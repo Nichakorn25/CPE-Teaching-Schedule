@@ -1,0 +1,11 @@
+package entity_test
+
+import (
+	"gorm.io/gorm"
+)
+
+type Position struct{
+	gorm.Model
+	Position  string
+	Priority  uint
+}
