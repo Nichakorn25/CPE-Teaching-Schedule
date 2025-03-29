@@ -1,23 +1,23 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type Schedule struct{
+type Schedule struct {
 	gorm.Model
-	YTID 	uint 	
-	YT  	YT 			`gorm:"foreignKey:YTID"`
+	YTID uint
+	YT   YT `gorm:"foreignKey:YTID"`
 
-	SelectedID 	uint 	
-	Selected  	Selected 			`gorm:"foreignKey:SelectedID"`
+	SelectedID uint
+	Selected   Selected `gorm:"foreignKey:SelectedID"`
 
-	InstructorID 	uint 	
-	Instructor  	Instructor 			`gorm:"foreignKey:InstructorID"`
+	InstructorID uint
+	Instructor   Instructor `gorm:"foreignKey:InstructorID"`
 
-	DayID 	uint 	
-	Day  	Day 			`gorm:"foreignKey:DayID"`
+	DayID uint
+	Day   Day `gorm:"foreignKey:DayID"`
 
-	PeriodID 	uint 	
-	Period  	Period 			`gorm:"foreignKey:PeriodID"`
+	PeriodID uint
+	Period   Period `gorm:"foreignKey:PeriodID"`
 }

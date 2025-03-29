@@ -1,16 +1,16 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type SelectedTA struct{
+type SelectedTA struct {
 	gorm.Model
-	TeachingHours  uint
+	TeachingHours uint
 
-	SelectedID 	uint 		
-	Selected  	Selected 	`gorm:"foreignKey:SelectedID"`
+	SelectedID uint
+	Selected   Selected `gorm:"foreignKey:SelectedID"`
 
-	TAID 	uint 	
-	TA  	TA 			`gorm:"foreignKey:TAID"`
+	TAID uint
+	TA   TA `gorm:"foreignKey:TAID"`
 }

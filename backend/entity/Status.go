@@ -1,12 +1,12 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type Status struct{
+type Status struct {
 	gorm.Model
-	Status  string
+	Status string
 
 	TA []TA `gorm:"foreignKey:StatusID"`
 }

@@ -1,15 +1,15 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type Unit struct{
+type Unit struct {
 	gorm.Model
-	Unit  string
-	Lectrue  uint
-	Lab  uint
-	SelfStudy  uint
+	Unit      string
+	Lectrue   uint
+	Lab       uint
+	SelfStudy uint
 
 	Subject []Subject `gorm:"foreignKey:UnitID"`
 }

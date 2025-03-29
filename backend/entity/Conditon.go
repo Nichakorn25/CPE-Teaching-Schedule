@@ -1,17 +1,17 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type Condition struct{
+type Condition struct {
 	gorm.Model
-	InstructorID 	uint 	
-	Instructor  	Instructor 			`gorm:"foreignKey:InstructorID"`
+	InstructorID uint
+	Instructor   Instructor `gorm:"foreignKey:InstructorID"`
 
-	DayID 	uint 	
-	Day  	Day 			`gorm:"foreignKey:DayID"`
+	DayID uint
+	Day   Day `gorm:"foreignKey:DayID"`
 
-	PeriodID 	uint 	
-	Period  	Period 			`gorm:"foreignKey:PeriodID"`
+	PeriodID uint
+	Period   Period `gorm:"foreignKey:PeriodID"`
 }

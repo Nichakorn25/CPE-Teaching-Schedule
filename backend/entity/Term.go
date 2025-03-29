@@ -1,10 +1,10 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type Term struct{
+type Term struct {
 	gorm.Model
 	Term uint
 

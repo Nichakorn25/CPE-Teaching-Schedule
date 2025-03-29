@@ -1,11 +1,11 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type Role struct{
+type Role struct {
 	gorm.Model
-	Role  string
+	Role string
 	User []User `gorm:"foreignKey:RoleID"`
 }

@@ -1,12 +1,12 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type Major struct{
+type Major struct {
 	gorm.Model
-	Name  string
+	Name       string
 	Curriculum []Curriculum `gorm:"foreignKey:Major"`
-	Subject []Subject `gorm:"foreignKey:Major"`
+	Subject    []Subject    `gorm:"foreignKey:Major"`
 }

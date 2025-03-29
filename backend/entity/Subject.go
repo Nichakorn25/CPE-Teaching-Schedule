@@ -1,25 +1,25 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type Subject struct{
+type Subject struct {
 	gorm.Model
-	Name  string
+	Name string
 
-	GCID 	uint 	
-	GC  	GC 			`gorm:"foreignKey:GCID"`
+	GCID uint
+	GC   GC `gorm:"foreignKey:GCID"`
 
-	MajorID 	uint 	
-	Major  		Major 			`gorm:"foreignKey:MajorID"`
+	MajorID uint
+	Major   Major `gorm:"foreignKey:MajorID"`
 
-	UnitID 	uint 	
-	Unit  		Unit 			`gorm:"foreignKey:UnitID"`
+	UnitID uint
+	Unit   Unit `gorm:"foreignKey:UnitID"`
 
-	SubjectTypeID 	uint 	
-	SubjectType  	SubjectType 			`gorm:"foreignKey:SubjectTypeID"`
+	SubjectTypeID uint
+	SubjectType   SubjectType `gorm:"foreignKey:SubjectTypeID"`
 
-	Selected []Selected `gorm:"foreignKey:SubjectID"`
+	Selected      []Selected      `gorm:"foreignKey:SubjectID"`
 	ServiceCenter []ServiceCenter `gorm:"foreignKey:SubjectID"`
 }

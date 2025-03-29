@@ -1,13 +1,13 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type Lab struct{
+type Lab struct {
 	gorm.Model
-	Section  uint
-	Student  uint
+	Section uint
+	Student uint
 
 	Selected []Selected `gorm:"foreignKey:LabID"`
 }

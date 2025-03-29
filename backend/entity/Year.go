@@ -1,11 +1,11 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type Year struct{
+type Year struct {
 	gorm.Model
 	Year uint
-	YT []YT `gorm:"foreignKey:YearID"`
+	YT   []YT `gorm:"foreignKey:YearID"`
 }

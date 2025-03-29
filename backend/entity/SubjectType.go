@@ -1,11 +1,11 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type SubjectType struct{
+type SubjectType struct {
 	gorm.Model
-	Name string
+	Name    string
 	Subject []Subject `gorm:"foreignKey:SubjectTypeID"`
 }

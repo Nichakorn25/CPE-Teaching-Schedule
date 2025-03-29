@@ -1,20 +1,20 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type ServiceCenter struct{
+type ServiceCenter struct {
 	gorm.Model
-	SubjectID 	uint 	
-	Subject  	Subject 			`gorm:"foreignKey:SubjectID"`
+	SubjectID uint
+	Subject   Subject `gorm:"foreignKey:SubjectID"`
 
-	DayID 	uint 	
-	Day  	Day 			`gorm:"foreignKey:DayID"`
+	DayID uint
+	Day   Day `gorm:"foreignKey:DayID"`
 
-	PeriodID 	uint 	
-	Period  	Period 			`gorm:"foreignKey:PeriodID"`
+	PeriodID uint
+	Period   Period `gorm:"foreignKey:PeriodID"`
 
-	AdminID 	uint 	
-	Admin  	Admin 			`gorm:"foreignKey:AdminID"`
+	AdminID uint
+	Admin   Admin `gorm:"foreignKey:AdminID"`
 }

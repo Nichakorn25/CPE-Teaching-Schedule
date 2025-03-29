@@ -1,12 +1,12 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type Grade struct{
+type Grade struct {
 	gorm.Model
-	Grade  uint
+	Grade uint
 
 	GC []GC `gorm:"foreignKey:GradeID"`
 }

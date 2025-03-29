@@ -1,14 +1,14 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type Day struct{
+type Day struct {
 	gorm.Model
-	Name  string
+	Name string
 
-	Schedule []Schedule `gorm:"foreignKey:Day"`
+	Schedule      []Schedule      `gorm:"foreignKey:Day"`
 	ServiceCenter []ServiceCenter `gorm:"foreignKey:Day"`
-	Condition []Condition `gorm:"foreignKey:Day"`
+	Condition     []Condition     `gorm:"foreignKey:Day"`
 }
