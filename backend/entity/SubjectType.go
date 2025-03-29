@@ -7,4 +7,5 @@ import (
 type SubjectType struct{
 	gorm.Model
 	Name string
+	Subject []Subject `gorm:"foreignKey:SubjectTypeID"`
 }

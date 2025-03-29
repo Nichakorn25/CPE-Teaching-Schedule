@@ -4,7 +4,9 @@ import (
 	"gorm.io/gorm"
 )
 
-type Degree struct{
+type Status struct{
 	gorm.Model
 	Status  string
+
+	TA []TA `gorm:"foreignKey:StatusID"`
 }

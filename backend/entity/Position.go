@@ -8,4 +8,6 @@ type Position struct{
 	gorm.Model
 	Position  string
 	Priority  uint
+
+	Instructor []Instructor `gorm:"foreignKey:PositionID"`
 }

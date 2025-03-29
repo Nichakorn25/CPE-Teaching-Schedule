@@ -9,4 +9,7 @@ type TA struct{
 	Name  string
 	Nickname  string
 	TotalHours  uint
+
+	StatusID 	uint 		
+	Status  	Status 	`gorm:"foreignKey:StatusID"`
 }

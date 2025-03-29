@@ -10,4 +10,6 @@ type Unit struct{
 	Lectrue  uint
 	Lab  uint
 	SelfStudy  uint
+
+	Subject []Subject `gorm:"foreignKey:UnitID"`
 }

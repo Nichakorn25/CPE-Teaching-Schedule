@@ -9,4 +9,9 @@ type Curriculum struct{
 	Name  string
 	Year  uint
 	Started  uint
+
+	MajorID 	uint 	
+	Major  	Major 			`gorm:"foreignKey:MajorID"`
+
+	GC []GC `gorm:"foreignKey:CurriculumID"`
 }
