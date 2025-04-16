@@ -8,5 +8,5 @@ type Grade struct{
 	gorm.Model
 	Grade  uint
 
-	GC []GC `gorm:"foreignKey:GradeID"`
+	GradeCurriculum []GradeCurriculum `gorm:"foreignKey:GradeID"`
 }

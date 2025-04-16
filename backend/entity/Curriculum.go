@@ -13,5 +13,5 @@ type Curriculum struct{
 	MajorID 	uint 	
 	Major  	Major 			`gorm:"foreignKey:MajorID"`
 
-	GC []GC `gorm:"foreignKey:CurriculumID"`
+	GradeCurriculum []GradeCurriculum `gorm:"foreignKey:CurriculumID"`
 }

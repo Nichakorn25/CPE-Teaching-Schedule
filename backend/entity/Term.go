@@ -8,5 +8,5 @@ type Term struct{
 	gorm.Model
 	Term uint
 
-	YT []YT `gorm:"foreignKey:TermID"`
+	YearTerm []YearTerm `gorm:"foreignKey:TermID"`
 }

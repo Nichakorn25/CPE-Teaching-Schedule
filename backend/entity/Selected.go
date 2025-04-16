@@ -12,8 +12,8 @@ type Selected struct{
 	InstructorID 	uint 	
 	Instructor  	Instructor 			`gorm:"foreignKey:InstructorID"`
 
-	YTID 	uint 	
-	YT  	YT 			`gorm:"foreignKey:YTID"`
+	YearTermID uint
+	YearTerm   YearTerm `gorm:"foreignKey:YearTermID"`
 
 	SubjectID 	uint 	
 	Subject  	Subject 			`gorm:"foreignKey:SubjectID"`

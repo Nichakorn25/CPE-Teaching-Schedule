@@ -12,4 +12,7 @@ type Admin struct{
 	Phone string
 
 	ServiceCenter []ServiceCenter `gorm:"foreignKey:AdminID"`
+
+	UserID uint
+	User   User `gorm:"foreignKey:UserID"`
 }
