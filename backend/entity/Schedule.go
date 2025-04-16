@@ -6,8 +6,8 @@ import (
 
 type Schedule struct {
 	gorm.Model
-	YTID uint
-	YT   YT `gorm:"foreignKey:YTID"`
+	YearTermID uint
+	YearTerm   YearTerm `gorm:"foreignKey:YearTermID"`
 
 	SelectedID uint
 	Selected   Selected `gorm:"foreignKey:SelectedID"`

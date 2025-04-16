@@ -17,4 +17,7 @@ type ServiceCenter struct {
 
 	AdminID uint
 	Admin   Admin `gorm:"foreignKey:AdminID"`
+
+	YearTermID uint
+	YearTerm   YearTerm `gorm:"foreignKey:YearTermID"`
 }

@@ -49,14 +49,14 @@ func ConnectionDB() {
 func SetupDatabase() {
 	db.AutoMigrate(
 		&entity.Admin{},
-		&entity.Condition{},
-		&entity.Curriculum{},
 		&entity.Day{},
-		&entity.GC{},
+		&entity.GradeCurriculum{},
 		&entity.Grade{},
 		&entity.Instructor{},
+		&entity.Condition{},
 		&entity.Lab{},
 		&entity.Major{},
+		&entity.Curriculum{},
 		&entity.Period{},
 		&entity.Position{},
 		&entity.Role{},
@@ -72,7 +72,7 @@ func SetupDatabase() {
 		&entity.Unit{},
 		&entity.User{},
 		&entity.Year{},
-		&entity.YT{},
+		&entity.YearTerm{},
 	)
 }
 

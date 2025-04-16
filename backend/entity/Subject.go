@@ -8,8 +8,8 @@ type Subject struct {
 	gorm.Model
 	Name string
 
-	GCID uint
-	GC   GC `gorm:"foreignKey:GCID"`
+	GradeCurriculumID uint
+	GradeCurriculum   GradeCurriculum `gorm:"foreignKey:GradeCurriculumID"`
 
 	MajorID uint
 	Major   Major `gorm:"foreignKey:MajorID"`
