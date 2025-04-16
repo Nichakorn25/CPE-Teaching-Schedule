@@ -1,10 +1,10 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
 )
 
-type TA struct{
+type TeachingAssistant struct{
 	gorm.Model
 	Name  string
 	Nickname  string

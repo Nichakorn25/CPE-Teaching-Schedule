@@ -1,4 +1,4 @@
-package entity_test
+package entity
 
 import (
 	"gorm.io/gorm"
