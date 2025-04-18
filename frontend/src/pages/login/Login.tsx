@@ -1,53 +1,107 @@
-import React from 'react';
+import React, { useEffect } from "react";
+import { Form, Input, Button, message } from "antd";
+import { useNavigate } from "react-router-dom";
+import { SignIn } from "../../services/https";
+import { SignInInterface } from "../../interfaces/SignIn";
 
 const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [messageApi, contextHolder] = message.useMessage();
+
+  useEffect(() => {
+    document.body.classList.add("bg-gray-100");
+    return () => {
+      document.body.classList.remove("bg-gray-100");
+    };
+  }, []);
+
+  const onFinish = async (values: SignInInterface) => {
+    const res = await SignIn(values);
+
+    if (res.status === 200) {
+      messageApi.success("เข้าสู่ระบบสำเร็จ");
+
+      const { token, role, user_id, first_name, last_name } = res.data;
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", role);
+      localStorage.setItem("user_id", user_id);
+      localStorage.setItem("first_name", first_name);
+      localStorage.setItem("last_name", last_name);
+
+      setTimeout(() => {
+        if (role === "Admin") {
+          navigate("/admin");
+        } else if (role === "Scheduler") {
+          navigate("/scheduler");
+        } else if (role === "Instructor") {
+          navigate("/instructor");
+        } else {
+          messageApi.error("ไม่สามารถระบุสิทธิ์ผู้ใช้งานได้");
+        }
+      }, 1000);
+    } else {
+      messageApi.error(res.data?.error || "เข้าสู่ระบบล้มเหลว");
+    }
+  };
+
   return (
-    <div className="w-full h-screen bg-[#aaaaaa]/40 flex items-center justify-center px-4">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-5xl overflow-hidden">
-        {/* Header */}
-        <div className="bg-[#09261d] py-6 px-4 md:px-12 rounded-t-xl">
-          <h1 className="text-white text-2xl md:text-4xl font-bold font-montserrat text-center">
-            CPE Teaching Schedule
-          </h1>
-        </div>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      {contextHolder}
+      <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg">
+        <h1 className="text-2xl font-bold text-center text-[#09261d] mb-6">
+          CPE Teaching Schedule
+        </h1>
 
-        {/* Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 md:p-10">
-          {/* Left - Form */}
-          <div className="space-y-6">
-            <div>
-              <label className="block text-black text-lg font-montserrat mb-1">รหัสพนักงาน</label>
-              <input
-                type="text"
-                placeholder="username"
-                className="w-full h-12 px-4 rounded-xl border border-[#aaaaaa] text-[#aaaaaa] text-lg font-montserrat"
-              />
-            </div>
-            <div>
-              <label className="block text-black text-lg font-montserrat mb-1">รหัสผ่าน</label>
-              <input
-                type="password"
-                placeholder="password"
-                className="w-full h-12 px-4 rounded-xl border border-[#aaaaaa] text-[#aaaaaa] text-lg font-montserrat"
-              />
-            </div>
-            <button className="w-full h-12 bg-[#ff6314] text-white text-xl font-bold font-montserrat rounded-xl hover:bg-orange-600 transition">
-              Sign in
-            </button>
+        <Form name="login-form" onFinish={onFinish} layout="vertical">
+          <Form.Item
+            name="UsernameID"
+            label="รหัสพนักงาน"
+            rules={[{ required: true, message: "กรุณากรอกรหัสพนักงาน" }]}
+          >
+            <Input placeholder="Username" className="h-10" />
+          </Form.Item>
+
+          <Form.Item
+            name="Password"
+            label="รหัสผ่าน"
+            rules={[{ required: true, message: "กรุณากรอกรหัสผ่าน" }]}
+          >
+            <Input.Password placeholder="Password" className="h-10" />
+          </Form.Item>
+
+          <div className="text-right mb-4">
+            <a href="#" className="text-sm text-blue-500 hover:underline">
+              ลืมรหัสผ่าน?
+            </a>
           </div>
 
-          {/* Right - Info */}
-          <div className="text-black text-base md:text-lg font-montserrat space-y-4">
-            <p>
-              (1) If you cannot log in, please contact the administrator:<br />
-              Tel: 0-4422-5759<br />
-              Email: <a href="mailto:administrator@sut.ac.th" className="underline">administrator@sut.ac.th</a>
-            </p>
-            <p>
-              (2) Please enter your email address correctly to auto-reply in case you forgot your password.
-            </p>
-            <a href="#" className="text-[#58b9ea] font-bold block mt-2">Forgotten your password?</a>
-          </div>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              className="w-full bg-[#ff6314] hover:bg-orange-600 text-white font-semibold h-10 rounded-lg"
+            >
+              เข้าสู่ระบบ
+            </Button>
+          </Form.Item>
+        </Form>
+
+        <div className="text-sm text-gray-600 mt-6 space-y-2">
+          <p>
+            (1) หากไม่สามารถเข้าสู่ระบบได้ กรุณาติดต่อผู้ดูแลระบบ<br />
+            โทร: 0-4422-5759<br />
+            อีเมล:{" "}
+            <a
+              href="mailto:administrator@sut.ac.th"
+              className="text-blue-600 underline"
+            >
+              administrator@sut.ac.th
+            </a>
+          </p>
+          <p>
+            (2) กรุณากรอกอีเมลให้ถูกต้องเพื่อใช้ในกรณีลืมรหัสผ่าน
+          </p>
         </div>
       </div>
     </div>

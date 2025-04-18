@@ -5,13 +5,11 @@ interface User {
   avatarUrl: string;
 }
 
-interface TopbarProps {
+const Topbar: React.FC<{
   user?: User;
-  onLogin: () => void;
-  onLogout: () => void;
-}
-
-const Topbar: React.FC<TopbarProps> = ({ user, onLogin, onLogout }) => {
+  onLogin?: () => void;
+  onLogout?: () => void;
+}> = ({ user, onLogin, onLogout }) => {
   return (
     <div className="w-full h-16 bg-white shadow-md fixed top-0 left-0 flex items-center justify-between px-4 z-50">
       <div className="flex items-center">

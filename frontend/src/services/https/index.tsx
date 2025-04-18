@@ -26,26 +26,28 @@ async function SignIn(data: SignInInterface) {
 
 }
 
-async function ForgottenPassword(email: string, newPassword: string) {
-  try {
-    const token = localStorage.getItem('token');
-    console.log(token);
-    const response = await axios.post(`${apiUrl}/employee/change-password`, {
-      Email: email,
-      NewPassword: newPassword,
-    }, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `${Bearer} ${Authorization}`,
-      }
-    });
-    return response.data;
-  } catch (error: any) {
-    return error.response ? error.response.data : { error: "An unknown error occurred" };
-  }
-}
+
+
+// async function ForgottenPassword(email: string, newPassword: string) {
+//   try {
+//     const token = localStorage.getItem('token');
+//     console.log(token);
+//     const response = await axios.post(`${apiUrl}/employee/change-password`, {
+//       Email: email,
+//       NewPassword: newPassword,
+//     }, {
+//       headers: {
+//         "Content-Type": "application/json",
+//         Authorization: `${Bearer} ${Authorization}`,
+//       }
+//     });
+//     return response.data;
+//   } catch (error: any) {
+//     return error.response ? error.response.data : { error: "An unknown error occurred" };
+//   }
+// }
 
 export {
     SignIn,
-    ForgottenPassword,
+    //ForgottenPassword,
 };
