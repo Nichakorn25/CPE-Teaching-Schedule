@@ -16,8 +16,8 @@ import (
 
 type (
 	Authen struct {
-		UserID   string
-		Password string
+		UsernameID string
+		Password   string
 	}
 )
 
@@ -31,7 +31,7 @@ func SignInUser(c *gin.Context) {
 	}
 
 	if err := config.DB().Preload("Role").
-		Where("user_id = ?", payload.UserID).
+		Where("username_id = ?", payload.UsernameID).
 		First(&user).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
 		return
@@ -64,19 +64,19 @@ func SignInUser(c *gin.Context) {
 		ExpirationHours: 24,
 	}
 
-	signedToken, err := jwtWrapper.GenerateToken(user.UserID)
+	signedToken, err := jwtWrapper.GenerateToken(user.UsernameID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error signing token"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"token_type":  "Bearer",
-		"token":       signedToken,
-		"user_id":     user.UserID,
-		"role":        user.Role.Role,
-		"first_name":  firstName,
-		"last_name":   lastName,
+		"token_type": "Bearer",
+		"token":      signedToken,
+		"user_id":    user.UsernameID,
+		"role":       user.Role.Role,
+		"first_name": firstName,
+		"last_name":  lastName,
 	})
 }
 

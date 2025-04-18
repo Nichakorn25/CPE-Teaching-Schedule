@@ -60,19 +60,24 @@ func ConnectionDB() {
 }
 
 func SetupDatabase() {
-	db.AutoMigrate(
+	err := db.AutoMigrate(
+		&entity.Role{},
+		&entity.User{},
+		&entity.Period{},
+		&entity.Position{},
 		&entity.Admin{},
+		&entity.Instructor{},
+		&entity.Term{},
+		&entity.Unit{},
+		&entity.Year{},
+		&entity.YearTerm{},
 		&entity.Day{},
 		&entity.GradeCurriculum{},
 		&entity.Grade{},
-		&entity.Instructor{},
 		&entity.Condition{},
 		&entity.Lab{},
 		&entity.Major{},
 		&entity.Curriculum{},
-		&entity.Period{},
-		&entity.Position{},
-		&entity.Role{},
 		&entity.Schedule{},
 		&entity.Selected{},
 		&entity.SelectedTA{},
@@ -81,12 +86,11 @@ func SetupDatabase() {
 		&entity.Subject{},
 		&entity.SubjectType{},
 		&entity.TeachingAssistant{},
-		&entity.Term{},
-		&entity.Unit{},
-		&entity.User{},
-		&entity.Year{},
-		&entity.YearTerm{},
 	)
+	if err != nil {
+		log.Fatalf("AutoMigrate failed: %v", err)
+	}
+
 	seedRoles()
 	seedPositions()
 	seedUsersData()
@@ -134,16 +138,17 @@ func seedUsersData() {
 	db.First(&Director, "position = ?", "ผู้บริหาร")
 	db.First(&Instructor, "position = ?", "อาจารย์ผู้สอน")
 
+	hashedPassword, _ := HashPassword("1234")
 	// --- Users ---
-	userAdmin := entity.User{UserID: "Admin1234", Password: "1234", RoleID: roleA.ID} //Admin
-	userSchedule := entity.User{UserID: "SS1234", Password: "1234", RoleID: roleB.ID} //Scheduler อาจารย์ฟาง
-	userA := entity.User{UserID: "A1234", Password: "1234", RoleID: roleC.ID}         //ผู้สอนธรรมดา
-	userB := entity.User{UserID: "B1234", Password: "1234", RoleID: roleC.ID}         //ผู้สอนธรรมดา
+	userAdmin := entity.User{UsernameID: "Admin1234", Password: hashedPassword, RoleID: roleA.ID} //Admin
+	userSchedule := entity.User{UsernameID: "SS1234", Password: hashedPassword, RoleID: roleB.ID} //Scheduler อาจารย์ฟาง
+	userA := entity.User{UsernameID: "A1234", Password: hashedPassword, RoleID: roleC.ID}         //ผู้สอนธรรมดา
+	userB := entity.User{UsernameID: "B1234", Password: hashedPassword, RoleID: roleC.ID}         //ผู้สอนธรรมดา
 
-	db.FirstOrCreate(&userAdmin, entity.User{UserID: "Admin1234"})
-	db.FirstOrCreate(&userSchedule, entity.User{UserID: "SS1234"})
-	db.FirstOrCreate(&userA, entity.User{UserID: "A1234"})
-	db.FirstOrCreate(&userB, entity.User{UserID: "B1234"})
+	db.FirstOrCreate(&userAdmin, entity.User{UsernameID: "Admin1234"})
+	db.FirstOrCreate(&userSchedule, entity.User{UsernameID: "SS1234"})
+	db.FirstOrCreate(&userA, entity.User{UsernameID: "A1234"})
+	db.FirstOrCreate(&userB, entity.User{UsernameID: "B1234"})
 
 	// --- Admins ---
 	admin0 := entity.Admin{
