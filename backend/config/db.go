@@ -89,11 +89,11 @@ func SetupDatabase() {
 	)
 	seedRoles()
 	seedPositions()
-	seedUsersAndRelatedData()
+	seedUsersData()
 }
 
 func seedRoles() {
-	roles := []string{"A", "B", "C"}
+	roles := []string{"Admin", "Scheduler", "Instructor"}
 	for _, role := range roles {
 		db.FirstOrCreate(&entity.Role{}, &entity.Role{Role: role})
 	}
@@ -101,90 +101,89 @@ func seedRoles() {
 
 func seedPositions() {
 	positions := []struct {
-		Name     string
+		Position string
 		Priority uint
 	}{
-		{"Lecturer", 1},
-		{"Assistant Professor", 2},
-		{"Associate Professor", 3},
-		{"Professor", 4},
+		{"ผู้บริหาร", 1},
+		{"อาจารย์ผู้สอน", 2},
 	}
 
 	for _, pos := range positions {
 		db.FirstOrCreate(&entity.Position{}, &entity.Position{
-			Position: pos.Name,
+			Position: pos.Position,
 			Priority: pos.Priority,
 		})
 	}
 }
 
-func seedUsersAndRelatedData() {
-	// หา Role ID ที่ต้องใช้
+func seedUsersData() {
+
+	// --- Roles ---
 	var roleA entity.Role
-	db.First(&roleA, "role = ?", "A")
-
 	var roleB entity.Role
-	db.First(&roleB, "role = ?", "B")
-
 	var roleC entity.Role
-	db.First(&roleC, "role = ?", "C")
 
-	// --- Users ชุดเดิม ---
-	userA := entity.User{UserID: "userA", Password: "passA", RoleID: roleA.ID}
-	userB := entity.User{UserID: "userB", Password: "passB", RoleID: roleB.ID}
-	userC := entity.User{UserID: "userC", Password: "passC", RoleID: roleC.ID}
+	db.First(&roleA, "role = ?", "Admin")
+	db.First(&roleB, "role = ?", "Scheduler")
+	db.First(&roleC, "role = ?", "Instructor")
 
-	db.FirstOrCreate(&userA, entity.User{UserID: "userA"})
-	db.FirstOrCreate(&userB, entity.User{UserID: "userB"})
-	db.FirstOrCreate(&userC, entity.User{UserID: "userC"})
+	// --- Positions ---
+	var Director entity.Position
+	var Instructor entity.Position
 
-	// --- เพิ่ม Users ใหม่ ---
-	userD := entity.User{UserID: "userD", Password: "passD", RoleID: roleA.ID}
-	userE := entity.User{UserID: "userE", Password: "passE", RoleID: roleB.ID}
+	db.First(&Director, "position = ?", "ผู้บริหาร")
+	db.First(&Instructor, "position = ?", "อาจารย์ผู้สอน")
 
-	db.FirstOrCreate(&userD, entity.User{UserID: "userD"})
-	db.FirstOrCreate(&userE, entity.User{UserID: "userE"})
+	// --- Users ---
+	userAdmin := entity.User{UserID: "Admin1234", Password: "1234", RoleID: roleA.ID} //Admin
+	userSchedule := entity.User{UserID: "SS1234", Password: "1234", RoleID: roleB.ID} //Scheduler อาจารย์ฟาง
+	userA := entity.User{UserID: "A1234", Password: "1234", RoleID: roleC.ID}         //ผู้สอนธรรมดา
+	userB := entity.User{UserID: "B1234", Password: "1234", RoleID: roleC.ID}         //ผู้สอนธรรมดา
+
+	db.FirstOrCreate(&userAdmin, entity.User{UserID: "Admin1234"})
+	db.FirstOrCreate(&userSchedule, entity.User{UserID: "SS1234"})
+	db.FirstOrCreate(&userA, entity.User{UserID: "A1234"})
+	db.FirstOrCreate(&userB, entity.User{UserID: "B1234"})
 
 	// --- Admins ---
-	admin1 := entity.Admin{
-		FirstName: "Alice",
+	admin0 := entity.Admin{
+		FirstName: "SUT",
 		LastName:  "Admin",
-		Email:     "alice.admin@example.com",
+		Email:     "SutAdmin@sut.ac.th",
 		Phone:     "0123456789",
-		UserID:    userA.ID,
+		UserID:    userAdmin.ID,
 	}
-	admin2 := entity.Admin{
-		FirstName: "Charlie",
-		LastName:  "Admin",
-		Email:     "charlie.admin@example.com",
-		Phone:     "0111222333",
-		UserID:    userD.ID,
-	}
-	db.FirstOrCreate(&admin1, entity.Admin{Email: "alice.admin@example.com"})
-	db.FirstOrCreate(&admin2, entity.Admin{Email: "charlie.admin@example.com"})
+	db.FirstOrCreate(&admin0, entity.Admin{Email: "SutAdmin@sut.ac.th"})
 
 	// --- Instructor ---
-	var lecturer entity.Position
-	db.First(&lecturer, "position = ?", "Lecturer")
-
+	Scheduler1 := entity.Instructor{
+		FirstName:  "ผู้ช่วยศาสตราจารย์ ดร. ศรัญญา", //ที่จริงควรเพิ่มฟิลสำหรับคำนำหน้าด้วย
+		LastName:   "กาญจนวัฒนา",
+		Email:      "sarunya.k@sut.ac.th",
+		Phone:      "044224447", //เบอร์โต๊ะ   ควรเพิ่มหมายเลขห้องที่อาคารวิชาการด้วย
+		Degree:     "ลืมว่าหาจากไหน",
+		UserID:     userSchedule.ID,
+		PositionID: Instructor.ID,
+	}
 	instructor1 := entity.Instructor{
-		FirstName:  "Bob",
-		LastName:   "Instructor",
-		Email:      "bob.instructor@example.com",
-		Phone:      "0987654321",
-		Degree:     "Ph.D.",
-		UserID:     userB.ID,
-		PositionID: lecturer.ID,
+		FirstName:  "ผู้ช่วยศาสตราจารย์ ดร.นันทวุฒิ", //ที่จริงควรเพิ่มฟิลสำหรับคำนำหน้าด้วย
+		LastName:   "คะอังกุ",
+		Email:      "nuntawut@sut.ac.th",
+		Phone:      "044224559", //เบอร์โต๊ะ   ควรเพิ่มหมายเลขห้องที่อาคารวิชาการด้วย
+		Degree:     "ลืมว่าหาจากไหน",
+		UserID:     userA.ID,
+		PositionID: Director.ID,
 	}
 	instructor2 := entity.Instructor{
-		FirstName:  "Diana",
-		LastName:   "Lecturer",
-		Email:      "diana.lecturer@example.com",
-		Phone:      "0222333444",
-		Degree:     "M.Sc.",
-		UserID:     userE.ID,
-		PositionID: lecturer.ID,
+		FirstName:  "อาจารย์ ดร. วิชัย",
+		LastName:   "ศรีสุรักษ์",
+		Email:      "wichai@sut.ac.th",
+		Phone:      "044224646",
+		Degree:     "ลืมว่าหาจากไหน",
+		UserID:     userB.ID,
+		PositionID: Instructor.ID,
 	}
-	db.FirstOrCreate(&instructor1, entity.Instructor{Email: "bob.instructor@example.com"})
-	db.FirstOrCreate(&instructor2, entity.Instructor{Email: "diana.lecturer@example.com"})
+	db.FirstOrCreate(&Scheduler1, entity.Instructor{Email: "sarunya.k@sut.ac.th"})
+	db.FirstOrCreate(&instructor1, entity.Instructor{Email: "nuntawut@sut.ac.th"})
+	db.FirstOrCreate(&instructor2, entity.Instructor{Email: "wichai@sut.ac.th"})
 }
