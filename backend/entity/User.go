@@ -4,14 +4,14 @@ import (
 	"gorm.io/gorm"
 )
 
-type User struct{
+type User struct {
 	gorm.Model
-	UserID  string
-	Password  string
+	UsernameID   string `gorm:"uniqueIndex"`
+	Password string
 
-	RoleID 	uint 	
-	Role  	Role 			`gorm:"foreignKey:RoleID"`
+	RoleID uint
+	Role   Role `gorm:"foreignKey:RoleID"`
 
 	Instructor []Instructor `gorm:"foreignKey:UserID"`
-	Admin []Admin `gorm:"foreignKey:UserID"`
+	Admin      []Admin      `gorm:"foreignKey:UserID"`
 }
