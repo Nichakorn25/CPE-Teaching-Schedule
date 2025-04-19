@@ -1,18 +1,33 @@
-// import React from "react";
-// import { Navigate, RouteObject } from "react-router-dom";
-// import Loadable from "../components/Loadable";
+import { lazy } from "react";
+import { Navigate, RouteObject } from "react-router-dom";
+import Loadable from "../components/loading/Loadable";
+import InstructorLayout from "../components/adminlayout/AdminLayout";
 // import InstructorLayout from "../layouts/InstructorLayout";
 
-// const InstructorDashboard = Loadable(lazy(() => import("../pages/instructor/dashboard")));
-// const InstructorProfile = Loadable(lazy(() => import("../pages/instructor/profile")));
+const InstructorPage = Loadable(lazy(() => import("../pages/instructor/InstructorPage")));
 
-// export const InstructorRoutes = (isLoggedIn: boolean): RouteObject => {
-//   return {
-//     path: "/",
-//     element: isLoggedIn ? <InstructorLayout /> : <Navigate to="/login" replace />,
-//     children: [
-//       { path: "dashboard", element: <InstructorDashboard /> },
-//       { path: "profile", element: <InstructorProfile /> },
-//     ],
-//   };
-// };
+const InstructorRoutes = (isLoggedIn: boolean): RouteObject[] => {
+    if (!isLoggedIn) {
+        return [
+            {
+                path: "*",
+                element: <Navigate to="/login" replace />,
+            },
+        ];
+    }
+
+    return [
+        {
+            path: "/",
+            element: <InstructorLayout />,
+            children: [
+                {
+                    path: "admin",
+                    element: <InstructorPage />,
+                },
+            ],
+        },
+    ];
+};
+
+export default InstructorRoutes;
