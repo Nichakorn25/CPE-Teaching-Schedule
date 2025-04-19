@@ -33,7 +33,7 @@ const LoginPage: React.FC = () => {
         if (role === "Admin") {
           navigate("/admin");
         } else if (role === "Scheduler") {
-          navigate("/scheduler");
+          navigate("/instructor");
         } else if (role === "Instructor") {
           navigate("/instructor");
         } else {

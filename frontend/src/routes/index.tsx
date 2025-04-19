@@ -1,26 +1,29 @@
-// import { useRoutes } from "react-router-dom";
-// import { AdminRoutes } from "./AdminRoutes";
-// import { SchedulerRoutes } from "./SchedulerRoutes";
-// import { InstructorRoutes } from "./InstructorRoutes";
-// import { MainRoutes } from "./MainRoutes";
+import { useRoutes, RouteObject, Navigate } from "react-router-dom";
+import AdminRoutes from "./AdminRoutes";
+import MainRoutes from "./MainRoutes";
+import InstructorRoutes from "./InstructorRoutes"; 
 
-// const AppRoutes = () => {
-//   const isLoggedIn = localStorage.getItem("isLogin") === "true";
-//   const role = localStorage.getItem("role");
+function ConfigRoutes() {
+  const isLoggedIn = localStorage.getItem("isLogin") === "true";
+  const role = localStorage.getItem("role") || "";
 
-//   let routes = [];
+  let routes: RouteObject[] = [];
 
-//   if (!isLoggedIn) {
-//     routes = [MainRoutes()];
-//   } else if (role === "Admin") {
-//     routes = [AdminRoutes(isLoggedIn)];
-//   } else if (role === "Scheduler") {
-//     routes = [SchedulerRoutes(isLoggedIn)];
-//   } else if (role === "Instructor") {
-//     routes = [InstructorRoutes(isLoggedIn)];
-//   }
+  if (isLoggedIn) {
+    if (role === "Admin") {
+      routes = AdminRoutes(isLoggedIn);
+    } else if (role === "Scheduler" || role === "Instructor") {
+      routes = InstructorRoutes(isLoggedIn);
+    } else {
+      routes = [{ path: "*", element: <Navigate to="/login" replace /> }];
+    }
+  } else {
+    routes = [MainRoutes()];
+  }
 
-//   return useRoutes(routes);
-// };
+  routes.push({ path: "*", element: <Navigate to="/" replace /> });
 
-// export default AppRoutes;
+  return useRoutes(routes);
+}
+
+export default ConfigRoutes;
