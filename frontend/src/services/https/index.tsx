@@ -1,10 +1,10 @@
 import { SignInInterface } from "../../interfaces/SignIn";
+import { ChangePassInterface, NewPassInterface } from "../../interfaces/ChangePass";
 import axios from "axios";
 
 const apiUrl = "http://localhost:8080";
 const Authorization = localStorage.getItem("token");
 const Bearer = localStorage.getItem("token_type");
-
 
 const requestOptions = {
 
@@ -15,6 +15,7 @@ const requestOptions = {
 
 };
 
+//------------------ login ------------------------------//
 
 async function SignIn(data: SignInInterface) {
 
@@ -26,28 +27,57 @@ async function SignIn(data: SignInInterface) {
 
 }
 
+//------------------ Password ------------------------------//
+
+async function GetAllChangePassword() {
+
+  return await axios
+
+    .get(`${apiUrl}/get-all-change-password`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+
+}
+
+async function GetChangePasswordByUsernameID(id: string) {
+
+  return await axios
+
+    .get(`${apiUrl}/getbyid-change-password${id}`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+
+}
 
 
-// async function ForgottenPassword(email: string, newPassword: string) {
-//   try {
-//     const token = localStorage.getItem('token');
-//     console.log(token);
-//     const response = await axios.post(`${apiUrl}/employee/change-password`, {
-//       Email: email,
-//       NewPassword: newPassword,
-//     }, {
-//       headers: {
-//         "Content-Type": "application/json",
-//         Authorization: `${Bearer} ${Authorization}`,
-//       }
-//     });
-//     return response.data;
-//   } catch (error: any) {
-//     return error.response ? error.response.data : { error: "An unknown error occurred" };
-//   }
-// }
+async function ChangePass(data: ChangePassInterface) {
+
+  return await axios
+
+    .post(`${apiUrl}/create-password`, data, requestOptions)  //สร้างคำร้องถึงแอดมิน
+    .then((res) => res)
+    .catch((e) => e.response);
+
+}
+
+async function NewPass(id: string) {
+  const data = { UsernameID: id };
+
+  return await axios
+
+    .post(`${apiUrl}/change-password`, data, requestOptions)  //เปลี่ยนรหัส
+    .then((res) => res)
+    .catch((e) => e.response);
+
+}
+
+//------------------ 00000 ------------------------------//
 
 export {
     SignIn,
-    //ForgottenPassword,
+    GetAllChangePassword,
+    GetChangePasswordByUsernameID,
+    ChangePass,
+    NewPass,
+
 };

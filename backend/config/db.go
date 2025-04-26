@@ -92,8 +92,16 @@ func SetupDatabase() {
 	}
 
 	seedRoles()
+	seedStatusChangePassword()
 	seedPositions()
 	seedUsersData()
+}
+
+func seedStatusChangePassword() {
+	status := []string{"ยังไม่ได้รับการอนุญาต", "ได้รับการอนุญาตแล้ว"}
+	for _, s := range status {
+		db.FirstOrCreate(&entity.StatusChangePassword{}, &entity.StatusChangePassword{StatusName: s})
+	}
 }
 
 func seedRoles() {
@@ -168,7 +176,7 @@ func seedUsersData() {
 		Phone:      "044224447", //เบอร์โต๊ะ   ควรเพิ่มหมายเลขห้องที่อาคารวิชาการด้วย
 		Degree:     "ลืมว่าหาจากไหน",
 		UserID:     userSchedule.ID,
-		PositionID: Instructor.ID,
+		PositionID: Instructor.ID, //เพิ่มวันที่เพิ่มเข้าระบบ
 	}
 	instructor1 := entity.Instructor{
 		FirstName:  "ผู้ช่วยศาสตราจารย์ ดร.นันทวุฒิ", //ที่จริงควรเพิ่มฟิลสำหรับคำนำหน้าด้วย

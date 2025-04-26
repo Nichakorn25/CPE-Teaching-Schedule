@@ -19,10 +19,14 @@ func main() {
 	r.Use(CORSMiddleware())
 
 	r.POST("/signin", controllers.SignInUser)
+	r.POST("/create-password", controllers.CreateChangePassword)
 
 	router := r.Group("/")
 	{
 		router.Use(middleware.Authorizes())
+		router.GET("/get-all-change-password", controllers.GetAllChangePassword)
+		router.GET("/getbyid-change-password", controllers.GetChangePasswordByUsernameID)
+		router.POST("/change-password", controllers.ChangePasswordUser)
 	}
 
 	r.GET("/", func(c *gin.Context) {

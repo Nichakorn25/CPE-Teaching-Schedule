@@ -79,35 +79,3 @@ func SignInUser(c *gin.Context) {
 		"last_name":  lastName,
 	})
 }
-
-// func ChangePasswordUser(c *gin.Context) {
-// 	var request struct {
-// 		UserID      string
-// 		NewPassword string
-// 	}
-
-// 	if err := c.ShouldBindJSON(&request); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id and new_password are required"})
-// 		return
-// 	}
-
-// 	var user entity.User
-// 	if err := config.DB().Where("user_id = ?", request.UserID).First(&user).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
-// 		return
-// 	}
-
-// 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.NewPassword), bcrypt.DefaultCost)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
-// 		return
-// 	}
-
-// 	user.Password = string(hashedPassword)
-// 	if err := config.DB().Save(&user).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update password"})
-// 		return
-// 	}
-
-// 	c.JSON(http.StatusOK, gin.H{"message": "password updated successfully"})
-// }
