@@ -11,92 +11,51 @@ import (
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
 )
 
-// func ChangePasswordUser(c *gin.Context) {
-// 	var request struct {
-// 		UsernameID string
-// 	}
-
-// 	if err := c.ShouldBindJSON(&request); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "UsernameID is required"})
-// 		return
-// 	}
-
-// 	var user entity.User
-// 	if err := config.DB().Where("username_id = ?", request.UsernameID).First(&user).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-// 		return
-// 	}
-
-// 	var changePassword entity.ChangePassword
-// 	if err := config.DB().Where("username_id = ?", request.UsernameID).First(&changePassword).Error; err != nil {
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "New password not found for user"})
-// 		return
-// 	}
-
-// 	if changePassword.Password == "" {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "New password is empty in ChangePassword table"})
-// 		return
-// 	}
-
-// 	user.Password = changePassword.Password
-// 	if err := config.DB().Save(&user).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
-// 		return
-// 	}
-
-// 	changePassword.StatusChangePasswordID = 2
-// 	if err := config.DB().Save(&changePassword).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status in ChangePassword"})
-// 		return
-// 	}
-
-// 	c.JSON(http.StatusOK, gin.H{"message": "Password updated and status changed successfully"})
-// }
-
 func ChangePasswordUser(c *gin.Context) {
-	usernameID := c.Query("username_id")
-	if usernameID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "username_id is required"})
+	var request struct {
+		ID uint `json:"id" binding:"required"` 
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ChangePassword ID is required"})
 		return
 	}
 
-	// หา user ตาม UsernameID
+	var changePassword entity.ChangePassword
+	if err := config.DB().First(&changePassword, request.ID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "ChangePassword record not found"})
+		return
+	}
+
+	if changePassword.StatusChangePasswordID != 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Password change request already processed"})
+		return
+	}
+
+	if changePassword.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "New password is empty in ChangePassword"})
+		return
+	}
+
 	var user entity.User
-	if err := config.DB().Where("username_id = ?", usernameID).First(&user).Error; err != nil {
+	if err := config.DB().Where("username_id = ?", changePassword.UsernameID).First(&user).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
-	// หา ChangePassword ที่ยังไม่ได้เปลี่ยนรหัส (StatusChangePasswordID = 1)
-	var changePassword entity.ChangePassword
-	if err := config.DB().Where("username_id = ? AND status_change_password_id = 1", usernameID).
-		Order("created_at DESC").
-		First(&changePassword).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No pending password change request found"})
-		return
-	}
-
-	// ตรวจสอบว่า password ใหม่ไม่ว่าง
-	if changePassword.Password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "New password is empty in request"})
-		return
-	}
-
-	// อัปเดตรหัสผ่าน
 	user.Password = changePassword.Password
 	if err := config.DB().Save(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
 		return
 	}
 
-	// อัปเดตสถานะคำร้องเป็น "เรียบร้อยแล้ว" (2)
 	changePassword.StatusChangePasswordID = 2
 	if err := config.DB().Save(&changePassword).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update change password request status"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update ChangePassword status"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Password updated and request marked as completed"})
+	c.JSON(http.StatusOK, gin.H{"message": "Password updated and status changed successfully"})
 }
 
 func CreateChangePassword(c *gin.Context) {
@@ -200,6 +159,7 @@ func GetAllChangePassword(c *gin.Context) {
 		}
 
 		result := gin.H{
+			"ID":         cp.ID,
 			"UsernameID": cp.UsernameID,
 			"FirstName":  instructor.FirstName,
 			"LastName":   instructor.LastName,

@@ -1,5 +1,5 @@
 import { SignInInterface } from "../../interfaces/SignIn";
-import { ChangePassInterface, NewPassInterface } from "../../interfaces/ChangePass";
+import { ChangePassInterface} from "../../interfaces/ChangePass";
 import axios from "axios";
 
 const apiUrl = "http://localhost:8080";
@@ -60,12 +60,10 @@ async function ChangePass(data: ChangePassInterface) {
 
 }
 
-async function NewPass(id: string) {
-  const data = { UsernameID: id };
-
+async function NewPass(id: number) {
   return await axios
 
-    .post(`${apiUrl}/change-password`, data, requestOptions)  //เปลี่ยนรหัส
+    .post(`${apiUrl}/change-password`,{id}, requestOptions)  //เปลี่ยนรหัส
     .then((res) => res)
     .catch((e) => e.response);
 

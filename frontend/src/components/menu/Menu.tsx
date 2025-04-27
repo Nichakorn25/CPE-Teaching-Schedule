@@ -1,0 +1,93 @@
+import { AiOutlineMenu, AiOutlineClose, AiOutlineLogout } from "react-icons/ai";
+import React, { useState } from 'react';
+import { useNavigate, Outlet } from "react-router-dom";
+
+const menuItems = [
+  { label: "หน้าแรก", icon: "📖", roles: ['Admin', 'Scheduler', 'Instructor'] },
+  { label: "ตารางสอน", icon: "🧑‍🏫", roles: ['Scheduler', 'Instructor'] },
+  { label: "ประวัติการจัดตารางสอน", icon: "🧑‍🏫", roles: ['Scheduler'] },
+  { label: "เงื่อนไขการจัดตารางสอน", icon: "🧑‍🏫", roles: ['Scheduler'] },
+  { label: "เพิ่มเงื่อนไข", icon: "🧑‍🏫", roles: ['Scheduler', 'Instructor'] },
+  { label: "เพิ่มวิชาที่ต้องการสอน", icon: "🧑‍🏫", roles: ['Scheduler', 'Instructor'] },
+  { label: "รายชื่ออาจารย์", icon: "🧑‍🏫", roles: ['Admin', 'Scheduler'] },
+  { label: "รายวิชาที่เปิดสอน", icon: "📋", roles: ['Admin', 'Scheduler', 'Instructor'] },
+  { label: "รายวิชาทั้งหมด", icon: "📚", roles: ['Admin', 'Scheduler'] },
+  { label: "จัดการรายชื่ออาจารย์", icon: "🛠️", roles: ['Admin'] },
+  { label: "จัดการรายวิชา", icon: "🖊️", roles: ['Admin', 'Scheduler'] },
+  { label: "จัดการวิชาจากศูนย์บริการ", icon: "🖋️", roles: ['Admin', 'Scheduler'] },
+];
+
+const LayoutMenu: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isOpen, setIsOpen] = useState(true);
+  const role = localStorage.getItem("role");
+  const first_name = localStorage.getItem("first_name");
+  const last_name = localStorage.getItem("last_name");
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.clear()
+    setTimeout(() => {
+      navigate("/login")
+    }, 1000);
+  };
+
+  const toggleMenu = () => setIsOpen(!isOpen);
+
+  return (
+    <div className="flex h-screen">
+      {/* Sidebar */}
+      <div className={`bg-orange-500 text-white transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'w-64' : 'w-16'}`}>
+        <div className="flex items-center justify-between h-16 px-4 border-b border-orange-200">
+          {isOpen && <div className="font-bold text-lg">SUT</div>}
+          <button
+            onClick={toggleMenu}
+            className={`text-white focus:outline-none text-3xl ${!isOpen ? 'ml-auto' : ''}`}
+          >
+            {isOpen ? <AiOutlineClose /> : <AiOutlineMenu />}
+          </button>
+        </div>
+
+        <nav className="flex flex-col gap-1 p-2 mt-4">
+          {menuItems
+            .filter(item => role && item.roles.includes(role))
+            .map((item, index) => (
+              <a
+                key={index}
+                href="#"
+                className="flex items-center gap-3 hover:bg-orange-600 p-2 rounded"
+              >
+                {item.icon}
+                {isOpen && <span>{item.label}</span>}
+              </a>
+            ))}
+        </nav>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col bg-gray-100">
+        <header className="flex justify-end items-center gap-6 p-3 bg-white shadow">
+          <div className="font-bold text-gray-700">
+            {first_name} {last_name}
+          </div>
+          <button
+            onClick={handleLogout}
+            className="group flex items-center overflow-hidden bg-red-500 text-white rounded-full hover:bg-red-600 active:bg-red-700 transition-all duration-300 px-3 py-2 w-12 hover:w-36"
+          >
+            <AiOutlineLogout size={20} className="min-w-[20px]" />
+            <span
+              className="ml-2 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            >
+              ออกจากระบบ
+            </span>
+          </button>
+        </header>
+        <main className="flex-1 overflow-y-auto p-6">
+          {children}
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default LayoutMenu;

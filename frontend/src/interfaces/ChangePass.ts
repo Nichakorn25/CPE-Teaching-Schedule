@@ -8,15 +8,10 @@ export interface ChangePassInterface {
 
     FirstName?: string;
     LastName?: string;
-    StatusName: string;
+    StatusName?: string;
 }
 
 export interface StatusPassInterface {
     ID?: number;
     StatusName?: string;
-}
-
-export interface NewPassInterface {
-    UsernameID?: string;
-    NewPassword?: string;
 }

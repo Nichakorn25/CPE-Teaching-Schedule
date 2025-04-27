@@ -6,9 +6,10 @@ import AdminPage from "./pages/admin/AdminPage";
 import InstructorPage from "./pages/instructor/InstructorPage";
 import Forgot from "./pages/forget/Forgotten";
 
+import MenuBar from "./components/menu/Menu";
 import Footer from "./components/footer/Footer";
 
-import PrivateRoute from "./PrivateRoute";  
+import PrivateRoute from "./PrivateRoute";
 
 const App: React.FC = () => {
   return (
@@ -17,8 +18,10 @@ const App: React.FC = () => {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<Forgot />} />
-        <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
-        <Route path="/instructor" element={<PrivateRoute><InstructorPage /></PrivateRoute>} />
+        <Route element={<MenuBar> </MenuBar>}>
+          <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
+          <Route path="/instructor" element={<PrivateRoute><InstructorPage /></PrivateRoute>} />
+        </Route>
       </Routes>
       <Footer />
     </Router>
