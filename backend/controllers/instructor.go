@@ -69,7 +69,6 @@ func (ctl *InstructorController) UpdateInstructor(c *gin.Context) {
 	instructor.LastName = input.LastName
 	instructor.Email = input.Email
 	instructor.Phone = input.Phone
-	instructor.Degree = input.Degree
 	instructor.UserID = input.UserID
 	instructor.PositionID = input.PositionID
 

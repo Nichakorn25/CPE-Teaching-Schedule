@@ -1,24 +1,36 @@
 package entity
 
 import (
+	"time"
+
 	"gorm.io/gorm"
 )
 
-type Instructor struct{
+type Instructor struct {
 	gorm.Model
-	FirstName string
-	LastName string
-	Email string
-	Phone string
-	Degree string
+	Image      string
+	FirstName  string
+	LastName   string
+	Email      string
+	Phone      string
+	AccessDate time.Time
 
-	UserID 	uint 	
-	User  	User 			`gorm:"foreignKey:UserID"`
+	TitleID uint
+	Title   Title
 
-	PositionID 	uint 	
-	Position  	Position 		`gorm:"foreignKey:PositionID"`
+	UserID uint
+	User   User `gorm:"foreignKey:UserID"`
 
-	Selected []Selected `gorm:"foreignKey:InstructorID"`
-	Schedule []Schedule `gorm:"foreignKey:InstructorID"`
+	PositionID uint
+	Position   Position `gorm:"foreignKey:PositionID"`
+
+	DepartmentID uint
+	Department   Department `gorm:"foreignKey:DepartmentID"`
+
+	MajorID uint
+	Major   Major `gorm:"foreignKey:MajorID"`
+
+	Selected  []Selected  `gorm:"foreignKey:InstructorID"`
+	Schedule  []Schedule  `gorm:"foreignKey:InstructorID"`
 	Condition []Condition `gorm:"foreignKey:InstructorID"`
 }

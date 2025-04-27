@@ -4,9 +4,13 @@ import (
 	"gorm.io/gorm"
 )
 
-type Major struct{
+type Major struct {
 	gorm.Model
-	Name       string
-	Curriculum []Curriculum `gorm:"foreignKey:MajorID"`
-	Subject    []Subject    `gorm:"foreignKey:MajorID"`
+	Name         string
+	DepartmentID uint
+	Department   Department `gorm:"foreignKey:DepartmentID"`
+
+	Curriculum  []Curriculum `gorm:"foreignKey:MajorID"`
+	Subject     []Subject    `gorm:"foreignKey:MajorID"`
+	Instructors []Instructor `gorm:"foreignKey:MajorID"`
 }

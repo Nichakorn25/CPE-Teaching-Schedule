@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
 	_ "github.com/lib/pq"
@@ -65,6 +66,9 @@ func SetupDatabase() {
 		&entity.User{},
 		&entity.Period{},
 		&entity.Position{},
+		&entity.Department{},
+		&entity.Major{},
+		&entity.Title{},
 		&entity.Admin{},
 		&entity.Instructor{},
 		&entity.Term{},
@@ -76,7 +80,6 @@ func SetupDatabase() {
 		&entity.Grade{},
 		&entity.Condition{},
 		&entity.Lab{},
-		&entity.Major{},
 		&entity.Curriculum{},
 		&entity.Schedule{},
 		&entity.Selected{},
@@ -86,15 +89,71 @@ func SetupDatabase() {
 		&entity.Subject{},
 		&entity.SubjectType{},
 		&entity.TeachingAssistant{},
+		&entity.StatusChangePassword{},
+		&entity.ChangePassword{},
 	)
 	if err != nil {
 		log.Fatalf("AutoMigrate failed: %v", err)
 	}
 
 	seedRoles()
+	seedTitles()
+	seedDepartments()
+	seedMajors()
 	seedStatusChangePassword()
 	seedPositions()
 	seedUsersData()
+}
+
+func seedTitles() {
+	titles := []string{
+		"ศาสตราจารย์ ดร.",
+		"รองศาสตราจารย์ ดร.",
+		"ผู้ช่วยศาสตราจารย์ ดร.",
+		"อาจารย์ ดร.",
+		"ศาสตราจารย์",
+		"รองศาสตราจารย์",
+		"ผู้ช่วยศาสตราจารย์",
+		"อาจารย์",
+	}
+
+	for _, title := range titles {
+		db.FirstOrCreate(&entity.Title{}, entity.Title{Name: title})
+	}
+}
+
+func seedDepartments() {
+	departments := []string{
+		"สำนักวิชาวิศวกรรม",
+		"สำนักวิชาแพทยศาสตร์",
+		"สำนักวิชาวิทยาศาสตร์",
+	}
+
+	for _, dept := range departments {
+		db.FirstOrCreate(&entity.Department{}, entity.Department{Name: dept})
+	}
+}
+
+func seedMajors() {
+	var M1 entity.Department
+	db.First(&M1, "name = ?", "สำนักวิชาวิศวกรรม")
+
+	var M2 entity.Department
+	db.First(&M2, "name = ?", "สำนักวิชาแพทยศาสตร์")
+
+	var M3 entity.Department
+	db.First(&M3, "name = ?", "สำนักวิชาวิทยาศาสตร์")
+
+	majors := []entity.Major{
+		{Name: "สาขาวิศวกรรมคอมพิวเตอร์", DepartmentID: M1.ID},
+		{Name: "สาขาวิศวกรรมเครื่องกล", DepartmentID: M1.ID},
+		{Name: "สาขาทันตแพทย์", DepartmentID: M2.ID},
+		{Name: "สาขาวิศวกรรมไฟฟ้า", DepartmentID: M1.ID},
+	}
+
+	for _, major := range majors {
+		db.FirstOrCreate(&entity.Major{}, entity.Major{Name: major.Name, DepartmentID: major.DepartmentID})
+	}
 }
 
 func seedStatusChangePassword() {
@@ -146,6 +205,18 @@ func seedUsersData() {
 	db.First(&Director, "position = ?", "ผู้บริหาร")
 	db.First(&Instructor, "position = ?", "อาจารย์ผู้สอน")
 
+	var department entity.Department
+	var major entity.Major
+
+	db.First(&department, "name = ?", "สำนักวิชาวิศวกรรม")
+	db.First(&major, "name = ?", "สาขาวิศวกรรมคอมพิวเตอร์")
+
+	var titleAssistantDr entity.Title
+	var titleLecturerDr entity.Title
+
+	db.First(&titleAssistantDr, "name = ?", "ผู้ช่วยศาสตราจารย์ ดร.")
+	db.First(&titleLecturerDr, "name = ?", "อาจารย์ ดร.")
+
 	hashedPassword, _ := HashPassword("1234")
 	// --- Users ---
 	userAdmin := entity.User{UsernameID: "Admin1234", Password: hashedPassword, RoleID: roleA.ID} //Admin
@@ -168,34 +239,52 @@ func seedUsersData() {
 	}
 	db.FirstOrCreate(&admin0, entity.Admin{Email: "SutAdmin@sut.ac.th"})
 
-	// --- Instructor ---
+	// --- Instructor 1 (Scheduler) ---
 	Scheduler1 := entity.Instructor{
-		FirstName:  "ผู้ช่วยศาสตราจารย์ ดร. ศรัญญา", //ที่จริงควรเพิ่มฟิลสำหรับคำนำหน้าด้วย
-		LastName:   "กาญจนวัฒนา",
-		Email:      "sarunya.k@sut.ac.th",
-		Phone:      "044224447", //เบอร์โต๊ะ   ควรเพิ่มหมายเลขห้องที่อาคารวิชาการด้วย
-		Degree:     "ลืมว่าหาจากไหน",
-		UserID:     userSchedule.ID,
-		PositionID: Instructor.ID, //เพิ่มวันที่เพิ่มเข้าระบบ
+		FirstName:    "ศรัญญา",
+		LastName:     "กาญจนวัฒนา",
+		Email:        "sarunya.k@sut.ac.th",
+		Phone:        "044224447",
+		UserID:       userSchedule.ID,
+		PositionID:   Instructor.ID,
+		TitleID:      titleAssistantDr.ID,
+		AccessDate:   time.Date(2010, time.June, 1, 0, 0, 0, 0, time.UTC),
+		Image:        "sarunya.jpg",
+		DepartmentID: department.ID,
+		MajorID:      major.ID,
 	}
+
+	// --- Instructor 2 ---
 	instructor1 := entity.Instructor{
-		FirstName:  "ผู้ช่วยศาสตราจารย์ ดร.นันทวุฒิ", //ที่จริงควรเพิ่มฟิลสำหรับคำนำหน้าด้วย
-		LastName:   "คะอังกุ",
-		Email:      "nuntawut@sut.ac.th",
-		Phone:      "044224559", //เบอร์โต๊ะ   ควรเพิ่มหมายเลขห้องที่อาคารวิชาการด้วย
-		Degree:     "ลืมว่าหาจากไหน",
-		UserID:     userA.ID,
-		PositionID: Director.ID,
+		FirstName:    "นันทวุฒิ",
+		LastName:     "คะอังกุ",
+		Email:        "nuntawut@sut.ac.th",
+		Phone:        "044224559",
+		UserID:       userA.ID,
+		PositionID:   Director.ID,
+		TitleID:      titleAssistantDr.ID,
+		AccessDate:   time.Date(2012, time.May, 15, 0, 0, 0, 0, time.UTC),
+		Image:        "nuntawut.jpg",
+		DepartmentID: department.ID,
+		MajorID:      major.ID,
 	}
+
+	// --- Instructor 3 ---
 	instructor2 := entity.Instructor{
-		FirstName:  "อาจารย์ ดร. วิชัย",
-		LastName:   "ศรีสุรักษ์",
-		Email:      "wichai@sut.ac.th",
-		Phone:      "044224646",
-		Degree:     "ลืมว่าหาจากไหน",
-		UserID:     userB.ID,
-		PositionID: Instructor.ID,
+		FirstName:    "วิชัย",
+		LastName:     "ศรีสุรักษ์",
+		Email:        "wichai@sut.ac.th",
+		Phone:        "044224646",
+		UserID:       userB.ID,
+		PositionID:   Instructor.ID,
+		TitleID:      titleLecturerDr.ID,
+		AccessDate:   time.Date(2015, time.September, 10, 0, 0, 0, 0, time.UTC),
+		Image:        "wichai.jpg",
+		DepartmentID: department.ID,
+		MajorID:      major.ID,
 	}
+
+	// --- บันทึกลงฐานข้อมูล ---
 	db.FirstOrCreate(&Scheduler1, entity.Instructor{Email: "sarunya.k@sut.ac.th"})
 	db.FirstOrCreate(&instructor1, entity.Instructor{Email: "nuntawut@sut.ac.th"})
 	db.FirstOrCreate(&instructor2, entity.Instructor{Email: "wichai@sut.ac.th"})
