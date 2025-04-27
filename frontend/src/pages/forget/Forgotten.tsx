@@ -14,27 +14,60 @@ const ForgotPasswordPage: React.FC = () => {
     Password: '',
   });
 
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error';
+    visible: boolean;
+  }>({ message: '', type: 'success', visible: false });
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type, visible: true });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, visible: false }));
+    }, 3000);
+  };
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   }
 
+  const handleInvalid = (e: React.FormEvent<HTMLInputElement>) => {
+    const target = e.target as HTMLInputElement;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+    if (target.name === "UsernameID" && target.value === "") {
+      target.setCustomValidity("กรุณากรอกรหัสพนักงาน");
+    } else if (target.name === "Email") {
+      if (target.value === "") {
+        target.setCustomValidity("กรุณากรอกอีเมล");
+      } else if (!emailRegex.test(target.value)) {
+        target.setCustomValidity("กรุณากรอกอีเมลในรูปแบบที่ถูกต้อง เช่น example@sut.ac.th");
+      } else {
+        target.setCustomValidity("");
+      }
+    } else if (target.name === "Password" && target.value === "") {
+      target.setCustomValidity("กรุณากรอกรหัสผ่านใหม่");
+    } else {
+      target.setCustomValidity("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     try {
       const response = await ChangePass(formData);
       if (response.status >= 200 && response.status < 300) {
-        alert("ส่งคำร้องขอเปลี่ยนรหัสผ่านเรียบร้อยแล้ว");
-        navigate("/login");
+        showToast("✅ ส่งคำร้องขอเปลี่ยนรหัสผ่านเรียบร้อยแล้ว", 'success');
+        setTimeout(() => navigate("/login"), 3500);
       } else {
-        alert("ไม่สามารถส่งคำร้องได้: " + (response.data?.error || response.data?.message || "เกิดข้อผิดพลาด"));
+        showToast("❗ ไม่สามารถส่งคำร้องได้: " + (response.data?.error || response.data?.message || "เกิดข้อผิดพลาด"), 'error');
       }
     } catch (err: any) {
       if (err.response && err.response.data && err.response.data.error) {
-        alert("เกิดข้อผิดพลาด: " + err.response.data.error);
+        showToast(`⚠️ เกิดข้อผิดพลาด: ${err.response.data.error}`, 'error');
       } else {
-        alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
+        showToast("⚡ เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์", 'error');
       }
     }
   };
@@ -70,7 +103,6 @@ const ForgotPasswordPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Form */}
           <div className="p-8 space-y-4 mt-4">
             <div>
               <label className="block text-gray-800 text-sm font-medium mb-1">
@@ -82,6 +114,7 @@ const ForgotPasswordPage: React.FC = () => {
                 placeholder="username"
                 value={formData.UsernameID}
                 onChange={handleChange}
+                onInvalid={handleInvalid}
                 className="w-full h-9 px-3 text-sm rounded-md border border-gray-300 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-orange-400 transition"
                 required
               />
@@ -96,6 +129,7 @@ const ForgotPasswordPage: React.FC = () => {
                 placeholder="example@sut.ac.th"
                 value={formData.Email}
                 onChange={handleChange}
+                onInvalid={handleInvalid}
                 className="w-full h-9 px-3 text-sm rounded-md border border-gray-300 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-orange-400 transition"
                 required
               />
@@ -110,6 +144,7 @@ const ForgotPasswordPage: React.FC = () => {
                 placeholder="new password"
                 value={formData.Password}
                 onChange={handleChange}
+                onInvalid={handleInvalid}
                 className="w-full h-9 px-3 text-sm rounded-md border border-gray-300 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-orange-400 transition"
                 required
               />
@@ -131,6 +166,16 @@ const ForgotPasswordPage: React.FC = () => {
           </div>
         </form>
       </div>
+
+      {toast.visible && (
+        <div
+          className={`fixed top-5 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg text-black text-sm transition-all
+        ${toast.type === 'success' ? 'bg-white' : 'bg-white'} 
+        shadow-xl border border-gray-300`}
+        >
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 };

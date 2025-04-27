@@ -1,5 +1,4 @@
-import React, { useEffect } from "react";
-import { Form, Input, Button, message } from "antd";
+import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { SignIn } from "../../services/https";
 import { SignInInterface } from "../../interfaces/SignIn";
@@ -8,7 +7,9 @@ import TopBar from "../../../src/components/topbar/TopBar";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const [messageApi, contextHolder] = message.useMessage();
+  const [message, setMessage] = useState<string | null>(null);
+  const [messageType, setMessageType] = useState<'success' | 'error' | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     document.body.classList.add("bg-gray-100");
@@ -17,39 +18,71 @@ const LoginPage: React.FC = () => {
     };
   }, []);
 
-  const onFinish = async (values: SignInInterface) => {
-    const res = await SignIn(values);
+  const handleInvalid = (e: React.FormEvent<HTMLInputElement>) => {
+    const target = e.target as HTMLInputElement;
 
-    if (res.status === 200) {
-      messageApi.success("เข้าสู่ระบบสำเร็จ");
-
-      const { token, token_type, role, user_id, first_name, last_name } = res.data;
-
-      localStorage.setItem("isLogin", "true");
-      localStorage.setItem("token", token);
-      localStorage.setItem("token_type", token_type);
-      localStorage.setItem("role", role);
-      localStorage.setItem("user_id", user_id);
-      localStorage.setItem("first_name", first_name);
-      localStorage.setItem("last_name", last_name);
-
-      setTimeout(() => {
-        if (role === "Admin") {
-          navigate("/admin");
-        } else if (role === "Scheduler" || role === "Instructor") {
-          navigate("/instructor");
-        } else {
-          messageApi.error("ไม่สามารถระบุสิทธิ์ผู้ใช้งานได้");
-        }
-      }, 1000);
+    if (target.name === "UsernameID" && target.value === "") {
+      target.setCustomValidity("กรุณากรอกรหัสพนักงาน");
+    } else if (target.name === "Password" && target.value === "") {
+      target.setCustomValidity("กรุณากรอกรหัสผ่าน");
     } else {
-      
-      if (res.data?.error && res.data.error.toLowerCase() === "incorrect password") {
-        messageApi.error("รหัสผ่านไม่ถูกต้อง");
-        return;
-      }
+      target.setCustomValidity("");
+    }
+  };
 
-      messageApi.error(res.data?.error || "เข้าสู่ระบบล้มเหลว");
+  const onFinish = async (values: SignInInterface) => {
+    setLoading(true);
+    setMessage(null);
+    setMessageType(null);
+
+    try {
+      const res = await SignIn(values);
+
+      if (res.status === 200) {
+        setMessage("เข้าสู่ระบบสำเร็จ");
+        setMessageType("success");
+        const { token, token_type, role, user_id, first_name, last_name } = res.data;
+
+        localStorage.setItem("isLogin", "true");
+        localStorage.setItem("token", token);
+        localStorage.setItem("token_type", token_type);
+        localStorage.setItem("role", role);
+        localStorage.setItem("user_id", user_id);
+        localStorage.setItem("first_name", first_name);
+        localStorage.setItem("last_name", last_name);
+        
+        setTimeout(() => {
+          if (role === "Admin") {
+            navigate("/home-admin");
+          } else if (role === "Scheduler" || role === "Instructor") {
+            navigate("/home-instructor");
+          } else {
+            setMessage("ไม่สามารถระบุสิทธิ์ผู้ใช้งานได้");
+            setMessageType("error");
+          }
+        }, 1000);
+      } else {
+        if (res.data?.error) {
+          if (res.data.error.toLowerCase() === "incorrect password") {
+            setMessage("รหัสผ่านไม่ถูกต้อง");
+            setMessageType("error");
+          } else if (res.data.error.toLowerCase() === "invalid user id") {
+            setMessage("ไม่พบรหัสพนักงาน");
+            setMessageType("error");
+          } else {
+            setMessage(res.data.error || "เข้าสู่ระบบล้มเหลว");
+            setMessageType("error");
+          }
+        } else {
+          setMessage("เกิดข้อผิดพลาดบางประการ");
+          setMessageType("error");
+        }
+      }
+    } catch (err) {
+      setMessage("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+      setMessageType("error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -60,7 +93,6 @@ const LoginPage: React.FC = () => {
         className="min-h-screen flex items-center justify-center px-4 bg-cover bg-center"
         style={{ backgroundImage: 'linear-gradient(rgba(60,60,60,0.4), rgba(60,60,60,0.3)),url(/sut.jpg)' }}
       >
-        {contextHolder}
         <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg overflow-hidden">
           {/* Header */}
           <div className="bg-[#09261d] text-white text-center py-4">
@@ -73,32 +105,65 @@ const LoginPage: React.FC = () => {
           <div className="flex flex-col md:flex-row">
             {/* ซ้ายมือเรา */}
             <div className="w-full md:w-1/2 p-8">
-              <Form name="login-form" onFinish={onFinish} layout="vertical">
-                <Form.Item
-                  name="UsernameID"
-                  label="รหัสพนักงาน"
-                  rules={[{ required: true, message: "กรุณากรอกรหัสพนักงาน" }]}
-                >
-                  <Input placeholder="username" className="h-10" />
-                </Form.Item>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target as HTMLFormElement);
+                  const values: SignInInterface = {
+                    UsernameID: formData.get("UsernameID") as string,
+                    Password: formData.get("Password") as string,
+                  };
+                  onFinish(values);
+                }}
+                className="space-y-6"
+              >
+                <div>
+                  <label htmlFor="UsernameID" className="block text-gray-700 font-medium">รหัสพนักงาน</label>
+                  <input
+                    type="text"
+                    id="UsernameID"
+                    name="UsernameID"
+                    onInvalid={handleInvalid}
+                    placeholder="username"
+                    required
+                    className="w-full p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-orange-400"
+                  />
+                </div>
 
-                <Form.Item
-                  name="Password"
-                  label="รหัสผ่าน"
-                  rules={[{ required: true, message: "กรุณากรอกรหัสผ่าน" }]}
-                >
-                  <Input.Password placeholder="password" className="h-10" />
-                </Form.Item>
+                <div>
+                  <label htmlFor="Password" className="block text-gray-700 font-medium">รหัสผ่าน</label>
+                  <input
+                    type="password"
+                    id="Password"
+                    name="Password"
+                    onInvalid={handleInvalid}
+                    placeholder="password"
+                    required
+                    className="w-full p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-orange-400"
+                  />
+                </div>
 
-                <Form.Item>
+                <div>
                   <button
                     type="submit"
-                    className="w-full h-12 bg-[#ff6314] hover:bg-orange-600 text-white text-sm font-medium rounded-md transition transform hover:scale-105"
+                    disabled={loading}
+                    className="w-full h-12 bg-[#ff6314] text-white font-medium rounded-md transition transform hover:scale-105"
                   >
-                    เข้าสู่ระบบ
+                    {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
                   </button>
-                </Form.Item>
-              </Form>
+                </div>
+              </form>
+
+              {message && (
+                <div
+                  className={`mt-4 p-4 rounded-md text-center text-sm font-semibold ${messageType === "success"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                    }`}
+                >
+                  {message}
+                </div>
+              )}
             </div>
 
             {/* ขวามือเรา */}
@@ -122,7 +187,7 @@ const LoginPage: React.FC = () => {
                 to="/forgot-password"
                 className="text-blue-600 text-sm font-semibold hover:underline"
               >
-                Forgotten your password?
+                ส่งคำร้องขอเปลี่ยนรหัสผ่าน?
               </Link>
             </div>
           </div>

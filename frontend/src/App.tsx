@@ -2,8 +2,8 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./pages/prelogin/PreLogin";
 import LoginPage from "./pages/login/Login";
-import AdminPage from "./pages/admin/AdminPage";
-import InstructorPage from "./pages/instructor/InstructorPage";
+import HomeAdminPage from "./pages/home/HomeAdmin";
+import HomeInstructorPage from "./pages/home/HomeInstructor";
 import Forgot from "./pages/forget/Forgotten";
 
 import MenuBar from "./components/menu/Menu";
@@ -19,8 +19,8 @@ const App: React.FC = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<Forgot />} />
         <Route element={<MenuBar> </MenuBar>}>
-          <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
-          <Route path="/instructor" element={<PrivateRoute><InstructorPage /></PrivateRoute>} />
+          <Route path="/home-admin" element={<PrivateRoute><HomeAdminPage /></PrivateRoute>} />
+          <Route path="/home-instructor" element={<PrivateRoute><HomeInstructorPage /></PrivateRoute>} />
         </Route>
       </Routes>
       <Footer />

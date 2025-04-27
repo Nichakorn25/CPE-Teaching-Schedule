@@ -56,6 +56,12 @@ func SignInUser(c *gin.Context) {
 			firstName = instructor.FirstName
 			lastName = instructor.LastName
 		}
+	} else if user.Role.Role == "Scheduler" {
+		var instructor entity.Instructor
+		if err := config.DB().Where("user_id = ?", user.ID).First(&instructor).Error; err == nil {
+			firstName = instructor.FirstName
+			lastName = instructor.LastName
+		}
 	}
 
 	jwtWrapper := services.JwtWrapper{
