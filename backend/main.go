@@ -29,6 +29,12 @@ func main() {
 		router.POST("/change-password", controllers.ChangePasswordUser)
 	}
 
+		//ทดลองทดสอบ ใช้ได้แล้ว
+		r.GET("/get-all-instructors", controllers.GetAllInstructors)
+		r.POST("/instructors", controllers.CreateInstructor)
+		r.PUT("/instructors/:id", controllers.UpdateInstructor)
+		r.DELETE("/instructors/:id", controllers.DeleteInstructor)
+
 	r.GET("/", func(c *gin.Context) {
 
 		c.String(http.StatusOK, "API RUNNING... PORT: %s", PORT)

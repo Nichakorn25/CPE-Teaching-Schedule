@@ -30,6 +30,9 @@ type Instructor struct {
 	MajorID uint
 	Major   Major `gorm:"foreignKey:MajorID"`
 
+	WorkStatusID uint
+	WorkStatus   WorkStatus `gorm:"foreignKey:WorkStatusID"`
+
 	Selected  []Selected  `gorm:"foreignKey:InstructorID"`
 	Schedule  []Schedule  `gorm:"foreignKey:InstructorID"`
 	Condition []Condition `gorm:"foreignKey:InstructorID"`

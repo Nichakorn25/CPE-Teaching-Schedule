@@ -68,6 +68,7 @@ func SetupDatabase() {
 		&entity.Position{},
 		&entity.Department{},
 		&entity.Major{},
+		&entity.WorkStatus{},
 		&entity.Title{},
 		&entity.Admin{},
 		&entity.Instructor{},
@@ -97,12 +98,26 @@ func SetupDatabase() {
 	}
 
 	seedRoles()
+	seedWorkStatuses()
 	seedTitles()
 	seedDepartments()
 	seedMajors()
 	seedStatusChangePassword()
 	seedPositions()
 	seedUsersData()
+}
+
+func seedWorkStatuses() {
+	statuses := []string{
+		"กำลังทำงาน",
+		"กำลังจะเกษียณ",
+		"เกษียณแล้ว",
+		"ออกจากสถานะการทำงาน",
+	}
+
+	for _, status := range statuses {
+		db.FirstOrCreate(&entity.WorkStatus{}, entity.WorkStatus{Name: status})
+	}
 }
 
 func seedTitles() {
@@ -175,8 +190,9 @@ func seedPositions() {
 		Position string
 		Priority uint
 	}{
-		{"ผู้บริหาร", 1},
-		{"อาจารย์ผู้สอน", 2},
+		{"หัวหน้าสาขาวิศวกรรมคอมพิวเตอร์", 1},
+		{"อาจารย์ประจำสาขาวิชา", 2},
+		{"หัวหน้าสถานนวัตกรรมวิศวศึกษา", 1},
 	}
 
 	for _, pos := range positions {
@@ -188,6 +204,9 @@ func seedPositions() {
 }
 
 func seedUsersData() {
+
+	var workingStatus entity.WorkStatus
+	db.First(&workingStatus, "name = ?", "กำลังทำงาน")
 
 	// --- Roles ---
 	var roleA entity.Role
@@ -202,8 +221,8 @@ func seedUsersData() {
 	var Director entity.Position
 	var Instructor entity.Position
 
-	db.First(&Director, "position = ?", "ผู้บริหาร")
-	db.First(&Instructor, "position = ?", "อาจารย์ผู้สอน")
+	db.First(&Director, "position = ?", "หัวหน้าสาขาวิศวกรรมคอมพิวเตอร์")
+	db.First(&Instructor, "position = ?", "อาจารย์ประจำสาขาวิชา")
 
 	var department entity.Department
 	var major entity.Major
@@ -252,6 +271,7 @@ func seedUsersData() {
 		Image:        "sarunya.jpg",
 		DepartmentID: department.ID,
 		MajorID:      major.ID,
+		WorkStatusID: workingStatus.ID,
 	}
 
 	// --- Instructor 2 ---
@@ -267,6 +287,7 @@ func seedUsersData() {
 		Image:        "nuntawut.jpg",
 		DepartmentID: department.ID,
 		MajorID:      major.ID,
+		WorkStatusID: workingStatus.ID,
 	}
 
 	// --- Instructor 3 ---
@@ -282,9 +303,9 @@ func seedUsersData() {
 		Image:        "wichai.jpg",
 		DepartmentID: department.ID,
 		MajorID:      major.ID,
+		WorkStatusID: workingStatus.ID,
 	}
 
-	// --- บันทึกลงฐานข้อมูล ---
 	db.FirstOrCreate(&Scheduler1, entity.Instructor{Email: "sarunya.k@sut.ac.th"})
 	db.FirstOrCreate(&instructor1, entity.Instructor{Email: "nuntawut@sut.ac.th"})
 	db.FirstOrCreate(&instructor2, entity.Instructor{Email: "wichai@sut.ac.th"})
