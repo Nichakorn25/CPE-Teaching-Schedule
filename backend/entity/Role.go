@@ -4,8 +4,9 @@ import (
 	"gorm.io/gorm"
 )
 
-type Role struct{
+type Role struct {
 	gorm.Model
-	Role  string
-	User []User `gorm:"foreignKey:RoleID"`
+	Role string
+
+	Users []User `gorm:"foreignKey:RoleID"`
 }

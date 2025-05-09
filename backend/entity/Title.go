@@ -6,6 +6,8 @@ import (
 
 type Title struct {
 	gorm.Model
-	Name        string
-	Instructors []Instructor `gorm:"foreignKey:TitleID"`
+	Title string
+
+	TeachingAssistants []TeachingAssistant `gorm:"foreignKey:TitleID"`
+	Users              []User              `gorm:"foreignKey:TitleID"`
 }

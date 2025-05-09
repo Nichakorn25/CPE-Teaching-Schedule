@@ -1,23 +1,21 @@
 package entity
 
 import (
+	"time"
+
 	"gorm.io/gorm"
 )
 
-type Schedule struct{
+type Schedule struct {
 	gorm.Model
-	YearTermID uint
-	YearTerm   YearTerm `gorm:"foreignKey:YearTermID"`
+	SectionNumber uint
+	DayOfWeek     string
+	StartTime     time.Time
+	EndTime       time.Time
 
-	SelectedID 	uint 	
-	Selected  	Selected 			`gorm:"foreignKey:SelectedID"`
+	OfferedCoursesID uint
+	OfferedCourses   OfferedCourses `gorm:"foreignKey:OfferedCoursesID"`
 
-	InstructorID 	uint 	
-	Instructor  	Instructor 			`gorm:"foreignKey:InstructorID"`
-
-	DayID 	uint 	
-	Day  	Day 			`gorm:"foreignKey:DayID"`
-
-	PeriodID 	uint 	
-	Period  	Period 			`gorm:"foreignKey:PeriodID"`
+	TimeFixedCourses          []TimeFixedCourses          `gorm:"foreignKey:ScheduleID"`
+	ScheduleTeachingAssistant []ScheduleTeachingAssistant `gorm:"foreignKey:ScheduleID"`
 }

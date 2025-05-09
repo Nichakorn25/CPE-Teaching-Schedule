@@ -73,6 +73,7 @@ async function NewPass(id: number) {
 
 export {
     SignIn,
+    //ข้างล่าง ยังไม่แก้
     GetAllChangePassword,
     GetChangePasswordByUsernameID,
     ChangePass,

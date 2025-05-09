@@ -4,14 +4,14 @@ import (
 	"gorm.io/gorm"
 )
 
-type Curriculum struct{
+type Curriculum struct {
 	gorm.Model
-	Name  string
-	Year  uint
-	Started  uint
+	CurriculumName string
+	Year           uint
+	Started        uint
 
-	MajorID 	uint 	
-	Major  	Major 			`gorm:"foreignKey:MajorID"`
+	MajorID uint
+	Major   Major `gorm:"foreignKey:MajorID"`
 
-	GradeCurriculum []GradeCurriculum `gorm:"foreignKey:CurriculumID"`
+	AllCourses []AllCourses `gorm:"foreignKey:CurriculumID"`
 }

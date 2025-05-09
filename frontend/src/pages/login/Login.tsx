@@ -21,7 +21,7 @@ const LoginPage: React.FC = () => {
   const handleInvalid = (e: React.FormEvent<HTMLInputElement>) => {
     const target = e.target as HTMLInputElement;
 
-    if (target.name === "UsernameID" && target.value === "") {
+    if (target.name === "Username" && target.value === "") {
       target.setCustomValidity("กรุณากรอกรหัสพนักงาน");
     } else if (target.name === "Password" && target.value === "") {
       target.setCustomValidity("กรุณากรอกรหัสผ่าน");
@@ -41,7 +41,7 @@ const LoginPage: React.FC = () => {
       if (res.status === 200) {
         setMessage("เข้าสู่ระบบสำเร็จ");
         setMessageType("success");
-        const { token, token_type, role, user_id, first_name, last_name } = res.data;
+        const { token, token_type, role, user_id, first_name, last_name, image, first_password, major_name, position, title, username } = res.data;
 
         localStorage.setItem("isLogin", "true");
         localStorage.setItem("token", token);
@@ -50,6 +50,12 @@ const LoginPage: React.FC = () => {
         localStorage.setItem("user_id", user_id);
         localStorage.setItem("first_name", first_name);
         localStorage.setItem("last_name", last_name);
+        localStorage.setItem("username", username);
+        localStorage.setItem("title", title);
+        localStorage.setItem("position", position);
+        localStorage.setItem("major_name", major_name);
+        localStorage.setItem("first_password", first_password);
+        localStorage.setItem("image", image);
         
         setTimeout(() => {
           if (role === "Admin") {
@@ -110,7 +116,7 @@ const LoginPage: React.FC = () => {
                   e.preventDefault();
                   const formData = new FormData(e.target as HTMLFormElement);
                   const values: SignInInterface = {
-                    UsernameID: formData.get("UsernameID") as string,
+                    Username: formData.get("Username") as string, 
                     Password: formData.get("Password") as string,
                   };
                   onFinish(values);
@@ -118,11 +124,11 @@ const LoginPage: React.FC = () => {
                 className="space-y-6"
               >
                 <div>
-                  <label htmlFor="UsernameID" className="block text-gray-700 font-medium">รหัสพนักงาน</label>
+                  <label htmlFor="Username" className="block text-gray-700 font-medium">รหัสพนักงาน</label>
                   <input
                     type="text"
-                    id="UsernameID"
-                    name="UsernameID"
+                    id="Username"
+                    name="Username"
                     onInvalid={handleInvalid}
                     placeholder="username"
                     required

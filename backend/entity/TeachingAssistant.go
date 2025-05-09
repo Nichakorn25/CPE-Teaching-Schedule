@@ -4,12 +4,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type TeachingAssistant struct{
+type TeachingAssistant struct {
 	gorm.Model
-	Name  string
-	Nickname  string
-	TotalHours  uint
+	Firstname   string
+	Lastname    string
+	Nickname    string
+	PhoneNumber string
 
-	StatusID 	uint 		
-	Status  	Status 	`gorm:"foreignKey:StatusID"`
+	TitleID uint
+	Title   Title `gorm:"foreignKey:TitleID"`
+
+	ScheduleTeachingAssistant []ScheduleTeachingAssistant `gorm:"foreignKey:TeachingAssistantID"`
 }

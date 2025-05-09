@@ -6,11 +6,11 @@ import (
 
 type Major struct {
 	gorm.Model
-	Name         string
+	MajorName string
+
 	DepartmentID uint
 	Department   Department `gorm:"foreignKey:DepartmentID"`
 
-	Curriculum  []Curriculum `gorm:"foreignKey:MajorID"`
-	Subject     []Subject    `gorm:"foreignKey:MajorID"`
-	Instructors []Instructor `gorm:"foreignKey:MajorID"`
+	Users      []User       `gorm:"foreignKey:MajorID"`
+	Curriculum []Curriculum `gorm:"foreignKey:MajorID"`
 }

@@ -6,8 +6,7 @@ import (
 
 type Department struct {
 	gorm.Model
-	Name string
+	DepartmentName string
 
-	Instructors []Instructor `gorm:"foreignKey:DepartmentID"`
-	Majors      []Major      `gorm:"foreignKey:DepartmentID"`
+	Majors []Major `gorm:"foreignKey:DepartmentID"`
 }

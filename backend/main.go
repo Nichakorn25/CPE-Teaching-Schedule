@@ -19,21 +19,13 @@ func main() {
 	r.Use(CORSMiddleware())
 
 	r.POST("/signin", controllers.SignInUser)
-	r.POST("/create-password", controllers.CreateChangePassword)
+	r.PATCH("/change-password", controllers.ChangePassword)
 
 	router := r.Group("/")
 	{
 		router.Use(middleware.Authorizes())
-		router.GET("/get-all-change-password", controllers.GetAllChangePassword)
-		router.GET("/getbyid-change-password", controllers.GetChangePasswordByUsernameID)
-		router.POST("/change-password", controllers.ChangePasswordUser)
-	}
 
-		//ทดลองทดสอบ ใช้ได้แล้ว
-		r.GET("/get-all-instructors", controllers.GetAllInstructors)
-		r.POST("/instructors", controllers.CreateInstructor)
-		r.PUT("/instructors/:id", controllers.UpdateInstructor)
-		r.DELETE("/instructors/:id", controllers.DeleteInstructor)
+	}
 
 	r.GET("/", func(c *gin.Context) {
 

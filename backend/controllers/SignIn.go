@@ -8,16 +8,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/config"
-
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
-
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/services"
 )
 
 type (
 	Authen struct {
-		UsernameID string
-		Password   string
+		Username string
+		Password string
 	}
 )
 
@@ -30,38 +28,16 @@ func SignInUser(c *gin.Context) {
 		return
 	}
 
-	if err := config.DB().Preload("Role").
-		Where("username_id = ?", payload.UsernameID).
+	if err := config.DB().Preload("Title").Preload("Position").Preload("Major").Preload("Role").
+		Where("username = ?", payload.Username).
 		First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ไม่พบ Usermane นี้"})
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(payload.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect password"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "รหัสผ่านไม่ถูกต้อง"})
 		return
-	}
-
-	var firstName, lastName string
-
-	if user.Role.Role == "Admin" {
-		var admin entity.Admin
-		if err := config.DB().Where("user_id = ?", user.ID).First(&admin).Error; err == nil {
-			firstName = admin.FirstName
-			lastName = admin.LastName
-		}
-	} else if user.Role.Role == "Instructor" {
-		var instructor entity.Instructor
-		if err := config.DB().Where("user_id = ?", user.ID).First(&instructor).Error; err == nil {
-			firstName = instructor.FirstName
-			lastName = instructor.LastName
-		}
-	} else if user.Role.Role == "Scheduler" {
-		var instructor entity.Instructor
-		if err := config.DB().Where("user_id = ?", user.ID).First(&instructor).Error; err == nil {
-			firstName = instructor.FirstName
-			lastName = instructor.LastName
-		}
 	}
 
 	jwtWrapper := services.JwtWrapper{
@@ -70,18 +46,61 @@ func SignInUser(c *gin.Context) {
 		ExpirationHours: 24,
 	}
 
-	signedToken, err := jwtWrapper.GenerateToken(user.UsernameID)
+	signedToken, err := jwtWrapper.GenerateToken(user.Username)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error signing token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้าง token ได้"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"token_type": "Bearer",
-		"token":      signedToken,
-		"user_id":    user.UsernameID,
-		"role":       user.Role.Role,
-		"first_name": firstName,
-		"last_name":  lastName,
+		"token_type":     "Bearer",
+		"token":          signedToken,
+		"user_id":        user.ID,
+		"username":       user.Username,
+		"first_name":     user.Firstname,
+		"last_name":      user.Lastname,
+		"role":           user.Role.Role,
+		"title":          user.Title.Title,
+		"position":       user.Position.Position,
+		"major_name":     user.Major.MajorName,
+		"first_password": user.FirstPassword,
+		"image":          user.Image,
 	})
+}
+
+func ChangePassword(c *gin.Context) {
+	type PasswordChangeRequest struct {
+		UserID      uint
+		NewPassword string
+	}
+
+	var req PasswordChangeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "คำร้องขอไม่ถูกต้อง"})
+		return
+	}
+
+	var user entity.User
+	if err := config.DB().First(&user, req.UserID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบผู้ใช้งานนี้"})
+		return
+	}
+
+	hashedPassword, err := config.HashPassword(req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเข้ารหัสของรหัสผ่านได้"})
+		return
+	}
+
+	user.Password = hashedPassword
+	if !user.FirstPassword {
+		user.FirstPassword = true
+	}
+
+	if err := config.DB().Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเปลี่ยนรหัสผ่านได้"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "เปลี่ยนรหัสผ่านสำเร็จ"})
 }

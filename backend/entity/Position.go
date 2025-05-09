@@ -4,10 +4,10 @@ import (
 	"gorm.io/gorm"
 )
 
-type Position struct{
+type Position struct {
 	gorm.Model
-	Position  string
-	Priority  uint
+	Position string
+	Priority *uint
 
-	Instructor []Instructor `gorm:"foreignKey:PositionID"`
+	Users []User `gorm:"foreignKey:PositionID"`
 }

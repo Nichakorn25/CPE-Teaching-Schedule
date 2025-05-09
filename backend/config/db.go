@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
 	_ "github.com/lib/pq"
@@ -62,62 +61,35 @@ func ConnectionDB() {
 
 func SetupDatabase() {
 	err := db.AutoMigrate(
-		&entity.Role{},
-		&entity.User{},
-		&entity.Period{},
+		&entity.Title{},
 		&entity.Position{},
+		&entity.Role{},
 		&entity.Department{},
 		&entity.Major{},
-		&entity.WorkStatus{},
-		&entity.Title{},
-		&entity.Admin{},
-		&entity.Instructor{},
-		&entity.Term{},
-		&entity.Unit{},
-		&entity.Year{},
-		&entity.YearTerm{},
-		&entity.Day{},
-		&entity.GradeCurriculum{},
-		&entity.Grade{},
-		&entity.Condition{},
-		&entity.Lab{},
+		&entity.Laboratory{},
+		&entity.Credit{},
+		&entity.TypeOfCourses{},
+		&entity.AcademicYear{},
 		&entity.Curriculum{},
-		&entity.Schedule{},
-		&entity.Selected{},
-		&entity.SelectedTA{},
-		&entity.ServiceCenter{},
-		&entity.Status{},
-		&entity.Subject{},
-		&entity.SubjectType{},
 		&entity.TeachingAssistant{},
-		&entity.StatusChangePassword{},
-		&entity.ChangePassword{},
+		&entity.User{},
+		&entity.Condition{},
+		&entity.AllCourses{},
+		&entity.UserAllCourses{},
+		&entity.OfferedCourses{},
+		&entity.TimeFixedCourses{},
+		&entity.Schedule{},
+		&entity.ScheduleTeachingAssistant{},
 	)
 	if err != nil {
 		log.Fatalf("AutoMigrate failed: %v", err)
 	}
-
-	seedRoles()
-	seedWorkStatuses()
 	seedTitles()
+	seedPositions()
+	seedRoles()
 	seedDepartments()
 	seedMajors()
-	seedStatusChangePassword()
-	seedPositions()
-	seedUsersData()
-}
-
-func seedWorkStatuses() {
-	statuses := []string{
-		"กำลังทำงาน",
-		"กำลังจะเกษียณ",
-		"เกษียณแล้ว",
-		"ออกจากสถานะการทำงาน",
-	}
-
-	for _, status := range statuses {
-		db.FirstOrCreate(&entity.WorkStatus{}, entity.WorkStatus{Name: status})
-	}
+	SeedDataUser()
 }
 
 func seedTitles() {
@@ -131,68 +103,23 @@ func seedTitles() {
 		"ผู้ช่วยศาสตราจารย์",
 		"อาจารย์",
 	}
-
 	for _, title := range titles {
-		db.FirstOrCreate(&entity.Title{}, entity.Title{Name: title})
-	}
-}
-
-func seedDepartments() {
-	departments := []string{
-		"สำนักวิชาวิศวกรรม",
-		"สำนักวิชาแพทยศาสตร์",
-		"สำนักวิชาวิทยาศาสตร์",
-	}
-
-	for _, dept := range departments {
-		db.FirstOrCreate(&entity.Department{}, entity.Department{Name: dept})
-	}
-}
-
-func seedMajors() {
-	var M1 entity.Department
-	db.First(&M1, "name = ?", "สำนักวิชาวิศวกรรม")
-
-	var M2 entity.Department
-	db.First(&M2, "name = ?", "สำนักวิชาแพทยศาสตร์")
-
-	var M3 entity.Department
-	db.First(&M3, "name = ?", "สำนักวิชาวิทยาศาสตร์")
-
-	majors := []entity.Major{
-		{Name: "สาขาวิศวกรรมคอมพิวเตอร์", DepartmentID: M1.ID},
-		{Name: "สาขาวิศวกรรมเครื่องกล", DepartmentID: M1.ID},
-		{Name: "สาขาทันตแพทย์", DepartmentID: M2.ID},
-		{Name: "สาขาวิศวกรรมไฟฟ้า", DepartmentID: M1.ID},
-	}
-
-	for _, major := range majors {
-		db.FirstOrCreate(&entity.Major{}, entity.Major{Name: major.Name, DepartmentID: major.DepartmentID})
-	}
-}
-
-func seedStatusChangePassword() {
-	status := []string{"ยังไม่ได้รับการอนุญาต", "ได้รับการอนุญาตแล้ว"}
-	for _, s := range status {
-		db.FirstOrCreate(&entity.StatusChangePassword{}, &entity.StatusChangePassword{StatusName: s})
-	}
-}
-
-func seedRoles() {
-	roles := []string{"Admin", "Scheduler", "Instructor"}
-	for _, role := range roles {
-		db.FirstOrCreate(&entity.Role{}, &entity.Role{Role: role})
+		db.FirstOrCreate(&entity.Title{}, entity.Title{Title: title})
 	}
 }
 
 func seedPositions() {
+	priority1 := uint(1)
+	priority2 := uint(2)
+
 	positions := []struct {
 		Position string
-		Priority uint
+		Priority *uint
 	}{
-		{"หัวหน้าสาขาวิศวกรรมคอมพิวเตอร์", 1},
-		{"อาจารย์ประจำสาขาวิชา", 2},
-		{"หัวหน้าสถานนวัตกรรมวิศวศึกษา", 1},
+		{"หัวหน้าสาขาวิศวกรรมคอมพิวเตอร์", &priority1},
+		{"อาจารย์ประจำสาขาวิชา", &priority2},
+		{"หัวหน้าสถานนวัตกรรมวิศวศึกษา", &priority1},
+		{"ผู้ดูแลระบบ", nil},
 	}
 
 	for _, pos := range positions {
@@ -203,110 +130,124 @@ func seedPositions() {
 	}
 }
 
-func seedUsersData() {
-
-	var workingStatus entity.WorkStatus
-	db.First(&workingStatus, "name = ?", "กำลังทำงาน")
-
-	// --- Roles ---
-	var roleA entity.Role
-	var roleB entity.Role
-	var roleC entity.Role
-
-	db.First(&roleA, "role = ?", "Admin")
-	db.First(&roleB, "role = ?", "Scheduler")
-	db.First(&roleC, "role = ?", "Instructor")
-
-	// --- Positions ---
-	var Director entity.Position
-	var Instructor entity.Position
-
-	db.First(&Director, "position = ?", "หัวหน้าสาขาวิศวกรรมคอมพิวเตอร์")
-	db.First(&Instructor, "position = ?", "อาจารย์ประจำสาขาวิชา")
-
-	var department entity.Department
-	var major entity.Major
-
-	db.First(&department, "name = ?", "สำนักวิชาวิศวกรรม")
-	db.First(&major, "name = ?", "สาขาวิศวกรรมคอมพิวเตอร์")
-
-	var titleAssistantDr entity.Title
-	var titleLecturerDr entity.Title
-
-	db.First(&titleAssistantDr, "name = ?", "ผู้ช่วยศาสตราจารย์ ดร.")
-	db.First(&titleLecturerDr, "name = ?", "อาจารย์ ดร.")
-
-	hashedPassword, _ := HashPassword("1234")
-	// --- Users ---
-	userAdmin := entity.User{UsernameID: "Admin1234", Password: hashedPassword, RoleID: roleA.ID} //Admin
-	userSchedule := entity.User{UsernameID: "SS1234", Password: hashedPassword, RoleID: roleB.ID} //Scheduler อาจารย์ฟาง
-	userA := entity.User{UsernameID: "A1234", Password: hashedPassword, RoleID: roleC.ID}         //ผู้สอนธรรมดา
-	userB := entity.User{UsernameID: "B1234", Password: hashedPassword, RoleID: roleC.ID}         //ผู้สอนธรรมดา
-
-	db.FirstOrCreate(&userAdmin, entity.User{UsernameID: "Admin1234"})
-	db.FirstOrCreate(&userSchedule, entity.User{UsernameID: "SS1234"})
-	db.FirstOrCreate(&userA, entity.User{UsernameID: "A1234"})
-	db.FirstOrCreate(&userB, entity.User{UsernameID: "B1234"})
-
-	// --- Admins ---
-	admin0 := entity.Admin{
-		FirstName: "SUT",
-		LastName:  "Admin",
-		Email:     "SutAdmin@sut.ac.th",
-		Phone:     "0123456789",
-		UserID:    userAdmin.ID,
+func seedRoles() {
+	roles := []string{"Admin", "Scheduler", "Instructor"}
+	for _, role := range roles {
+		db.FirstOrCreate(&entity.Role{}, &entity.Role{Role: role})
 	}
-	db.FirstOrCreate(&admin0, entity.Admin{Email: "SutAdmin@sut.ac.th"})
+}
 
-	// --- Instructor 1 (Scheduler) ---
-	Scheduler1 := entity.Instructor{
-		FirstName:    "ศรัญญา",
-		LastName:     "กาญจนวัฒนา",
-		Email:        "sarunya.k@sut.ac.th",
-		Phone:        "044224447",
-		UserID:       userSchedule.ID,
-		PositionID:   Instructor.ID,
-		TitleID:      titleAssistantDr.ID,
-		AccessDate:   time.Date(2010, time.June, 1, 0, 0, 0, 0, time.UTC),
-		Image:        "sarunya.jpg",
-		DepartmentID: department.ID,
-		MajorID:      major.ID,
-		WorkStatusID: workingStatus.ID,
+func seedDepartments() {
+	departments := []string{
+		"สำนักวิชาวิศวกรรม",
+		"สำนักวิชาแพทยศาสตร์",
+		"สำนักวิชาวิทยาศาสตร์",
+	}
+	for _, dept := range departments {
+		db.FirstOrCreate(&entity.Department{}, entity.Department{DepartmentName: dept})
+	}
+}
+
+func seedMajors() {
+	var M1, M2, M3 entity.Department
+	db.First(&M1, "department_name = ?", "สำนักวิชาวิศวกรรม")
+	db.First(&M2, "department_name = ?", "สำนักวิชาแพทยศาสตร์")
+	db.First(&M3, "department_name = ?", "สำนักวิชาวิทยาศาสตร์")
+
+	majors := []entity.Major{
+		{MajorName: "สาขาวิศวกรรมคอมพิวเตอร์", DepartmentID: M1.ID},
+		{MajorName: "สาขาวิศวกรรมเครื่องกล", DepartmentID: M1.ID},
+		{MajorName: "สาขาทันตแพทย์", DepartmentID: M2.ID},
+		{MajorName: "สาขาวิศวกรรมไฟฟ้า", DepartmentID: M1.ID},
+		{MajorName: "สาขาวิทยาศาสตร์คอมพิวเตอร์", DepartmentID: M3.ID},
+	}
+	for _, major := range majors {
+		db.FirstOrCreate(&entity.Major{}, entity.Major{
+			MajorName:    major.MajorName,
+			DepartmentID: major.DepartmentID,
+		})
+	}
+}
+
+func SeedDataUser() {
+	hashedPassword01, err := HashPassword("admin")
+	if err != nil {
+		log.Fatalf("Failed to hash admin password: %v", err)
+	}
+	hashedPassword, err := HashPassword("1234")
+	if err != nil {
+		log.Fatalf("Failed to hash user password: %v", err)
 	}
 
-	// --- Instructor 2 ---
-	instructor1 := entity.Instructor{
-		FirstName:    "นันทวุฒิ",
-		LastName:     "คะอังกุ",
-		Email:        "nuntawut@sut.ac.th",
-		Phone:        "044224559",
-		UserID:       userA.ID,
-		PositionID:   Director.ID,
-		TitleID:      titleAssistantDr.ID,
-		AccessDate:   time.Date(2012, time.May, 15, 0, 0, 0, 0, time.UTC),
-		Image:        "nuntawut.jpg",
-		DepartmentID: department.ID,
-		MajorID:      major.ID,
-		WorkStatusID: workingStatus.ID,
+	users := []entity.User{
+		{
+			Username:      "admin",
+			Password:      hashedPassword01,
+			Firstname:     "SUT",
+			Lastname:      "ADMIN",
+			Image:         "",
+			Email:         "SutAdmin@sut.ac.th",
+			PhoneNumber:   "0844444444",
+			Address:       "อาคารบริการ 1 ชั้น 1 ห้อง C2",
+			FirstPassword: true,
+			TitleID:       1,
+			PositionID:    1,
+			MajorID:       1,
+			RoleID:        1,
+		},
+		{
+			Username:      "SS1234",
+			Password:      hashedPassword,
+			Firstname:     "ศรัญญา",
+			Lastname:      "กาญจนวัฒนา",
+			Image:         "",
+			Email:         "sarunya.k@sut.ac.th",
+			PhoneNumber:   "044224447",
+			Address:       "อาคารบริการ 1 ชั้น 3 ห้อง 12",
+			FirstPassword: false,
+			TitleID:       2,
+			PositionID:    2,
+			MajorID:       2,
+			RoleID:        2,
+		},
+		{
+			Username:      "A1234",
+			Password:      hashedPassword,
+			Firstname:     "นันทวุฒิ",
+			Lastname:      "คะอังกุ",
+			Image:         "",
+			Email:         "nuntawut@sut.ac.th",
+			PhoneNumber:   "044224559",
+			Address:       "อาคารบริการ 1 ชั้น 3 ห้อง 25",
+			FirstPassword: false,
+			TitleID:       2,
+			PositionID:    2,
+			MajorID:       2,
+			RoleID:        2,
+		},
+		{
+			Username:      "B1234",
+			Password:      hashedPassword,
+			Firstname:     "วิชัย",
+			Lastname:      "ศรีสุรักษ์",
+			Image:         "",
+			Email:         "wichai@sut.ac.th",
+			PhoneNumber:   "044224646",
+			Address:       "F11 ชั้น 4 ห้อง 421",
+			FirstPassword: false,
+			TitleID:       2,
+			PositionID:    2,
+			MajorID:       2,
+			RoleID:        2,
+		},
 	}
-
-	// --- Instructor 3 ---
-	instructor2 := entity.Instructor{
-		FirstName:    "วิชัย",
-		LastName:     "ศรีสุรักษ์",
-		Email:        "wichai@sut.ac.th",
-		Phone:        "044224646",
-		UserID:       userB.ID,
-		PositionID:   Instructor.ID,
-		TitleID:      titleLecturerDr.ID,
-		AccessDate:   time.Date(2015, time.September, 10, 0, 0, 0, 0, time.UTC),
-		Image:        "wichai.jpg",
-		DepartmentID: department.ID,
-		MajorID:      major.ID,
-		WorkStatusID: workingStatus.ID,
+	for _, user := range users {
+		var existing entity.User
+		result := db.Where("email = ?", user.Email).FirstOrCreate(&existing, user)
+		if result.Error != nil {
+			log.Printf("Error seeding user %s: %v\n", user.Username, result.Error)
+		} else {
+			log.Printf("User %s created or already exists.\n", user.Username)
+		}
 	}
-
-	db.FirstOrCreate(&Scheduler1, entity.Instructor{Email: "sarunya.k@sut.ac.th"})
-	db.FirstOrCreate(&instructor1, entity.Instructor{Email: "nuntawut@sut.ac.th"})
-	db.FirstOrCreate(&instructor2, entity.Instructor{Email: "wichai@sut.ac.th"})
 }
