@@ -2,6 +2,7 @@ package config
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 
@@ -90,6 +91,12 @@ func SetupDatabase() {
 	seedDepartments()
 	seedMajors()
 	SeedDataUser()
+	seedCredits()
+	seedTypeOfCourses()
+	seedAcademicYears()
+	seedCurriculums()
+	seedAllCourses()
+	SeedUserAllCourses()
 }
 
 func seedTitles() {
@@ -223,7 +230,7 @@ func SeedDataUser() {
 			TitleID:       2,
 			PositionID:    2,
 			MajorID:       2,
-			RoleID:        2,
+			RoleID:        3,
 		},
 		{
 			Username:      "B1234",
@@ -238,16 +245,310 @@ func SeedDataUser() {
 			TitleID:       2,
 			PositionID:    2,
 			MajorID:       2,
-			RoleID:        2,
+			RoleID:        3,
 		},
 	}
 	for _, user := range users {
 		var existing entity.User
-		result := db.Where("email = ?", user.Email).FirstOrCreate(&existing, user)
-		if result.Error != nil {
-			log.Printf("Error seeding user %s: %v\n", user.Username, result.Error)
+		err := db.Where("username = ?", user.Username).First(&existing).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			if err := db.Create(&user).Error; err != nil {
+				log.Printf("Error creating user %s: %v\n", user.Username, err)
+			} else {
+				log.Printf("User %s created successfully.\n", user.Username)
+			}
+		} else if err != nil {
+			log.Printf("DB error checking user %s: %v\n", user.Username, err)
 		} else {
-			log.Printf("User %s created or already exists.\n", user.Username)
+			log.Printf("User %s already exists.\n", user.Username)
+		}
+	}
+}
+
+func seedCredits() {
+	credits := []entity.Credit{
+		{Unit: 2, Lectrue: 1, Lab: 3, Self: 5},
+		{Unit: 4, Lectrue: 4, Lab: 0, Self: 8},
+		{Unit: 4, Lectrue: 3, Lab: 3, Self: 9},
+		{Unit: 3, Lectrue: 3, Lab: 0, Self: 6},
+		{Unit: 1, Lectrue: 0, Lab: 3, Self: 3},
+		{Unit: 2, Lectrue: 2, Lab: 0, Self: 4},
+		{Unit: 1, Lectrue: 0, Lab: 0, Self: 0},
+		{Unit: 1, Lectrue: 0, Lab: 3, Self: 0},
+	}
+
+	for _, credit := range credits {
+		db.FirstOrCreate(&entity.Credit{}, entity.Credit{
+			Unit:    credit.Unit,
+			Lectrue: credit.Lectrue,
+			Lab:     credit.Lab,
+			Self:    credit.Self,
+		})
+	}
+}
+
+func seedTypeOfCourses() {
+	types := []entity.TypeOfCourses{
+		{Type: 1, TypeName: "กลุ่มวิชาแกนศึกษาทั่วไป"},
+		{Type: 2, TypeName: "กลุ่มวิชาภาษา"},
+		{Type: 3, TypeName: "กลุ่มวิชาศึกษาทั่วไปแบบเลือก"},
+		{Type: 4, TypeName: "หมวดวิชาเฉพาะ"},
+		{Type: 5, TypeName: "กลุ่มวิชาชีพบังคับทางวิศวกรรมคอมพิวเตอร์"},
+		{Type: 6, TypeName: "หมวดวิชาสหกิจศึกษา"},
+		{Type: 7, TypeName: "หมวดวิชาเลือกเสรี"},
+	}
+
+	for _, t := range types {
+		db.FirstOrCreate(&entity.TypeOfCourses{}, entity.TypeOfCourses{
+			Type:     t.Type,
+			TypeName: t.TypeName,
+		})
+	}
+}
+
+func seedAcademicYears() {
+	years := []entity.AcademicYear{
+		{Level: 1},
+		{Level: 2},
+		{Level: 3},
+		{Level: 4},
+	}
+	for _, y := range years {
+		db.FirstOrCreate(&entity.AcademicYear{}, entity.AcademicYear{
+			Level: y.Level,
+		})
+	}
+}
+
+func seedCurriculums() {
+	var (
+		comEng    entity.Major
+		mechEng   entity.Major
+		dentistry entity.Major
+		elecEng   entity.Major
+		csScience entity.Major
+	)
+	db.First(&comEng, "major_name = ?", "สาขาวิศวกรรมคอมพิวเตอร์")
+	db.First(&mechEng, "major_name = ?", "สาขาวิศวกรรมเครื่องกล")
+	db.First(&dentistry, "major_name = ?", "สาขาทันตแพทย์")
+	db.First(&elecEng, "major_name = ?", "สาขาวิศวกรรมไฟฟ้า")
+	db.First(&csScience, "major_name = ?", "สาขาวิทยาศาสตร์คอมพิวเตอร์")
+
+	curriculums := []entity.Curriculum{
+		{CurriculumName: "วิศวกรรมคอมพิวเตอร์ 2565", Year: 2565, Started: 2022, MajorID: comEng.ID},
+		{CurriculumName: "วิศวกรรมคอมพิวเตอร์ 2566", Year: 2566, Started: 2023, MajorID: comEng.ID},
+		{CurriculumName: "วิศวกรรมเครื่องกล 2564", Year: 2564, Started: 2021, MajorID: mechEng.ID},
+		{CurriculumName: "วิศวกรรมเครื่องกล 2566", Year: 2566, Started: 2023, MajorID: mechEng.ID},
+		{CurriculumName: "ทันตแพทย์ 2564", Year: 2564, Started: 2021, MajorID: dentistry.ID},
+		{CurriculumName: "ทันตแพทย์ 2565", Year: 2565, Started: 2022, MajorID: dentistry.ID},
+		{CurriculumName: "วิศวกรรมไฟฟ้า 2563", Year: 2563, Started: 2020, MajorID: elecEng.ID},
+		{CurriculumName: "วิทยาการคอมพิวเตอร์ 2566", Year: 2566, Started: 2023, MajorID: csScience.ID},
+		{CurriculumName: "วิทยาการคอมพิวเตอร์ 2567", Year: 2567, Started: 2024, MajorID: csScience.ID},
+	}
+	for _, curriculum := range curriculums {
+		db.FirstOrCreate(&entity.Curriculum{}, entity.Curriculum{
+			CurriculumName: curriculum.CurriculumName,
+			Year:           curriculum.Year,
+			Started:        curriculum.Started,
+			MajorID:        curriculum.MajorID,
+		})
+	}
+}
+
+func seedAllCourses() {
+	var (
+		curriculumComEng2566  entity.Curriculum
+		curriculumMechEng2566 entity.Curriculum
+		curriculumDentist2565 entity.Curriculum
+
+		credit3_3_0 entity.Credit
+		credit2_2_0 entity.Credit
+		credit4_4_0 entity.Credit
+		credit1_0_3 entity.Credit
+
+		typeSpecific entity.TypeOfCourses
+		typeLanguage entity.TypeOfCourses
+		typeGeneral  entity.TypeOfCourses
+
+		year1 entity.AcademicYear
+		year2 entity.AcademicYear
+		year3 entity.AcademicYear
+	)
+	db.First(&curriculumComEng2566, "curriculum_name = ?", "วิศวกรรมคอมพิวเตอร์ 2566")
+	db.First(&curriculumMechEng2566, "curriculum_name = ?", "วิศวกรรมเครื่องกล 2566")
+	db.First(&curriculumDentist2565, "curriculum_name = ?", "ทันตแพทย์ 2565")
+
+	db.First(&credit3_3_0, "unit = ? AND lectrue = ? AND lab = ?", 3, 3, 0)
+	db.First(&credit2_2_0, "unit = ? AND lectrue = ? AND lab = ?", 2, 2, 0)
+	db.First(&credit4_4_0, "unit = ? AND lectrue = ? AND lab = ?", 4, 4, 0)
+	db.First(&credit1_0_3, "unit = ? AND lectrue = ? AND lab = ?", 1, 0, 3)
+
+	db.First(&typeSpecific, "type_name = ?", "หมวดวิชาเฉพาะ")
+	db.First(&typeLanguage, "type_name = ?", "กลุ่มวิชาภาษา")
+	db.First(&typeGeneral, "type_name = ?", "กลุ่มวิชาแกนศึกษาทั่วไป")
+
+	db.First(&year1, "level = ?", 1)
+	db.First(&year2, "level = ?", 2)
+	db.First(&year3, "level = ?", 3)
+
+	courses := []entity.AllCourses{
+		{
+			Code:            "COMP201",
+			EnglishName:     "Data Structures",
+			ThaiName:        "โครงสร้างข้อมูล",
+			CurriculumID:    curriculumComEng2566.ID,
+			AcademicYearID:  &year2.ID,
+			TypeOfCoursesID: typeSpecific.ID,
+			CreditID:        credit3_3_0.ID,
+		},
+		{
+			Code:            "COMP101",
+			EnglishName:     "Introduction to Programming",
+			ThaiName:        "การเขียนโปรแกรมเบื้องต้น",
+			CurriculumID:    curriculumComEng2566.ID,
+			AcademicYearID:  &year1.ID,
+			TypeOfCoursesID: typeSpecific.ID,
+			CreditID:        credit2_2_0.ID,
+		},
+		{
+			Code:            "MECH301",
+			EnglishName:     "Thermodynamics",
+			ThaiName:        "อุณหพลศาสตร์",
+			CurriculumID:    curriculumMechEng2566.ID,
+			AcademicYearID:  &year3.ID,
+			TypeOfCoursesID: typeSpecific.ID,
+			CreditID:        credit4_4_0.ID,
+		},
+		{
+			Code:            "DENT201",
+			EnglishName:     "Oral Anatomy",
+			ThaiName:        "กายวิภาคช่องปาก",
+			CurriculumID:    curriculumDentist2565.ID,
+			AcademicYearID:  &year2.ID,
+			TypeOfCoursesID: typeSpecific.ID,
+			CreditID:        credit3_3_0.ID,
+		},
+		{
+			Code:            "LANG101",
+			EnglishName:     "English for Communication",
+			ThaiName:        "ภาษาอังกฤษเพื่อการสื่อสาร",
+			CurriculumID:    curriculumComEng2566.ID,
+			AcademicYearID:  &year1.ID,
+			TypeOfCoursesID: typeLanguage.ID,
+			CreditID:        credit2_2_0.ID,
+		},
+		{
+			Code:            "GEN101",
+			EnglishName:     "Philosophy and Ethics",
+			ThaiName:        "ปรัชญาและจริยธรรม",
+			CurriculumID:    curriculumComEng2566.ID,
+			AcademicYearID:  &year1.ID,
+			TypeOfCoursesID: typeGeneral.ID,
+			CreditID:        credit3_3_0.ID,
+		},
+		{
+			Code:            "COMP301",
+			EnglishName:     "Database Systems",
+			ThaiName:        "ระบบฐานข้อมูล",
+			CurriculumID:    curriculumComEng2566.ID,
+			AcademicYearID:  &year3.ID,
+			TypeOfCoursesID: typeSpecific.ID,
+			CreditID:        credit3_3_0.ID,
+		},
+		{
+			Code:            "MECH201",
+			EnglishName:     "Fluid Mechanics",
+			ThaiName:        "กลศาสตร์ของไหล",
+			CurriculumID:    curriculumMechEng2566.ID,
+			AcademicYearID:  &year2.ID,
+			TypeOfCoursesID: typeSpecific.ID,
+			CreditID:        credit4_4_0.ID,
+		},
+		{
+			Code:            "DENT301",
+			EnglishName:     "Dental Materials",
+			ThaiName:        "วัสดุทางทันตกรรม",
+			CurriculumID:    curriculumDentist2565.ID,
+			AcademicYearID:  &year3.ID,
+			TypeOfCoursesID: typeSpecific.ID,
+			CreditID:        credit2_2_0.ID,
+		},
+		{
+			Code:            "LAB101",
+			EnglishName:     "Physics Lab",
+			ThaiName:        "ปฏิบัติการฟิสิกส์",
+			CurriculumID:    curriculumComEng2566.ID,
+			AcademicYearID:  &year1.ID,
+			TypeOfCoursesID: typeGeneral.ID,
+			CreditID:        credit1_0_3.ID,
+		},
+	}
+
+	for _, course := range courses {
+		db.FirstOrCreate(&entity.AllCourses{}, entity.AllCourses{
+			Code:            course.Code,
+			EnglishName:     course.EnglishName,
+			ThaiName:        course.ThaiName,
+			CurriculumID:    course.CurriculumID,
+			AcademicYearID:  course.AcademicYearID,
+			TypeOfCoursesID: course.TypeOfCoursesID,
+			CreditID:        course.CreditID,
+		})
+	}
+}
+
+func SeedUserAllCourses() {
+	var (
+		ss1234 entity.User
+		a1234  entity.User
+		b1234  entity.User
+
+		comp101 entity.AllCourses
+		comp201 entity.AllCourses
+		comp301 entity.AllCourses
+		lang101 entity.AllCourses
+		gen101  entity.AllCourses
+		lab101  entity.AllCourses
+		mech201 entity.AllCourses
+		mech301 entity.AllCourses
+		dent201 entity.AllCourses
+		dent301 entity.AllCourses
+	)
+
+	db.First(&ss1234, "username = ?", "SS1234")
+	db.First(&a1234, "username = ?", "A1234")
+	db.First(&b1234, "username = ?", "B1234")
+
+	db.First(&comp101, "code = ?", "COMP101")
+	db.First(&comp201, "code = ?", "COMP201")
+	db.First(&comp301, "code = ?", "COMP301")
+	db.First(&lang101, "code = ?", "LANG101")
+	db.First(&gen101, "code = ?", "GEN101")
+	db.First(&lab101, "code = ?", "LAB101")
+	db.First(&mech201, "code = ?", "MECH201")
+	db.First(&mech301, "code = ?", "MECH301")
+	db.First(&dent201, "code = ?", "DENT201")
+	db.First(&dent301, "code = ?", "DENT301")
+
+	enrollments := []entity.UserAllCourses{
+		{UserID: ss1234.ID, AllCoursesID: comp101.ID},
+		{UserID: ss1234.ID, AllCoursesID: comp201.ID},
+		{UserID: ss1234.ID, AllCoursesID: lab101.ID},
+
+		{UserID: a1234.ID, AllCoursesID: comp101.ID},
+		{UserID: a1234.ID, AllCoursesID: mech201.ID},
+		{UserID: a1234.ID, AllCoursesID: mech301.ID},
+
+		{UserID: b1234.ID, AllCoursesID: comp101.ID},
+		{UserID: b1234.ID, AllCoursesID: dent201.ID},
+		{UserID: b1234.ID, AllCoursesID: dent301.ID},
+	}
+	for _, enroll := range enrollments {
+		err := db.Create(&enroll).Error
+		if err != nil {
+			log.Printf("❌ พบข้อผิดพลาดในการลงทะเบียน: ผู้ใช้ user_id=%d กับรายวิชา course_id=%d : %v", enroll.UserID, enroll.AllCoursesID, err)
+		} else {
+			log.Printf("ลงทะเบียนสำเร็จ: ผู้ใช้ user_id=%d กับรายวิชา course_id=%d", enroll.UserID, enroll.AllCoursesID)
 		}
 	}
 }

@@ -24,6 +24,10 @@ func main() {
 	router := r.Group("/")
 	{
 		router.Use(middleware.Authorizes())
+		r.GET("/users-by-role", controllers.GetUsersByRole)
+		r.POST("/users", controllers.CreateUser)
+		r.PATCH("/update-users/:id", controllers.UpdateUser)
+		r.DELETE("/users/:id", controllers.DeleteUser)
 
 	}
 
