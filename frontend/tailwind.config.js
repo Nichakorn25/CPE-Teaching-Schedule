@@ -9,6 +9,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Montserrat', 'sans-serif'],
+        sarabun: ['Sarabun', 'sans-serif'],
       },
     },
   },
