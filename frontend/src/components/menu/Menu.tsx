@@ -31,7 +31,7 @@ const menuItems = [
     icon: "📋", path: "/open-course",
     roles: ["Admin", "Scheduler", "Instructor"],
   },
-  { label: "รายวิชาทั้งหมด", icon: "📚", roles: ["Admin", "Scheduler"] },
+  { label: "รายวิชาทั้งหมด", icon: "📚", path:"/all-course", roles: ["Admin", "Scheduler"] },
   { label: "จัดการรายชื่ออาจารย์", icon: "🛠️", roles: ["Admin"] },
   { label: "จัดการรายวิชา", icon: "🖊️", roles: ["Admin", "Scheduler"] },
   {
