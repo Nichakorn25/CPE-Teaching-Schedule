@@ -14,6 +14,7 @@ import OpenCourse from "./pages/admin/OpenCourse/OpenCourse";
 import AllCourse from "./pages/admin/AllCourse/AllCourse";
 import ManageTeacher from "./pages/admin/ManageTeacher/ManageTeacher";
 import ManageCourse from "./pages/admin/ManageCourse/ManageCourse";
+import ManageCesCourse from "./pages/admin/ManageCesCourse/ManageCesCourse";
 
 import PrivateRoute from "./PrivateRoute";
 
@@ -32,6 +33,7 @@ const App: React.FC = () => {
           <Route path="/all-course" element={<AllCourse />} />
           <Route path="/manage-teacher" element={<ManageTeacher />} />
           <Route path="/manage-course" element={<ManageCourse />} />
+          <Route path="/manage-cescourse" element={<ManageCesCourse />} />
           <Route path="/home-instructor" element={<PrivateRoute><HomeInstructorPage /></PrivateRoute>} />
         </Route>
       </Routes>

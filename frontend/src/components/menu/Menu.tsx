@@ -48,7 +48,7 @@ const menuItems = [
   { label: "จัดการรายวิชา", icon: "🖊️",path:"/manage-course", roles: ["Admin", "Scheduler"] },
   {
     label: "จัดการวิชาจากศูนย์บริการ",
-    icon: "🖋️",
+    icon: "🖋️", path:"/manage-cescourse",
     roles: ["Admin", "Scheduler"],
   },
 ];
