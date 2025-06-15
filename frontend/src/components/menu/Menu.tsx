@@ -28,11 +28,22 @@ const menuItems = [
   },
   {
     label: "รายวิชาที่เปิดสอน",
-    icon: "📋", path: "/open-course",
+    icon: "📋",
+    path: "/open-course",
     roles: ["Admin", "Scheduler", "Instructor"],
   },
-  { label: "รายวิชาทั้งหมด", icon: "📚", path:"/all-course", roles: ["Admin", "Scheduler"] },
-  { label: "จัดการรายชื่ออาจารย์", icon: "🛠️",path:"manage-teacher", roles: ["Admin"] },
+  {
+    label: "รายวิชาทั้งหมด",
+    icon: "📚",
+    path: "/all-course",
+    roles: ["Admin", "Scheduler"],
+  },
+  {
+    label: "จัดการรายชื่ออาจารย์",
+    icon: "🛠️",
+    path: "manage-teacher",
+    roles: ["Admin"],
+  },
   { label: "จัดการรายวิชา", icon: "🖊️", roles: ["Admin", "Scheduler"] },
   {
     label: "จัดการวิชาจากศูนย์บริการ",
@@ -111,7 +122,7 @@ const LayoutMenu: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             className="flex items-center gap-2 bg-[#5d7285] text-white rounded px-4 py-2 hover:bg-[#4a5d70] active:bg-[#3a4a58] transition-colors duration-300 mt-10"
           >
             <AiOutlineLogout size={20} />
-            <span>ออกจากระบบ</span>
+            {isOpen && <span>ออกจากระบบ</span>}
           </button>
         </nav>
       </div>
