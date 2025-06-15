@@ -28,7 +28,7 @@ const menuItems = [
   },
   {
     label: "รายวิชาที่เปิดสอน",
-    icon: "📋",
+    icon: "📋", path: "/open-course",
     roles: ["Admin", "Scheduler", "Instructor"],
   },
   { label: "รายวิชาทั้งหมด", icon: "📚", roles: ["Admin", "Scheduler"] },

@@ -10,6 +10,7 @@ import MenuBar from "./components/menu/Menu";
 import Footer from "./components/footer/Footer";
 
 import TeacherList from "./pages/admin/TeacherList/TeacherList";
+import OpenCourse from "./pages/admin/OpenCourse/OpenCourse";
 
 import PrivateRoute from "./PrivateRoute";
 
@@ -24,6 +25,7 @@ const App: React.FC = () => {
           {/* <Route path="/home-admin" element={<PrivateRoute><HomeAdminPage /></PrivateRoute>} /> */}
           <Route path="/home-admin" element={<HomeAdminPage />} />
           <Route path="/teacher-list" element={<TeacherList />} />
+          <Route path="/open-course" element={<OpenCourse />} />
           <Route path="/home-instructor" element={<PrivateRoute><HomeInstructorPage /></PrivateRoute>} />
         </Route>
       </Routes>
