@@ -1,6 +1,7 @@
 import { AiOutlineMenu, AiOutlineClose, AiOutlineLogout } from "react-icons/ai";
 import React, { useState } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
+import Header from "../header/Header";
 
 type MenuItem = {
   label: string;
@@ -41,10 +42,10 @@ const menuItems = [
   {
     label: "จัดการรายชื่ออาจารย์",
     icon: "🛠️",
-    path: "manage-teacher",
+    path: "/manage-teacher",
     roles: ["Admin"],
   },
-  { label: "จัดการรายวิชา", icon: "🖊️", roles: ["Admin", "Scheduler"] },
+  { label: "จัดการรายวิชา", icon: "🖊️",path:"/manage-course", roles: ["Admin", "Scheduler"] },
   {
     label: "จัดการวิชาจากศูนย์บริการ",
     icon: "🖋️",
@@ -69,7 +70,8 @@ const LayoutMenu: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const toggleMenu = () => setIsOpen(!isOpen);
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen font-sarabun">
+      <Header/>
       {/* Sidebar */}
       <div
         className={`bg-white-500 z-50 text-orange transition-all duration-300 ease-in-out overflow-hidden ${
