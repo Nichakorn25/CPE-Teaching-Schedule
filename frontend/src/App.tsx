@@ -12,6 +12,7 @@ import Footer from "./components/footer/Footer";
 import TeacherList from "./pages/admin/TeacherList/TeacherList";
 import OpenCourse from "./pages/admin/OpenCourse/OpenCourse";
 import AllCourse from "./pages/admin/AllCourse/AllCourse";
+import ManageTeacher from "./pages/admin/ManageTeacher/ManageTeacher";
 
 import PrivateRoute from "./PrivateRoute";
 
@@ -28,6 +29,7 @@ const App: React.FC = () => {
           <Route path="/teacher-list" element={<TeacherList />} />
           <Route path="/open-course" element={<OpenCourse />} />
           <Route path="/all-course" element={<AllCourse />} />
+          <Route path="/manage-teacher" element={<ManageTeacher />} />
           <Route path="/home-instructor" element={<PrivateRoute><HomeInstructorPage /></PrivateRoute>} />
         </Route>
       </Routes>
