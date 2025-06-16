@@ -15,7 +15,7 @@ const menuItems = [
   { label: "ตารางสอน", icon: "🧑‍🏫", roles: ["Scheduler", "Instructor"] },
   { label: "ประวัติการจัดตารางสอน", icon: "🧑‍🏫", roles: ["Scheduler"] },
   { label: "เงื่อนไขการจัดตารางสอน", icon: "🧑‍🏫", roles: ["Scheduler"] },
-  { label: "เพิ่มเงื่อนไข", icon: "🧑‍🏫", roles: ["Scheduler", "Instructor"] },
+  { label: "เพิ่มเงื่อนไข", icon: "🧑‍🏫",path:"/add-condition", roles: ["Scheduler", "Instructor"] },
   {
     label: "เพิ่มวิชาที่ต้องการสอน",
     icon: "🧑‍🏫",

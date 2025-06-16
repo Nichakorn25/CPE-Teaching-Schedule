@@ -17,6 +17,7 @@ import ManageCourse from "./pages/admin/ManageCourse/ManageCourse";
 import ManageCesCourse from "./pages/admin/ManageCesCourse/ManageCesCourse";
 
 import ChangePassword from "./pages/instructor/ChangePassword/ChangePassword";
+import AddCondition from "./pages/instructor/AddCondition/AddCondition";
 
 
 import PrivateRoute from "./PrivateRoute";
@@ -39,6 +40,7 @@ const App: React.FC = () => {
           <Route path="/manage-cescourse" element={<ManageCesCourse />} />
 
           <Route path="/change-password" element={<ChangePassword/>} />
+          <Route path="/add-condition" element={<AddCondition/>} />
 
           <Route path="/home-instructor" element={<PrivateRoute><HomeInstructorPage /></PrivateRoute>} />
         </Route>
