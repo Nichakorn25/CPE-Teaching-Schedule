@@ -18,7 +18,7 @@ const menuItems = [
   { label: "เพิ่มเงื่อนไข", icon: "🧑‍🏫",path:"/add-condition", roles: ["Scheduler", "Instructor"] },
   {
     label: "เพิ่มวิชาที่ต้องการสอน",
-    icon: "🧑‍🏫",
+    icon: "🧑‍🏫",path:"/add-course",
     roles: ["Scheduler", "Instructor"],
   },
   {
