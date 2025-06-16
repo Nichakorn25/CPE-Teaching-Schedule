@@ -35,18 +35,17 @@ const ManageCesCourse: React.FC = () => {
     { id: 1, title: "", firstName: "", lastName: "", credit: "", hours: "" },
   ]);
 
- const [classTimes, setClassTimes] = useState<ClassTime[]>([
-  {
-    id: 1,
-    day: "",
-    start: "",
-    end: "",
-    group: "",
-    room: "",
-    assistants: [],
-  },
-]);
-
+  const [classTimes, setClassTimes] = useState<ClassTime[]>([
+    {
+      id: 1,
+      day: "",
+      start: "",
+      end: "",
+      group: "",
+      room: "",
+      assistants: [],
+    },
+  ]);
 
   const handleChangeHours = (key: string, value: string) => {
     setHours({ ...hours, [key]: value });
@@ -150,9 +149,8 @@ const ManageCesCourse: React.FC = () => {
             value={courseType}
             onChange={(e) => setCourseType(e.target.value)}
           >
-            <option value="">--</option>
-            <option>หมวดวิชาเฉพาะ</option>
             <option>หมวดวิชาศึกษาทั่วไป</option>
+            <option>หมวดวิชาเฉพาะ</option>
           </select>
         </div>
         <div>
@@ -173,29 +171,39 @@ const ManageCesCourse: React.FC = () => {
             value={credit}
             onChange={(e) => setCredit(e.target.value)}
           >
-            <option value="">--</option>
             <option value="1">1</option>
             <option value="2">2</option>
             <option value="3">3</option>
             <option value="4">4</option>
           </select>
         </div>
+
         <div>
-          <label className="text-[#f26522]">รูปแบบชั่วโมงการสอน</label>
-          <div className="grid grid-cols-3 gap-2">
-            {["lecture", "practice", "selfStudy"].map((type) => (
-              <select
-                key={type}
-                className="border px-3 py-2 rounded-full w-full text-center"
-                value={hours[type as keyof typeof hours]}
-                onChange={(e) => handleChangeHours(type, e.target.value)}
-              >
-                <option value="">--</option>
-                <option>1</option>
-                <option>2</option>
-                <option>3</option>
-                <option>4</option>
-              </select>
+          <label className="text-[#f26522] font-medium text-xl block mb-2">
+            รูปแบบชั่วโมงการสอน
+          </label>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            {[
+              { label: "บรรยาย", key: "lecture" },
+              { label: "ปฏิบัติ", key: "practice" },
+              { label: "เรียนรู้ด้วยตนเอง", key: "selfStudy" },
+            ].map(({ label, key }) => (
+              <div key={key}>
+                <div className="text-[#f26522] font-medium mb-1">{label}</div>
+                <select
+                  className="border px-3 py-2 rounded-full w-20 mx-auto text-center"
+                  value={hours[key as keyof typeof hours]}
+                  onChange={(e) =>
+                    setHours({ ...hours, [key]: e.target.value })
+                  }
+                >
+                  <option value="">--</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                </select>
+              </div>
             ))}
           </div>
         </div>
@@ -222,7 +230,7 @@ const ManageCesCourse: React.FC = () => {
       {/* จำนวนนักศึกษา */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="text-[#f26522]">จำนวนผู้เรียนทั้งหมด</label>
+          <label className="text-[#f26522]">จำนวนกลุ่มเรียนทั้งหมด</label>
           <input
             type="number"
             className="border px-3 py-2 rounded w-full"
@@ -231,9 +239,7 @@ const ManageCesCourse: React.FC = () => {
           />
         </div>
         <div>
-          <label className="text-[#f26522]">
-            จำนวนนักศึกษาที่คาดว่าจะเข้าเรียน
-          </label>
+          <label className="text-[#f26522]">จำนวนนักศึกษาต่อกลุ่มเรียน</label>
           <input
             type="number"
             className="border px-3 py-2 rounded w-full"
@@ -242,171 +248,195 @@ const ManageCesCourse: React.FC = () => {
           />
         </div>
       </div>
-      อาจารย์ผู้สอน 
-      <div className="space-y-2">
-        <h2 className="text-[#f26522] font-semibold text-lg">
+
+      {/* อาจารย์ผู้สอน */}
+      <div className="space-y-4">
+        <h2 className="text-orange-500 font-semibold text-xl">
           เพิ่มอาจารย์ผู้สอน
         </h2>
-        {teachers.map((t, idx) => (
-          <div key={t.id} className="grid grid-cols-12 gap-2 items-center">
-            <div className="col-span-1">{idx + 1}</div>
-            <select
-              className="col-span-2 border px-2 py-1 rounded"
-              value={t.title}
-              onChange={(e) => {
-                const updated = [...teachers];
-                updated[idx].title = e.target.value;
-                setTeachers(updated);
-              }}
-            >
-              <option value="">--</option>
-              <option>รศ.ดร.</option>
-              <option>ผศ.ดร.</option>
-            </select>
-            <input
-              className="col-span-2 border px-2 py-1 rounded"
-              placeholder="ชื่อ"
-              value={t.firstName}
-              onChange={(e) => {
-                const updated = [...teachers];
-                updated[idx].firstName = e.target.value;
-                setTeachers(updated);
-              }}
-            />
-            <input
-              className="col-span-2 border px-2 py-1 rounded"
-              placeholder="นามสกุล"
-              value={t.lastName}
-              onChange={(e) => {
-                const updated = [...teachers];
-                updated[idx].lastName = e.target.value;
-                setTeachers(updated);
-              }}
-            />
-            <input
-              className="col-span-1 border px-2 py-1 rounded"
-              placeholder="หน่วยกิต"
-              value={t.credit}
-              onChange={(e) => {
-                const updated = [...teachers];
-                updated[idx].credit = e.target.value;
-                setTeachers(updated);
-              }}
-            />
-            <input
-              className="col-span-2 border px-2 py-1 rounded"
-              placeholder="จำนวนชั่วโมง"
-              value={t.hours}
-              onChange={(e) => {
-                const updated = [...teachers];
-                updated[idx].hours = e.target.value;
-                setTeachers(updated);
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => removeTeacher(t.id)}
-              className="col-span-1 text-red-500"
-            >
-              ลบ
-            </button>
+        {teachers.map((t, index) => (
+          <div key={t.id} className="grid grid-cols-12 gap-4 items-center">
+            <div className="w-8 h-8 bg-[#f26522] text-white rounded-full flex items-center justify-center font-semibold text-sm">
+              {index + 1}
+            </div>
+            <div className="col-span-2">
+              <select className="border px-3 py-2 rounded w-full">
+                <option>อ.ดร.</option>
+                <option>ผศ.ดร.</option>
+                <option>รศ.ดร.</option>
+                <option>ศ.ดร.</option>
+              </select>
+            </div>
+            <div className="col-span-4">
+              <input
+                className="border px-3 py-2 rounded w-full"
+                defaultValue={t.firstName}
+                placeholder="ชื่อ"
+              />
+            </div>
+            <div className="col-span-4">
+              <input
+                className="border px-3 py-2 rounded w-full"
+                defaultValue={t.lastName}
+                placeholder="นามสกุล"
+              />
+            </div>
+            <div className="col-span-1 text-center">
+              <button
+                type="button"
+                onClick={() => removeTeacher(t.id)}
+                className="bg-red-500 text-white px-6 py-2 rounded hover:bg-orange-600"
+              >
+                ลบ
+              </button>
+            </div>
           </div>
         ))}
         <button
           type="button"
           onClick={addTeacher}
-          className="bg-orange-500 text-white px-4 py-2 rounded"
+          className="bg-orange-500 text-white px-6 py-2 rounded hover:bg-orange-600"
         >
           + เพิ่มอาจารย์ผู้สอน
         </button>
       </div>
-      {/* วันเวลาเรียน + ผู้ช่วยสอนแต่ละกลุ่ม */}
+
       <div className="space-y-6">
         <h2 className="text-[#f26522] font-semibold text-lg">
           เพิ่มวันและเวลาที่สอน
         </h2>
+
         {classTimes.map((c, idx) => (
-          <div key={c.id} className="space-y-2 border-t pt-4">
-            <div className="grid grid-cols-12 gap-2 items-center">
-              <div className="col-span-1">{idx + 1}</div>
-              <select
-                className="col-span-2 border px-2 py-1 rounded"
-                value={c.day}
-                onChange={(e) => {
-                  const updated = [...classTimes];
-                  updated[idx].day = e.target.value;
-                  setClassTimes(updated);
-                }}
-              >
-                <option value="">--</option>
-                <option>จันทร์</option>
-                <option>อังคาร</option>
-                <option>พุธ</option>
-                <option>พฤหัสบดี</option>
-                <option>ศุกร์</option>
-                <option>เสาร์</option>
-                <option>อาทิตย์</option>
-              </select>
-              <input
-                className="col-span-2 border px-2 py-1 rounded"
-                type="time"
-                value={c.start}
-                onChange={(e) => {
-                  const updated = [...classTimes];
-                  updated[idx].start = e.target.value;
-                  setClassTimes(updated);
-                }}
-              />
-              <input
-                className="col-span-2 border px-2 py-1 rounded"
-                type="time"
-                value={c.end}
-                onChange={(e) => {
-                  const updated = [...classTimes];
-                  updated[idx].end = e.target.value;
-                  setClassTimes(updated);
-                }}
-              />
-              <input
-                className="col-span-2 border px-2 py-1 rounded"
-                placeholder="กลุ่มเรียน"
-                value={c.group}
-                onChange={(e) => {
-                  const updated = [...classTimes];
-                  updated[idx].group = e.target.value;
-                  setClassTimes(updated);
-                }}
-              />
-              <input
-                className="col-span-2 border px-2 py-1 rounded"
-                placeholder="ห้องเรียน"
-                value={c.room}
-                onChange={(e) => {
-                  const updated = [...classTimes];
-                  updated[idx].room = e.target.value;
-                  setClassTimes(updated);
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => removeClassTime(c.id)}
-                className="col-span-1 text-red-500"
-              >
-                ลบ
-              </button>
+          <div key={c.id} className="space-y-4">
+            <div className="grid grid-cols-12 gap-3 items-start mt-10">
+              {/* ลำดับ */}
+              <div className="col-span-1 flex items-center mt-6">
+                <div className="w-8 h-8 bg-[#f26522] text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                  {idx + 1}.
+                </div>
+              </div>
+
+              {/* วัน */}
+              <div className="col-span-2 -ml-0">
+                <label className="block text-sm text-gray-600 mb-1">วัน</label>
+                <select
+                  className="w-full border rounded px-2 py-1"
+                  value={c.day}
+                  onChange={(e) => {
+                    const updated = [...classTimes];
+                    updated[idx].day = e.target.value;
+                    setClassTimes(updated);
+                  }}
+                >
+                  <option>จันทร์</option>
+                  <option>อังคาร</option>
+                  <option>พุธ</option>
+                  <option>พฤหัสบดี</option>
+                  <option>ศุกร์</option>
+                  <option>เสาร์</option>
+                  <option>อาทิตย์</option>
+                </select>
+              </div>
+
+              {/* เวลาเริ่มต้น */}
+              <div className="col-span-2">
+                <label className="block text-sm text-gray-600 mb-1">
+                  เวลาเริ่มต้น
+                </label>
+                <input
+                  type="time"
+                  className="w-full border rounded px-2 py-1"
+                  value={c.start}
+                  onChange={(e) => {
+                    const updated = [...classTimes];
+                    updated[idx].start = e.target.value;
+                    setClassTimes(updated);
+                  }}
+                />
+              </div>
+
+              {/* คั่นกลาง */}
+              <div className="mt-7 col-span-1 flex items-end justify-center pb-1 text-gray-500">
+                -
+              </div>
+
+              {/* เวลาสิ้นสุด */}
+              <div className="col-span-2">
+                <label className="block text-sm text-gray-600 mb-1">
+                  เวลาสิ้นสุด
+                </label>
+                <input
+                  type="time"
+                  className="w-full border rounded px-2 py-1"
+                  value={c.end}
+                  onChange={(e) => {
+                    const updated = [...classTimes];
+                    updated[idx].end = e.target.value;
+                    setClassTimes(updated);
+                  }}
+                />
+              </div>
+
+              {/* กลุ่มเรียน */}
+              <div className="col-span-1">
+                <label className="block text-sm text-gray-600 mb-1">
+                  กลุ่ม
+                </label>
+                <input
+                  className="w-full border px-2 py-1 rounded text-center"
+                  placeholder="1"
+                  value={c.group}
+                  onChange={(e) => {
+                    const updated = [...classTimes];
+                    updated[idx].group = e.target.value;
+                    setClassTimes(updated);
+                  }}
+                />
+              </div>
+
+              {/* ห้อง */}
+              <div className="col-span-2">
+                <label className="block text-sm text-gray-600 mb-1">
+                  ห้องเรียน
+                </label>
+                <input
+                  className="w-full border px-2 py-1 rounded"
+                  placeholder="DIGITAL TECH LAB"
+                  value={c.room}
+                  onChange={(e) => {
+                    const updated = [...classTimes];
+                    updated[idx].room = e.target.value;
+                    setClassTimes(updated);
+                  }}
+                />
+              </div>
+
+              {/* ปุ่มลบ */}
+              <div className="col-span-1 flex mt-5 items-end">
+                <button
+                  type="button"
+                  onClick={() => removeClassTime(c.id)}
+                  className="bg-red-500 text-white px-6 py-2 rounded hover:bg-orange-600"
+                >
+                  ลบ
+                </button>
+              </div>
             </div>
 
-            {/* ผู้ช่วยสอนในเวลาเรียนนี้ */}
-            <div className="col-span-12 ml-6 space-y-2">
+            {/* เพิ่มผู้ช่วยสอน */}
+            <div className="ml-8 space-y-6 mt-10">
               <h3 className="text-[#f26522] font-medium">เพิ่มผู้ช่วยสอน</h3>
               {c.assistants.map((a, aIdx) => (
                 <div
                   key={a.id}
-                  className="grid grid-cols-12 gap-2 items-center"
+                  className="grid grid-cols-12 gap-3 items-center"
                 >
-                  <div className="col-span-1">{aIdx + 1}</div>
+                  <div className="w-8 h-8 bg-[#f26522] text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                    {aIdx + 1}.
+                  </div>
+
                   <select
-                    className="col-span-2 border px-2 py-1 rounded"
+                    className="col-span-2 border rounded px-2 py-1"
                     value={a.title}
                     onChange={(e) =>
                       updateAssistantInClassTime(
@@ -417,13 +447,16 @@ const ManageCesCourse: React.FC = () => {
                       )
                     }
                   >
-                    <option value="">--</option>
                     <option>นาย</option>
                     <option>นางสาว</option>
                     <option>อ.ดร.</option>
+                    <option>ผศ.ดร.</option>
+                    <option>รศ.ดร.</option>
+                    <option>ศ.ดร.</option>
                   </select>
+
                   <input
-                    className="col-span-4 border px-2 py-1 rounded"
+                    className="col-span-4 border rounded px-2 py-1"
                     placeholder="ชื่อ"
                     value={a.firstName}
                     onChange={(e) =>
@@ -436,7 +469,7 @@ const ManageCesCourse: React.FC = () => {
                     }
                   />
                   <input
-                    className="col-span-4 border px-2 py-1 rounded"
+                    className="col-span-4 border rounded px-2 py-1"
                     placeholder="นามสกุล"
                     value={a.lastName}
                     onChange={(e) =>
@@ -448,15 +481,17 @@ const ManageCesCourse: React.FC = () => {
                       )
                     }
                   />
+
                   <button
                     type="button"
                     onClick={() => removeAssistantFromClassTime(c.id, a.id)}
-                    className="col-span-1 text-red-500"
+                    className="bg-red-500 text-white px-6 py-2 rounded hover:bg-orange-600"
                   >
                     ลบ
                   </button>
                 </div>
               ))}
+
               <button
                 type="button"
                 onClick={() => addAssistantToClassTime(c.id)}
@@ -465,8 +500,12 @@ const ManageCesCourse: React.FC = () => {
                 + เพิ่มผู้ช่วยสอน
               </button>
             </div>
+
+            <hr className="border-t mt-4" />
           </div>
         ))}
+
+        {/* ปุ่มเพิ่มวันเวลาเรียน */}
         <button
           type="button"
           onClick={addClassTime}
@@ -474,14 +513,16 @@ const ManageCesCourse: React.FC = () => {
         >
           + เพิ่มวันเวลาเรียน
         </button>
-      </div>
-      <div className="text-right pt-6">
-        <button
-          type="submit"
-          className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded"
-        >
-          บันทึก
-        </button>
+
+        {/* ปุ่มบันทึก */}
+        <div className="text-right pt-6">
+          <button
+            type="submit"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded"
+          >
+            บันทึก
+          </button>
+        </div>
       </div>
     </div>
   );
