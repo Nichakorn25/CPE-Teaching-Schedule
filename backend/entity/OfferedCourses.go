@@ -16,7 +16,7 @@ type OfferedCourses struct {
 	User         User `gorm:"foreignKey:UserID"`
 	AllCoursesID uint
 	AllCourses   AllCourses `gorm:"foreignKey:AllCoursesID"`
-	LaboratoryID uint
+	LaboratoryID *uint
 	Laboratory   Laboratory `gorm:"foreignKey:LaboratoryID"`
 
 	Schedule []Schedule `gorm:"foreignKey:OfferedCoursesID"`

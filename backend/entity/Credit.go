@@ -7,7 +7,7 @@ import (
 type Credit struct {
 	gorm.Model
 	Unit    uint
-	Lectrue uint
+	Lecture uint
 	Lab     uint
 	Self    uint
 

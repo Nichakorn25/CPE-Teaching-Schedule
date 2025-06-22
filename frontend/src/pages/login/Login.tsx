@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from "react";
+
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { SignIn } from "../../services/https";
 import { SignInInterface } from "../../interfaces/SignIn";
 
-import TopBar from "../../../src/components/topbar/TopBar";
-
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const [showReset, setShowReset] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'success' | 'error' | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+
+  const loginFormRef = useRef<HTMLFormElement>(null);
+  const resetFormRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     document.body.classList.add("bg-gray-100");
@@ -25,10 +28,30 @@ const LoginPage: React.FC = () => {
       target.setCustomValidity("กรุณากรอกรหัสพนักงาน");
     } else if (target.name === "Password" && target.value === "") {
       target.setCustomValidity("กรุณากรอกรหัสผ่าน");
+    } else if (target.name === "Email") {
+      if (target.value === "") {
+        target.setCustomValidity("กรุณากรอกอีเมล");
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(target.value)) {
+        target.setCustomValidity("รูปแบบอีเมลไม่ถูกต้อง");
+      } else {
+        target.setCustomValidity("");
+      }
+    } else if (target.name === "NewPassword" && target.value === "") {
+      target.setCustomValidity("กรุณากรอกรหัสผ่านใหม่");
+    } else if (target.name === "ConfirmPassword") {
+      const newPassword = document.querySelector<HTMLInputElement>('input[name="NewPassword"]');
+      if (target.value === "") {
+        target.setCustomValidity("กรุณากรอกยืนยันรหัสผ่าน");
+      } else if (newPassword && target.value !== newPassword.value) {
+        target.setCustomValidity("รหัสผ่านไม่ตรงกัน");
+      } else {
+        target.setCustomValidity("");
+      }
     } else {
       target.setCustomValidity("");
     }
   };
+
 
   const onFinish = async (values: SignInInterface) => {
     setLoading(true);
@@ -56,7 +79,7 @@ const LoginPage: React.FC = () => {
         localStorage.setItem("major_name", major_name);
         localStorage.setItem("first_password", first_password);
         localStorage.setItem("image", image);
-        
+
         setTimeout(() => {
           if (role === "Admin") {
             navigate("/home-admin");
@@ -93,114 +116,186 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <TopBar />
-      <div
-        className="min-h-screen flex items-center justify-center px-4 bg-cover bg-center"
-        style={{ backgroundImage: 'linear-gradient(rgba(60,60,60,0.4), rgba(60,60,60,0.3)),url(/sut.jpg)' }}
-      >
-        <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg overflow-hidden">
-          {/* Header */}
-          <div className="bg-[#09261d] text-white text-center py-4">
-            <h1 className="text-2xl font-bold tracking-wide">
-              CPE Teaching Schedule
-            </h1>
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
+      <video
+        className="absolute top-0 left-0 w-full h-full object-cover z-0 pointer-events-none"
+        src="/login.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+      />
+
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
+        <div className="w-full max-w-sm bg-[#5D7285]/70 backdrop-blur-lg border border-[#E7E7E7] rounded-[3rem] p-10 shadow-lg">
+
+          <div className="text-center mb-6 leading-tight">
+            <h1 className="text-4xl font-bold text-white">CPE</h1>
+            <h2 className="text-xl font-semibold text-white tracking-wide">Teaching Schedule</h2>
           </div>
+          {!showReset ? (
+            <form
+              ref={loginFormRef}
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target as HTMLFormElement);
+                const values: SignInInterface = {
+                  Username: formData.get("Username") as string,
+                  Password: formData.get("Password") as string,
+                };
+                onFinish(values);
+              }}
+              className="space-y-5"
+            >
+              <div>
+                <label htmlFor="Username" className="block text-white font-medium pl-4">
+                  รหัสพนักงาน
+                </label>
+                <input
+                  type="text"
+                  id="Username"
+                  name="Username"
+                  onInvalid={handleInvalid}
+                  placeholder="🧑 username"
+                  required
+                  className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm 
+                 bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
+                />
+              </div>
 
-          {/* กล่องซ้ายขวา */}
-          <div className="flex flex-col md:flex-row">
-            {/* ซ้ายมือเรา */}
-            <div className="w-full md:w-1/2 p-8">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.target as HTMLFormElement);
-                  const values: SignInInterface = {
-                    Username: formData.get("Username") as string, 
-                    Password: formData.get("Password") as string,
-                  };
-                  onFinish(values);
-                }}
-                className="space-y-6"
-              >
-                <div>
-                  <label htmlFor="Username" className="block text-gray-700 font-medium">รหัสพนักงาน</label>
-                  <input
-                    type="text"
-                    id="Username"
-                    name="Username"
-                    onInvalid={handleInvalid}
-                    placeholder="username"
-                    required
-                    className="w-full p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-orange-400"
-                  />
-                </div>
+              <div>
+                <label htmlFor="Password" className="block text-white font-medium pl-4">
+                  รหัสผ่าน
+                </label>
+                <input
+                  type="password"
+                  id="Password"
+                  name="Password"
+                  onInvalid={handleInvalid}
+                  placeholder="🔑 password"
+                  required
+                  className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
+                />
+              </div>
 
-                <div>
-                  <label htmlFor="Password" className="block text-gray-700 font-medium">รหัสผ่าน</label>
-                  <input
-                    type="password"
-                    id="Password"
-                    name="Password"
-                    onInvalid={handleInvalid}
-                    placeholder="password"
-                    required
-                    className="w-full p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-orange-400"
-                  />
-                </div>
+              <div className="mt-6 space-y-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-12 bg-[#F26522] text-white font-semibold rounded-full transition-transform hover:scale-105"
+                >
+                  {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+                </button>
 
-                <div>
+                <div className="text-center">
                   <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full h-12 bg-[#ff6314] text-white font-medium rounded-md transition transform hover:scale-105"
+                    type="button"
+                    className="text-sm text-white font-semibold hover:underline"
+                    onClick={() => {setShowReset(true); loginFormRef.current?.reset();}}
                   >
-                    {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+                    ลืมรหัสผ่าน?
                   </button>
                 </div>
-              </form>
+              </div>
+            </form>
+          ) : (
+            <form
+              ref={resetFormRef}
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target as HTMLFormElement);
+                // const values: ResetPasswordInterface = {
+                //   Email: formData.get("Email") as string,
+                //   NewPassword: formData.get("NewPassword") as string,
+                //   ConfirmPassword: formData.get("ConfirmPassword") as string,
+                // };
+                // handleReset(values);
+              }}
+              className="space-y-5"
+            >
+              <div>
+                <label htmlFor="Email" className="block text-white font-medium pl-4">
+                  อีเมล
+                </label>
+                <input
+                  type="email"
+                  id="Email"
+                  name="Email"
+                  required
+                  onInvalid={handleInvalid}
+                  onInput={(e) => (e.currentTarget as HTMLInputElement).setCustomValidity("")}
+                  placeholder="📧 example@g.sut.ac.th"
+                  className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
+                />
+              </div>
 
-              {message && (
-                <div
-                  className={`mt-4 p-4 rounded-md text-center text-sm font-semibold ${messageType === "success"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-red-100 text-red-700"
-                    }`}
+              <div>
+                <label htmlFor="NewPassword" className="block text-white font-medium pl-4">
+                  รหัสผ่านใหม่
+                </label>
+                <input
+                  type="password"
+                  id="NewPassword"
+                  name="NewPassword"
+                  required
+                  onInvalid={handleInvalid}
+                  placeholder="🔐 รหัสผ่านใหม่"
+                  className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="ConfirmPassword" className="block text-white font-medium pl-4">
+                  ยืนยันรหัสผ่าน
+                </label>
+                <input
+                  type="password"
+                  id="ConfirmPassword"
+                  name="ConfirmPassword"
+                  required
+                  onInvalid={handleInvalid}
+                  placeholder="🔐 ยืนยันรหัสผ่าน"
+                  className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
+                />
+              </div>
+
+              <div className="mt-6 space-y-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-12 bg-[#F26522] text-white font-semibold rounded-full transition-transform hover:scale-105"
                 >
-                  {message}
+                  {loading ? "กำลังรีเซ็ต..." : "รีเซ็ตรหัสผ่าน"}
+                </button>
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    className="text-sm text-white font-semibold hover:underline"
+                    onClick={() => {setShowReset(false); resetFormRef.current?.reset();}}
+                  >
+                    กลับสู่หน้าเข้าสู่ระบบ
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            </form>
+          )}
 
-            {/* ขวามือเรา */}
-            <div className="w-full md:w-1/2 p-8 border-t md:border-t-0 md:border-l border-gray-200 text-sm text-gray-700">
-              <p className="mb-4">
-                (1) If you can not log-in, <br />
-                please contact the administrator<br />
-                Tel: 0-4422-5759<br />
-                Email:{" "}
-                <a
-                  href="mailto:administrator@sut.ac.th"
-                  className="text-blue-600 underline"
-                >
-                  administrator@sut.ac.th
-                </a>
-              </p>
-              <p className="mb-4">
-                (2) Please enter your email address correctly to auto-reply in case you forgot your password
-              </p>
-              <Link
-                to="/forgot-password"
-                className="text-blue-600 text-sm font-semibold hover:underline"
-              >
-                ส่งคำร้องขอเปลี่ยนรหัสผ่าน?
-              </Link>
+          {message && (
+            <div
+              className={`mt-4 p-3 text-center text-sm font-semibold rounded-md ${messageType === "success"
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+                }`}
+            >
+              {message}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
   );
+
 };
 
 export default LoginPage;

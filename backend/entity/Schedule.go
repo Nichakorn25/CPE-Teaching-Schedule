@@ -8,6 +8,7 @@ import (
 
 type Schedule struct {
 	gorm.Model
+	NameTable     string
 	SectionNumber uint
 	DayOfWeek     string
 	StartTime     time.Time

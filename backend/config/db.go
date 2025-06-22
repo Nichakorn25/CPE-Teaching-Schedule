@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
 	_ "github.com/lib/pq"
@@ -85,21 +86,30 @@ func SetupDatabase() {
 	if err != nil {
 		log.Fatalf("AutoMigrate failed: %v", err)
 	}
-	seedTitles()
-	seedPositions()
-	seedRoles()
-	seedDepartments()
-	seedMajors()
+	SeedTitles()
+	SeedPositions()
+	SeedRoles()
+	SeedLaboratory()
+	SeedDepartments()
+	SeedMajors()
 	SeedDataUser()
-	seedCredits()
-	seedTypeOfCourses()
-	seedAcademicYears()
-	seedCurriculums()
-	seedAllCourses()
+	SeedCredits()
+	SeedTypeOfCourses()
+	SeedAcademicYears()
+	SeedCurriculums()
+	SeedAllCourses()
 	SeedUserAllCourses()
+	SeedTeachingAssistants()
+	SeedConditions()
+	SeedOfferedCourses()
+	SeedSchedules()
+	SeedTimeFixedCourses()
+	SeedScheduleTeachingAssistants()
 }
 
-func seedTitles() {
+// //////////////////////////////////////////////////// ผู้ใช้งาน ///////////////////////////////////////////////
+// ครบ
+func SeedTitles() {
 	titles := []string{
 		"ศาสตราจารย์ ดร.",
 		"รองศาสตราจารย์ ดร.",
@@ -109,13 +119,17 @@ func seedTitles() {
 		"รองศาสตราจารย์",
 		"ผู้ช่วยศาสตราจารย์",
 		"อาจารย์",
+		"นาย", //9
+		"นาง",
+		"นางสาว",
 	}
 	for _, title := range titles {
 		db.FirstOrCreate(&entity.Title{}, entity.Title{Title: title})
 	}
 }
 
-func seedPositions() {
+// เช็คอีกที
+func SeedPositions() {
 	priority1 := uint(1)
 	priority2 := uint(2)
 
@@ -137,14 +151,16 @@ func seedPositions() {
 	}
 }
 
-func seedRoles() {
+// ครบ
+func SeedRoles() {
 	roles := []string{"Admin", "Scheduler", "Instructor"}
 	for _, role := range roles {
 		db.FirstOrCreate(&entity.Role{}, &entity.Role{Role: role})
 	}
 }
 
-func seedDepartments() {
+// ยังใส่ไม่หมด
+func SeedDepartments() {
 	departments := []string{
 		"สำนักวิชาวิศวกรรม",
 		"สำนักวิชาแพทยศาสตร์",
@@ -155,7 +171,8 @@ func seedDepartments() {
 	}
 }
 
-func seedMajors() {
+// เชื่อไม่หมด ใส่ข้อมูลยังไม่หมด
+func SeedMajors() {
 	var M1, M2, M3 entity.Department
 	db.First(&M1, "department_name = ?", "สำนักวิชาวิศวกรรม")
 	db.First(&M2, "department_name = ?", "สำนักวิชาแพทยศาสตร์")
@@ -176,6 +193,7 @@ func seedMajors() {
 	}
 }
 
+// ครบ
 func SeedDataUser() {
 	hashedPassword01, err := HashPassword("admin")
 	if err != nil {
@@ -194,11 +212,11 @@ func SeedDataUser() {
 			Lastname:      "ADMIN",
 			Image:         "",
 			Email:         "SutAdmin@sut.ac.th",
-			PhoneNumber:   "0844444444",
-			Address:       "อาคารบริการ 1 ชั้น 1 ห้อง C2",
+			PhoneNumber:   "044224422",
+			Address:       "อาคารบริการ 1 ชั้น 4 ห้อง CPE01",
 			FirstPassword: true,
-			TitleID:       1,
-			PositionID:    1,
+			TitleID:       9,
+			PositionID:    4,
 			MajorID:       1,
 			RoleID:        1,
 		},
@@ -210,11 +228,11 @@ func SeedDataUser() {
 			Image:         "",
 			Email:         "sarunya.k@sut.ac.th",
 			PhoneNumber:   "044224447",
-			Address:       "อาคารบริการ 1 ชั้น 3 ห้อง 12",
+			Address:       "อาคารบริการ 1 ชั้น 4 ห้อง CPE04",
 			FirstPassword: false,
-			TitleID:       2,
+			TitleID:       3,
 			PositionID:    2,
-			MajorID:       2,
+			MajorID:       1,
 			RoleID:        2,
 		},
 		{
@@ -225,11 +243,11 @@ func SeedDataUser() {
 			Image:         "",
 			Email:         "nuntawut@sut.ac.th",
 			PhoneNumber:   "044224559",
-			Address:       "อาคารบริการ 1 ชั้น 3 ห้อง 25",
+			Address:       "อาคารบริการ 1 ชั้น 4 ห้อง CPE16",
 			FirstPassword: false,
-			TitleID:       2,
-			PositionID:    2,
-			MajorID:       2,
+			TitleID:       3,
+			PositionID:    1,
+			MajorID:       1,
 			RoleID:        3,
 		},
 		{
@@ -240,11 +258,116 @@ func SeedDataUser() {
 			Image:         "",
 			Email:         "wichai@sut.ac.th",
 			PhoneNumber:   "044224646",
-			Address:       "F11 ชั้น 4 ห้อง 421",
+			Address:       "อาคารบริการ 1 ชั้น 4 ห้อง CPE07",
+			FirstPassword: false,
+			TitleID:       4,
+			PositionID:    2,
+			MajorID:       1,
+			RoleID:        3,
+		},
+		{
+			Username:      "C1234",
+			Password:      hashedPassword,
+			Firstname:     "คะชา",
+			Lastname:      "ชาญศิลป์",
+			Image:         "",
+			Email:         "kacha@sut.ac.th",
+			PhoneNumber:   "044224237",
+			Address:       "อาคารบริการ 1 ชั้น 4 ห้อง CPE12",
 			FirstPassword: false,
 			TitleID:       2,
 			PositionID:    2,
-			MajorID:       2,
+			MajorID:       1,
+			RoleID:        3,
+		},
+		{
+			Username:      "D1234",
+			Password:      hashedPassword,
+			Firstname:     "กิตติศักดิ์",
+			Lastname:      "เกิดประสพ",
+			Image:         "",
+			Email:         "kerdpras@sut.ac.th",
+			PhoneNumber:   "044224349",
+			Address:       "อาคารบริการ 1 ชั้น 4 ห้อง CPE09",
+			FirstPassword: false,
+			TitleID:       2,
+			PositionID:    2,
+			MajorID:       1,
+			RoleID:        3,
+		},
+		{
+			Username:      "E1234",
+			Password:      hashedPassword,
+			Firstname:     "คมศัลล์",
+			Lastname:      "ศรีวิสุทธิ์",
+			Image:         "",
+			Email:         "komsan@sut.ac.th",
+			PhoneNumber:   "044224664",
+			Address:       "อาคารบริการ 1 ชั้น 4 ห้อง CPE13",
+			FirstPassword: false,
+			TitleID:       4,
+			PositionID:    3,
+			MajorID:       1,
+			RoleID:        3,
+		},
+		{
+			Username:      "F1234",
+			Password:      hashedPassword,
+			Firstname:     "นิตยา",
+			Lastname:      "เกิดประสพ",
+			Image:         "",
+			Email:         "nittaya@sut.ac.th",
+			PhoneNumber:   "044224432",
+			Address:       "อาคารบริการ 1 ชั้น 4 ห้อง CPE10",
+			FirstPassword: false,
+			TitleID:       2,
+			PositionID:    2,
+			MajorID:       1,
+			RoleID:        3,
+		},
+		{
+			Username:      "G1234",
+			Password:      hashedPassword,
+			Firstname:     "ปรเมศวร์",
+			Lastname:      "ห่อแก้ว",
+			Image:         "",
+			Email:         "phorkaew@sut.ac.th",
+			PhoneNumber:   "044224432",
+			Address:       "อาคารบริการ 1 ชั้น 4 ห้อง CPE08",
+			FirstPassword: false,
+			TitleID:       2,
+			PositionID:    2,
+			MajorID:       1,
+			RoleID:        3,
+		},
+		{
+			Username:      "H1234",
+			Password:      hashedPassword,
+			Firstname:     "ปริญญ์",
+			Lastname:      "ศรเลิศล้ำวาณิช",
+			Image:         "",
+			Email:         "parin.s@sut.ac.th",
+			PhoneNumber:   "044224452",
+			Address:       "อาคารบริการ 1 ชั้น 4 ห้อง CPE11",
+			FirstPassword: false,
+			TitleID:       4,
+			PositionID:    2,
+			MajorID:       1,
+			RoleID:        3,
+		},
+		{
+			Username:      "I1234",
+			Password:      hashedPassword,
+			Firstname:     "สุภาพร",
+			Lastname:      "บุญฤทธิ์",
+			Image:         "",
+			Email:         "sbunrit@sut.ac.th",
+			PhoneNumber:   "044224422",
+			Address:       "อาคารบริการ 1 ชั้น 4 ห้อง CPE06",
+			FirstPassword: false,
+			TitleID:       4,
+			PositionID:    2,
+			MajorID:       1,
 			RoleID:        3,
 		},
 	}
@@ -265,29 +388,94 @@ func SeedDataUser() {
 	}
 }
 
-func seedCredits() {
+// //////////////////////////////////////////////////////////// เงื่อนไข ///////////////////////////////////////////////////////
+// ยังใส่ไม่ครบ
+func SeedConditions() {
+	layout := "15:04"
+
+	conditions := []struct {
+		DayOfWeek    string
+		StartTimeStr string
+		EndTimeStr   string
+		UserID       uint
+	}{
+		{
+			DayOfWeek:    "Monday",
+			StartTimeStr: "08:00",
+			EndTimeStr:   "12:00",
+			UserID:       1,
+		},
+		{
+			DayOfWeek:    "Tuesday",
+			StartTimeStr: "13:00",
+			EndTimeStr:   "17:00",
+			UserID:       2,
+		},
+		{
+			DayOfWeek:    "Wednesday",
+			StartTimeStr: "09:30",
+			EndTimeStr:   "11:30",
+			UserID:       3,
+		},
+	}
+
+	for _, c := range conditions {
+		startTime, _ := time.Parse(layout, c.StartTimeStr)
+		endTime, _ := time.Parse(layout, c.EndTimeStr)
+
+		db.FirstOrCreate(&entity.Condition{}, &entity.Condition{
+			DayOfWeek: c.DayOfWeek,
+			StartTime: startTime,
+			EndTime:   endTime,
+			UserID:    c.UserID,
+		})
+	}
+}
+
+// //////////////////////////////////////////////////////////// วิชา ///////////////////////////////////////////////////////
+
+// ลืมว่ามีห้องไหนบ้าง
+func SeedLaboratory() {
+	laboratories := []entity.Laboratory{
+		{Room: "Lab A", Building: "อาคารเครื่องมือ 11", Capacity: "40"},
+		{Room: "Lab B", Building: "อาคารเครื่องมือ 11", Capacity: "30"},
+		{Room: "Lab C", Building: "อาคารเครื่องมือ 11", Capacity: "50"},
+	}
+
+	for _, lab := range laboratories {
+		db.FirstOrCreate(&entity.Laboratory{}, &entity.Laboratory{
+			Room:     lab.Room,
+			Building: lab.Building,
+			Capacity: lab.Capacity,
+		})
+	}
+}
+
+// ยังใส่ไม่ครบ
+func SeedCredits() {
 	credits := []entity.Credit{
-		{Unit: 2, Lectrue: 1, Lab: 3, Self: 5},
-		{Unit: 4, Lectrue: 4, Lab: 0, Self: 8},
-		{Unit: 4, Lectrue: 3, Lab: 3, Self: 9},
-		{Unit: 3, Lectrue: 3, Lab: 0, Self: 6},
-		{Unit: 1, Lectrue: 0, Lab: 3, Self: 3},
-		{Unit: 2, Lectrue: 2, Lab: 0, Self: 4},
-		{Unit: 1, Lectrue: 0, Lab: 0, Self: 0},
-		{Unit: 1, Lectrue: 0, Lab: 3, Self: 0},
+		{Unit: 2, Lecture: 1, Lab: 3, Self: 5},
+		{Unit: 4, Lecture: 4, Lab: 0, Self: 8},
+		{Unit: 4, Lecture: 3, Lab: 3, Self: 9},
+		{Unit: 3, Lecture: 3, Lab: 0, Self: 6},
+		{Unit: 1, Lecture: 0, Lab: 3, Self: 3},
+		{Unit: 2, Lecture: 2, Lab: 0, Self: 4},
+		{Unit: 1, Lecture: 0, Lab: 0, Self: 0},
+		{Unit: 1, Lecture: 0, Lab: 3, Self: 0},
 	}
 
 	for _, credit := range credits {
 		db.FirstOrCreate(&entity.Credit{}, entity.Credit{
 			Unit:    credit.Unit,
-			Lectrue: credit.Lectrue,
+			Lecture: credit.Lecture,
 			Lab:     credit.Lab,
 			Self:    credit.Self,
 		})
 	}
 }
 
-func seedTypeOfCourses() {
+// ใส่หัวหลักมาก่อน จะเอาหัวย่อยๆไหม ? ยังไม่เคลีย
+func SeedTypeOfCourses() {
 	types := []entity.TypeOfCourses{
 		{Type: 1, TypeName: "กลุ่มวิชาแกนศึกษาทั่วไป"},
 		{Type: 2, TypeName: "กลุ่มวิชาภาษา"},
@@ -306,7 +494,8 @@ func seedTypeOfCourses() {
 	}
 }
 
-func seedAcademicYears() {
+// ครบ
+func SeedAcademicYears() {
 	years := []entity.AcademicYear{
 		{Level: 1},
 		{Level: 2},
@@ -320,7 +509,8 @@ func seedAcademicYears() {
 	}
 }
 
-func seedCurriculums() {
+// ยังใส่ข้อมูลไม่ครบ
+func SeedCurriculums() {
 	var (
 		comEng    entity.Major
 		mechEng   entity.Major
@@ -355,7 +545,8 @@ func seedCurriculums() {
 	}
 }
 
-func seedAllCourses() {
+// ยังใส่ไม่ครบ
+func SeedAllCourses() {
 	var (
 		curriculumComEng2566  entity.Curriculum
 		curriculumMechEng2566 entity.Curriculum
@@ -378,10 +569,10 @@ func seedAllCourses() {
 	db.First(&curriculumMechEng2566, "curriculum_name = ?", "วิศวกรรมเครื่องกล 2566")
 	db.First(&curriculumDentist2565, "curriculum_name = ?", "ทันตแพทย์ 2565")
 
-	db.First(&credit3_3_0, "unit = ? AND lectrue = ? AND lab = ?", 3, 3, 0)
-	db.First(&credit2_2_0, "unit = ? AND lectrue = ? AND lab = ?", 2, 2, 0)
-	db.First(&credit4_4_0, "unit = ? AND lectrue = ? AND lab = ?", 4, 4, 0)
-	db.First(&credit1_0_3, "unit = ? AND lectrue = ? AND lab = ?", 1, 0, 3)
+	db.First(&credit3_3_0, "unit = ? AND lecture = ? AND lab = ?", 3, 3, 0)
+	db.First(&credit2_2_0, "unit = ? AND lecture = ? AND lab = ?", 2, 2, 0)
+	db.First(&credit4_4_0, "unit = ? AND lecture = ? AND lab = ?", 4, 4, 0)
+	db.First(&credit1_0_3, "unit = ? AND lecture = ? AND lab = ?", 1, 0, 3)
 
 	db.First(&typeSpecific, "type_name = ?", "หมวดวิชาเฉพาะ")
 	db.First(&typeLanguage, "type_name = ?", "กลุ่มวิชาภาษา")
@@ -497,6 +688,7 @@ func seedAllCourses() {
 	}
 }
 
+// ยังใส่ไม่ครบ
 func SeedUserAllCourses() {
 	var (
 		ss1234 entity.User
@@ -548,7 +740,247 @@ func SeedUserAllCourses() {
 		if err != nil {
 			log.Printf("❌ พบข้อผิดพลาดในการลงทะเบียน: ผู้ใช้ user_id=%d กับรายวิชา course_id=%d : %v", enroll.UserID, enroll.AllCoursesID, err)
 		} else {
-			log.Printf("ลงทะเบียนสำเร็จ: ผู้ใช้ user_id=%d กับรายวิชา course_id=%d", enroll.UserID, enroll.AllCoursesID)
+			log.Printf("✅ ลงทะเบียนสำเร็จ: ผู้ใช้ user_id=%d กับรายวิชา course_id=%d", enroll.UserID, enroll.AllCoursesID)
 		}
 	}
+}
+
+// //////////////////////////////////////////////////////////// ผู้ช่วยสอน ///////////////////////////////////////////////////////
+// ยังไม่แก้ไข
+func SeedTeachingAssistants() {
+
+	assistants := []entity.TeachingAssistant{
+		{
+			Firstname:   "สมชาย",
+			Lastname:    "ใจดี",
+			Nickname:    "แม็ค",
+			PhoneNumber: "0812345678",
+			TitleID:     9,
+		},
+		{
+			Firstname:   "วรัญญา",
+			Lastname:    "ศรีสวัสดิ์",
+			Nickname:    "นุ่น",
+			PhoneNumber: "0898765432",
+			TitleID:     10,
+		},
+		{
+			Firstname:   "นภัส",
+			Lastname:    "ทองคำ",
+			Nickname:    "บูม",
+			PhoneNumber: "0822223344",
+			TitleID:     11,
+		},
+	}
+
+	for _, ta := range assistants {
+		db.FirstOrCreate(&entity.TeachingAssistant{}, &entity.TeachingAssistant{
+			Firstname:   ta.Firstname,
+			Lastname:    ta.Lastname,
+			Nickname:    ta.Nickname,
+			PhoneNumber: ta.PhoneNumber,
+			TitleID:     ta.TitleID,
+		})
+	}
+}
+
+// ยังไม่ครบ
+func SeedScheduleTeachingAssistants() {
+	entries := []struct {
+		TeachingAssistantID uint
+		ScheduleID          uint
+	}{
+		{TeachingAssistantID: 1, ScheduleID: 1},
+		{TeachingAssistantID: 1, ScheduleID: 2},
+		{TeachingAssistantID: 2, ScheduleID: 1},
+		{TeachingAssistantID: 3, ScheduleID: 2},
+	}
+
+	for _, e := range entries {
+		db.FirstOrCreate(&entity.ScheduleTeachingAssistant{}, &entity.ScheduleTeachingAssistant{
+			TeachingAssistantID: e.TeachingAssistantID,
+			ScheduleID:          e.ScheduleID,
+		})
+	}
+}
+
+// //////////////////////////////////////////////////////////// วิชาที่จะเปิดสอนในเทอมนั้น ///////////////////////////////////////////////////////
+// ยังไม่ครบ
+func SeedOfferedCourses() {
+	labID3 := uint(3)
+
+	courses := []entity.OfferedCourses{
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      2,
+			Capacity:     30,
+			IsFixCourses: false,
+			UserID:       3,
+			AllCoursesID: 3,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     30,
+			IsFixCourses: false,
+			UserID:       2,
+			AllCoursesID: 10,
+			LaboratoryID: &labID3,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     40,
+			IsFixCourses: false,
+			UserID:       3,
+			AllCoursesID: 3,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         2,
+			Section:      1,
+			Capacity:     35,
+			IsFixCourses: true,
+			UserID:       1,
+			AllCoursesID: 5,
+			LaboratoryID: nil,
+		},
+	}
+
+	for _, c := range courses {
+		db.FirstOrCreate(&entity.OfferedCourses{}, &entity.OfferedCourses{
+			Year:         c.Year,
+			Term:         c.Term,
+			Section:      c.Section,
+			Capacity:     c.Capacity,
+			IsFixCourses: c.IsFixCourses,
+			UserID:       c.UserID,
+			AllCoursesID: c.AllCoursesID,
+			LaboratoryID: c.LaboratoryID,
+		})
+	}
+}
+
+// ยังไม่ครบ
+func SeedTimeFixedCourses() {
+	layout := "15:04"
+
+	entries := []struct {
+		Year         uint
+		Term         uint
+		DayOfWeek    string
+		StartTimeStr string
+		EndTimeStr   string
+		RoomFix      string
+		Section      uint
+		Capacity     uint
+		AllCoursesID uint
+		ScheduleID   uint
+	}{
+		{
+			Year:         2567,
+			Term:         1,
+			DayOfWeek:    "จันทร์",
+			StartTimeStr: "09:00",
+			EndTimeStr:   "11:00",
+			RoomFix:      "Lecture 101",
+			Section:      1,
+			Capacity:     40,
+			AllCoursesID: 6,
+			ScheduleID:   1,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			DayOfWeek:    "อังคาร",
+			StartTimeStr: "13:00",
+			EndTimeStr:   "15:00",
+			RoomFix:      "Lecture 102",
+			Section:      2,
+			Capacity:     35,
+			AllCoursesID: 6,
+			ScheduleID:   1,
+		},
+		{
+			Year:         2567,
+			Term:         2,
+			DayOfWeek:    "พฤหัสบดี",
+			StartTimeStr: "10:30",
+			EndTimeStr:   "12:30",
+			RoomFix:      "Lecture 201",
+			Section:      1,
+			Capacity:     30,
+			AllCoursesID: 5,
+			ScheduleID:   2,
+		},
+	}
+
+	for _, entry := range entries {
+		startTime, _ := time.Parse(layout, entry.StartTimeStr)
+		endTime, _ := time.Parse(layout, entry.EndTimeStr)
+
+		db.FirstOrCreate(&entity.TimeFixedCourses{}, &entity.TimeFixedCourses{
+			Year:         entry.Year,
+			Term:         entry.Term,
+			DayOfWeek:    entry.DayOfWeek,
+			StartTime:    startTime,
+			EndTime:      endTime,
+			RoomFix:      entry.RoomFix,
+			Section:      entry.Section,
+			Capacity:     entry.Capacity,
+			AllCoursesID: entry.AllCoursesID,
+			ScheduleID:   entry.ScheduleID,
+		})
+	}
+}
+
+// //////////////////////////////////////////////////////////// ตารางสอน ///////////////////////////////////////////////////////
+// ยังไม่ครบ
+func SeedSchedules() {
+	layout := "15:04"
+
+	schedules := []entity.Schedule{
+		{
+			NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+			SectionNumber:    1,
+			DayOfWeek:        "จันทร์",
+			StartTime:        mustParseTime(layout, "09:00"),
+			EndTime:          mustParseTime(layout, "11:00"),
+			OfferedCoursesID: 1, // ต้องตรงกับ ID ของ OfferedCourses ที่มีอยู่ใน DB
+		},
+		{
+			NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+			SectionNumber:    2,
+			DayOfWeek:        "อังคาร",
+			StartTime:        mustParseTime(layout, "13:00"),
+			EndTime:          mustParseTime(layout, "15:00"),
+			OfferedCoursesID: 2,
+		},
+		{
+			NameTable:        "ตารางเรียนปี 2567 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "พฤหัสบดี",
+			StartTime:        mustParseTime(layout, "10:30"),
+			EndTime:          mustParseTime(layout, "12:30"),
+			OfferedCoursesID: 4,
+		},
+	}
+
+	for _, s := range schedules {
+		db.FirstOrCreate(&entity.Schedule{}, &s)
+	}
+}
+
+// ตัวช่วยแปลงเวลาหรือ panic ถ้าพลาด
+func mustParseTime(layout, value string) time.Time {
+	t, err := time.Parse(layout, value)
+	if err != nil {
+		panic(err)
+	}
+	return t
 }

@@ -1,6 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Home from "./pages/prelogin/PreLogin";
+import Home from "./pages/prelogin/PreLogin";  // อิ๋งว่าไม่อยากให้ทีหน้านี้ละ
 import LoginPage from "./pages/login/Login";
 import HomeAdminPage from "./pages/home/HomeAdmin";
 import HomeInstructorPage from "./pages/home/HomeInstructor";
