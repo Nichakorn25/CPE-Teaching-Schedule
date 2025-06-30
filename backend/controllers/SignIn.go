@@ -68,39 +68,46 @@ func SignInUser(c *gin.Context) {
 	})
 }
 
+type Password struct {
+	Email           string `binding:"required,email"`
+	NewPassword     string `binding:"required,min=8"`
+	ConfirmPassword string `binding:"required,min=8"`
+}
+
 func ChangePassword(c *gin.Context) {
-	type PasswordChangeRequest struct {
-		UserID      uint
-		NewPassword string
+	var input Password
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง: " + err.Error()})
+		return
 	}
 
-	var req PasswordChangeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "คำร้องขอไม่ถูกต้อง"})
+	if input.NewPassword != input.ConfirmPassword {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน"})
 		return
 	}
 
 	var user entity.User
-	if err := config.DB().First(&user, req.UserID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบผู้ใช้งานนี้"})
+	if err := config.DB().Where("email = ?", input.Email).First(&user).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบผู้ใช้งานด้วยอีเมลนี้"})
 		return
 	}
 
-	hashedPassword, err := config.HashPassword(req.NewPassword)
+	hashedPassword, err := config.HashPassword(input.NewPassword)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเข้ารหัสของรหัสผ่านได้"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "การเข้ารหัสผ่านล้มเหลว"})
 		return
 	}
 
 	user.Password = hashedPassword
+
 	if !user.FirstPassword {
 		user.FirstPassword = true
 	}
 
 	if err := config.DB().Save(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเปลี่ยนรหัสผ่านได้"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "การอัปเดตรหัสผ่านล้มเหลว"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "เปลี่ยนรหัสผ่านสำเร็จ"})
+	c.JSON(http.StatusOK, gin.H{"message": "การอัปเดตรหัสผ่านสำเร็จ"})
 }
