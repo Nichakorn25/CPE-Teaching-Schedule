@@ -24,10 +24,17 @@ func main() {
 	router := r.Group("/")
 	{
 		router.Use(middleware.Authorizes())
-		r.GET("/users-by-role", controllers.GetUsersByRole)
+		///////////////////// AllCourses /////////////////////////
+		r.GET("/all-courses", controllers.GetAllCourses)
+		r.POST("/courses", controllers.CreateCourses)
+		r.PUT("/update-courses/:id", controllers.UpdateAllCourses)
+		r.DELETE("/delete-courses/:id", controllers.DeleteAllCourses)
+
+		///////////////////// USER /////////////////////////
+		r.GET("/all-teachers", controllers.GetAllTeachers)
 		r.POST("/users", controllers.CreateUser)
-		r.PATCH("/update-users/:id", controllers.UpdateUser)
-		r.DELETE("/users/:id", controllers.DeleteUser)
+		r.PUT("/update-users/:id", controllers.UpdateUser)
+		r.DELETE("/delete-users/:id", controllers.DeleteUser)
 
 	}
 

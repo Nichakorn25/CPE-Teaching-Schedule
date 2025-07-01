@@ -9,44 +9,78 @@ import (
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
 )
 
-// ดึงข้อมูลอาจารย์ทั้งหมด
-func GetUsersByRole(c *gin.Context) {
+func GetAllTeachers(c *gin.Context) {
 	var users []entity.User
 
-	if err := config.DB().Where("role_id IN ?", []int{2, 3}).Preload("Role").Find(&users).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	err := config.DB().Preload("Title").
+		Preload("Position").
+		Preload("Major").
+		Preload("Major.Department").
+		Preload("Role").
+		Find(&users).Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถดึงข้อมูลผู้ใช้ได้"})
 		return
 	}
 
-	c.JSON(http.StatusOK, users)
+	type TeacherResp struct {
+		ID         uint
+		Title      string
+		Firstname  string
+		Lastname   string
+		Email      string
+		Username   string
+		Department string
+		Major      string
+		Position   string
+		Status     string
+		Role       string
+	}
+
+	resp := make([]TeacherResp, 0, len(users))
+	for _, u := range users {
+		resp = append(resp, TeacherResp{
+			ID:         u.ID,
+			Title:      u.Title.Title,
+			Firstname:  u.Firstname,
+			Lastname:   u.Lastname,
+			Email:      u.Email,
+			Username:   u.Username,
+			Department: u.Major.Department.DepartmentName,
+			Major:      u.Major.MajorName,
+			Position:   u.Position.Position,
+			Status:     "Active",
+			Role:       u.Role.Role,
+		})
+	}
+
+	c.JSON(http.StatusOK, resp)
 }
 
-// เพิ่มผู้ใช้งาน
 func CreateUser(c *gin.Context) {
 	var input struct {
-		Username      string `json:"username" binding:"required"`
-		Password      string `json:"password" binding:"required"`
-		Firstname     string `json:"firstname" binding:"required"`
-		Lastname      string `json:"lastname" binding:"required"`
-		Image         string `json:"image" binding:"required"`
-		Email         string `json:"email" binding:"required"`
-		PhoneNumber   string `json:"phone_number" binding:"required"`
-		Address       string `json:"address" binding:"required"`
-		FirstPassword bool   `json:"first_password" binding:"required"`
-		TitleID       uint   `json:"title_id" binding:"required"`
-		PositionID    uint   `json:"position_id" binding:"required"`
-		MajorID       uint   `json:"major_id" binding:"required"`
-		RoleID        uint   `json:"role_id" binding:"required"`
+		Username    string `binding:"required"`
+		Password    string `binding:"required"`
+		Firstname   string
+		Lastname    string
+		Image       string
+		Email       string
+		PhoneNumber string
+		Address     string
+		TitleID     uint
+		PositionID  uint
+		MajorID     uint
+		RoleID      uint
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
 		return
 	}
 
 	hashedPassword, err := config.HashPassword(input.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเข้ารหัสของรหัสผ่านได้"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "เข้ารหัสรหัสผ่านล้มเหลว"})
 		return
 	}
 
@@ -59,7 +93,7 @@ func CreateUser(c *gin.Context) {
 		Email:         input.Email,
 		PhoneNumber:   input.PhoneNumber,
 		Address:       input.Address,
-		FirstPassword: input.FirstPassword,
+		FirstPassword: false,
 		TitleID:       input.TitleID,
 		PositionID:    input.PositionID,
 		MajorID:       input.MajorID,
@@ -67,101 +101,62 @@ func CreateUser(c *gin.Context) {
 	}
 
 	if err := config.DB().Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเพิ่มผู้ใช้ได้"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": user})
+	c.JSON(http.StatusOK, gin.H{"message": "เพิ่มผู้ใช้สำเร็จ", "user_id": user.ID})
 }
 
-// แก้ไขรายละเอียดผู้ใช้งาน
 func UpdateUser(c *gin.Context) {
-
 	id := c.Param("id")
 
 	var user entity.User
 	if err := config.DB().First(&user, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบผู้ใช้นี้"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบผู้ใช้ที่ต้องการแก้ไข"})
 		return
 	}
 
 	var input struct {
-		Username      *string `json:"username"`
-		Password      *string `json:"password"`
-		Firstname     *string `json:"firstname"`
-		Lastname      *string `json:"lastname"`
-		Image         *string `json:"image"`
-		Email         *string `json:"email"`
-		PhoneNumber   *string `json:"phone_number"`
-		Address       *string `json:"address"`
-		FirstPassword *bool   `json:"first_password"`
-		TitleID       *uint   `json:"title_id"`
-		PositionID    *uint   `json:"position_id"`
-		MajorID       *uint   `json:"major_id"`
-		RoleID        *uint   `json:"role_id"`
+		Username    string
+		Firstname   string
+		Lastname    string
+		Image       string
+		Email       string
+		PhoneNumber string
+		Address     string
+		TitleID     uint
+		PositionID  uint
+		MajorID     uint
+		RoleID      uint
 	}
+
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
 		return
 	}
 
-	updates := map[string]interface{}{}
+	user.Username = input.Username
+	user.Firstname = input.Firstname
+	user.Lastname = input.Lastname
+	user.Image = input.Image
+	user.Email = input.Email
+	user.PhoneNumber = input.PhoneNumber
+	user.Address = input.Address
+	user.TitleID = input.TitleID
+	user.PositionID = input.PositionID
+	user.MajorID = input.MajorID
+	user.RoleID = input.RoleID
 
-	if input.Username != nil {
-		updates["username"] = *input.Username
-	}
-	if input.Password != nil {
-		hashedPassword, err := config.HashPassword(*input.Password)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเข้ารหัสรหัสผ่านได้"})
-			return
-		}
-		updates["password"] = hashedPassword
-	}
-	if input.Firstname != nil {
-		updates["firstname"] = *input.Firstname
-	}
-	if input.Lastname != nil {
-		updates["lastname"] = *input.Lastname
-	}
-	if input.Image != nil {
-		updates["image"] = *input.Image
-	}
-	if input.Email != nil {
-		updates["email"] = *input.Email
-	}
-	if input.PhoneNumber != nil {
-		updates["phone_number"] = *input.PhoneNumber
-	}
-	if input.Address != nil {
-		updates["address"] = *input.Address
-	}
-	if input.FirstPassword != nil {
-		updates["first_password"] = *input.FirstPassword
-	}
-	if input.TitleID != nil {
-		updates["title_id"] = *input.TitleID
-	}
-	if input.PositionID != nil {
-		updates["position_id"] = *input.PositionID
-	}
-	if input.MajorID != nil {
-		updates["major_id"] = *input.MajorID
-	}
-	if input.RoleID != nil {
-		updates["role_id"] = *input.RoleID
-	}
-
-	if err := config.DB().Model(&user).Updates(updates).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := config.DB().Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถอัปเดตข้อมูลผู้ใช้ได้"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": user})
+
+	c.JSON(http.StatusOK, gin.H{"message": "อัปเดตข้อมูลผู้ใช้เรียบร้อยแล้ว"})
 }
 
-// ลบผู้ใช้งาน
 func DeleteUser(c *gin.Context) {
-
 	id := c.Param("id")
 
 	var user entity.User
@@ -174,5 +169,6 @@ func DeleteUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถลบผู้ใช้ได้"})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "ลบผู้ใช้เรียบร้อยแล้ว"})
 }
