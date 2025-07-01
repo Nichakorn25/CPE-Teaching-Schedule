@@ -1,8 +1,12 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { SignIn } from "../../services/https";
-import { SignInInterface } from "../../interfaces/SignIn";
+import { FaLock, FaCheckCircle, FaTimesCircle, FaExclamationTriangle } from "react-icons/fa";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { SignIn, ChangePassword } from "../../services/https/LoginServices";
+import { SignInInterface, ChangePasswordInterface } from "../../interfaces/SignIn";
+import './Toast.css'
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -21,6 +25,50 @@ const LoginPage: React.FC = () => {
     };
   }, []);
 
+  ///////////////////////////// Notification-Password /////////////////////////////////
+  const InvalidForPassword = (e: React.FormEvent<HTMLInputElement>) => {
+    const target = e.target as HTMLInputElement;
+
+    switch (target.name) {
+      case "Email":
+        if (target.value.trim() === "") {
+          target.setCustomValidity("กรุณากรอกอีเมล");
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(target.value)) {
+          target.setCustomValidity("รูปแบบอีเมลไม่ถูกต้อง");
+        } else {
+          target.setCustomValidity("");
+        }
+        break;
+
+      case "NewPassword":
+        if (target.value.trim() === "") {
+          target.setCustomValidity("กรุณากรอกรหัสผ่านใหม่");
+        } else if (target.value.length < 8) {
+          target.setCustomValidity("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร");
+        } else {
+          target.setCustomValidity("");
+        }
+        break;
+
+      case "ConfirmPassword":
+        const newPassword = document.querySelector<HTMLInputElement>('input[name="NewPassword"]');
+        if (target.value.trim() === "") {
+          target.setCustomValidity("กรุณากรอกยืนยันรหัสผ่าน");
+        } else if (newPassword && target.value !== newPassword.value) {
+          target.setCustomValidity("รหัสผ่านไม่ตรงกัน");
+        } else {
+          target.setCustomValidity("");
+        }
+        break;
+
+      default:
+        target.setCustomValidity("");
+        break;
+    }
+  };
+
+  ///////////////////////////// Notification-Login /////////////////////////////////
+  
   const handleInvalid = (e: React.FormEvent<HTMLInputElement>) => {
     const target = e.target as HTMLInputElement;
 
@@ -52,7 +100,7 @@ const LoginPage: React.FC = () => {
     }
   };
 
-
+  ///////////////////////////// Login /////////////////////////////////
   const onFinish = async (values: SignInInterface) => {
     setLoading(true);
     setMessage(null);
@@ -110,6 +158,38 @@ const LoginPage: React.FC = () => {
     } catch (err) {
       setMessage("เกิดข้อผิดพลาดในการเชื่อมต่อ");
       setMessageType("error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  //////////////////// forget password /////////////////////////////////
+  const handleReset = async (values: ChangePasswordInterface) => {
+    setLoading(true);
+    try {
+      const res = await ChangePassword(values);
+      if (res?.status === 200) {
+        toast.success("รีเซ็ตรหัสผ่านสำเร็จ", {
+          icon: <FaCheckCircle />,
+        });
+        resetFormRef.current?.reset();
+        setTimeout(() => {
+          setShowReset(false);
+          loginFormRef.current?.reset();
+        }, 1500);
+      } else if (res?.status === 404) {
+        toast.error("ไม่พบผู้ใช้งานด้วยอีเมลนี้", {
+          icon: <FaExclamationTriangle />,
+        });
+      } else {
+        toast.error(res?.data?.error || "เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน", {
+          icon: <FaTimesCircle />,
+        });
+      }
+    } catch (error) {
+      toast.error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์", {
+        icon: <FaTimesCircle />,
+      });
     } finally {
       setLoading(false);
     }
@@ -191,7 +271,7 @@ const LoginPage: React.FC = () => {
                   <button
                     type="button"
                     className="text-sm text-white font-semibold hover:underline"
-                    onClick={() => {setShowReset(true); loginFormRef.current?.reset();}}
+                    onClick={() => { setShowReset(true); loginFormRef.current?.reset(); }}
                   >
                     ลืมรหัสผ่าน?
                   </button>
@@ -204,12 +284,23 @@ const LoginPage: React.FC = () => {
               onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target as HTMLFormElement);
-                // const values: ResetPasswordInterface = {
-                //   Email: formData.get("Email") as string,
-                //   NewPassword: formData.get("NewPassword") as string,
-                //   ConfirmPassword: formData.get("ConfirmPassword") as string,
-                // };
-                // handleReset(values);
+                const values: ChangePasswordInterface = {
+                  Email: formData.get("Email") as string,
+                  NewPassword: formData.get("NewPassword") as string,
+                  ConfirmPassword: formData.get("ConfirmPassword") as string,
+                };
+
+                if (values.NewPassword !== values.ConfirmPassword) {
+                  toast.warning("รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน", {
+                    position: "top-center",
+                    className: "custom-toast Toastify__toast--warning",
+                    progressClassName: "Toastify__progress-bar--warning",
+                    icon: false,
+                  });
+                  return;
+                }
+
+                handleReset(values);
               }}
               className="space-y-5"
             >
@@ -222,7 +313,7 @@ const LoginPage: React.FC = () => {
                   id="Email"
                   name="Email"
                   required
-                  onInvalid={handleInvalid}
+                  onInvalid={InvalidForPassword}
                   onInput={(e) => (e.currentTarget as HTMLInputElement).setCustomValidity("")}
                   placeholder="📧 example@g.sut.ac.th"
                   className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
@@ -238,7 +329,8 @@ const LoginPage: React.FC = () => {
                   id="NewPassword"
                   name="NewPassword"
                   required
-                  onInvalid={handleInvalid}
+                  onInvalid={InvalidForPassword}
+                  onInput={(e) => (e.currentTarget as HTMLInputElement).setCustomValidity("")}
                   placeholder="🔐 รหัสผ่านใหม่"
                   className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
                 />
@@ -253,7 +345,8 @@ const LoginPage: React.FC = () => {
                   id="ConfirmPassword"
                   name="ConfirmPassword"
                   required
-                  onInvalid={handleInvalid}
+                  onInvalid={InvalidForPassword}
+                  onInput={(e) => (e.currentTarget as HTMLInputElement).setCustomValidity("")}
                   placeholder="🔐 ยืนยันรหัสผ่าน"
                   className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
                 />
@@ -272,12 +365,26 @@ const LoginPage: React.FC = () => {
                   <button
                     type="button"
                     className="text-sm text-white font-semibold hover:underline"
-                    onClick={() => {setShowReset(false); resetFormRef.current?.reset();}}
+                    onClick={() => { setShowReset(false); resetFormRef.current?.reset(); }}
                   >
                     กลับสู่หน้าเข้าสู่ระบบ
                   </button>
                 </div>
               </div>
+              <ToastContainer
+                position="top-center"
+                autoClose={1000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick={false}
+                closeButton={false}
+                rtl={false}
+                pauseOnFocusLoss={false}
+                draggable={false}
+                pauseOnHover={false}
+                theme="colored"
+                toastClassName="custom-toast"
+              />
             </form>
           )}
 

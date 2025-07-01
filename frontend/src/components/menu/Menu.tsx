@@ -63,7 +63,7 @@ const LayoutMenu: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const handleLogout = () => {
     localStorage.clear();
     setTimeout(() => {
-      navigate("/login");
+      navigate("/");
     }, 1000);
   };
 
