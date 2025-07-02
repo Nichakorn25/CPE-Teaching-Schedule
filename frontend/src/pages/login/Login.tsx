@@ -68,7 +68,7 @@ const LoginPage: React.FC = () => {
   };
 
   ///////////////////////////// Notification-Login /////////////////////////////////
-  
+
   const handleInvalid = (e: React.FormEvent<HTMLInputElement>) => {
     const target = e.target as HTMLInputElement;
 
@@ -112,7 +112,7 @@ const LoginPage: React.FC = () => {
       if (res.status === 200) {
         setMessage("เข้าสู่ระบบสำเร็จ");
         setMessageType("success");
-        const { token, token_type, role, user_id, first_name, last_name, image, first_password, major_name, position, title, username } = res.data;
+        const { token, token_type, role, user_id, first_name, last_name, image, first_password, major_name, position, title, username, email } = res.data;
 
         localStorage.setItem("isLogin", "true");
         localStorage.setItem("token", token);
@@ -127,9 +127,12 @@ const LoginPage: React.FC = () => {
         localStorage.setItem("major_name", major_name);
         localStorage.setItem("first_password", first_password);
         localStorage.setItem("image", image);
+        localStorage.setItem("email", email);
 
         setTimeout(() => {
-          if (role === "Admin") {
+          if (first_password === false) {
+            navigate("/change-password");
+          } else if (role === "Admin") {
             navigate("/home-admin");
           } else if (role === "Scheduler" || role === "Instructor") {
             navigate("/home-instructor");

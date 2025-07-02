@@ -65,6 +65,7 @@ func SignInUser(c *gin.Context) {
 		"major_name":     user.Major.MajorName,
 		"first_password": user.FirstPassword,
 		"image":          user.Image,
+		"email":          user.Email,
 	})
 }
 

@@ -25,13 +25,13 @@ func main() {
 	{
 		router.Use(middleware.Authorizes())
 		///////////////////// AllCourses /////////////////////////
-		r.GET("/all-courses", controllers.GetAllCourses)
+		r.GET("/all-courses", controllers.GetAllCourses) //
 		r.POST("/courses", controllers.CreateCourses)
 		r.PUT("/update-courses/:id", controllers.UpdateAllCourses)
 		r.DELETE("/delete-courses/:id", controllers.DeleteAllCourses)
 
 		///////////////////// USER /////////////////////////
-		r.GET("/all-teachers", controllers.GetAllTeachers)
+		r.GET("/all-teachers", controllers.GetAllTeachers) //
 		r.POST("/users", controllers.CreateUser)
 		r.PUT("/update-users/:id", controllers.UpdateUser)
 		r.DELETE("/delete-users/:id", controllers.DeleteUser)
