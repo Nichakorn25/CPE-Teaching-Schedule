@@ -23,3 +23,4 @@ export interface CreateUserInterface {
   MajorID: number;
   RoleID: number;
 }
+

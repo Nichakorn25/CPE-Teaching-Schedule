@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { GetAllChangePassword, NewPass } from "../../services/https/index";
-import { ChangePassInterface } from "../../interfaces/ChangePass";
-
-
 function ChangePasswordApproval() {
-  const [changeRequests, setChangeRequests] = useState<ChangePassInterface[]>([]);
+  const [changeRequests, setChangeRequests] = useState("");
   const [loading, setLoading] = useState(true);
   const [approvedIds, setApprovedIds] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
