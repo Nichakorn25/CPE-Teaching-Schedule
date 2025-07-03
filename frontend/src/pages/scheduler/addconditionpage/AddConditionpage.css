@@ -1,0 +1,227 @@
+/* Background Layer */
+.addcondition-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #e9ecef;
+    z-index: -1;
+}
+
+/* Sidebar Container */
+.addcondition-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100vh;
+    z-index: 1000;
+}
+
+/* Main Content Container */
+.addcondition-main-content {
+    position: fixed;
+    top: 0;
+    left: 300px;
+    width: calc(100vw - 300px);
+    height: 100vh;
+    background-color: #e9ecef;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 88px 40px 100px 40px;
+    overflow-y: scroll;
+    box-sizing: border-box;
+}
+
+/* White Content Area */
+.addcondition-content-area {
+    width: 1200px;
+    min-height: calc(100vh - 300px);
+    background-color: #ffffff;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    padding-top: 45px;
+    padding-bottom: 30px;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    margin: 15px 15px 60px 15px;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+/* Button Styles */
+.addcondition-primary-button {
+    background-color: #F26522 !important;
+    border-color: #F26522 !important;
+    color: white !important;
+}
+
+.addcondition-primary-button:hover {
+    background-color: #e0561a !important;
+    border-color: #e0561a !important;
+}
+
+.addcondition-danger-button {
+    background-color: #ff4d4f !important;
+    border-color: #ff4d4f !important;
+    color: white !important;
+}
+
+.addcondition-danger-button:hover {
+    background-color: #ff7875 !important;
+    border-color: #ff7875 !important;
+}
+
+/* Table Styles */
+.addcondition-table {
+    border-collapse: collapse;
+    width: 100%;
+    background-color: white;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.addcondition-table th {
+    background-color: #5d7285 !important;
+    color: white !important;
+    padding: 12px 8px !important;
+    text-align: center !important;
+    font-weight: bold !important;
+    font-size: 14px !important;
+    border: 1px solid #4a6170 !important;
+}
+
+.addcondition-table td {
+    padding: 12px 8px !important;
+    text-align: center !important;
+    border: 1px solid #d9d9d9 !important;
+    vertical-align: top !important;
+    background-color: white;
+}
+
+.addcondition-table tbody tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.addcondition-table tbody tr:hover {
+    background-color: #e6f7ff !important;
+}
+
+/* Time Slot Styles */
+.time-slot-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    min-height: 80px;
+}
+
+.time-slot-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    width: 100%;
+    justify-content: center;
+}
+
+.time-slot-number {
+    width: 24px;
+    height: 24px;
+    background-color: #F26522;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.time-input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.time-input-label {
+    font-size: 10px;
+    color: #666;
+    font-weight: 500;
+}
+
+.time-input {
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 12px;
+    width: 80px;
+    text-align: center;
+}
+
+.time-input:focus {
+    border-color: #F26522;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(242, 101, 34, 0.2);
+}
+
+.time-separator {
+    color: #666;
+    font-weight: bold;
+    margin: 0 4px;
+    align-self: flex-end;
+    margin-bottom: 8px;
+}
+
+.add-time-button {
+    background-color: #F26522;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.add-time-button:hover {
+    background-color: #e0561a;
+}
+
+.remove-time-button {
+    background-color: #ff4d4f;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    align-self: flex-end;
+    margin-bottom: 8px;
+}
+
+.remove-time-button:hover {
+    background-color: #ff7875;
+}
+
+/* Save Button Container */
+.save-button-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #e9ecef;
+}

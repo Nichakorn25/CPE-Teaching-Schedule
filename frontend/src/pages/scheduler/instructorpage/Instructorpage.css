@@ -1,0 +1,145 @@
+/* Background Layer */
+.instructor-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #e9ecef;
+    z-index: -1;
+}
+
+/* Sidebar Container */
+.instructor-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100vh;
+    z-index: 1000;
+}
+
+/* Main Content Container */
+.instructor-main-content {
+    position: fixed;
+    top: 0;
+    left: 300px;
+    width: calc(100vw - 300px);
+    height: 100vh;
+    background-color: #e9ecef;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 88px 40px 100px 40px;
+    overflow-y: scroll;
+    box-sizing: border-box;
+}
+
+/* White Content Area */
+.instructor-content-area {
+    width: 1200px;
+    min-height: calc(100vh - 300px);
+    background-color: #ffffff;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    padding-top: 45px;
+    padding-bottom: 30px;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    margin: 15px 15px 60px 15px;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+/* Button Styles */
+.instructor-primary-button {
+    background-color: #F26522 !important;
+    border-color: #F26522 !important;
+    color: white !important;
+}
+
+.instructor-primary-button:hover {
+    background-color: #e0561a !important;
+    border-color: #e0561a !important;
+}
+
+.instructor-danger-button {
+    background-color: #ff4d4f !important;
+    border-color: #ff4d4f !important;
+    color: white !important;
+}
+
+.instructor-danger-button:hover {
+    background-color: #ff7875 !important;
+    border-color: #ff7875 !important;
+}
+
+/* Table Styles */
+.custom-table .ant-table-thead > tr > th {
+    background-color: #5d7285 !important;
+    color: white !important;
+    font-weight: bold !important;
+    text-align: center !important;
+    font-size: 12px !important;
+    padding: 8px 4px !important;
+    border: 1px solid #4a6170 !important;
+}
+
+.custom-table .ant-table-tbody > tr > td {
+    padding: 6px 4px !important;
+    font-size: 11px !important;
+    border: 1px solid #d9d9d9 !important;
+    vertical-align: top !important;
+    background-color: white;
+}
+
+.custom-table .ant-table-tbody > tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.custom-table .ant-table-tbody > tr:hover {
+    background-color: #e6f7ff !important;
+}
+
+.custom-table .ant-table {
+    font-size: 11px;
+}
+
+.custom-table .ant-table-container {
+    border: none;
+}
+
+/* Tag Styles */
+.instructor-content-area .ant-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* Status and Role Tags */
+.instructor-content-area .ant-tag-green {
+    background-color: #f6ffed;
+    border-color: #b7eb8f;
+    color: #52c41a;
+}
+
+.instructor-content-area .ant-tag-red {
+    background-color: #fff2f0;
+    border-color: #ffccc7;
+    color: #ff4d4f;
+}
+
+.instructor-content-area .ant-tag-blue {
+    background-color: #f0f5ff;
+    border-color: #adc6ff;
+    color: #1890ff;
+}
+
+.instructor-content-area .ant-tag-orange {
+    background-color: #fff7e6;
+    border-color: #ffd591;
+    color: #fa8c16;
+}

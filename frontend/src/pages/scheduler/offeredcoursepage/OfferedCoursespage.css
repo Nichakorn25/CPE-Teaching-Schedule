@@ -1,0 +1,113 @@
+/* Background Layer */
+.schedule-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #e9ecef;
+    z-index: -1;
+}
+
+/* Sidebar Container */
+.schedule-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100vh;
+    z-index: 1000;
+}
+
+/* Main Content Container */
+.schedule-main-content {
+    position: fixed;
+    top: 0;
+    left: 300px;
+    width: calc(100vw - 300px);
+    height: 100vh;
+    background-color: #e9ecef;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 88px 40px 100px 40px; /* เพิ่ม padding ด้านล่างเป็น 100px */
+    overflow-y: scroll;
+    box-sizing: border-box; /* ให้ padding นับรวมใน height */
+}
+
+/* White Content Area */
+.schedule-content-area {
+    width: 1200px;
+    min-height: calc(100vh - 300px); /* กำหนด min-height ให้มีขนาดขั้นต่ำ */
+    background-color: #ffffff;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    padding-top: 45px;
+    padding-bottom: 30px; /* เพิ่ม padding ด้านล่างภายใน content area */
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    margin: 15px 15px 60px 15px; /* เพิ่ม margin ด้านล่างเป็น 60px */
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.schedule-button {
+    justify-content: flex-end;
+}
+
+/* Button Styles */
+.primary-button {
+    background-color: #F26522 !important;
+    border-color: #F26522 !important;
+}
+
+.defualt-button {
+    border-color: #F26522 !important;
+    color: #F26522 !important;
+}
+
+/* Fixed Height Rows */
+.fixed-height-row td {
+    height: 90px !important;
+    vertical-align: top !important;
+    padding: 4px !important;
+}
+
+.fixed-height-row td > div {
+    height: 100% !important;
+}
+
+.custom-table .ant-table-thead > tr > th {
+                    background-color: #f5f5f5 !important;
+                    font-weight: bold !important;
+                    text-align: center !important;
+                    font-size: 12px !important;
+                    padding: 8px 4px !important;
+                    border: 1px solid #d9d9d9 !important;
+                }
+                
+                .custom-table .ant-table-tbody > tr > td {
+                    padding: 6px 4px !important;
+                    font-size: 11px !important;
+                    border: 1px solid #d9d9d9 !important;
+                    vertical-align: top !important;
+                }
+                
+                .custom-table .ant-table-tbody > tr:nth-child(even) {
+                    background-color: #fafafa;
+                }
+                
+                .custom-table .ant-table-tbody > tr:hover {
+                    background-color: #e6f7ff !important;
+                }
+                
+                .custom-table .ant-table {
+                    font-size: 11px;
+                }
+                
+                .custom-table .ant-table-container {
+                    border: none;
+                }

@@ -19,6 +19,16 @@ import ChangePassword from "./pages/instructor/ChangePassword/ChangePassword";
 import AddCondition from "./pages/instructor/AddCondition/AddCondition";
 import AddCourse from "./pages/instructor/AddCourse/AddCourse";
 
+import Homepage from './pages/scheduler/homepage/Homepage';
+import Schedulepage from './pages/scheduler/schedulepage/Schedulepage';
+import OfferedCoursespage from "./pages/scheduler/offeredcoursepage/OfferedCoursespage";
+import AddConditionpage from './pages/scheduler/addconditionpage/AddConditionpage';
+import Conditionpage from './pages/scheduler/conditionpage/Conditionpage';
+import AllCoursepage from './pages/scheduler/allcoursepage/AllCoursepage';
+import AddCoursepage from './pages/scheduler/addcoursepage/AddCoursepage';
+import Instructorpage from './pages/scheduler/instructorpage/Instructorpage';
+
+
 import PrivateRoute from "./PrivateRoute";
 
 const App: React.FC = () => {
@@ -43,6 +53,14 @@ const App: React.FC = () => {
 
           <Route path="/home-instructor" element={<PrivateRoute><HomeInstructorPage /></PrivateRoute>} />
         </Route>
+        <Route path="/Homepage" element={<Homepage />} />
+        <Route path="/Schedulepage" element={<Schedulepage />} />
+        <Route path="/OfferedCoursespage" element={<OfferedCoursespage />} />
+        <Route path="/Conditionpage" element={<Conditionpage/>} />
+        <Route path="/Instructorpage" element={<Instructorpage/>} />
+        <Route path="/AllCoursepage" element={<AllCoursepage/>} />
+        <Route path="/AddConditionpage" element={<AddConditionpage/>} />
+        <Route path="/AddCoursepage" element={<AddCoursepage/>} />
       </Routes>
       <Footer />
     </Router>

@@ -1,0 +1,195 @@
+/* Background Layer */
+.addcourse-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #e9ecef;
+    z-index: -1;
+}
+
+/* Sidebar Container */
+.addcourse-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100vh;
+    z-index: 1000;
+}
+
+/* Main Content Container */
+.addcourse-main-content {
+    position: fixed;
+    top: 0;
+    left: 300px;
+    width: calc(100vw - 300px);
+    height: 100vh;
+    background-color: #e9ecef;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 88px 40px 100px 40px;
+    overflow-y: scroll;
+    box-sizing: border-box;
+}
+
+/* White Content Area */
+.addcourse-content-area {
+    width: 1200px;
+    min-height: calc(100vh - 300px);
+    background-color: #ffffff;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    padding-top: 45px;
+    padding-bottom: 30px;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    margin: 15px 15px 60px 15px;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+/* Button Styles */
+.addcourse-primary-button {
+    background-color: #F26522 !important;
+    border-color: #F26522 !important;
+    color: white !important;
+}
+
+.addcourse-primary-button:hover {
+    background-color: #e0561a !important;
+    border-color: #e0561a !important;
+}
+
+.addcourse-danger-button {
+    background-color: #ff4d4f !important;
+    border-color: #ff4d4f !important;
+    color: white !important;
+}
+
+.addcourse-danger-button:hover {
+    background-color: #ff7875 !important;
+    border-color: #ff7875 !important;
+}
+
+/* Form Styles */
+.addcourse-form-item {
+    margin-bottom: 16px;
+}
+
+.addcourse-form-label {
+    color: #F26522;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* Card Styles */
+.addcourse-card {
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.addcourse-card .ant-card-head {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.addcourse-card .ant-card-head-title {
+    color: #333;
+    font-weight: bold;
+}
+
+/* Assistant Item Styles */
+.addcourse-assistant-item {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.addcourse-assistant-number {
+    width: 32px;
+    height: 32px;
+    background-color: #F26522;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+/* Hours Selection Styles */
+.addcourse-hours-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    text-align: center;
+}
+
+.addcourse-hours-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.addcourse-hours-label {
+    color: #F26522;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* Input Focus Styles */
+.addcourse-content-area .ant-input:focus,
+.addcourse-content-area .ant-input-focused {
+    border-color: #F26522;
+    box-shadow: 0 0 0 2px rgba(242, 101, 34, 0.2);
+}
+
+.addcourse-content-area .ant-select:not(.ant-select-disabled):hover .ant-select-selector,
+.addcourse-content-area .ant-select-focused .ant-select-selector {
+    border-color: #F26522;
+}
+
+.addcourse-content-area .ant-select-focused .ant-select-selector {
+    box-shadow: 0 0 0 2px rgba(242, 101, 34, 0.2);
+}
+
+/* Instructions Styles */
+.addcourse-instructions {
+    margin-top: 24px;
+    padding: 16px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.addcourse-instructions h4 {
+    margin: 0 0 8px 0;
+    color: #333;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.addcourse-instructions ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #666;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.addcourse-instructions li {
+    margin-bottom: 4px;
+}
