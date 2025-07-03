@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import { FaSearch } from "react-icons/fa";
 import Header from "../../../components/header/Header";
+import { getAllCourses } from "../../../services/https/AdminPageServices";
 
 interface Course {
   id: number;
@@ -15,89 +16,31 @@ const AllCourse: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [perPage, setPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [courseData, setCourseData] = useState<Course[]>([]);
 
-  const courseData: Course[] = [
-    {
-      id: 1,
-      code: "IST20 1001",
-      name: "DIGITAL LITERACY",
-      credit: "2 (2-0-4)",
-      category: "ศึกษาทั่วไป",
-      instructors: ["อ.ดร.ปราโมทย์ ภักดีณรงค์"],
-    },
-    {
-      id: 2,
-      code: "IST20 1502",
-      name: "ART APPRECIATION",
-      credit: "2 (2-0-4)",
-      category: "ศึกษาทั่วไป",
-      instructors: ["อ.ดร.ปราโมทย์ ภักดีณรงค์"],
-    },
-    {
-      id: 3,
-      code: "ENG23 2003",
-      name: "PROBLEM SOLVING WITH PROGRAMMING",
-      credit: "2(1-3-5)",
-      category: "หมวดวิชาเฉพาะ",
-      instructors: ["อ.ดร.คมศัลล์  ศรีวิสุทธิ์"],
-    },
-    {
-      id: 4,
-      code: "ENG23 2011",
-      name: "DATABASE SYSTEMS",
-      credit: "4 (3-3-9)",
-      category: "หมวดวิชาเฉพาะ",
-      instructors: ["ผศ.ดร.นันทวุฒิ  คะอังกุ", "ผศ.ดร.ศรัญญา กาญจนวัฒนา"],
-    },
-    {
-      id: 5,
-      code: "ENG23 4014",
-      name: "ARTIFICIAL NEURAL NETWORKS",
-      credit: "4 (4-0-8)",
-      category: "หมวดวิชาเลือก",
-      instructors: ["อ.ดร.สุภาพร บุญฤทธิ์"],
-    },
-    {
-      id: 6,
-      code: "ENG23 3017",
-      name: "INTRODUCTION TO DATA ENGINEERING",
-      credit: "4 (3-3-9)",
-      category: "หมวดวิชาเลือก",
-      instructors: ["ผศ.ดร.ศรัญญา กาญจนวัฒนา"],
-    },
-    {
-      id: 7,
-      code: "IST20 1001",
-      name: "DIGITAL LITERACY",
-      credit: "2 (2-0-4)",
-      category: "ศึกษาทั่วไป",
-      instructors: ["อ.ดร.ปราโมทย์ ภักดีณรงค์"],
-    },
-    {
-      id: 8,
-      code: "IST20 1502",
-      name: "ART APPRECIATION",
-      credit: "2 (2-0-4)",
-      category: "ศึกษาทั่วไป",
-      instructors: ["อ.ดร.ปราโมทย์ ภักดีณรงค์"],
-    },
-    {
-      id: 9,
-      code: "ENG23 2003",
-      name: "PROBLEM SOLVING WITH PROGRAMMING",
-      credit: "2(1-3-5)",
-      category: "หมวดวิชาเฉพาะ",
-      instructors: ["อ.ดร.คมศัลล์  ศรีวิสุทธิ์"],
-    },
-    {
-      id: 10,
-      code: "ENG23 2011",
-      name: "DATABASE SYSTEMS",
-      credit: "4 (3-3-9)",
-      category: "หมวดวิชาเฉพาะ",
-      instructors: ["ผศ.ดร.นันทวุฒิ  คะอังกุ", "ผศ.ดร.ศรัญญา กาญจนวัฒนา"],
-    },
-  ];
+  useEffect(() => {
+  const fetchCourses = async () => {
+    const response = await getAllCourses();
+
+    if (response.status === 200 && Array.isArray(response.data)) {
+      const mappedData: Course[] = response.data.map((item: any, index: number) => ({
+        id: index + 1,
+        code: item["รหัสวิชา"],
+        name: item["ชื่อวิชา"],
+        credit: item["หน่วยกิต"],
+        category: item["หมวดวิชา"],
+        instructors: [...new Set(item["อาจารย์ผู้สอน"]?.split(", ").map((name: string) => name.trim()))],
+      }));
+
+      setCourseData(mappedData);
+    } else {
+      console.error("โหลดข้อมูลรายวิชาไม่สำเร็จ", response);
+    }
+  };
+
+  fetchCourses();
+}, []);
+
 
   const filteredCourses = courseData.filter((course) =>
     course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

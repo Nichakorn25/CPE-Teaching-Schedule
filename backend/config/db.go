@@ -33,7 +33,7 @@ func DB() *gorm.DB {
 // }
 
 func CreateDatabase() {
-	dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable"
+	dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
 	dbSQL, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal("Failed to connect to PostgreSQL:", err)
@@ -51,7 +51,7 @@ func CreateDatabase() {
 
 func ConnectionDB() {
 	CreateDatabase()
-	dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
+	dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")

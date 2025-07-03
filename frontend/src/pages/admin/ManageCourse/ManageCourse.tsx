@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
+import {postCreateCourse} from "../../../services/https/AdminPageServices";
+import { getTypeofCourse } from "../../../services/https/AdminPageServices";
 
 const ManageCourse: React.FC = () => {
   const [teachers, setTeachers] = useState([
@@ -18,6 +20,15 @@ const ManageCourse: React.FC = () => {
   const [hours, setHours] = useState({ lecture: "", practice: "", selfStudy: "" });
   const [thaiName, setThaiName] = useState("");
   const [englishName, setEnglishName] = useState("");
+  const [typeOfCoursesList, setTypeOfCoursesList] = useState<{ id: number, typeName: string }[]>([]);
+
+  useEffect(() => {
+  const fetchTypes = async () => {
+    const result = await getTypeofCourse();
+    setTypeOfCoursesList(result);
+  };
+  fetchTypes();
+  }, []);
 
   const addTeacher = () => {
     const nextId = teachers.length + 1;
@@ -51,6 +62,30 @@ const ManageCourse: React.FC = () => {
 
     return true;
   };
+
+  const handleSubmit = async () => {
+  const data = {
+    Code: courseCode,
+    EnglishName: englishName,
+    ThaiName: thaiName,
+    CurriculumID: 1,         // สมมุติเป็น ID จริง (ดึงจากระบบในอนาคต)
+    AcademicYearID: 1,       // ปี 2565 เป็นต้น
+    TypeOfCoursesID: parseInt(courseType),
+    CreditID: 1,             // ต้อง match กับฐานข้อมูล
+    UserIDs: teachers.map((t) => t.id), // ใช้ id จริงของอาจารย์จากระบบ
+  };
+
+  const response = await postCreateCourse(data);
+
+  if (response.status === 200) {
+    alert("เพิ่มรายวิชาเรียบร้อย");
+    // รีเซ็ตฟอร์มหรือ redirect ได้
+  } else {
+    alert("เกิดข้อผิดพลาดในการเพิ่มรายวิชา");
+    console.error(response.data);
+  }
+};
+
 
   return (
     <div className="pt-16 px-6 font-sarabun">
@@ -232,6 +267,7 @@ const ManageCourse: React.FC = () => {
         {/* ปุ่มบันทึก */}
        <div className="text-right">
           <button
+            onClick={handleSubmit}
             disabled={!isFormValid()}
             className={`px-6 py-2 rounded text-white ${
               isFormValid() ? "bg-orange-500 hover:bg-orange-600" : "bg-gray-300 cursor-not-allowed"
