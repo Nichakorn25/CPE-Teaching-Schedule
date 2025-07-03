@@ -1,3 +1,11 @@
+/* Import Sarabun font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+/* Global font family */
+* {
+    font-family: 'Sarabun', sans-serif;
+}
+
 /* Background Layer */
 .instructor-background {
     position: fixed;
@@ -59,6 +67,8 @@
     background-color: #F26522 !important;
     border-color: #F26522 !important;
     color: white !important;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
 }
 
 .instructor-primary-button:hover {
@@ -70,6 +80,8 @@
     background-color: #ff4d4f !important;
     border-color: #ff4d4f !important;
     color: white !important;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
 }
 
 .instructor-danger-button:hover {
@@ -81,11 +93,12 @@
 .custom-table .ant-table-thead > tr > th {
     background-color: #5d7285 !important;
     color: white !important;
-    font-weight: bold !important;
+    font-weight: 600 !important;
     text-align: center !important;
     font-size: 12px !important;
     padding: 8px 4px !important;
     border: 1px solid #4a6170 !important;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .custom-table .ant-table-tbody > tr > td {
@@ -94,6 +107,7 @@
     border: 1px solid #d9d9d9 !important;
     vertical-align: top !important;
     background-color: white;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .custom-table .ant-table-tbody > tr:nth-child(even) {
@@ -106,6 +120,7 @@
 
 .custom-table .ant-table {
     font-size: 11px;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .custom-table .ant-table-container {
@@ -117,6 +132,7 @@
     font-size: 10px;
     padding: 2px 6px;
     border-radius: 4px;
+    font-family: 'Sarabun', sans-serif;
 }
 
 /* Status and Role Tags */
@@ -124,22 +140,140 @@
     background-color: #f6ffed;
     border-color: #b7eb8f;
     color: #52c41a;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .instructor-content-area .ant-tag-red {
     background-color: #fff2f0;
     border-color: #ffccc7;
     color: #ff4d4f;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .instructor-content-area .ant-tag-blue {
     background-color: #f0f5ff;
     border-color: #adc6ff;
     color: #1890ff;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .instructor-content-area .ant-tag-orange {
     background-color: #fff7e6;
     border-color: #ffd591;
     color: #fa8c16;
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Ant Design component overrides for Sarabun font */
+.instructor-content-area .ant-btn {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
+}
+
+.instructor-content-area .ant-input,
+.instructor-content-area .ant-select-selector,
+.instructor-content-area .ant-input-number,
+.instructor-content-area .ant-select-selection-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.instructor-content-area .ant-select-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.instructor-content-area .ant-table-tbody > tr > td,
+.instructor-content-area .ant-table-thead > tr > th {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.instructor-content-area .ant-table-cell {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.instructor-content-area .ant-empty-description,
+.instructor-content-area .ant-empty-normal {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.instructor-content-area .ant-pagination {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.instructor-content-area .ant-pagination-item,
+.instructor-content-area .ant-pagination-item a {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.instructor-content-area .ant-message {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.instructor-content-area .ant-modal {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.instructor-content-area .ant-modal-title,
+.instructor-content-area .ant-modal-content,
+.instructor-content-area .ant-modal-body {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Additional text styling for Thai content */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+}
+
+p, span, div, label {
+    font-family: 'Sarabun', sans-serif;
+}
+
+ul, ol, li {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Input and form elements */
+input, textarea, select, button {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Placeholder text styling */
+.instructor-content-area .ant-input::placeholder,
+.instructor-content-area .ant-select-selection-placeholder {
+    font-family: 'Sarabun', sans-serif;
+    color: #bfbfbf;
+}
+
+/* Custom pagination buttons */
+.instructor-content-area [style*="cursor: pointer"] {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Links styling */
+.instructor-content-area a {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Search prefix icon area */
+.instructor-content-area .ant-input-prefix {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Ensure all dropdown items use Sarabun */
+.instructor-content-area .ant-select-dropdown {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Empty state content */
+.custom-table .ant-table-placeholder {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Tag color overrides to ensure font consistency */
+.instructor-content-area .ant-tag.ant-tag-green,
+.instructor-content-area .ant-tag.ant-tag-red,
+.instructor-content-area .ant-tag.ant-tag-blue,
+.instructor-content-area .ant-tag.ant-tag-orange {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
 }

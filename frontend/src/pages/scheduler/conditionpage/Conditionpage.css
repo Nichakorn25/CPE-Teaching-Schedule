@@ -1,3 +1,11 @@
+/* Import Sarabun font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+/* Global font family */
+* {
+    font-family: 'Sarabun', sans-serif;
+}
+
 /* Background Layer */
 .condition-background {
     position: fixed;
@@ -62,21 +70,26 @@
 .primary-button {
     background-color: #F26522 !important;
     border-color: #F26522 !important;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
 }
 
 .default-button {
     border-color: #F26522 !important;
     color: #F26522 !important;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
 }
 
 /* Table Styles */
 .custom-table .ant-table-thead > tr > th {
     background-color: #f5f5f5 !important;
-    font-weight: bold !important;
+    font-weight: 600 !important;
     text-align: center !important;
     font-size: 12px !important;
     padding: 8px 4px !important;
     border: 1px solid #d9d9d9 !important;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .custom-table .ant-table-tbody > tr > td {
@@ -84,6 +97,7 @@
     font-size: 11px !important;
     border: 1px solid #d9d9d9 !important;
     vertical-align: top !important;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .custom-table .ant-table-tbody > tr:nth-child(even) {
@@ -96,6 +110,7 @@
 
 .custom-table .ant-table {
     font-size: 11px;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .custom-table .ant-table-container {
@@ -112,6 +127,7 @@
     display: inline-block;
     font-size: 10px;
     color: #495057;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .time-slot-display:hover {
@@ -123,4 +139,133 @@
     flex-wrap: wrap;
     gap: 4px;
     max-width: 200px;
+}
+
+/* Ant Design component overrides for Sarabun font */
+.condition-content-area .ant-btn {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
+}
+
+.condition-content-area .ant-input,
+.condition-content-area .ant-select-selector,
+.condition-content-area .ant-input-number,
+.condition-content-area .ant-select-selection-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.condition-content-area .ant-select-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.condition-content-area .ant-table-tbody > tr > td,
+.condition-content-area .ant-table-thead > tr > th {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.condition-content-area .ant-table-cell {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.condition-content-area .ant-empty-description,
+.condition-content-area .ant-empty-normal {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.condition-content-area .ant-modal {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.condition-content-area .ant-modal-title,
+.condition-content-area .ant-modal-content,
+.condition-content-area .ant-modal-body {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.condition-content-area .ant-modal-confirm-content {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.condition-content-area .ant-message {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.condition-content-area .ant-tooltip {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.condition-content-area .ant-dropdown-menu-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Additional text styling for Thai content */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+}
+
+p, span, div, label {
+    font-family: 'Sarabun', sans-serif;
+}
+
+ul, ol, li {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Input and form elements */
+input, textarea, select, button {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Placeholder text styling */
+.condition-content-area .ant-input::placeholder,
+.condition-content-area .ant-select-selection-placeholder {
+    font-family: 'Sarabun', sans-serif;
+    color: #bfbfbf;
+}
+
+/* Custom pagination buttons and controls */
+.condition-content-area [style*="cursor: pointer"] {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Action buttons in table */
+.condition-content-area .ant-btn-sm {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
+}
+
+/* Links styling */
+.condition-content-area a {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Custom styled elements for condition page */
+.condition-content-area .time-slots-container span {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Search prefix icon area */
+.condition-content-area .ant-input-prefix {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Table pagination area */
+.condition-content-area .ant-pagination {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.condition-content-area .ant-pagination-item,
+.condition-content-area .ant-pagination-item a {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Ensure all dropdown items use Sarabun */
+.condition-content-area .ant-select-dropdown {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Empty state content */
+.custom-table .ant-table-placeholder {
+    font-family: 'Sarabun', sans-serif;
 }

@@ -1,3 +1,11 @@
+/* Import Sarabun font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+/* Global font family */
+* {
+    font-family: 'Sarabun', sans-serif;
+}
+
 /* Background Layer */
 .addcourse-background {
     position: fixed;
@@ -59,6 +67,8 @@
     background-color: #F26522 !important;
     border-color: #F26522 !important;
     color: white !important;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
 }
 
 .addcourse-primary-button:hover {
@@ -70,6 +80,8 @@
     background-color: #ff4d4f !important;
     border-color: #ff4d4f !important;
     color: white !important;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
 }
 
 .addcourse-danger-button:hover {
@@ -84,10 +96,11 @@
 
 .addcourse-form-label {
     color: #F26522;
-    font-weight: bold;
+    font-weight: 600;
     font-size: 14px;
     margin-bottom: 8px;
     display: block;
+    font-family: 'Sarabun', sans-serif;
 }
 
 /* Card Styles */
@@ -104,7 +117,8 @@
 
 .addcourse-card .ant-card-head-title {
     color: #333;
-    font-weight: bold;
+    font-weight: 600;
+    font-family: 'Sarabun', sans-serif;
 }
 
 /* Assistant Item Styles */
@@ -125,8 +139,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
+    font-weight: 600;
     font-size: 14px;
+    font-family: 'Sarabun', sans-serif;
 }
 
 /* Hours Selection Styles */
@@ -146,8 +161,9 @@
 
 .addcourse-hours-label {
     color: #F26522;
-    font-weight: bold;
+    font-weight: 600;
     font-size: 16px;
+    font-family: 'Sarabun', sans-serif;
 }
 
 /* Input Focus Styles */
@@ -179,7 +195,8 @@
     margin: 0 0 8px 0;
     color: #333;
     font-size: 14px;
-    font-weight: bold;
+    font-weight: 600;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .addcourse-instructions ul {
@@ -188,8 +205,70 @@
     color: #666;
     font-size: 13px;
     line-height: 1.6;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .addcourse-instructions li {
     margin-bottom: 4px;
+}
+
+/* Ant Design component overrides for Sarabun font */
+.addcourse-content-area .ant-btn {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
+}
+
+.addcourse-content-area .ant-input,
+.addcourse-content-area .ant-select-selector,
+.addcourse-content-area .ant-input-number,
+.addcourse-content-area .ant-select-selection-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.addcourse-content-area .ant-form-item-label > label {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+}
+
+.addcourse-content-area .ant-card-head-title {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+}
+
+.addcourse-content-area .ant-select-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.addcourse-content-area .ant-form-item-explain-error {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.addcourse-content-area .ant-message {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Additional text styling for Thai content */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+}
+
+p, span, div, label {
+    font-family: 'Sarabun', sans-serif;
+}
+
+ul, ol, li {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Input and form elements */
+input, textarea, select, button {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Placeholder text styling */
+.addcourse-content-area .ant-input::placeholder,
+.addcourse-content-area .ant-select-selection-placeholder {
+    font-family: 'Sarabun', sans-serif;
+    color: #bfbfbf;
 }

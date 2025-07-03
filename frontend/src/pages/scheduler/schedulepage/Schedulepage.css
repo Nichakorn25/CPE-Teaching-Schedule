@@ -1,3 +1,11 @@
+/* Import Sarabun font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+/* Global font family */
+* {
+    font-family: 'Sarabun', sans-serif;
+}
+
 /* Background Layer */
 .schedule-background {
     position: fixed;
@@ -62,11 +70,15 @@
 .primary-button {
     background-color: #F26522 !important;
     border-color: #F26522 !important;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
 }
 
 .defualt-button {
     border-color: #F26522 !important;
     color: #F26522 !important;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
 }
 
 /* Fixed Height Rows */
@@ -78,4 +90,200 @@
 
 .fixed-height-row td > div {
     height: 100% !important;
+}
+
+/* Ant Design component overrides for Sarabun font */
+.schedule-content-area .ant-btn {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
+}
+
+.schedule-content-area .ant-input,
+.schedule-content-area .ant-select-selector,
+.schedule-content-area .ant-input-number,
+.schedule-content-area .ant-select-selection-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-select-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-table-tbody > tr > td,
+.schedule-content-area .ant-table-thead > tr > th {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-table-cell {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-table-container {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-table {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-modal {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-modal-title,
+.schedule-content-area .ant-modal-content,
+.schedule-content-area .ant-modal-body {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-message {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-card {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-card-meta-title,
+.schedule-content-area .ant-card-meta-description {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-list {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-list-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-flex {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Table header styling */
+.schedule-content-area .ant-table-thead > tr > th {
+    background-color: #F26522 !important;
+    color: white !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    font-size: 12px !important;
+    padding: 8px 4px !important;
+    border: 1px solid #e0561a !important;
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-table-tbody > tr > td {
+    padding: 4px !important;
+    font-size: 11px !important;
+    border: 1px solid #d9d9d9 !important;
+    vertical-align: top !important;
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Schedule cell content styling */
+.schedule-content-area .ant-table-tbody td > div {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Class info styling within schedule cells */
+.schedule-content-area .ant-table-tbody td div[draggable="true"] {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-table-tbody td div[draggable="true"] > div {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Additional text styling for Thai content */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+}
+
+p, span, div, label {
+    font-family: 'Sarabun', sans-serif;
+}
+
+ul, ol, li {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Input and form elements */
+input, textarea, select, button {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Placeholder text styling */
+.schedule-content-area .ant-input::placeholder,
+.schedule-content-area .ant-select-selection-placeholder {
+    font-family: 'Sarabun', sans-serif;
+    color: #bfbfbf;
+}
+
+/* Tooltip and popover content */
+.schedule-content-area .ant-tooltip {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-popover {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Ensure all text content uses Sarabun font */
+.schedule-content-area * {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* PDF export specific styling - ensure draggable content uses Sarabun */
+.schedule-content-area [draggable="true"] {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area [draggable="true"] * {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Button group styling */
+.schedule-content-area .ant-btn-group {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-btn-group .ant-btn {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
+}
+
+/* Modal actions styling */
+.schedule-content-area .ant-modal-footer {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-modal-footer .ant-btn {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
+}
+
+/* Card actions styling */
+.schedule-content-area .ant-card-actions {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-card-actions .ant-btn {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
+}
+
+/* Loading message styling */
+.schedule-content-area .ant-message-notice-content {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Empty state styling */
+.schedule-content-area .ant-empty {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-empty-description {
+    font-family: 'Sarabun', sans-serif;
 }

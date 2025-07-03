@@ -156,38 +156,6 @@ const AllCoursepage: React.FC = () => {
     setCurrentPage(1);
   };
 
-  // ฟังก์ชันเพิ่มวิชาใหม่
-  const handleAddCourse = () => {
-    message.info('เปิดหน้าเพิ่มรายวิชาใหม่');
-    // TODO: นำไปยังหน้าเพิ่มรายวิชา
-  };
-
-  // ฟังก์ชันแก้ไขรายวิชา
-  const handleEditCourse = (courseId: number, courseName: string) => {
-    message.info(`เปิดหน้าแก้ไขรายวิชา ${courseName}`);
-    // TODO: นำไปยังหน้าแก้ไขรายวิชา
-  };
-
-  // ฟังก์ชันลบรายวิชา
-  const handleDeleteCourse = (courseId: number, courseName: string) => {
-    Modal.confirm({
-      title: 'ยืนยันการลบ',
-      content: `คุณต้องการลบรายวิชา "${courseName}" หรือไม่?`,
-      okText: 'ลบ',
-      okType: 'danger',
-      cancelText: 'ยกเลิก',
-      onOk() {
-        setCoursesData(prev => prev.filter(item => item.id !== courseId));
-        message.success(`ลบรายวิชา ${courseName} สำเร็จ`);
-        
-        // ปรับหน้าถ้าจำเป็น
-        if (currentData.length === 1 && currentPage > 1) {
-          setCurrentPage(currentPage - 1);
-        }
-      }
-    });
-  };
-
   // คอลัมน์ของตาราง
   const columns: ColumnsType<CourseTableData> = [
     {
@@ -241,47 +209,10 @@ const AllCoursepage: React.FC = () => {
         </div>
       )
     },
-    {
-      title: 'จัดการ',
-      key: 'action',
-      width: 120,
-      align: 'center',
-      render: (_, record: CourseTableData) => (
-        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-          <Button
-            size="small"
-            style={{
-              backgroundColor: '#F26522',
-              borderColor: '#F26522',
-              color: 'white',
-              fontSize: '11px',
-              padding: '2px 8px',
-              height: 'auto'
-            }}
-            onClick={() => handleEditCourse(record.id, record.name)}
-          >
-            แก้ไข
-          </Button>
-          <Button
-            size="small"
-            style={{
-              backgroundColor: '#ff4d4f',
-              borderColor: '#ff4d4f',
-              color: 'white',
-              fontSize: '11px',
-              padding: '2px 8px',
-              height: 'auto'
-            }}
-            onClick={() => handleDeleteCourse(record.id, record.name)}
-          >
-            ลบ
-          </Button>
-        </div>
-      )
-    }
   ];
 
   return (
+    <div className="p-6 font-sarabun mt-10">
     <>
       {/* Background Layer */}
       <div className="allcourse-background" />
@@ -514,6 +445,7 @@ const AllCoursepage: React.FC = () => {
         </div>
       </div>
     </>
+    </div>
   );
 };
 
