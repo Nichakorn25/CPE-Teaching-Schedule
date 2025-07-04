@@ -1,7 +1,4 @@
-import {
-  CreateCourseInteface,
-  CreateUserInterface,
-} from "../../interfaces/Adminpage";
+import {CreateCourseInteface,CreateUserInterface,} from "../../interfaces/Adminpage";
 import axios from "axios";
 
 const apiUrl = "http://localhost:8080";
@@ -44,7 +41,7 @@ async function deleteCourse(id: number) {
     .catch((e) => e.response);
 }
 
-async function getTypeofCourse() {
+async function getTypeofCourse() {   //////////////////////ย้ายไป GetService นะ
   return await axios
     .get(`${apiUrl}/course-type`, requestOptions)
     .then((res) => res)
