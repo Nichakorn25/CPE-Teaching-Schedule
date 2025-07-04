@@ -813,7 +813,7 @@ func SeedOfferedCourses() {
 
 	courses := []entity.OfferedCourses{
 		{
-			Year:         2567,
+			Year:         2566,
 			Term:         1,
 			Section:      2,
 			Capacity:     30,
@@ -848,8 +848,18 @@ func SeedOfferedCourses() {
 			Section:      1,
 			Capacity:     35,
 			IsFixCourses: true,
-			UserID:       1,
+			UserID:       6,
 			AllCoursesID: 5,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2566,
+			Term:         1,
+			Section:      1,
+			Capacity:     40,
+			IsFixCourses: true,
+			UserID:       6,
+			AllCoursesID: 6,
 			LaboratoryID: nil,
 		},
 	}
@@ -885,7 +895,7 @@ func SeedTimeFixedCourses() {
 		ScheduleID   uint
 	}{
 		{
-			Year:         2567,
+			Year:         2566,
 			Term:         1,
 			DayOfWeek:    "จันทร์",
 			StartTimeStr: "09:00",
