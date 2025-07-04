@@ -38,6 +38,9 @@ func main() {
 		r.PUT("/update-users/:id", controllers.UpdateUser)
 		r.DELETE("/delete-users/:id", controllers.DeleteUser)
 
+		r.GET("/open-courses", controllers.GetOpenCourses)
+
+
 	}
 
 	r.GET("/", func(c *gin.Context) {

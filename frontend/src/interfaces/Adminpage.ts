@@ -24,3 +24,48 @@ export interface CreateUserInterface {
   RoleID: number;
 }
 
+
+//////////////////////////////////// ยังไม่เช็ค
+export interface OfferedCourseInterface {
+  Year: number;
+  Term: number;
+  Section: number;
+  Capacity: number;
+  IsFixCourses: boolean;
+
+  UserID: number;
+  AllCoursesID: number;
+  LaboratoryID?: number;
+
+  Schedule: CreateScheduleInterface[];
+}
+
+export interface CreateLaboratoryInterface {
+  Room: string;
+  Building: string;
+  Capacity: string;
+}
+
+export interface CreateScheduleInterface {
+  NameTable: string;
+  SectionNumber: number;
+  DayOfWeek: string;
+  StartTime: string; 
+  EndTime: string;
+
+  TimeFixedCourses?: TimeFixedCoursesInterface[];
+
+}
+
+export interface TimeFixedCoursesInterface {
+  Year: number;
+  Term: number;
+  DayOfWeek: string;
+  StartTime: string;
+  EndTime: string;
+  RoomFix: string;
+  Section: number;
+  Capacity: number;
+
+  AllCoursesID: number;
+}

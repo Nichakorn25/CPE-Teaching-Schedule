@@ -80,16 +80,28 @@ async function deleteUser(id: number) {
     .catch((e) => e.response);
 }
 
-//------------------ 00000 ------------------------------//
+//------------------ OpenCourses ------------------------------//
+async function getOpenCourses() {
+  return await axios
+    .get(`${apiUrl}/open-courses`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 
 export {
   getAllCourses,
   postCreateCourse,
   putUpdateCourse,
   deleteCourse,
-  getTypeofCourse,
+
   getAllTeachers,
   postCreateUser,
   putUpdateUser,
   deleteUser,
+
+  getOpenCourses,
+
+  getTypeofCourse,
+
 };

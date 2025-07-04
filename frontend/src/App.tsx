@@ -4,6 +4,7 @@ import LoginPage from "./pages/login/Login";
 import Password from "./pages/forget/FristChangePassword";
 import HomeAdminPage from "./pages/home/HomeAdmin";
 import HomeInstructorPage from "./pages/home/HomeInstructor";
+import HomeSchedulePage from "./pages/home/HomeSchedulor";
 
 import MenuBar from "./components/menu/Menu";
 import Footer from "./components/footer/Footer";
@@ -37,6 +38,7 @@ const App: React.FC = () => {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/change-password" element={<Password />} />
+        <Route path="/home-schedule" element={<HomeSchedulePage />} />
         <Route element={<MenuBar> </MenuBar>}>
           {/* <Route path="/home-admin" element={<PrivateRoute><HomeAdminPage /></PrivateRoute>} /> */}
           <Route path="/home-admin" element={<HomeAdminPage />} />
