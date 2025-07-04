@@ -1,3 +1,11 @@
+/* Import Sarabun font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+/* Global font family */
+* {
+    font-family: 'Sarabun', sans-serif;
+}
+
 /* Background Layer */
 .schedule-background {
     position: fixed;
@@ -62,11 +70,15 @@
 .primary-button {
     background-color: #F26522 !important;
     border-color: #F26522 !important;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
 }
 
 .defualt-button {
     border-color: #F26522 !important;
     color: #F26522 !important;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
 }
 
 /* Fixed Height Rows */
@@ -81,33 +93,172 @@
 }
 
 .custom-table .ant-table-thead > tr > th {
-                    background-color: #f5f5f5 !important;
-                    font-weight: bold !important;
-                    text-align: center !important;
-                    font-size: 12px !important;
-                    padding: 8px 4px !important;
-                    border: 1px solid #d9d9d9 !important;
-                }
-                
-                .custom-table .ant-table-tbody > tr > td {
-                    padding: 6px 4px !important;
-                    font-size: 11px !important;
-                    border: 1px solid #d9d9d9 !important;
-                    vertical-align: top !important;
-                }
-                
-                .custom-table .ant-table-tbody > tr:nth-child(even) {
-                    background-color: #fafafa;
-                }
-                
-                .custom-table .ant-table-tbody > tr:hover {
-                    background-color: #e6f7ff !important;
-                }
-                
-                .custom-table .ant-table {
-                    font-size: 11px;
-                }
-                
-                .custom-table .ant-table-container {
-                    border: none;
-                }
+    background-color: #f5f5f5 !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    font-size: 12px !important;
+    padding: 8px 4px !important;
+    border: 1px solid #d9d9d9 !important;
+    font-family: 'Sarabun', sans-serif;
+}
+
+.custom-table .ant-table-tbody > tr > td {
+    padding: 6px 4px !important;
+    font-size: 11px !important;
+    border: 1px solid #d9d9d9 !important;
+    vertical-align: top !important;
+    font-family: 'Sarabun', sans-serif;
+}
+
+.custom-table .ant-table-tbody > tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.custom-table .ant-table-tbody > tr:hover {
+    background-color: #e6f7ff !important;
+}
+
+.custom-table .ant-table {
+    font-size: 11px;
+    font-family: 'Sarabun', sans-serif;
+}
+
+.custom-table .ant-table-container {
+    border: none;
+}
+
+/* Ant Design component overrides for Sarabun font */
+.schedule-content-area .ant-btn {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
+}
+
+.schedule-content-area .ant-input,
+.schedule-content-area .ant-select-selector,
+.schedule-content-area .ant-input-number,
+.schedule-content-area .ant-select-selection-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-select-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-table-tbody > tr > td,
+.schedule-content-area .ant-table-thead > tr > th {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-table-cell {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-empty-description,
+.schedule-content-area .ant-empty-normal {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-pagination {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-pagination-item,
+.schedule-content-area .ant-pagination-item a {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-message {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-modal {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-typography {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.schedule-content-area .ant-typography-title {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+}
+
+/* Additional text styling for Thai content */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+}
+
+p, span, div, label {
+    font-family: 'Sarabun', sans-serif;
+}
+
+ul, ol, li {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Input and form elements */
+input, textarea, select, button {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Placeholder text styling */
+.schedule-content-area .ant-input::placeholder,
+.schedule-content-area .ant-select-selection-placeholder {
+    font-family: 'Sarabun', sans-serif;
+    color: #bfbfbf;
+}
+
+/* Custom pagination buttons */
+.schedule-content-area [style*="cursor: pointer"] {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Links styling */
+.schedule-content-area a {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Search prefix icon area */
+.schedule-content-area .ant-input-prefix {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Ensure all dropdown items use Sarabun */
+.schedule-content-area .ant-select-dropdown {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Empty state content */
+.custom-table .ant-table-placeholder {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Action buttons in table */
+.schedule-content-area .ant-btn-sm {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
+}
+
+/* Controls section styling */
+.schedule-content-area .ant-select-selection-search-input {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Year/Term controls */
+.schedule-content-area .ant-select-single .ant-select-selector {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Ensure all text content uses Sarabun font */
+.schedule-content-area * {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Header component font styling */
+.schedule-main-content .ant-typography,
+.schedule-main-content .ant-typography-title {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+}

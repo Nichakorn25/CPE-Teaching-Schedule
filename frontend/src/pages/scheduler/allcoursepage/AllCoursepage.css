@@ -1,3 +1,11 @@
+/* Import Sarabun font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+/* Global font family */
+* {
+    font-family: 'Sarabun', sans-serif;
+}
+
 /* Background Layer */
 .allcourse-background {
     position: fixed;
@@ -59,6 +67,8 @@
     background-color: #F26522 !important;
     border-color: #F26522 !important;
     color: white !important;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
 }
 
 .allcourse-primary-button:hover {
@@ -70,6 +80,8 @@
     background-color: #ff4d4f !important;
     border-color: #ff4d4f !important;
     color: white !important;
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
 }
 
 .allcourse-danger-button:hover {
@@ -81,11 +93,12 @@
 .custom-table .ant-table-thead > tr > th {
     background-color: #5d7285 !important;
     color: white !important;
-    font-weight: bold !important;
+    font-weight: 600 !important;
     text-align: center !important;
     font-size: 12px !important;
     padding: 8px 4px !important;
     border: 1px solid #4a6170 !important;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .custom-table .ant-table-tbody > tr > td {
@@ -94,6 +107,7 @@
     border: 1px solid #d9d9d9 !important;
     vertical-align: top !important;
     background-color: white;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .custom-table .ant-table-tbody > tr:nth-child(even) {
@@ -106,8 +120,107 @@
 
 .custom-table .ant-table {
     font-size: 11px;
+    font-family: 'Sarabun', sans-serif;
 }
 
 .custom-table .ant-table-container {
     border: none;
+}
+
+/* Ant Design component overrides for Sarabun font */
+.allcourse-content-area .ant-btn {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 500;
+}
+
+.allcourse-content-area .ant-input,
+.allcourse-content-area .ant-select-selector,
+.allcourse-content-area .ant-input-number,
+.allcourse-content-area .ant-select-selection-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.allcourse-content-area .ant-select-item {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.allcourse-content-area .ant-table-tbody > tr > td,
+.allcourse-content-area .ant-table-thead > tr > th {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.allcourse-content-area .ant-empty-description,
+.allcourse-content-area .ant-empty-normal {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.allcourse-content-area .ant-pagination {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.allcourse-content-area .ant-pagination-item,
+.allcourse-content-area .ant-pagination-item a {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.allcourse-content-area .ant-message {
+    font-family: 'Sarabun', sans-serif;
+}
+
+.allcourse-content-area .ant-modal {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Additional text styling for Thai content */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+}
+
+p, span, div, label {
+    font-family: 'Sarabun', sans-serif;
+}
+
+ul, ol, li {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Input and form elements */
+input, textarea, select, button {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Placeholder text styling */
+.allcourse-content-area .ant-input::placeholder,
+.allcourse-content-area .ant-select-selection-placeholder {
+    font-family: 'Sarabun', sans-serif;
+    color: #bfbfbf;
+}
+
+/* Custom pagination buttons */
+.allcourse-content-area [style*="cursor: pointer"] {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Table cell content */
+.custom-table .ant-table-cell {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Empty state text */
+.custom-table .ant-table-placeholder {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Controls section text */
+.allcourse-content-area .ant-select-selection-search-input {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Ensure all clickable elements use Sarabun */
+.allcourse-content-area button,
+.allcourse-content-area .ant-btn,
+.allcourse-content-area .ant-select-dropdown,
+.allcourse-content-area .ant-dropdown-menu-item {
+    font-family: 'Sarabun', sans-serif;
 }

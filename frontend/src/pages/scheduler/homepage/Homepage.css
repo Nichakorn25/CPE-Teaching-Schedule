@@ -1,3 +1,11 @@
+/* Import Sarabun font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+/* Global font family */
+* {
+    font-family: 'Sarabun', sans-serif;
+}
+
 /* Background Layer */
 .homepage-background {
     position: fixed;
@@ -46,4 +54,38 @@
     max-width: 80%;
     max-height: 100vh;
     object-fit: contain;
+}
+
+/* Additional text styling for Thai content */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sarabun', sans-serif;
+    font-weight: 600;
+}
+
+p, span, div, label {
+    font-family: 'Sarabun', sans-serif;
+}
+
+ul, ol, li {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Input and form elements */
+input, textarea, select, button {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Ensure all text content uses Sarabun font */
+.homepage-main-content * {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Header component font styling */
+.homepage-header * {
+    font-family: 'Sarabun', sans-serif;
+}
+
+/* Sidebar font styling */
+.homepage-sidebar * {
+    font-family: 'Sarabun', sans-serif;
 }

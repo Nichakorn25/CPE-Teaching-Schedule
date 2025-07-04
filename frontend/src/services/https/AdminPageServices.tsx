@@ -1,4 +1,7 @@
-import { CreateCourseInteface, CreateUserInterface } from "../../interfaces/Adminpage";
+import {
+  CreateCourseInteface,
+  CreateUserInterface,
+} from "../../interfaces/Adminpage";
 import axios from "axios";
 
 const apiUrl = "http://localhost:8080";
@@ -6,12 +9,10 @@ const Authorization = localStorage.getItem("token");
 const Bearer = localStorage.getItem("token_type");
 
 const requestOptions = {
-
   headers: {
     "Content-Type": "application/json",
     Authorization: `${Bearer} ${Authorization}`,
   },
-
 };
 
 //------------------ Courses ------------------------------//
@@ -39,6 +40,13 @@ async function putUpdateCourse(id: number, data: CreateCourseInteface) {
 async function deleteCourse(id: number) {
   return await axios
     .delete(`${apiUrl}/delete-courses/${id}`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
+async function getTypeofCourse() {
+  return await axios
+    .get(`${apiUrl}/course-type`, requestOptions)
     .then((res) => res)
     .catch((e) => e.response);
 }
@@ -82,15 +90,18 @@ async function getOpenCourses() {
 
 
 export {
-    getAllCourses,
-    postCreateCourse,
-    putUpdateCourse,
-    deleteCourse,
+  getAllCourses,
+  postCreateCourse,
+  putUpdateCourse,
+  deleteCourse,
 
-    getAllTeachers,
-    postCreateUser,
-    putUpdateUser,
-    deleteUser,
+  getAllTeachers,
+  postCreateUser,
+  putUpdateUser,
+  deleteUser,
 
-    getOpenCourses,
+  getOpenCourses,
+
+  getTypeofCourse,
+
 };

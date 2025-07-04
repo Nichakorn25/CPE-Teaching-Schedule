@@ -30,6 +30,8 @@ func main() {
 		r.PUT("/update-courses/:id", controllers.UpdateAllCourses)
 		r.DELETE("/delete-courses/:id", controllers.DeleteAllCourses)
 
+		r.GET("/course-type", controllers.GetAllCourses)
+
 		///////////////////// USER /////////////////////////
 		r.GET("/all-teachers", controllers.GetAllTeachers) //
 		r.POST("/users", controllers.CreateUser)
