@@ -28,6 +28,7 @@ func GetAllCourses(c *gin.Context) {
 	}
 
 	var result []gin.H
+
 	for i, course := range courses {
 		var teachers []string
 		for _, uac := range course.UserAllCourses {
@@ -48,7 +49,7 @@ func GetAllCourses(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-///////////////////////////////////////
+// /////////////////////////////////////
 type AllCoursesInput struct {
 	Code            string
 	EnglishName     string
@@ -116,13 +117,13 @@ func UpdateAllCourses(c *gin.Context) {
 		return
 	}
 
-	course.Code            = in.Code
-	course.EnglishName     = in.EnglishName
-	course.ThaiName        = in.ThaiName
-	course.CurriculumID    = in.CurriculumID
-	course.AcademicYearID  = in.AcademicYearID
+	course.Code = in.Code
+	course.EnglishName = in.EnglishName
+	course.ThaiName = in.ThaiName
+	course.CurriculumID = in.CurriculumID
+	course.AcademicYearID = in.AcademicYearID
 	course.TypeOfCoursesID = in.TypeOfCoursesID
-	course.CreditID        = in.CreditID
+	course.CreditID = in.CreditID
 
 	err := config.DB().Transaction(func(tx *gorm.DB) error {
 		// (4.1) บันทึกฟิลด์หลัก
@@ -178,13 +179,4 @@ func DeleteAllCourses(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "ลบรายวิชาสำเร็จ"})
-}
-
-func GetTypeOfCourses(c *gin.Context) {
-	var types []entity.TypeOfCourses
-	if err := config.DB().Find(&types).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถดึงข้อมูลหมวดวิชาได้"})
-		return
-	}
-	c.JSON(http.StatusOK, types)
 }

@@ -30,16 +30,19 @@ func main() {
 		r.PUT("/update-courses/:id", controllers.UpdateAllCourses)
 		r.DELETE("/delete-courses/:id", controllers.DeleteAllCourses)
 
-		r.GET("/course-type", controllers.GetAllCourses)
-
 		///////////////////// USER /////////////////////////
 		r.GET("/all-teachers", controllers.GetAllTeachers) //
 		r.POST("/users", controllers.CreateUser)
 		r.PUT("/update-users/:id", controllers.UpdateUser)
 		r.DELETE("/delete-users/:id", controllers.DeleteUser)
 
+		///////////////////// openCourse /////////////////////////
 		r.GET("/open-courses", controllers.GetOpenCourses)
 
+		///////////////////// Get into dropdown /////////////////////////
+		r.GET("/course-type", controllers.GetTypeOfCourses)
+		r.GET("/all-title", controllers.GetAllTitles)
+		r.GET("/all-position", controllers.GetAllPosition)
 
 	}
 
