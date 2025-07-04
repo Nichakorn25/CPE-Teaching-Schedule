@@ -29,15 +29,16 @@ type OpenCourseResp struct {
 	Credit       string
 	TypeName     string
 	Teacher      string
-	Groups       []GroupInfo
+	Groups       []GroupInfo // จะรวมกลุ่มเรียนทั้งหมดของวิชานั้น
+	GroupTotal   uint        // จำนวนกลุ่มเรียน
 	SectionCount uint
 	CapacityPer  uint
 	Remark       string
 	IsFixCourses bool
 }
 
-func GetOpenCourses(c *gin.Context) {
-	yearQ := c.Query("year")
+func GetOpenCourses(c *gin.Context) {   //////// มีปัญหาเรื่องกลุ่ม    ที่ฟอนต์จะรับจำนวนกลุ่มเรียนและจำนวนคนต่อกลุ่มมาเลยแสดงว่าแต่ละกลุ่มจำนวนเท่ากัน
+	yearQ := c.Query("year") 
 	termQ := c.Query("term")
 	search := strings.TrimSpace(c.Query("search"))
 
@@ -83,15 +84,16 @@ func GetOpenCourses(c *gin.Context) {
 			ac.Credit.Unit, ac.Credit.Lecture, ac.Credit.Lab, ac.Credit.Self)
 
 		teacher := fmt.Sprintf("%s%s %s",
-			oc.User.Title.Title,
-			oc.User.Firstname,
-			oc.User.Lastname)
+			oc.User.Title.Title, oc.User.Firstname, oc.User.Lastname)
 
 		remark := ac.TypeOfCourses.TypeName
 		groupInfos := []GroupInfo{}
+		groupTotal := oc.Section // นับจำนวนกลุ่ม
 
 		if oc.IsFixCourses {
 			remark = "วิชาจากศูนย์บริการ"
+			groupTotal = 0
+
 			for _, tf := range ac.TimeFixedCourses {
 				if tf.Year == oc.Year && tf.Term == oc.Term {
 					groupInfos = append(groupInfos, GroupInfo{
@@ -102,6 +104,7 @@ func GetOpenCourses(c *gin.Context) {
 							tf.StartTime.Format("15:04"),
 							tf.EndTime.Format("15:04")),
 					})
+					groupTotal++
 				}
 			}
 		}
@@ -116,7 +119,7 @@ func GetOpenCourses(c *gin.Context) {
 			TypeName:     ac.TypeOfCourses.TypeName,
 			Teacher:      teacher,
 			Groups:       groupInfos,
-			SectionCount: oc.Section,
+			GroupTotal:   groupTotal,
 			CapacityPer:  oc.Capacity,
 			Remark:       remark,
 			IsFixCourses: oc.IsFixCourses,
@@ -124,7 +127,6 @@ func GetOpenCourses(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data":  resp,
-		"total": len(resp),
+		"data": resp, 
 	})
 }
