@@ -7,13 +7,12 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/config"
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
 )
 
-type GroupInfo struct {
+type GroupInfo struct { //วิชาจากศูนย์บริการ
 	Group    uint
 	Room     string
 	Day      string
@@ -21,7 +20,7 @@ type GroupInfo struct {
 }
 
 type OpenCourseResp struct {
-	ID           uint
+	ID           uint // ไว้ใช้ตอนลบและแก้ไข
 	Year         uint
 	Term         uint
 	Code         string
@@ -29,16 +28,15 @@ type OpenCourseResp struct {
 	Credit       string
 	TypeName     string
 	Teacher      string
-	Groups       []GroupInfo // จะรวมกลุ่มเรียนทั้งหมดของวิชานั้น
-	GroupTotal   uint        // จำนวนกลุ่มเรียน
-	SectionCount uint
+	GroupInfos   []GroupInfo // รายละเอียดกลุ่ม (เฉพาะศูนย์บริการ) // จะรวมกลุ่มเรียนทั้งหมดของวิชานั้น
+	GroupTotal   uint        // จำนวนกลุ่มทั้งหมด
 	CapacityPer  uint
-	Remark       string
-	IsFixCourses bool
+	Remark       string // “วิชาจากศูนย์บริการ” หรือหมวดวิชา
+	IsFixCourses bool   // true = วิชาที่มาจากศูนย์บริการ
 }
 
-func GetOpenCourses(c *gin.Context) {   //////// มีปัญหาเรื่องกลุ่ม    ที่ฟอนต์จะรับจำนวนกลุ่มเรียนและจำนวนคนต่อกลุ่มมาเลยแสดงว่าแต่ละกลุ่มจำนวนเท่ากัน
-	yearQ := c.Query("year") 
+func GetOpenCourses(c *gin.Context) { 
+	yearQ := c.Query("year")
 	termQ := c.Query("term")
 	search := strings.TrimSpace(c.Query("search"))
 
@@ -50,27 +48,21 @@ func GetOpenCourses(c *gin.Context) {   //////// มีปัญหาเรื�
 		Preload("AllCourses.TimeFixedCourses").
 		Order("year, term, all_courses_id")
 
-	if yearQ != "" {
-		y, _ := strconv.Atoi(yearQ)
+	if y, err := strconv.Atoi(yearQ); err == nil && y > 0 {
 		db = db.Where("year = ?", y)
 	}
-	if termQ != "" {
-		t, _ := strconv.Atoi(termQ)
+	if t, err := strconv.Atoi(termQ); err == nil && t > 0 {
 		db = db.Where("term = ?", t)
 	}
-
 	if search != "" {
 		like := "%" + search + "%"
-		db = db.Joins("JOIN all_courses ON all_courses.id = offered_courses.all_courses_id").
+		db = db.
+			Joins("JOIN all_courses ON all_courses.id = offered_courses.all_courses_id").
 			Where("all_courses.code LIKE ? OR all_courses.english_name LIKE ? OR all_courses.thai_name LIKE ?", like, like, like)
 	}
 
 	var offered []entity.OfferedCourses
 	if err := db.Find(&offered).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusOK, gin.H{"data": []OpenCourseResp{}})
-			return
-		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "ดึงข้อมูลล้มเหลว"})
 		return
 	}
@@ -87,13 +79,11 @@ func GetOpenCourses(c *gin.Context) {   //////// มีปัญหาเรื�
 			oc.User.Title.Title, oc.User.Firstname, oc.User.Lastname)
 
 		remark := ac.TypeOfCourses.TypeName
-		groupInfos := []GroupInfo{}
-		groupTotal := oc.Section // นับจำนวนกลุ่ม
+		groupInfos := make([]GroupInfo, 0)
+		groupTotal := oc.Section
 
 		if oc.IsFixCourses {
 			remark = "วิชาจากศูนย์บริการ"
-			groupTotal = 0
-
 			for _, tf := range ac.TimeFixedCourses {
 				if tf.Year == oc.Year && tf.Term == oc.Term {
 					groupInfos = append(groupInfos, GroupInfo{
@@ -104,7 +94,6 @@ func GetOpenCourses(c *gin.Context) {   //////// มีปัญหาเรื�
 							tf.StartTime.Format("15:04"),
 							tf.EndTime.Format("15:04")),
 					})
-					groupTotal++
 				}
 			}
 		}
@@ -118,7 +107,7 @@ func GetOpenCourses(c *gin.Context) {   //////// มีปัญหาเรื�
 			Credit:       credit,
 			TypeName:     ac.TypeOfCourses.TypeName,
 			Teacher:      teacher,
-			Groups:       groupInfos,
+			GroupInfos:   groupInfos,
 			GroupTotal:   groupTotal,
 			CapacityPer:  oc.Capacity,
 			Remark:       remark,
@@ -126,7 +115,5 @@ func GetOpenCourses(c *gin.Context) {   //////// มีปัญหาเรื�
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data": resp, 
-	})
+	c.JSON(http.StatusOK, gin.H{"data": resp})
 }
