@@ -402,21 +402,33 @@ func SeedConditions() {
 		UserID       uint
 	}{
 		{
-			DayOfWeek:    "Monday",
+			DayOfWeek:    "จันทร์",
 			StartTimeStr: "08:00",
 			EndTimeStr:   "12:00",
-			UserID:       1,
+			UserID:       8,
 		},
 		{
-			DayOfWeek:    "Tuesday",
+			DayOfWeek:    "อังคาร",
 			StartTimeStr: "13:00",
 			EndTimeStr:   "17:00",
 			UserID:       2,
 		},
 		{
-			DayOfWeek:    "Wednesday",
+			DayOfWeek:    "พุธ",
 			StartTimeStr: "09:30",
 			EndTimeStr:   "11:30",
+			UserID:       3,
+		},
+		{
+			DayOfWeek:    "พุธ",
+			StartTimeStr: "12:30",
+			EndTimeStr:   "16:30",
+			UserID:       6,
+		},
+		{
+			DayOfWeek:    "พฤหัสบดี",
+			StartTimeStr: "09:30",
+			EndTimeStr:   "17:30",
 			UserID:       3,
 		},
 	}
