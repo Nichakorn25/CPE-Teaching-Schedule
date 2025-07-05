@@ -1,3 +1,6 @@
+
+// แก้ไขใช้ได้เลยนะคับ
+
 export interface CreateCourseInteface {
   Code: string;
   EnglishName: string;

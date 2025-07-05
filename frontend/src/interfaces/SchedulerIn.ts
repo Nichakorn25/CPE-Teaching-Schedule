@@ -5,3 +5,6 @@ export interface ConditionInterface {
   EndTime: string;
   UserID: number;
 }
+
+
+// แก้ไขใช้ได้เลยนะคับ
