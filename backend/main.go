@@ -43,6 +43,7 @@ func main() {
 		r.GET("/course-type", controllers.GetTypeOfCourses)
 		r.GET("/all-title", controllers.GetAllTitles)
 		r.GET("/all-position", controllers.GetAllPosition)
+		r.GET("/all-majors", controllers.GetAllMajorOfDepathment)
 
 	}
 
