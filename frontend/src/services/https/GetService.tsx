@@ -35,10 +35,18 @@ async function getTypeofCourse() {
         .catch((e) => e.response);
 }
 
+//------------------ TypeofCourse ------------------------------//
+async function getMajorOfDepathment() {
+    return await axios
+        .get(`${apiUrl}/all-majors`, requestOptions)
+        .then((res) => res)
+        .catch((e) => e.response);
+}
 
 export {
     getAllTitle,
     getAllPosition,
     getTypeofCourse,
+    getMajorOfDepathment,
     
 };

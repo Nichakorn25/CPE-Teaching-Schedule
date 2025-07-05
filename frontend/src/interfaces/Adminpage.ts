@@ -25,7 +25,7 @@ export interface CreateUserInterface {
 }
 
 
-//////////////////////////////////// ยังไม่เช็ค
+//////////////////////////////////// ด้านล่างนี้ยังไม่เช็ค //////////////////////////////////
 export interface OfferedCourseInterface {
   Year: number;
   Term: number;
