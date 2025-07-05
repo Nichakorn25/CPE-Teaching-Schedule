@@ -39,6 +39,9 @@ func main() {
 		///////////////////// openCourse /////////////////////////
 		r.GET("/open-courses", controllers.GetOpenCourses)
 
+		///////////////////// Condition /////////////////////////
+		r.POST("/condition", controllers.CreateConditions)
+
 		///////////////////// Get into dropdown /////////////////////////
 		r.GET("/course-type", controllers.GetTypeOfCourses)
 		r.GET("/all-title", controllers.GetAllTitles)
