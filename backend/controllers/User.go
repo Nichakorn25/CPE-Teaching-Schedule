@@ -57,6 +57,44 @@ func GetAllTeachers(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+func GetUserByID(c *gin.Context) {
+	id := c.Param("id")
+
+	var user entity.User
+	err := config.DB().
+		Preload("Title").
+		Preload("Position").
+		Preload("Major").
+		Preload("Role").
+		First(&user, id).Error
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบผู้ใช้"})
+		return
+	}
+
+	resp := gin.H{
+		"id":           user.ID,
+		"username":     user.Username,
+		"firstname":    user.Firstname,
+		"lastname":     user.Lastname,
+		"image":        user.Image,
+		"email":        user.Email,
+		"phone_number": user.PhoneNumber,
+		"address":      user.Address,
+		"title_id":     user.TitleID,
+		"title_name":   user.Title.Title,
+		"position_id":  user.PositionID,
+		"position":     user.Position.Position,
+		"major_id":     user.MajorID,
+		"major":        user.Major.MajorName,
+		"role_id":      user.RoleID,
+		"role":         user.Role.Role,
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
 func CreateUser(c *gin.Context) {
 	var input struct {
 		Username    string `binding:"required"`

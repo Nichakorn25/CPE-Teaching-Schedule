@@ -56,6 +56,13 @@ async function getAllTeachers() {
     .catch((e) => e.response);
 }
 
+async function getUserById(id: string) {
+  return await axios
+    .get(`${apiUrl}/users/${id}`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 async function postCreateUser(data: CreateUserInterface) {
   return await axios
     .post(`${apiUrl}/users`, data, requestOptions)
@@ -93,6 +100,7 @@ export {
   deleteCourse,
 
   getAllTeachers,
+  getUserById,
   postCreateUser,
   putUpdateUser,
   deleteUser,

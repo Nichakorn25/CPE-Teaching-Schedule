@@ -43,10 +43,19 @@ async function getMajorOfDepathment() {
         .catch((e) => e.response);
 }
 
+
+//------------------ Roles ------------------------------//
+async function getAllRoles() {
+    return await axios
+        .get(`${apiUrl}/all-roles`, requestOptions)
+        .then((res) => res)
+        .catch((e) => e.response);
+}
 export {
     getAllTitle,
     getAllPosition,
     getTypeofCourse,
     getMajorOfDepathment,
+    getAllRoles,
     
 };
