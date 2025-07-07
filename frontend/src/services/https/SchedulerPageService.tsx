@@ -12,11 +12,18 @@ const requestOptions = {
   },
 };
 
-//------------------ Courses ------------------------------//
+//------------------ Conditions ------------------------------//
 
 async function postCreateConditions(data: ConditionInterface) {
   return await axios
     .post(`${apiUrl}/condition`, data, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
+async function putUpdateConditions(data: ConditionInterface) {
+  return await axios
+    .put(`${apiUrl}/update-conditions`, data, requestOptions)
     .then((res) => res)
     .catch((e) => e.response);
 }
@@ -29,8 +36,19 @@ async function getAllConditions() {
 }
 
 
+async function getConditionsByUserId(userID: string) {
+  return await axios
+    .get(`${apiUrl}/conditions/user/${userID}`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
+
+
 export {
   postCreateConditions,
+  putUpdateConditions,
   getAllConditions,
+  getConditionsByUserId,
 
 };
