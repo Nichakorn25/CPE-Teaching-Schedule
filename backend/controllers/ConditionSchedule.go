@@ -225,3 +225,20 @@ func GetConditionByuserID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, resp)
 }
+
+func DeleteConditionsByUser(c *gin.Context) {
+	uid, err := strconv.Atoi(c.Param("userID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "userID ไม่ถูกต้อง"})
+		return
+	}
+
+	if err := config.DB().
+		Where("user_id = ?", uid).
+		Delete(&entity.Condition{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ลบข้อมูลไม่สำเร็จ"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "ลบเงื่อนไขเวลาที่ไม่ว่างทั้งหมดเรียบร้อย"})
+}

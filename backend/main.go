@@ -45,6 +45,7 @@ func main() {
 		r.PUT("/update-conditions", controllers.UpdateConditions)
 		r.GET("/conditions", controllers.GetAllCondition)
 		r.GET("/conditions/user/:userID", controllers.GetConditionByuserID)
+		r.DELETE("/conditions-user/:userID", controllers.DeleteConditionsByUser)
 
 		///////////////////// Get into dropdown /////////////////////////
 		r.GET("/course-type", controllers.GetTypeOfCourses)

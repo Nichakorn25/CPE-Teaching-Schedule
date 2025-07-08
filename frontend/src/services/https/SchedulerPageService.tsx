@@ -43,6 +43,13 @@ async function getConditionsByUserId(userID: string) {
     .catch((e) => e.response);
 }
 
+async function deleteConditionsByUser(userID: string) {
+  return await axios
+    .get(`${apiUrl}/conditions-user/${userID}`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 
 
 export {
@@ -50,5 +57,6 @@ export {
   putUpdateConditions,
   getAllConditions,
   getConditionsByUserId,
+  deleteConditionsByUser,
 
 };
