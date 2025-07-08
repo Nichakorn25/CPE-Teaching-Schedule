@@ -8,6 +8,7 @@ export interface ConditionInterface {
 
 //////////////////////// GetAllConditions //////////////////////////////
 export interface GetAllConditionInterface {
+  ID: number;
   DayOfWeek: string;
   Start: string;
   End: string;

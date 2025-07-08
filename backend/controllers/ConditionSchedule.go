@@ -26,6 +26,7 @@ type (
 	}
 
 	ConditionItem struct {
+		ID        uint
 		DayOfWeek string
 		Start     string
 		End       string
@@ -78,7 +79,7 @@ func CreateConditions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "บันทึกเงื่อนไขเวลาที่ไม่ว่างสำเร็จ"})
 }
 
-func UpdateConditions(c *gin.Context) {  // แก้ไขข้อมูลเฉพาะของคนๆ นั้น
+func UpdateConditions(c *gin.Context) { // แก้ไขข้อมูลเฉพาะของคนๆ นั้น
 	var req ConditionsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
@@ -147,6 +148,7 @@ func GetAllCondition(c *gin.Context) {
 			}
 
 			items = append(items, ConditionItem{
+				ID:        cnd.ID,
 				DayOfWeek: cnd.DayOfWeek,
 				Start:     cnd.StartTime.Format("15:04"),
 				End:       cnd.EndTime.Format("15:04"),
