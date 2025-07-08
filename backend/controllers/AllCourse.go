@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -57,7 +58,10 @@ type AllCoursesInput struct {
 	CurriculumID    uint
 	AcademicYearID  *uint
 	TypeOfCoursesID uint
-	CreditID        uint
+	Unit            uint
+	Lecture         uint
+	Lab             uint
+	Self            uint
 	UserIDs         []uint
 }
 
@@ -69,6 +73,27 @@ func CreateCourses(c *gin.Context) {
 		return
 	}
 
+	var credit entity.Credit
+	err := config.DB().Where("unit = ? AND lecture = ? AND lab = ? AND self = ?",
+		input.Unit, input.Lecture, input.Lab, input.Self).First(&credit).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+
+		credit = entity.Credit{
+			Unit:    input.Unit,
+			Lecture: input.Lecture,
+			Lab:     input.Lab,
+			Self:    input.Self,
+		}
+		if err := config.DB().Create(&credit).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้างข้อมูลหน่วยกิตได้"})
+			return
+		}
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถดึงข้อมูลหน่วยกิตได้"})
+		return
+	}
+
 	course := entity.AllCourses{
 		Code:            input.Code,
 		EnglishName:     input.EnglishName,
@@ -76,7 +101,7 @@ func CreateCourses(c *gin.Context) {
 		CurriculumID:    input.CurriculumID,
 		AcademicYearID:  input.AcademicYearID,
 		TypeOfCoursesID: input.TypeOfCoursesID,
-		CreditID:        input.CreditID,
+		CreditID:        credit.ID,
 	}
 
 	if err := config.DB().Create(&course).Error; err != nil {
@@ -99,7 +124,10 @@ func CreateCourses(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "เพิ่มรายวิชาและผู้สอนสำเร็จ", "course_id": course.ID})
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "เพิ่มรายวิชาและผู้สอนสำเร็จ",
+		"course_id": course.ID,
+	})
 }
 
 func UpdateAllCourses(c *gin.Context) {
@@ -117,25 +145,47 @@ func UpdateAllCourses(c *gin.Context) {
 		return
 	}
 
+	var credit entity.Credit
+	err := config.DB().Where("unit = ? AND lecture = ? AND lab = ? AND self = ?",
+		in.Unit, in.Lecture, in.Lab, in.Self).First(&credit).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		credit = entity.Credit{
+			Unit:    in.Unit,
+			Lecture: in.Lecture,
+			Lab:     in.Lab,
+			Self:    in.Self,
+		}
+		if err := config.DB().Create(&credit).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้างข้อมูลหน่วยกิตใหม่ได้"})
+			return
+		}
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถตรวจสอบข้อมูลหน่วยกิตได้"})
+		return
+	}
+
 	course.Code = in.Code
 	course.EnglishName = in.EnglishName
 	course.ThaiName = in.ThaiName
 	course.CurriculumID = in.CurriculumID
 	course.AcademicYearID = in.AcademicYearID
 	course.TypeOfCoursesID = in.TypeOfCoursesID
-	course.CreditID = in.CreditID
+	course.CreditID = credit.ID
 
-	err := config.DB().Transaction(func(tx *gorm.DB) error {
-		// (4.1) บันทึกฟิลด์หลัก
+	// ใช้ Transaction เพื่อจัดการทั้งการอัปเดตวิชาและผู้สอน
+	err = config.DB().Transaction(func(tx *gorm.DB) error {
+		// (1) อัปเดตข้อมูลรายวิชา
 		if err := tx.Save(&course).Error; err != nil {
 			return err
 		}
 
-		// (4.2) จัดการความสัมพันธ์ UserAllCourses
-		// ลบของเดิมทั้งหมด แล้วสร้างใหม่จาก in.UserIDs (ง่ายที่สุด)
+		// (2) ลบความสัมพันธ์ UserAllCourses เดิม
 		if err := tx.Where("all_courses_id = ?", course.ID).Delete(&entity.UserAllCourses{}).Error; err != nil {
 			return err
 		}
+
+		// (3) เพิ่มผู้สอนใหม่
 		if len(in.UserIDs) > 0 {
 			var links []entity.UserAllCourses
 			for _, uid := range in.UserIDs {
@@ -148,6 +198,7 @@ func UpdateAllCourses(c *gin.Context) {
 				return err
 			}
 		}
+
 		return nil
 	})
 
