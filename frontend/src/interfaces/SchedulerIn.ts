@@ -6,5 +6,23 @@ export interface ConditionInterface {
   UserID: number;
 }
 
+//////////////////////// GetAllConditions //////////////////////////////
+export interface GetAllConditionInterface {
+  DayOfWeek: string;
+  Start: string;
+  End: string;
+}
 
-// แก้ไขใช้ได้เลยนะคับ
+export interface UserInterface {
+  UserID: number;
+  Code: string;
+  Fullname: string;
+  Major: string;
+  Email: string;
+  Phone: string;
+  ItemCount: number;
+  Conditions: ConditionInterface[];
+  CreatedAt: string;
+  LastUpdatedAt: string;
+}
+///////////////////////////////////////////////////////////////////////
