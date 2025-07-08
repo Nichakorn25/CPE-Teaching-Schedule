@@ -1,5 +1,5 @@
-import React, { useState,useEffect } from "react";
-import {postCreateCourse} from "../../../services/https/AdminPageServices";
+import React, { useState, useEffect } from "react";
+import { postCreateCourse } from "../../../services/https/AdminPageServices";
 import { getTypeofCourse } from "../../../services/https/AdminPageServices";
 
 const ManageCourse: React.FC = () => {
@@ -13,31 +13,47 @@ const ManageCourse: React.FC = () => {
     { id: 2, title: "นาย", firstName: "ภูวดล", lastName: "เดชารัมย์" },
   ]);
 
-  const [courseStructure, setCourseStructure] = useState("10705001165 วิศวกรรมคอมพิวเตอร์ 2565");
+  const [courseStructure, setCourseStructure] = useState(
+    "10705001165 วิศวกรรมคอมพิวเตอร์ 2565"
+  );
   const [courseType, setCourseType] = useState("");
   const [courseCode, setCourseCode] = useState("");
   const [credit, setCredit] = useState("");
-  const [hours, setHours] = useState({ lecture: "", practice: "", selfStudy: "" });
+  const [academicYear, setAcademicYear] = useState("");
+  const [hours, setHours] = useState({
+    lecture: "",
+    practice: "",
+    selfStudy: "",
+  });
   const [thaiName, setThaiName] = useState("");
   const [englishName, setEnglishName] = useState("");
-  const [typeOfCoursesList, setTypeOfCoursesList] = useState<{ id: number, typeName: string }[]>([]);
+  const [typeOfCoursesList, setTypeOfCoursesList] = useState<
+    { id: number; TypeName: string }[]
+  >([]);
 
   useEffect(() => {
-  const fetchTypes = async () => {
-    const result = await getTypeofCourse();
-    setTypeOfCoursesList(result);
-  };
-  fetchTypes();
+    const fetchTypes = async () => {
+      const result = await getTypeofCourse();
+      console.log(result);
+      setTypeOfCoursesList(result.data);
+    };
+    fetchTypes();
   }, []);
 
   const addTeacher = () => {
     const nextId = teachers.length + 1;
-    setTeachers([...teachers, { id: nextId, title: "", firstName: "", lastName: "" }]);
+    setTeachers([
+      ...teachers,
+      { id: nextId, title: "", firstName: "", lastName: "" },
+    ]);
   };
 
   const addAssistant = () => {
     const nextId = assistants.length + 1;
-    setAssistants([...assistants, { id: nextId, title: "", firstName: "", lastName: "" }]);
+    setAssistants([
+      ...assistants,
+      { id: nextId, title: "", firstName: "", lastName: "" },
+    ]);
   };
 
   const removeTeacher = (id: number) => {
@@ -49,74 +65,127 @@ const ManageCourse: React.FC = () => {
   };
 
   const isFormValid = () => {
-    if (!courseStructure || !courseType || !courseCode || !credit || !thaiName || !englishName) return false;
+    if (
+      !courseStructure ||
+      !courseType ||
+      !courseCode ||
+      !credit ||
+      !thaiName ||
+      !englishName
+    )
+      return false;
     if (!hours.lecture || !hours.practice || !hours.selfStudy) return false;
 
     for (const teacher of teachers) {
-      if (!teacher.title || !teacher.firstName || !teacher.lastName) return false;
+      if (!teacher.title || !teacher.firstName || !teacher.lastName)
+        return false;
     }
 
     for (const assistant of assistants) {
-      if (!assistant.title || !assistant.firstName || !assistant.lastName) return false;
+      if (!assistant.title || !assistant.firstName || !assistant.lastName)
+        return false;
     }
 
     return true;
   };
 
   const handleSubmit = async () => {
-  const data = {
-    Code: courseCode,
-    EnglishName: englishName,
-    ThaiName: thaiName,
-    CurriculumID: 1,         // สมมุติเป็น ID จริง (ดึงจากระบบในอนาคต)
-    AcademicYearID: 1,       // ปี 2565 เป็นต้น
-    TypeOfCoursesID: parseInt(courseType),
-    CreditID: 1,             // ต้อง match กับฐานข้อมูล
-    UserIDs: teachers.map((t) => t.id), // ใช้ id จริงของอาจารย์จากระบบ
+    const data = {
+      Code: courseCode,
+      EnglishName: englishName,
+      ThaiName: thaiName,
+      CurriculumID: 1, // สมมุติเป็น ID จริง (ดึงจากระบบในอนาคต)
+      AcademicYearID: 1, // ปี 2565 เป็นต้น
+      TypeOfCoursesID: parseInt(courseType),
+      CreditID: 1, // ต้อง match กับฐานข้อมูล
+      UserIDs: teachers.map((t) => t.id), // ใช้ id จริงของอาจารย์จากระบบ
+    };
+
+    const response = await postCreateCourse(data);
+
+    if (response.status === 200) {
+      alert("เพิ่มรายวิชาเรียบร้อย");
+      // รีเซ็ตฟอร์มหรือ redirect ได้
+    } else {
+      alert("เกิดข้อผิดพลาดในการเพิ่มรายวิชา");
+      console.error(response.data);
+    }
   };
-
-  const response = await postCreateCourse(data);
-
-  if (response.status === 200) {
-    alert("เพิ่มรายวิชาเรียบร้อย");
-    // รีเซ็ตฟอร์มหรือ redirect ได้
-  } else {
-    alert("เกิดข้อผิดพลาดในการเพิ่มรายวิชา");
-    console.error(response.data);
-  }
-};
-
 
   return (
     <div className="pt-16 px-6 font-sarabun">
       <form className="w-full p-10 space-y-10 bg-white">
         <div>
-          <label className="text-[#f26522] font-medium text-xl">โครงสร้างหลักสูตร</label>
-          <select className="border px-3 py-2 rounded w-full" value={courseStructure} onChange={(e) => setCourseStructure(e.target.value)}>
+          <label className="text-[#f26522] font-medium text-xl">
+            โครงสร้างหลักสูตร
+          </label>
+          <select
+            className="border px-3 py-2 rounded w-full"
+            value={courseStructure}
+            onChange={(e) => setCourseStructure(e.target.value)}
+          >
             <option>10705001165 วิศวกรรมคอมพิวเตอร์ 2565</option>
           </select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div>
-            <label className="text-[#f26522] font-medium text-xl block mb-2">หมวดวิชา</label>
-            <select className="border px-3 py-2 rounded w-full" value={courseType} onChange={(e) => setCourseType(e.target.value)}>
-              <option value="">-- กรุณาเลือก --</option>
-              <option>หมวดวิชาเฉพาะ</option>
-              <option>หมวดวิชาศึกษาทั่วไป</option>
-              <option>หมวดวิชาเลือก</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-[#f26522] font-medium text-xl block mb-2">รหัสวิชา</label>
-            <input className="border px-3 py-2 rounded w-full" value={courseCode} onChange={(e) => setCourseCode(e.target.value)} />
+        <div className="flex justify-center px-4 md:px-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-6xl w-full">
+            <div>
+              <label className="text-[#f26522] font-medium text-xl block mb-2">
+                หมวดวิชา
+              </label>
+              <select
+                className="border px-3 py-2 rounded w-full"
+                value={courseType}
+                onChange={(e) => setCourseType(e.target.value)}
+              >
+                <option value="">-- กรุณาเลือก --</option>
+                {typeOfCoursesList.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.TypeName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[#f26522] font-medium text-xl block mb-2">
+                รหัสวิชา
+              </label>
+              <input
+                className="border px-3 py-2 rounded w-[100%]"
+                value={courseCode}
+                onChange={(e) => setCourseCode(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-[#f26522] font-medium text-xl block mb-2">
+                ชั้นปีที่สามารถเรียนได้
+              </label>
+              <select
+                className="border px-3 py-2 rounded w-full"
+                value={academicYear}
+                onChange={(e) => setAcademicYear(e.target.value)}
+              >
+                <option value="0">ทุกชั้นปี</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+              </select>
+            </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div>
-            <label className="text-[#f26522] font-medium text-xl block mb-2">หน่วยกิต</label>
-            <select className="border px-3 py-2 rounded w-full" value={credit} onChange={(e) => setCredit(e.target.value)}>
+            <label className="text-[#f26522] font-medium text-xl block mb-2">
+              หน่วยกิต
+            </label>
+            <select
+              className="border px-3 py-2 rounded w-full"
+              value={credit}
+              onChange={(e) => setCredit(e.target.value)}
+            >
               <option value="">--</option>
               <option value="1">1</option>
               <option value="2">2</option>
@@ -125,7 +194,9 @@ const ManageCourse: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="text-[#f26522] font-medium text-xl block mb-2">รูปแบบชั่วโมงการสอน</label>
+            <label className="text-[#f26522] font-medium text-xl block mb-2">
+              รูปแบบชั่วโมงการสอน
+            </label>
             <div className="grid grid-cols-3 gap-4 text-center">
               {[
                 { label: "บรรยาย", key: "lecture" },
@@ -137,7 +208,9 @@ const ManageCourse: React.FC = () => {
                   <select
                     className="border px-3 py-2 rounded-full w-20 mx-auto text-center"
                     value={hours[key as keyof typeof hours]}
-                    onChange={(e) => setHours({ ...hours, [key]: e.target.value })}
+                    onChange={(e) =>
+                      setHours({ ...hours, [key]: e.target.value })
+                    }
                   >
                     <option value="">--</option>
                     <option value="1">1</option>
@@ -153,15 +226,26 @@ const ManageCourse: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div>
-            <label className="text-[#f26522] font-medium text-xl">ชื่อวิชา-ภาษาไทย</label>
-            <input className="border px-3 py-2 rounded w-full" value={thaiName} onChange={(e) => setThaiName(e.target.value)} />
+            <label className="text-[#f26522] font-medium text-xl">
+              ชื่อวิชา-ภาษาไทย
+            </label>
+            <input
+              className="border px-3 py-2 rounded w-full"
+              value={thaiName}
+              onChange={(e) => setThaiName(e.target.value)}
+            />
           </div>
           <div>
-            <label className="text-[#f26522] font-medium text-xl">ชื่อวิชา-ภาษาอังกฤษ</label>
-            <input className="border px-3 py-2 rounded w-full" value={englishName} onChange={(e) => setEnglishName(e.target.value)} />
+            <label className="text-[#f26522] font-medium text-xl">
+              ชื่อวิชา-ภาษาอังกฤษ
+            </label>
+            <input
+              className="border px-3 py-2 rounded w-full"
+              value={englishName}
+              onChange={(e) => setEnglishName(e.target.value)}
+            />
           </div>
         </div>
-
 
         {/* อาจารย์ผู้สอน */}
         <div className="space-y-4">
@@ -265,12 +349,14 @@ const ManageCourse: React.FC = () => {
         </div>
 
         {/* ปุ่มบันทึก */}
-       <div className="text-right">
+        <div className="text-right">
           <button
             onClick={handleSubmit}
             disabled={!isFormValid()}
             className={`px-6 py-2 rounded text-white ${
-              isFormValid() ? "bg-orange-500 hover:bg-orange-600" : "bg-gray-300 cursor-not-allowed"
+              isFormValid()
+                ? "bg-orange-500 hover:bg-orange-600"
+                : "bg-gray-300 cursor-not-allowed"
             }`}
           >
             บันทึก

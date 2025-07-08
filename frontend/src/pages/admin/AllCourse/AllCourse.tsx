@@ -1,7 +1,9 @@
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { FaSearch } from "react-icons/fa";
 import Header from "../../../components/header/Header";
 import { getAllCourses } from "../../../services/https/AdminPageServices";
+import Swal from "sweetalert2";
+import { deleteCourse } from "../../../services/https/AdminPageServices";
 
 interface Course {
   id: number;
@@ -19,33 +21,70 @@ const AllCourse: React.FC = () => {
   const [courseData, setCourseData] = useState<Course[]>([]);
 
   useEffect(() => {
-  const fetchCourses = async () => {
-    const response = await getAllCourses();
+    const fetchCourses = async () => {
+      const response = await getAllCourses();
+      console.log(response);
 
-    if (response.status === 200 && Array.isArray(response.data)) {
-      const mappedData: Course[] = response.data.map((item: any, index: number) => ({
-        id: index + 1,
-        code: item["รหัสวิชา"],
-        name: item["ชื่อวิชา"],
-        credit: item["หน่วยกิต"],
-        category: item["หมวดวิชา"],
-        instructors: [...new Set(item["อาจารย์ผู้สอน"]?.split(", ").map((name: string) => name.trim()))],
-      }));
+      if (response.status === 200 && Array.isArray(response.data)) {
+        const mappedData: Course[] = response.data
+          .filter((item: any) => item.CourseName && item.CourseCode)
+          .map((item: any, index: number) => ({
+            id: index + 1,
+            code: item.CourseCode,
+            name: item.CourseName,
+            credit: item.Credit,
+            category: item.CourseType,
+            instructors: [
+              ...new Set(
+                item.Instructor?.split(",").map((name: string) => name.trim())
+              ),
+            ],
+          }));
+        setCourseData(mappedData);
+      } else {
+        console.error("โหลดข้อมูลรายวิชาไม่สำเร็จ", response);
+      }
+    };
+    fetchCourses();
+  }, []);
 
-      setCourseData(mappedData);
-    } else {
-      console.error("โหลดข้อมูลรายวิชาไม่สำเร็จ", response);
+  const filteredCourses = courseData.filter(
+    (course) =>
+      course.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      course.code?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleDeleteCourse = async (id: number, courseName: string) => {
+    const result = await Swal.fire({
+      title: "คุณแน่ใจหรือไม่?",
+      text: `คุณต้องการลบวิชา "${courseName}" หรือไม่?`,
+      icon: "warning",
+      showCancelButton: true,
+      cancelButtonColor: "#d33",
+      confirmButtonColor: "#f26522",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonText: "ตกลง",
+    });
+
+    if (result.isConfirmed) {
+      const response = await deleteCourse(id);
+
+      if (response.status === 200) {
+        await Swal.fire(
+          "ลบเรียบร้อย!",
+          `รายวิชา "${courseName}" ถูกลบแล้ว`,
+          "success"
+        );
+        fetchCourses(); // รีโหลดรายวิชาใหม่
+      } else {
+        Swal.fire(
+          "เกิดข้อผิดพลาด!",
+          response.data?.error || "ไม่สามารถลบรายวิชาได้",
+          "error"
+        );
+      }
     }
   };
-
-  fetchCourses();
-}, []);
-
-
-  const filteredCourses = courseData.filter((course) =>
-    course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    course.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="p-6 font-sarabun mt-10">
@@ -93,7 +132,10 @@ const AllCourse: React.FC = () => {
             </button>
           ))}
           <span>... 7</span>
-          <button onClick={() => setCurrentPage(currentPage + 1)} className="hover:underline">
+          <button
+            onClick={() => setCurrentPage(currentPage + 1)}
+            className="hover:underline"
+          >
             ถัดไป
           </button>
         </div>
@@ -131,7 +173,10 @@ const AllCourse: React.FC = () => {
                     <button className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm">
                       แก้ไข
                     </button>
-                    <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                    <button
+                      onClick={() => handleDeleteCourse(course.id, course.name)}
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                    >
                       ลบ
                     </button>
                   </div>
@@ -146,3 +191,7 @@ const AllCourse: React.FC = () => {
 };
 
 export default AllCourse;
+function fetchCourses() {
+  throw new Error("Function not implemented.");
+}
+

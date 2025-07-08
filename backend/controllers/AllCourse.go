@@ -37,12 +37,13 @@ func GetAllCourses(c *gin.Context) {
 		}
 
 		result = append(result, gin.H{
-			"ลำดับ":         i + 1,
-			"รหัสวิชา":      course.Code,
-			"ชื่อวิชา":      course.EnglishName,
-			"หน่วยกิต":      fmt.Sprintf("%d (%d-%d-%d)", course.Credit.Unit, course.Credit.Lecture, course.Credit.Lab, course.Credit.Self),
-			"หมวดวิชา":      course.TypeOfCourses.TypeName,
-			"อาจารย์ผู้สอน": strings.Join(teachers, ", "),
+			"ID":      course.ID,
+			"No":         i + 1,
+			"CourseCode":      course.Code,
+			"CourseName":      course.EnglishName,
+			"Credit":      fmt.Sprintf("%d (%d-%d-%d)", course.Credit.Unit, course.Credit.Lecture, course.Credit.Lab, course.Credit.Self),
+			"CourseType":      course.TypeOfCourses.TypeName,
+			"Instructor": strings.Join(teachers, ", "),
 		})
 	}
 
