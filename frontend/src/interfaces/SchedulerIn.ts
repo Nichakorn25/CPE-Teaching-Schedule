@@ -1,13 +1,6 @@
-export interface ConditionInterface {
-  ID?: number;
-  DayOfWeek: string;
-  StartTime: string; // เวลาในรูปแบบ "HH:mm"
-  EndTime: string;
-  UserID: number;
-}
-
 //////////////////////// GetAllConditions //////////////////////////////
-export interface GetAllConditionInterface {
+export interface ConditionInterface {
+  ID: number;
   DayOfWeek: string;
   Start: string;
   End: string;

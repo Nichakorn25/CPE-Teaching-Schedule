@@ -25,17 +25,13 @@ const Conditionpage: React.FC = () => {
     const getAllUserConditions = async () => {
     try {
         let res = await getAllConditions();
-        console.log("dfghjkl",res)
         if (res) {
             setConditionsData(res.data);
-            console.log("fghjmk,rftgyhj",res.data)
         }
         } catch (error) {
             console.error('Error fetching conditions:', error);
         }
     }
-
-    const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"];
 
     useEffect(() => {
         getAllUserConditions();
@@ -88,7 +84,7 @@ const Conditionpage: React.FC = () => {
             <div className="time-slots-container">
                 {conditions.map((condition, index) => (
                     <div key={`${condition.ID}-${index}`} className="time-slot-display">
-                        {condition.DayOfWeek}: {condition.StartTime}-{condition.EndTime}
+                        {condition.DayOfWeek}: {condition.Start}-{condition.End}
                     </div>
                 ))}
             </div>
