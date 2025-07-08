@@ -511,6 +511,7 @@ func SeedTypeOfCourses() {
 // ครบ
 func SeedAcademicYears() {
 	years := []entity.AcademicYear{
+		{Level: 0},
 		{Level: 1},
 		{Level: 2},
 		{Level: 3},

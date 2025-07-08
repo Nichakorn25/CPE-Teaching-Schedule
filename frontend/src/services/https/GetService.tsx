@@ -51,11 +51,22 @@ async function getAllRoles() {
         .then((res) => res)
         .catch((e) => e.response);
 }
+
+//------------------ AcademicYears ------------------------------//
+async function getAllAcademicYears() {
+    return await axios
+        .get(`${apiUrl}/all-academic-years`, requestOptions)
+        .then((res) => res)
+        .catch((e) => e.response);
+}
+
+
 export {
     getAllTitle,
     getAllPosition,
     getTypeofCourse,
     getMajorOfDepathment,
     getAllRoles,
+    getAllAcademicYears,
     
 };
