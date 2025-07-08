@@ -5,6 +5,8 @@ import "./Conditionpage.css";
 import { Button, Table, Input, Select, message, Modal } from 'antd';
 import { SearchOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { getAllConditions } from "../../../services/https/SchedulerPageService";
+import {UserConInterface} from "../../../interfaces/SchedulerIn";
 
 const { Option } = Select;
 
@@ -39,146 +41,45 @@ const Conditionpage: React.FC = () => {
     const [selectedDepartment, setSelectedDepartment] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    const [conditionsData, setConditionsData] = useState<TeacherCondition[]>([]);
+    const [conditionsData, setConditionsData] = useState<UserConInterface[]>([]);
+
+    const getAllUserConditions = async () => {
+    try {
+        let res = await getAllConditions();
+        console.log("dfghjkl",res)
+        if (res) {
+            setConditionsData(res.data);
+            console.log("fghjmk,rftgyhj",res.data)
+        }
+        } catch (error) {
+            console.error('Error fetching conditions:', error);
+        }
+    }
 
     const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 
-    // ข้อมูลตัวอย่างเงื่อนไขของอาจารย์
-    const sampleConditions: TeacherCondition[] = [
-        {
-            id: "T001",
-            teacherName: "อ.ดร.ปราโมทย์ ภักดีณรงค์",
-            teacherCode: "T001",
-            department: "เทคโนโลยีสารสนเทศ",
-            email: "pramote@sut.ac.th",
-            phone: "044-224-3000",
-            unavailableDays: {
-                0: [{ id: 1, start: "08:00", end: "10:00" }], // จันทร์
-                2: [{ id: 2, start: "13:00", end: "15:00" }, { id: 3, start: "16:00", end: "18:00" }], // พุธ
-            },
-            createdAt: "2024-01-15 09:30:00",
-            updatedAt: "2024-01-20 14:15:00",
-            totalTimeSlots: 3
-        },
-        {
-            id: "T002",
-            teacherName: "รศ.ดร.ศรัญญา กาญจนวัฒนา",
-            teacherCode: "T002",
-            department: "วิศวกรรมคอมพิวเตอร์",
-            email: "saranya@sut.ac.th",
-            phone: "044-224-3001",
-            unavailableDays: {
-                1: [{ id: 4, start: "09:00", end: "12:00" }], // อังคาร
-                4: [{ id: 5, start: "14:00", end: "16:00" }], // ศุกร์
-            },
-            createdAt: "2024-01-10 11:00:00",
-            updatedAt: "2024-01-18 16:30:00",
-            totalTimeSlots: 2
-        },
-        {
-            id: "T003",
-            teacherName: "อ.สมชาย รักการสอน",
-            teacherCode: "T003",
-            department: "วิทยาการคอมพิวเตอร์",
-            email: "somchai@sut.ac.th",
-            phone: "044-224-3002",
-            unavailableDays: {
-                0: [{ id: 6, start: "13:00", end: "15:00" }], // จันทร์
-                2: [{ id: 7, start: "10:00", end: "12:00" }], // พุธ
-                4: [{ id: 8, start: "15:00", end: "17:00" }], // ศุกร์
-            },
-            createdAt: "2024-01-12 14:20:00",
-            updatedAt: "2024-01-22 10:45:00",
-            totalTimeSlots: 3
-        },
-        {
-            id: "T004",
-            teacherName: "อ.วิมลา เก่งการสอน",
-            teacherCode: "T004",
-            department: "เทคโนโลยีสารสนเทศ",
-            email: "vimala@sut.ac.th",
-            phone: "044-224-3003",
-            unavailableDays: {
-                1: [{ id: 9, start: "08:00", end: "10:00" }, { id: 10, start: "14:00", end: "16:00" }], // อังคาร
-                3: [{ id: 11, start: "11:00", end: "13:00" }], // พฤหัสบดี
-            },
-            createdAt: "2024-01-08 08:15:00",
-            updatedAt: "2024-01-25 13:20:00",
-            totalTimeSlots: 3
-        },
-        {
-            id: "T005",
-            teacherName: "ผศ.ดร.อนันต์ มานะเรียน",
-            teacherCode: "T005",
-            department: "วิศวกรรมคอมพิวเตอร์",
-            email: "anan@sut.ac.th",
-            phone: "044-224-3004",
-            unavailableDays: {
-                0: [{ id: 12, start: "09:00", end: "11:00" }], // จันทร์
-                1: [{ id: 13, start: "13:00", end: "15:00" }], // อังคาร
-                2: [{ id: 14, start: "16:00", end: "18:00" }], // พุธ
-                4: [{ id: 15, start: "10:00", end: "12:00" }], // ศุกร์
-            },
-            createdAt: "2024-01-05 16:45:00",
-            updatedAt: "2024-01-28 09:10:00",
-            totalTimeSlots: 4
-        },
-        {
-            id: "T006",
-            teacherName: "อ.สุวรรณา ปัญญาดี",
-            teacherCode: "T006",
-            department: "วิทยาการคอมพิวเตอร์",
-            email: "suwanna@sut.ac.th",
-            phone: "044-224-3005",
-            unavailableDays: {
-                2: [{ id: 16, start: "08:00", end: "12:00" }], // พุธ
-                5: [{ id: 17, start: "09:00", end: "11:00" }], // เสาร์
-            },
-            createdAt: "2024-01-20 10:30:00",
-            updatedAt: "2024-01-30 15:45:00",
-            totalTimeSlots: 2
-        },
-        {
-            id: "T007",
-            teacherName: "ผศ.ดร.จิรพันธ์ นักวิจัย",
-            teacherCode: "T007",
-            department: "เทคโนโลยีสารสนเทศ",
-            email: "jirapan@sut.ac.th",
-            phone: "044-224-3006",
-            unavailableDays: {
-                1: [{ id: 18, start: "10:00", end: "12:00" }], // อังคาร
-                3: [{ id: 19, start: "14:00", end: "17:00" }], // พฤหัสบดี
-                4: [{ id: 20, start: "08:00", end: "10:00" }], // ศุกร์
-            },
-            createdAt: "2024-01-03 13:15:00",
-            updatedAt: "2024-01-27 11:20:00",
-            totalTimeSlots: 3
-        }
-    ];
-
     useEffect(() => {
-        // จำลองการโหลดข้อมูลจาก API หรือ localStorage
-        setConditionsData(sampleConditions);
+        getAllUserConditions();
     }, []);
 
-    // กรองข้อมูลตาม search text และแผนก
-    const filteredConditions = conditionsData.filter(condition => {
-        const matchesSearch = condition.teacherName.toLowerCase().includes(searchText.toLowerCase()) ||
-                            condition.teacherCode.toLowerCase().includes(searchText.toLowerCase()) ||
-                            condition.email.toLowerCase().includes(searchText.toLowerCase());
+    // // กรองข้อมูลตาม search text และแผนก
+    // const filteredConditions = conditionsData.filter(condition => {
+    //     const matchesSearch = condition.teacherName.toLowerCase().includes(searchText.toLowerCase()) ||
+    //                         condition.teacherCode.toLowerCase().includes(searchText.toLowerCase()) ||
+    //                         condition.email.toLowerCase().includes(searchText.toLowerCase());
         
-        const matchesDepartment = selectedDepartment === 'all' || 
-                                condition.department === selectedDepartment;
+    //     const matchesDepartment = selectedDepartment === 'all' || 
+    //                             condition.department === selectedDepartment;
         
-        return matchesSearch && matchesDepartment;
-    });
+    //     return matchesSearch && matchesDepartment;
+    // });
 
-    // แปลงข้อมูลสำหรับตาราง
-    const tableData: ConditionTableData[] = filteredConditions.map((condition, index) => ({
-        ...condition,
-        key: condition.id,
-        order: index + 1
-    }));
+    // // แปลงข้อมูลสำหรับตาราง
+    // const tableData: ConditionTableData[] = filteredConditions.map((condition, index) => ({
+    //     ...condition,
+    //     key: condition.id,
+    //     order: index + 1
+    // }));
 
     // Calculate pagination
     const totalItems = tableData.length;

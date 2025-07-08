@@ -13,7 +13,7 @@ export interface GetAllConditionInterface {
   End: string;
 }
 
-export interface UserInterface {
+export interface UserConInterface {
   UserID: number;
   Code: string;
   Fullname: string;
