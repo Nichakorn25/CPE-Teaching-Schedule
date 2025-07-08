@@ -19,9 +19,9 @@ const AddConditionpage: React.FC = () => {
   const [userID, setUserID] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get user ID from localStorage or context
+  // Get user ID from localStorage
   useEffect(() => {
-    const storedUserID = localStorage.getItem("userID");
+    const storedUserID = localStorage.getItem("user_id");
     if (storedUserID) {
       const parsedUserID = parseInt(storedUserID);
       setUserID(parsedUserID);
@@ -99,10 +99,10 @@ const AddConditionpage: React.FC = () => {
         slots.forEach((slot) => {
           if (slot.start && slot.end) {
             conditionsToSave.push({
+              ID: userID, // ใช้ userID เป็น ID
               DayOfWeek: days[parseInt(dayIndex)],
               Start: slot.start,
-              End: slot.end,
-              ID: userID
+              End: slot.end
             });
           }
         });
@@ -126,7 +126,7 @@ const AddConditionpage: React.FC = () => {
       
       if (successCount === conditionsToSave.length) {
         message.success(`บันทึกข้อมูลเวลาที่ไม่สะดวกสำเร็จ! (${successCount} รายการ)`);
-        // Optionally clear the form or redirect
+        // Clear the form after successful save
         setTimeSlotsByDay({});
       } else {
         message.warning(`บันทึกสำเร็จ ${successCount} จาก ${conditionsToSave.length} รายการ`);
