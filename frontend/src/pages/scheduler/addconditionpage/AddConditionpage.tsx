@@ -1,7 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "../../../components/schedule-sidebar/Sidebar";
 import Header from "../../../components/schedule-header/Header";
 import "./AddConditionpage.css";
+import { message } from 'antd';
+import { postCreateConditions } from "../../../services/https/SchedulerPageService";
+import { ConditionInterface } from "../../../interfaces/SchedulerIn";
 
 const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 
@@ -12,9 +15,20 @@ interface TimeSlot {
 }
 
 const AddConditionpage: React.FC = () => {
-  const [timeSlotsByDay, setTimeSlotsByDay] = useState<
-    Record<number, TimeSlot[]>
-  >({});
+  const [timeSlotsByDay, setTimeSlotsByDay] = useState<Record<number, TimeSlot[]>>({});
+  const [userID, setUserID] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Get user ID from localStorage or context
+  useEffect(() => {
+    const storedUserID = localStorage.getItem("userID");
+    if (storedUserID) {
+      const parsedUserID = parseInt(storedUserID);
+      setUserID(parsedUserID);
+    } else {
+      message.error("ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่");
+    }
+  }, []);
 
   const addTimeSlot = (dayIndex: number) => {
     setTimeSlotsByDay((prev) => {
@@ -49,9 +63,81 @@ const AddConditionpage: React.FC = () => {
     });
   };
 
-  const handleSubmit = () => {
-    console.log("ข้อมูลเวลาที่ไม่สะดวก:", timeSlotsByDay);
-    alert("บันทึกข้อมูลเวลาที่ไม่สะดวกสำเร็จ!");
+  const validateTimeSlots = () => {
+    for (const [dayIndex, slots] of Object.entries(timeSlotsByDay)) {
+      for (const slot of slots) {
+        if (!slot.start || !slot.end) {
+          message.error(`กรุณากำหนดเวลาให้ครบถ้วนสำหรับวัน${days[parseInt(dayIndex)]}`);
+          return false;
+        }
+        if (slot.start >= slot.end) {
+          message.error(`เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุดสำหรับวัน${days[parseInt(dayIndex)]}`);
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (!userID) {
+      message.error("ไม่พบข้อมูลผู้ใช้");
+      return;
+    }
+
+    if (!validateTimeSlots()) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Convert timeSlotsByDay to ConditionInterface array
+      const conditionsToSave: ConditionInterface[] = [];
+      
+      Object.entries(timeSlotsByDay).forEach(([dayIndex, slots]) => {
+        slots.forEach((slot) => {
+          if (slot.start && slot.end) {
+            conditionsToSave.push({
+              DayOfWeek: days[parseInt(dayIndex)],
+              Start: slot.start,
+              End: slot.end,
+              ID: userID
+            });
+          }
+        });
+      });
+
+      if (conditionsToSave.length === 0) {
+        message.warning("กรุณาเพิ่มช่วงเวลาที่ไม่สะดวกอย่างน้อย 1 ช่วงเวลา");
+        setIsLoading(false);
+        return;
+      }
+
+      // Save each condition
+      const savePromises = conditionsToSave.map(condition => 
+        postCreateConditions(condition)
+      );
+
+      const results = await Promise.all(savePromises);
+      
+      // Check if all saves were successful
+      const successCount = results.filter(result => result && result.status === 200).length;
+      
+      if (successCount === conditionsToSave.length) {
+        message.success(`บันทึกข้อมูลเวลาที่ไม่สะดวกสำเร็จ! (${successCount} รายการ)`);
+        // Optionally clear the form or redirect
+        setTimeSlotsByDay({});
+      } else {
+        message.warning(`บันทึกสำเร็จ ${successCount} จาก ${conditionsToSave.length} รายการ`);
+      }
+
+    } catch (error) {
+      console.error("Error saving conditions:", error);
+      message.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -100,6 +186,21 @@ const AddConditionpage: React.FC = () => {
               กำหนดช่วงเวลาที่ไม่สะดวกสำหรับการจัดตารางเรียน
             </p>
           </div>
+
+          {/* User Info Display */}
+          {userID && (
+            <div style={{
+              marginBottom: '20px',
+              padding: '12px 16px',
+              backgroundColor: '#e8f5e8',
+              borderRadius: '6px',
+              border: '1px solid #b8e6b8'
+            }}>
+              <span style={{ fontSize: '14px', color: '#2d5a2d', fontWeight: '500' }}>
+                กำลังจัดการเงื่อนไขสำหรับผู้ใช้ ID: {userID}
+              </span>
+            </div>
+          )}
 
           {/* Table Container */}
           <div style={{ 
@@ -162,6 +263,7 @@ const AddConditionpage: React.FC = () => {
                                     e.target.value
                                   )
                                 }
+                                disabled={isLoading}
                               />
                             </div>
                             
@@ -178,6 +280,7 @@ const AddConditionpage: React.FC = () => {
                                 onChange={(e) =>
                                   updateTime(index, slot.id, "end", e.target.value)
                                 }
+                                disabled={isLoading}
                               />
                             </div>
                             
@@ -185,6 +288,7 @@ const AddConditionpage: React.FC = () => {
                               className="remove-time-button"
                               onClick={() => removeSlot(index, slot.id)}
                               title="ลบช่วงเวลานี้"
+                              disabled={isLoading}
                             >
                               ลบ
                             </button>
@@ -194,6 +298,7 @@ const AddConditionpage: React.FC = () => {
                         <button
                           onClick={() => addTimeSlot(index)}
                           className="add-time-button"
+                          disabled={isLoading}
                         >
                           + เพิ่มช่วงเวลาไม่สะดวก
                         </button>
@@ -210,17 +315,19 @@ const AddConditionpage: React.FC = () => {
             <button
               onClick={handleSubmit}
               className="addcondition-primary-button"
+              disabled={isLoading || !userID}
               style={{
                 padding: '12px 32px',
                 fontSize: '16px',
                 fontWeight: 'bold',
                 border: 'none',
                 borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                opacity: isLoading ? 0.7 : 1
               }}
             >
-              บันทึกข้อมูล
+              {isLoading ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
             </button>
           </div>
 
@@ -251,9 +358,40 @@ const AddConditionpage: React.FC = () => {
               <li>สามารถเพิ่มหลายช่วงเวลาในวันเดียวกันได้</li>
               <li>คลิก "ลบ" เพื่อลบช่วงเวลาที่ไม่ต้องการ</li>
               <li>กำหนดเวลาเริ่มต้นและเวลาสิ้นสุดให้ครบถ้วน</li>
+              <li>เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุด</li>
               <li>ข้อมูลจะถูกนำไปใช้ในการจัดตารางเรียนอัตโนมัติ</li>
+              <li>ระบบจะบันทึกแต่ละช่วงเวลาแยกกันตาม API</li>
             </ul>
           </div>
+
+          {/* Summary */}
+          {Object.keys(timeSlotsByDay).length > 0 && (
+            <div style={{
+              marginTop: '16px',
+              padding: '12px 16px',
+              backgroundColor: '#fff3cd',
+              borderRadius: '6px',
+              border: '1px solid #ffeaa7'
+            }}>
+              <h4 style={{ 
+                margin: '0 0 8px 0', 
+                color: '#856404',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}>
+                สรุปเงื่อนไขที่จะบันทึก:
+              </h4>
+              <div style={{ fontSize: '13px', color: '#856404' }}>
+                {Object.entries(timeSlotsByDay).map(([dayIndex, slots]) => (
+                  slots.length > 0 && (
+                    <div key={dayIndex} style={{ marginBottom: '4px' }}>
+                      <strong>{days[parseInt(dayIndex)]}:</strong> {slots.length} ช่วงเวลา
+                    </div>
+                  )
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
