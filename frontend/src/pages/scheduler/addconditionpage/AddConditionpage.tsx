@@ -8,14 +8,8 @@ import { ConditionInterface } from "../../../interfaces/SchedulerIn";
 
 const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 
-interface TimeSlot {
-  id: number;
-  start: string;
-  end: string;
-}
-
 const AddConditionpage: React.FC = () => {
-  const [timeSlotsByDay, setTimeSlotsByDay] = useState<Record<number, TimeSlot[]>>({});
+  const [timeSlotsByDay, setTimeSlotsByDay] = useState<Record<number, ConditionInterface[]>>({});
   const [userID, setUserID] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,10 +27,11 @@ const AddConditionpage: React.FC = () => {
   const addTimeSlot = (dayIndex: number) => {
     setTimeSlotsByDay((prev) => {
       const existing = prev[dayIndex] || [];
-      const newSlot: TimeSlot = {
-        id: Date.now(),
-        start: "",
-        end: "",
+      const newSlot: ConditionInterface = {
+        ID: 0, // temporary ID
+        DayOfWeek: days[dayIndex],
+        Start: "",
+        End: "",
       };
       return { ...prev, [dayIndex]: [...existing, newSlot] };
     });
@@ -44,33 +39,35 @@ const AddConditionpage: React.FC = () => {
 
   const updateTime = (
     dayIndex: number,
-    id: number,
-    field: "start" | "end",
+    slotIndex: number,
+    field: "Start" | "End",
     value: string
   ) => {
     setTimeSlotsByDay((prev) => {
-      const updated = prev[dayIndex].map((slot) =>
-        slot.id === id ? { ...slot, [field]: value } : slot
-      );
+      const updated = [...(prev[dayIndex] || [])];
+      if (updated[slotIndex]) {
+        updated[slotIndex] = { ...updated[slotIndex], [field]: value };
+      }
       return { ...prev, [dayIndex]: updated };
     });
   };
 
-  const removeSlot = (dayIndex: number, id: number) => {
+  const removeSlot = (dayIndex: number, slotIndex: number) => {
     setTimeSlotsByDay((prev) => {
-      const filtered = prev[dayIndex].filter((slot) => slot.id !== id);
-      return { ...prev, [dayIndex]: filtered };
+      const updated = [...(prev[dayIndex] || [])];
+      updated.splice(slotIndex, 1);
+      return { ...prev, [dayIndex]: updated };
     });
   };
 
   const validateTimeSlots = () => {
     for (const [dayIndex, slots] of Object.entries(timeSlotsByDay)) {
       for (const slot of slots) {
-        if (!slot.start || !slot.end) {
+        if (!slot.Start || !slot.End) {
           message.error(`กรุณากำหนดเวลาให้ครบถ้วนสำหรับวัน${days[parseInt(dayIndex)]}`);
           return false;
         }
-        if (slot.start >= slot.end) {
+        if (slot.Start >= slot.End) {
           message.error(`เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุดสำหรับวัน${days[parseInt(dayIndex)]}`);
           return false;
         }
@@ -97,12 +94,12 @@ const AddConditionpage: React.FC = () => {
       
       Object.entries(timeSlotsByDay).forEach(([dayIndex, slots]) => {
         slots.forEach((slot) => {
-          if (slot.start && slot.end) {
+          if (slot.Start && slot.End) {
             conditionsToSave.push({
               ID: userID, // ใช้ userID เป็น ID
               DayOfWeek: days[parseInt(dayIndex)],
-              Start: slot.start,
-              End: slot.end
+              Start: slot.Start,
+              End: slot.End
             });
           }
         });
