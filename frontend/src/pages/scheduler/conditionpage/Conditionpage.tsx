@@ -6,32 +6,11 @@ import { Button, Table, Input, Select, message, Modal } from 'antd';
 import { SearchOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { getAllConditions } from "../../../services/https/SchedulerPageService";
-import {UserConInterface} from "../../../interfaces/SchedulerIn";
+import { UserConInterface, ConditionInterface } from "../../../interfaces/SchedulerIn";
 
 const { Option } = Select;
 
-interface TimeSlot {
-  id: number;
-  start: string;
-  end: string;
-}
-
-interface TeacherCondition {
-  id: string;
-  teacherName: string;
-  teacherCode: string;
-  department: string;
-  email: string;
-  phone: string;
-  unavailableDays: {
-    [dayIndex: number]: TimeSlot[];
-  };
-  createdAt: string;
-  updatedAt: string;
-  totalTimeSlots: number;
-}
-
-interface ConditionTableData extends TeacherCondition {
+interface ConditionTableData extends UserConInterface {
   key: string;
   order: number;
 }
@@ -56,30 +35,30 @@ const Conditionpage: React.FC = () => {
         }
     }
 
-    const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+    const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"];
 
     useEffect(() => {
         getAllUserConditions();
     }, []);
 
-    // // กรองข้อมูลตาม search text และแผนก
-    // const filteredConditions = conditionsData.filter(condition => {
-    //     const matchesSearch = condition.teacherName.toLowerCase().includes(searchText.toLowerCase()) ||
-    //                         condition.teacherCode.toLowerCase().includes(searchText.toLowerCase()) ||
-    //                         condition.email.toLowerCase().includes(searchText.toLowerCase());
+    // กรองข้อมูลตาม search text และแผนก
+    const filteredConditions = conditionsData.filter(condition => {
+        const matchesSearch = condition.Fullname?.toLowerCase().includes(searchText.toLowerCase()) ||
+                            condition.Code?.toLowerCase().includes(searchText.toLowerCase()) ||
+                            condition.Email?.toLowerCase().includes(searchText.toLowerCase());
         
-    //     const matchesDepartment = selectedDepartment === 'all' || 
-    //                             condition.department === selectedDepartment;
+        const matchesDepartment = selectedDepartment === 'all' || 
+                                condition.Major === selectedDepartment;
         
-    //     return matchesSearch && matchesDepartment;
-    // });
+        return matchesSearch && matchesDepartment;
+    });
 
-    // // แปลงข้อมูลสำหรับตาราง
-    // const tableData: ConditionTableData[] = filteredConditions.map((condition, index) => ({
-    //     ...condition,
-    //     key: condition.id,
-    //     order: index + 1
-    // }));
+    // แปลงข้อมูลสำหรับตาราง
+    const tableData: ConditionTableData[] = filteredConditions.map((condition, index) => ({
+        ...condition,
+        key: condition.UserID?.toString() || `${index}`,
+        order: index + 1
+    }));
 
     // Calculate pagination
     const totalItems = tableData.length;
@@ -100,38 +79,33 @@ const Conditionpage: React.FC = () => {
     };
 
     // ฟังก์ชันแสดงช่วงเวลาที่ไม่สะดวก
-    const renderTimeSlots = (unavailableDays: { [dayIndex: number]: TimeSlot[] }) => {
-        const allSlots: React.ReactElement[] = [];
-        
-        Object.entries(unavailableDays).forEach(([dayIndex, slots]) => {
-            const dayName = days[parseInt(dayIndex)];
-            slots.forEach((slot, index) => {
-                allSlots.push(
-                    <div key={`${dayIndex}-${slot.id}`} className="time-slot-display">
-                        {dayName}: {slot.start}-{slot.end}
-                    </div>
-                );
-            });
-        });
+    const renderTimeSlots = (conditions: ConditionInterface[]) => {
+        if (!conditions || conditions.length === 0) {
+            return <span style={{ color: '#999', fontStyle: 'italic' }}>ไม่มีเงื่อนไข</span>;
+        }
         
         return (
             <div className="time-slots-container">
-                {allSlots.length > 0 ? allSlots : <span style={{ color: '#999', fontStyle: 'italic' }}>ไม่มีเงื่อนไข</span>}
+                {conditions.map((condition, index) => (
+                    <div key={`${condition.ID}-${index}`} className="time-slot-display">
+                        {condition.DayOfWeek}: {condition.StartTime}-{condition.EndTime}
+                    </div>
+                ))}
             </div>
         );
     };
 
     // ฟังก์ชันลบเงื่อนไข
-    const handleDeleteCondition = (conditionId: string, teacherName: string) => {
+    const handleDeleteCondition = (userID: number, fullname: string) => {
         Modal.confirm({
             title: 'ยืนยันการลบ',
-            content: `คุณต้องการลบเงื่อนไขของ "${teacherName}" หรือไม่?`,
+            content: `คุณต้องการลบเงื่อนไขของ "${fullname}" หรือไม่?`,
             okText: 'ลบ',
             okType: 'danger',
             cancelText: 'ยกเลิก',
             onOk() {
-                setConditionsData(prev => prev.filter(item => item.id !== conditionId));
-                message.success(`ลบเงื่อนไขของ ${teacherName} สำเร็จ`);
+                setConditionsData(prev => prev.filter(item => item.UserID !== userID));
+                message.success(`ลบเงื่อนไขของ ${fullname} สำเร็จ`);
                 
                 // ปรับหน้าถ้าจำเป็น
                 if (currentData.length === 1 && currentPage > 1) {
@@ -142,8 +116,8 @@ const Conditionpage: React.FC = () => {
     };
 
     // ฟังก์ชันแก้ไขเงื่อนไข
-    const handleEditCondition = (conditionId: string, teacherName: string) => {
-        message.info(`เปิดหน้าแก้ไขเงื่อนไขของ ${teacherName}`);
+    const handleEditCondition = (userID: number, fullname: string) => {
+        message.info(`เปิดหน้าแก้ไขเงื่อนไขของ ${fullname}`);
         // TODO: นำไปยังหน้าแก้ไขเงื่อนไข หรือเปิด Modal แก้ไข
     };
 
@@ -159,29 +133,29 @@ const Conditionpage: React.FC = () => {
         },
         {
             title: 'รหัสอาจารย์',
-            dataIndex: 'teacherCode',
-            key: 'teacherCode',
+            dataIndex: 'Code',
+            key: 'Code',
             width: 100,
             render: (value: string) => <span style={{ fontWeight: 'bold', color: '#1890ff' }}>{value}</span>
         },
         {
             title: 'ชื่อ-นามสกุล',
-            dataIndex: 'teacherName',
-            key: 'teacherName',
+            dataIndex: 'Fullname',
+            key: 'Fullname',
             width: 200,
             render: (value: string) => <span style={{ fontWeight: '500' }}>{value}</span>
         },
         {
             title: 'แผนก/สาขา',
-            dataIndex: 'department',
-            key: 'department',
+            dataIndex: 'Major',
+            key: 'Major',
             width: 150,
             align: 'center'
         },
         {
             title: 'อีเมล',
-            dataIndex: 'email',
-            key: 'email',
+            dataIndex: 'Email',
+            key: 'Email',
             width: 180,
             render: (value: string) => (
                 <a href={`mailto:${value}`} style={{ color: '#1890ff' }}>
@@ -191,22 +165,22 @@ const Conditionpage: React.FC = () => {
         },
         {
             title: 'เบอร์โทร',
-            dataIndex: 'phone',
-            key: 'phone',
+            dataIndex: 'Phone',
+            key: 'Phone',
             width: 120,
             align: 'center'
         },
         {
             title: 'เงื่อนไขเวลาที่ไม่สะดวก',
-            dataIndex: 'unavailableDays',
-            key: 'unavailableDays',
+            dataIndex: 'Conditions',
+            key: 'Conditions',
             width: 250,
-            render: (value: { [dayIndex: number]: TimeSlot[] }) => renderTimeSlots(value)
+            render: (value: ConditionInterface[]) => renderTimeSlots(value)
         },
         {
             title: 'จำนวนช่วงเวลา',
-            dataIndex: 'totalTimeSlots',
-            key: 'totalTimeSlots',
+            dataIndex: 'ItemCount',
+            key: 'ItemCount',
             width: 100,
             align: 'center',
             render: (value: number) => (
@@ -225,8 +199,8 @@ const Conditionpage: React.FC = () => {
         },
         {
             title: 'วันที่สร้าง',
-            dataIndex: 'createdAt',
-            key: 'createdAt',
+            dataIndex: 'CreatedAt',
+            key: 'CreatedAt',
             width: 130,
             align: 'center',
             render: (value: string) => (
@@ -237,8 +211,8 @@ const Conditionpage: React.FC = () => {
         },
         {
             title: 'แก้ไขล่าสุด',
-            dataIndex: 'updatedAt',
-            key: 'updatedAt',
+            dataIndex: 'LastUpdatedAt',
+            key: 'LastUpdatedAt',
             width: 130,
             align: 'center',
             render: (value: string) => (
@@ -264,7 +238,7 @@ const Conditionpage: React.FC = () => {
                             padding: '2px 8px',
                             height: 'auto'
                         }}
-                        onClick={() => handleEditCondition(record.id, record.teacherName)}
+                        onClick={() => handleEditCondition(record.UserID, record.Fullname)}
                     >
                         แก้ไข
                     </Button>
@@ -278,7 +252,7 @@ const Conditionpage: React.FC = () => {
                             padding: '2px 8px',
                             height: 'auto'
                         }}
-                        onClick={() => handleDeleteCondition(record.id, record.teacherName)}
+                        onClick={() => handleDeleteCondition(record.UserID, record.Fullname)}
                     >
                         ลบ
                     </Button>
@@ -454,8 +428,6 @@ const Conditionpage: React.FC = () => {
                             </div>
                         </div>
                     </div>
-
-
 
                     {/* Main Table */}
                     <div style={{ 
