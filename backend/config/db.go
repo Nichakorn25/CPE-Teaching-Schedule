@@ -709,6 +709,7 @@ func SeedUserAllCourses() {
 		ss1234 entity.User
 		a1234  entity.User
 		b1234  entity.User
+		c1234  entity.User
 
 		comp101 entity.AllCourses
 		comp201 entity.AllCourses
@@ -725,6 +726,7 @@ func SeedUserAllCourses() {
 	db.First(&ss1234, "username = ?", "SS1234")
 	db.First(&a1234, "username = ?", "A1234")
 	db.First(&b1234, "username = ?", "B1234")
+	db.First(&c1234, "username = ?", "C1234")
 
 	db.First(&comp101, "code = ?", "COMP101")
 	db.First(&comp201, "code = ?", "COMP201")
@@ -749,6 +751,10 @@ func SeedUserAllCourses() {
 		{UserID: b1234.ID, AllCoursesID: comp101.ID},
 		{UserID: b1234.ID, AllCoursesID: dent201.ID},
 		{UserID: b1234.ID, AllCoursesID: dent301.ID},
+
+		{UserID: c1234.ID, AllCoursesID: lang101.ID},
+		{UserID: c1234.ID, AllCoursesID: gen101.ID},
+		{UserID: c1234.ID, AllCoursesID: comp301.ID},
 	}
 	for _, enroll := range enrollments {
 		err := db.Create(&enroll).Error
