@@ -31,7 +31,7 @@ func main() {
 		r.DELETE("/delete-courses/:id", controllers.DeleteAllCourses)
 
 		///////////////////// USER /////////////////////////
-		r.GET("/all-teachers", controllers.GetAllTeachers) 
+		r.GET("/all-teachers", controllers.GetAllTeachers)
 		r.GET("/users/:id", controllers.GetUserByID)
 		r.POST("/users", controllers.CreateUser)
 		r.PUT("/update-users/:id", controllers.UpdateUser)
@@ -46,6 +46,12 @@ func main() {
 		r.GET("/conditions", controllers.GetAllCondition)
 		r.GET("/conditions/user/:userID", controllers.GetConditionByuserID)
 		r.DELETE("/conditions-user/:userID", controllers.DeleteConditionsByUser)
+
+		///////////////////// TeachingAssistant /////////////////////////
+		r.GET("/all-teaching-assistants", controllers.GetAllTeachingAssistants)
+		r.POST("/create-teaching-assistants", controllers.CreateTeachingAssistant)
+		r.PUT("/update-teaching-assistants/:id", controllers.UpdateTeachingAssistant)
+		r.DELETE("/delete-teaching-assistants/:id", controllers.DeleteTeachingAssistant)
 
 		///////////////////// Get into dropdown /////////////////////////
 		r.GET("/course-type", controllers.GetTypeOfCourses)
