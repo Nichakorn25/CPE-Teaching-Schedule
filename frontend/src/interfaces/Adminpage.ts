@@ -60,6 +60,23 @@ export interface Allposition {
   Position: string,
 }
 
+export interface AllRoleInterface {
+  ID: number;
+  Role: string,
+}
+
+export interface DepartmentInterface {
+  ID: number;
+  DepartmentName: string;
+}
+
+export interface MajorInterface {
+  ID: number;
+  MajorName: string;
+  DepartmentID: number;
+  Department: DepartmentInterface;
+}
+
 
 //////////////////////////////////// ด้านล่างนี้ยังไม่เช็ค //////////////////////////////////
 export interface OfferedCourseInterface {
