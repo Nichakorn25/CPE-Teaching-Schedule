@@ -11,8 +11,8 @@ import (
 
 func GetAllTitles(c *gin.Context) {
 
-    var titles []entity.Title
-    config.DB().Preload("TeachingAssistants").Preload("Users").Find(&titles)
+	var titles []entity.Title
+	config.DB().Preload("TeachingAssistants").Preload("Users").Find(&titles)
 
-    c.JSON(http.StatusOK, titles)
+	c.JSON(http.StatusOK, titles)
 }

@@ -50,6 +50,16 @@ export interface AllTeacher {
   Role: string,
 }
 
+export interface Alltitles {
+  ID: number;
+  Title: string,
+}
+
+export interface Allposition {
+  ID: number;
+  Position: string,
+}
+
 
 //////////////////////////////////// ด้านล่างนี้ยังไม่เช็ค //////////////////////////////////
 export interface OfferedCourseInterface {
