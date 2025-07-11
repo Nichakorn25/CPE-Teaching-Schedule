@@ -1,143 +1,43 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Header from "../../../components/header/Header";
+import { getAllTeachers } from "../../../services/https/AdminPageServices";
+import { AllTeacher } from "../../../interfaces/Adminpage";
 
 const TeacherList = () => {
-  const teacherData = [
-    {
-      id: 1,
-      title: "ผศ.ดร.",
-      firstName: "นันทวุฒิ",
-      lastName: "คะอังกุ",
-      email: "nunthawut@sut.ac.th",
-      empId: "6500001",
-      faculty: "วิศวกรรมศาสตร์",
-      department: "วิศวกรรมคอมพิวเตอร์",
-      position: "หัวหน้าสาขาวิชา",
-      status: "Active",
-      role: "Instructor",
-    },
-    {
-      id: 2,
-      title: "รศ.ดร.",
-      firstName: "กิตติศักดิ์",
-      lastName: "เกิดประสพ",
-      email: "kerdpras@sut.ac.th",
-      empId: "6500002",
-      faculty: "วิศวกรรมศาสตร์",
-      department: "วิศวกรรมคอมพิวเตอร์",
-      position: "อาจารย์ประจำหลักสูตร",
-      status: "Active",
-      role: "Instructor",
-    },
-    {
-      id: 3,
-      title: "รศ.ดร.",
-      firstName: "นิตยา",
-      lastName: "เกิดประสพ",
-      email: "nittaya@sut.ac.th",
-      empId: "6500003",
-      faculty: "วิศวกรรมศาสตร์",
-      department: "วิศวกรรมคอมพิวเตอร์",
-      position: "อาจารย์ประจำหลักสูตร",
-      status: "Active",
-      role: "Instructor",
-    },
-    {
-      id: 4,
-      title: "รศ.ดร.",
-      firstName: "คะชา",
-      lastName: "ชาญศิลป์",
-      email: "kacha@sut.ac.th",
-      empId: "6500004",
-      faculty: "วิศวกรรมศาสตร์",
-      department: "วิศวกรรมคอมพิวเตอร์",
-      position: "อาจารย์ประจำหลักสูตร",
-      status: "Active",
-      role: "Instructor",
-    },
-    {
-      id: 5,
-      title: "รศ.ดร.",
-      firstName: "ปรเมศวร์",
-      lastName: "ห่อแก้ว",
-      email: "phorkaew@sut.ac.th",
-      empId: "6500005",
-      faculty: "วิศวกรรมศาสตร์",
-      department: "วิศวกรรมคอมพิวเตอร์",
-      position: "อาจารย์ประจำหลักสูตร",
-      status: "Active",
-      role: "Instructor",
-    },
-    {
-      id: 6,
-      title: "ผศ.ดร.",
-      firstName: "ศรัญญา",
-      lastName: "กาญจนวัฒนา",
-      email: "sarunya.k@sut.ac.th",
-      empId: "6500006",
-      faculty: "วิศวกรรมศาสตร์",
-      department: "วิศวกรรมคอมพิวเตอร์",
-      position: "ผู้จัดตารางสอน",
-      status: "Active",
-      role: "Scheduler",
-    },
-    {
-      id: 7,
-      title: "อ.ดร.",
-      firstName: "สุภาพร",
-      lastName: "บุญฤทธิ์",
-      email: "sbunrit@sut.ac.th",
-      empId: "6500007",
-      faculty: "วิศวกรรมศาสตร์",
-      department: "วิศวกรรมคอมพิวเตอร์",
-      position: "อาจารย์ประจำหลักสูตร",
-      status: "Active",
-      role: "Instructor",
-    },
-    {
-      id: 8,
-      title: "อ.ดร.",
-      firstName: "วิชัย",
-      lastName: "ศรีสุรักษ์",
-      email: "wichai@sut.ac.th",
-      empId: "6500008",
-      faculty: "วิศวกรรมศาสตร์",
-      department: "วิศวกรรมคอมพิวเตอร์",
-      position: "อาจารย์ประจำหลักสูตร",
-      status: "Active",
-      role: "Instructor",
-    },
-    {
-      id: 9,
-      title: "อ.ดร.",
-      firstName: "ปริญญ์",
-      lastName: "ศรเลิศล้ำวาณิช",
-      email: "parin.s@sut.ac.th",
-      empId: "6500009",
-      faculty: "วิศวกรรมศาสตร์",
-      department: "วิศวกรรมคอมพิวเตอร์",
-      position: "อาจารย์ประจำหลักสูตร",
-      status: "Active",
-      role: "Instructor",
-    },
-    {
-      id: 10,
-      title: "อ.ดร.",
-      firstName: "คมศัลล์",
-      lastName: "ศรีวิสุทธิ์",
-      email: "komsan@sut.ac.th",
-      empId: "6500010",
-      faculty: "วิศวกรรมศาสตร์",
-      department: "วิศวกรรมคอมพิวเตอร์",
-      position: "หัวหน้านวัตกรรมสถานศึกษา",
-      status: "Active",
-      role: "Instructor",
-    },
-  ];
+  const [teacherData, setTeacherData] = useState<AllTeacher[]>([]);
+
+  useEffect(() => {
+    const FetchTeacher = async () => {
+      const response = await getAllTeachers();
+      console.log(response);
+
+      if (response.status === 200 && Array.isArray(response.data)) {
+        const mappedData: AllTeacher[] = response.data
+          .filter((item: any) => item.Firstname && item.Lastname)
+          .map((item: any, index: number) => ({
+            ID: index+1,
+            Title: item.Title,
+            FirstName: item.Firstname,
+            LastName: item.Lastname,
+            Email: item.Email,
+            EmpId: item.Username, //ไม่ใช่รหัสพนักงานหรอ
+            Department: item.Department,
+            Major: item.Major,
+            Position: item.Position,
+            Status: item.Status,
+            Role: item.Role,
+          }));
+        setTeacherData(mappedData);
+      } else {
+        console.error("โหลดข้อมูลรายชื่ออาจารย์ไม่สำเร็จ", response);
+      }
+    };
+    FetchTeacher();
+  }, []);
 
   return (
     <div className="font-sarabun p-6 mt-10">
-    <Header />
+      <Header />
       {/* Header */}
       <div className="flex items-center justify-between  px-4 py-2 rounded mb-4">
         {/* ซ้าย: ค้นหา */}
@@ -175,7 +75,7 @@ const TeacherList = () => {
                 {p}
               </button>
             ))}
-            <span className="text-sm text-black">...   7</span>
+            <span className="text-sm text-black">... 7</span>
             <button className="text-sm text-black hover:underline ml-5">
               ถัดไป
             </button>
@@ -189,11 +89,11 @@ const TeacherList = () => {
         </select>
       </div>
 
-       <div className="flex justify-end mb-2">
-          <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
-            ➕ เพิ่มอาจารย์
-          </button>
-        </div>
+      <div className="flex justify-end mb-2">
+        <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+          ➕ เพิ่มอาจารย์
+        </button>
+      </div>
       {/* Main Content */}
       <div className="px-8 py-6 max-w-[1400px] mx-auto">
         {/* Table */}
@@ -217,24 +117,24 @@ const TeacherList = () => {
             </thead>
             <tbody>
               {teacherData.map((teacher) => (
-                <tr key={teacher.id} className="border-t">
-                  <td className="py-3">{teacher.id}</td>
-                  <td className="py-3">{teacher.title}</td>
-                  <td className="py-3">{teacher.firstName}</td>
-                  <td className="py-3">{teacher.lastName}</td>
-                  <td className="py-3">{teacher.email}</td>
-                  <td className="py-3">{teacher.empId}</td>
-                  <td className="py-3">{teacher.faculty}</td>
-                  <td className="py-3">{teacher.department}</td>
-                  <td className="py-3">{teacher.position}</td>
-                  <td className="py-3 text-green-600">{teacher.status}</td>
-                  <td className="py-3">{teacher.role}</td>
+                <tr key={teacher.ID} className="border-t">
+                  <td className="py-3">{teacher.ID}</td>
+                  <td className="py-3">{teacher.Title}</td>
+                  <td className="py-3">{teacher.FirstName}</td>
+                  <td className="py-3">{teacher.LastName}</td>
+                  <td className="py-3">{teacher.Email}</td>
+                  <td className="py-3">{teacher.EmpId}</td>
+                  <td className="py-3">{teacher.Department}</td>
+                  <td className="py-3">{teacher.Major}</td>
+                  <td className="py-3">{teacher.Position}</td>
+                  <td className="py-3 text-green-600">{teacher.Status}</td>
+                  <td className="py-3">{teacher.Role}</td>
                   <td className="py-3 flex justify-center gap-2">
                     <button className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-sm">
-                        แก้ไข
+                      แก้ไข
                     </button>
                     <button className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm">
-                        ลบ
+                      ลบ
                     </button>
                   </td>
                 </tr>
@@ -242,7 +142,6 @@ const TeacherList = () => {
             </tbody>
           </table>
         </div>
-
       </div>
     </div>
   );

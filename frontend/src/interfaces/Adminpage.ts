@@ -12,6 +12,15 @@ export interface CreateCourseInteface {
   UserIDs: number[]; 
 }
 
+export interface AllCourseInterface {
+  id: number;
+  code: string;
+  name: string;
+  credit: string;
+  category: string;
+  instructors: string[];
+}
+
 export interface CreateUserInterface {
   Username: string;
   Password: string;
@@ -25,6 +34,20 @@ export interface CreateUserInterface {
   PositionID: number;
   MajorID: number;
   RoleID: number;
+}
+
+export interface AllTeacher {
+  ID: number,
+  Title: string,
+  FirstName: string,
+  LastName: string,
+  Email: string,
+  EmpId: string,
+  Department: string,
+  Major: string,
+  Position: string,
+  Status: string,
+  Role: string,
 }
 
 

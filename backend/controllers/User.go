@@ -17,6 +17,7 @@ func GetAllTeachers(c *gin.Context) {
 		Preload("Major").
 		Preload("Major.Department").
 		Preload("Role").
+		Where(`Role_id != ?`, 1).
 		Find(&users).Error
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถดึงข้อมูลผู้ใช้ได้"})

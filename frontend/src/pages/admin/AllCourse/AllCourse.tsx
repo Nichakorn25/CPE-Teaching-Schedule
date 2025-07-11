@@ -4,21 +4,13 @@ import Header from "../../../components/header/Header";
 import { getAllCourses } from "../../../services/https/AdminPageServices";
 import Swal from "sweetalert2";
 import { deleteCourse } from "../../../services/https/AdminPageServices";
-
-interface Course {
-  id: number;
-  code: string;
-  name: string;
-  credit: string;
-  category: string;
-  instructors: string[];
-}
+import { AllCourseInterface } from "../../../interfaces/Adminpage";
 
 const AllCourse: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [perPage, setPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const [courseData, setCourseData] = useState<Course[]>([]);
+  const [courseData, setCourseData] = useState<AllCourseInterface[]>([]);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -26,7 +18,7 @@ const AllCourse: React.FC = () => {
       console.log(response);
 
       if (response.status === 200 && Array.isArray(response.data)) {
-        const mappedData: Course[] = response.data
+        const mappedData: AllCourseInterface[] = response.data
           .filter((item: any) => item.CourseName && item.CourseCode)
           .map((item: any, index: number) => ({
             id: index + 1,
