@@ -31,6 +31,11 @@ const ManageAssistance: React.FC = () => {
     Nickname: "",
     PhoneNumber: "",
     TitleID: 0,
+    Title: {
+      ID: 0,
+      Title: "",
+      TeachingAssistants: [],
+    },
     ScheduleTeachingAssistant: [],
   });
 

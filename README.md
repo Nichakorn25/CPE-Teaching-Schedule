@@ -1,4 +1,4 @@
 # CPE-Teaching-Schedule
 
 npm install jspdf
-npm install sweetalert2
+<br>npm install sweetalert2

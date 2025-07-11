@@ -28,6 +28,12 @@ const menuItems = [
     roles: ["Admin", "Scheduler"],
   },
   {
+    label: "รายชื่อผู้ช่วยสอน",
+    icon: "🧑‍🏫",
+    path: "/assistance-list",
+    roles: ["Admin", "Scheduler"],
+  },
+  {
     label: "รายวิชาที่เปิดสอน",
     icon: "📋",
     path: "/open-course",

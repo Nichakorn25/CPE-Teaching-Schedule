@@ -9,6 +9,7 @@ import HomeSchedulePage from "./pages/home/HomeSchedulor/Homepage";
 import MenuBar from "./components/menu/Menu";
 
 import TeacherList from "./pages/admin/TeacherList/TeacherList";
+import AssistanceList from "./pages/admin/AssistanceList/AssistanceList";
 import OpenCourse from "./pages/admin/OpenCourse/OpenCourse";
 import AllCourse from "./pages/admin/AllCourse/AllCourse";
 import ManageTeacher from "./pages/admin/ManageTeacher/ManageTeacher";
@@ -43,6 +44,7 @@ const App: React.FC = () => {
           {/* <Route path="/home-admin" element={<PrivateRoute><HomeAdminPage /></PrivateRoute>} /> */}
           {/* <Route path="/home-admin" element={<HomeAdminPage />} /> */}
           <Route path="/teacher-list" element={<TeacherList />} />
+          <Route path="/assistance-list" element={<AssistanceList />} />
           <Route path="/open-course" element={<OpenCourse />} />
           <Route path="/all-course" element={<AllCourse />} />
           <Route path="/manage-teacher" element={<ManageTeacher />} />
