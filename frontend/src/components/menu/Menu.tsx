@@ -45,6 +45,12 @@ const menuItems = [
     path: "/manage-teacher",
     roles: ["Admin"],
   },
+  {
+    label: "จัดการรายชื่อผู้ช่วยสอน",
+    icon: "🛠️",
+    path: "/manage-assistance",
+    roles: ["Admin"],
+  },
   { label: "จัดการรายวิชา", icon: "🖊️",path:"/manage-course", roles: ["Admin", "Scheduler"] },
   {
     label: "จัดการวิชาจากศูนย์บริการ",
