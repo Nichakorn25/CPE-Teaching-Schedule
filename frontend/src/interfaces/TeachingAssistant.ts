@@ -6,7 +6,7 @@ export interface TeachingAssistantInterface {
   PhoneNumber: string;
 
   TitleID: number;
-  Title: TitleInterface;
+  // Title: TitleInterface;
 
   ScheduleTeachingAssistant: ScheduleTeachingAssistantIn[];
 }

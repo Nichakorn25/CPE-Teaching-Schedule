@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import Header from "../../../components/header/Header";
 import { getAllTitle } from "../../../services/https/GetService";
-import { Alltitles,CreateUserInterface } from "../../../interfaces/Adminpage";
-import { postCreateUser } from "../../../services/https/AdminPageServices";
+import {
+  TitleInterface,
+  TeachingAssistantInterface,
+} from "../../../interfaces/TeachingAssistant";
+import { postCreateTeachingAssistant } from "../../../services/https/AdminPageServices";
 import Swal from "sweetalert2";
 
 const ManageAssistance: React.FC = () => {
-  const [title, setTitle] = useState<Alltitles[]>([]);
+  const [title, setTitle] = useState<TitleInterface[]>([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
@@ -21,19 +24,14 @@ const ManageAssistance: React.FC = () => {
     fetchData();
   }, []);
 
-  const [form, setForm] = useState<CreateUserInterface>({
-    Username: "",
-    Password: "",
+  const [form, setForm] = useState<TeachingAssistantInterface>({
+    ID: 0,
     Firstname: "",
     Lastname: "",
-    Image: "", // จะเปลี่ยนเป็น base64 หรือ URL ภายหลัง
-    Email: "",
+    Nickname: "",
     PhoneNumber: "",
-    Address: "",
     TitleID: 0,
-    PositionID: 0,
-    MajorID: 1,
-    RoleID: 0,
+    ScheduleTeachingAssistant: [],
   });
 
   const handleChange = (
@@ -48,13 +46,12 @@ const ManageAssistance: React.FC = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setForm({ ...form, Image: reader.result as string });
+        setForm({ ...form });
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
     } else {
-      setForm({ ...form, Image: "" });
-      setImagePreview(null);
+      setForm({ ...form });
     }
   };
 
@@ -62,16 +59,12 @@ const ManageAssistance: React.FC = () => {
     e.preventDefault();
 
     if (
-      !form.Username ||
-      !form.Password ||
       !form.Firstname ||
       !form.Lastname ||
-      !form.Image ||
-      !form.Email ||
+      !form.Nickname ||
+      !form.Lastname ||
       !form.PhoneNumber ||
-      form.RoleID === 0 ||
-      form.TitleID === 0 ||
-      form.PositionID === 0
+      form.TitleID === 0
     ) {
       Swal.fire({
         icon: "warning",
@@ -81,12 +74,11 @@ const ManageAssistance: React.FC = () => {
       return;
     }
 
-    const dataToSubmit: CreateUserInterface = {
+    const dataToSubmit: TeachingAssistantInterface = {
       ...form,
-      Address: form.Address || "N/A", // หรือให้มี input ให้กรอก
     };
 
-    const res = await postCreateUser(dataToSubmit);
+    const res = await postCreateTeachingAssistant(dataToSubmit);
 
     if (res.status === 201 || res.status === 200) {
       alert("บันทึกสำเร็จ");
@@ -101,7 +93,6 @@ const ManageAssistance: React.FC = () => {
       className="p-10 font-sarabun grid grid-cols-1 md:grid-cols-2 gap-y-14 gap-x-12 w-full mt-20 bg-white"
     >
       <Header />
-
       {/* Left side */}
       <div className="flex flex-col gap-4 col-span-1 md:col-span-2">
         <label className="text-sm text-[#f26522]">คำนำหน้า</label>
@@ -149,7 +140,7 @@ const ManageAssistance: React.FC = () => {
             <label className="text-sm text-[#f26522]">อีเมล</label>
             <input
               name="email"
-              value={form.Email}
+              value={form.ID}
               onChange={handleChange}
               className="w-full border border-orange-400 rounded px-3 py-2 text-sm font-bold"
             />
