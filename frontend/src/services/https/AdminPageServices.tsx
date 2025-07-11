@@ -1,4 +1,5 @@
 import {CreateCourseInteface,CreateUserInterface,} from "../../interfaces/Adminpage";
+import {TeachingAssistantInterface,} from "../../interfaces/TeachingAssistant";
 import axios from "axios";
 
 const apiUrl = "http://localhost:8080";
@@ -92,6 +93,35 @@ async function getOpenCourses() {
     .catch((e) => e.response);
 }
 
+///////////////////// TeachingAssistant /////////////////////////
+async function getAllTeachingAssistants() {
+  return await axios
+    .get(`${apiUrl}/all-teaching-assistants`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
+async function postCreateTeachingAssistant(data: TeachingAssistantInterface) {
+  return await axios
+    .post(`${apiUrl}/create-teaching-assistants`, data, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
+async function putUpdateTeachingAssistant(id: number, data: TeachingAssistantInterface) {
+  return await axios
+    .put(`${apiUrl}/update-teaching-assistants/${id}`, data, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
+async function deleteTeachingAssistant(id: number) {
+  return await axios
+    .delete(`${apiUrl}/delete-teaching-assistants/${id}`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 
 export {
   getAllCourses,
@@ -106,6 +136,11 @@ export {
   deleteUser,
 
   getOpenCourses,
+
+  getAllTeachingAssistants,
+  postCreateTeachingAssistant,
+  putUpdateTeachingAssistant,
+  deleteTeachingAssistant,
 
   getTypeofCourse,
 
