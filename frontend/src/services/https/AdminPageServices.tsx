@@ -124,12 +124,12 @@ async function deleteTeachingAssistant(id: number) {
 
 
 export {
-  getAllCourses,
-  postCreateCourse,
+  getAllCourses, //used
+  postCreateCourse, //used
   putUpdateCourse,
-  deleteCourse,
+  deleteCourse, //used
 
-  getAllTeachers,
+  getAllTeachers, //used
   getUserById,
   postCreateUser,
   putUpdateUser,

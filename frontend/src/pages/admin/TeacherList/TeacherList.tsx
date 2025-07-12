@@ -59,11 +59,12 @@ const TeacherList = () => {
 
     if (result.isConfirmed) {
       const response = await deleteUser(id); // ส่ง ID ที่เป็น number
+      console.log("ลบไอดีนี้",response);
 
       if (response.status === 200) {
         Swal.fire("ลบเรียบร้อย!", `${title} ${fullName} ถูกลบแล้ว`, "success");
 
-        // ✅ ลบจาก state โดยใช้ ID
+        //ลบจาก state โดยใช้ ID
         setTeacherData((prev) => prev.filter((teacher) => teacher.ID !== id));
       } else {
         Swal.fire(
