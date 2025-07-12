@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from "react";
 import Header from "../../../components/header/Header";
-import { getAllTeachers } from "../../../services/https/AdminPageServices";
+import {
+  getAllTeachers,
+  deleteUser,
+} from "../../../services/https/AdminPageServices";
 import { AllTeacher } from "../../../interfaces/Adminpage";
+import Swal from "sweetalert2";
+import { useNavigate } from "react-router-dom";
 
 const TeacherList = () => {
   const [teacherData, setTeacherData] = useState<AllTeacher[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const FetchTeacher = async () => {
@@ -15,7 +21,7 @@ const TeacherList = () => {
         const mappedData: AllTeacher[] = response.data
           .filter((item: any) => item.Firstname && item.Lastname)
           .map((item: any, index: number) => ({
-            ID: index+1,
+            ID: index + 1,
             Title: item.Title,
             FirstName: item.Firstname,
             LastName: item.Lastname,
@@ -34,6 +40,40 @@ const TeacherList = () => {
     };
     FetchTeacher();
   }, []);
+
+  const handleDeleteTeacher = async (
+    id: number,
+    fullName: string,
+    title: string
+  ) => {
+    const result = await Swal.fire({
+      title: "คุณแน่ใจหรือไม่?",
+      text: `คุณต้องการลบ ${title} ${fullName} หรือไม่?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#f26522",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "ตกลง",
+      cancelButtonText: "ยกเลิก",
+    });
+
+    if (result.isConfirmed) {
+      const response = await deleteUser(id); // ส่ง ID ที่เป็น number
+
+      if (response.status === 200) {
+        Swal.fire("ลบเรียบร้อย!", `${title} ${fullName} ถูกลบแล้ว`, "success");
+
+        // ✅ ลบจาก state โดยใช้ ID
+        setTeacherData((prev) => prev.filter((teacher) => teacher.ID !== id));
+      } else {
+        Swal.fire(
+          "เกิดข้อผิดพลาด!",
+          response.data?.error || "ไม่สามารถลบอาจารย์ได้",
+          "error"
+        );
+      }
+    }
+  };
 
   return (
     <div className="font-sarabun p-6 mt-10">
@@ -90,7 +130,8 @@ const TeacherList = () => {
       </div>
 
       <div className="flex justify-end mb-2">
-        <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+        <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm"
+        onClick={()=> navigate("/manage-teacher")}>
           ➕ เพิ่มอาจารย์
         </button>
       </div>
@@ -133,7 +174,16 @@ const TeacherList = () => {
                     <button className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-sm">
                       แก้ไข
                     </button>
-                    <button className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm">
+                    <button
+                      className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
+                      onClick={() =>
+                        handleDeleteTeacher(
+                          teacher.ID,
+                          `${teacher.FirstName} ${teacher.LastName}`,
+                          teacher.Title
+                        )
+                      }
+                    >
                       ลบ
                     </button>
                   </td>
