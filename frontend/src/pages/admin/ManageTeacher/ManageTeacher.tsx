@@ -138,17 +138,41 @@ const ManageTeacher: React.FC = () => {
       return;
     }
 
+    const selectedTitle = title.find((t) => t.ID === form.TitleID)?.Title || "";
+    const fullname = `${form.Firstname} ${form.Lastname}`;
+
+    const result = await Swal.fire({
+      title: "ยืนยันการบันทึก",
+      text: `คุณต้องการบันทึกข้อมูล ${selectedTitle} ${fullname} หรือไม่?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#f26522",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "ตกลง",
+      cancelButtonText: "ยกเลิก",
+    });
+
+    if (!result.isConfirmed) return;
+
     const dataToSubmit: CreateUserInterface = {
       ...form,
-      Address: form.Address || "N/A", // หรือให้มี input ให้กรอก
+      Address: form.Address || "N/A",
     };
 
     const res = await postCreateUser(dataToSubmit);
 
     if (res.status === 201 || res.status === 200) {
-      alert("บันทึกสำเร็จ");
+      Swal.fire({
+        icon: "success",
+        title: "บันทึกสำเร็จ",
+        text: `ข้อมูล ${selectedTitle} ${fullname} ถูกบันทึกเรียบร้อยแล้ว`,
+      });
     } else {
-      alert("บันทึกล้มเหลว: " + res?.data?.error);
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาด",
+        text: res?.data?.error || "ไม่สามารถบันทึกข้อมูลได้",
+      });
     }
   };
 
@@ -180,7 +204,7 @@ const ManageTeacher: React.FC = () => {
 
         <label className="text-sm text-[#f26522]">ชื่อ</label>
         <input
-          name="firstName"
+          name="Firstname"
           value={form.Firstname}
           onChange={handleChange}
           className="border border-orange-400 rounded px-3 py-2 text-sm"
@@ -202,7 +226,7 @@ const ManageTeacher: React.FC = () => {
 
         <label className="text-sm text-[#f26522]">อีเมล</label>
         <input
-          name="email"
+          name="Email"
           value={form.Email}
           onChange={handleChange}
           className="border border-orange-400 rounded px-3 py-2 text-sm font-bold"
@@ -248,7 +272,7 @@ const ManageTeacher: React.FC = () => {
 
         <label className="text-sm text-[#f26522]">นามสกุล</label>
         <input
-          name="lastName"
+          name="Lastname"
           value={form.Lastname}
           onChange={handleChange}
           className="border border-orange-400 rounded px-3 py-2 text-sm"
@@ -273,7 +297,7 @@ const ManageTeacher: React.FC = () => {
 
         <label className="text-sm text-[#f26522]">หมายเลขโทรศัพท์</label>
         <input
-          name="phone"
+          name="PhoneNumber"
           value={form.PhoneNumber}
           onChange={handleChange}
           className="border border-orange-400 rounded px-3 py-2 text-sm font-bold"
@@ -300,7 +324,7 @@ const ManageTeacher: React.FC = () => {
         <div className="flex flex-col">
           <label className="text-sm text-[#f26522]">รหัสพนักงาน</label>
           <input
-            name="employeeId"
+            name="Username"
             value={form.Username}
             onChange={handleChange}
             className="border border-orange-400 rounded px-3 py-2 text-sm"
@@ -310,7 +334,7 @@ const ManageTeacher: React.FC = () => {
         <div className="flex flex-col">
           <label className="text-sm text-[#f26522]">รหัสผ่าน</label>
           <input
-            name="password"
+            name="Password"
             value={form.Password}
             onChange={handleChange}
             className="border border-orange-400 rounded px-3 py-2 text-sm font-bold"
@@ -321,6 +345,9 @@ const ManageTeacher: React.FC = () => {
       {/* ปุ่มบันทึก */}
       <div className="col-span-1 md:col-span-2 flex justify-end mt-6">
         <button
+          onClick={() => {
+            handleSubmit;
+          }}
           type="submit"
           className="bg-[#f26522] text-white px-6 py-2 rounded hover:bg-[#d9531e]"
         >
