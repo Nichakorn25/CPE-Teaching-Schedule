@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../../../components/schedule-sidebar/Sidebar";
 import Header from "../../../components/schedule-header/Header";
 import "./AddConditionpage.css";
@@ -9,6 +10,7 @@ import { ConditionInterface } from "../../../interfaces/SchedulerIn";
 const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 
 const AddConditionpage: React.FC = () => {
+  const navigate = useNavigate();
   const [timeSlotsByDay, setTimeSlotsByDay] = useState<Record<number, ConditionInterface[]>>({});
   const [userID, setUserID] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +30,7 @@ const AddConditionpage: React.FC = () => {
     setTimeSlotsByDay((prev) => {
       const existing = prev[dayIndex] || [];
       const newSlot: ConditionInterface = {
-        ID: 0, // temporary ID
+        ID: Date.now(), // temporary unique ID
         DayOfWeek: days[dayIndex],
         Start: "",
         End: "",
@@ -39,24 +41,25 @@ const AddConditionpage: React.FC = () => {
 
   const updateTime = (
     dayIndex: number,
-    slotIndex: number,
+    slotId: number,
     field: "Start" | "End",
     value: string
   ) => {
     setTimeSlotsByDay((prev) => {
       const updated = [...(prev[dayIndex] || [])];
-      if (updated[slotIndex]) {
+      const slotIndex = updated.findIndex(slot => slot.ID === slotId);
+      if (slotIndex !== -1) {
         updated[slotIndex] = { ...updated[slotIndex], [field]: value };
       }
       return { ...prev, [dayIndex]: updated };
     });
   };
 
-  const removeSlot = (dayIndex: number, slotIndex: number) => {
+  const removeSlot = (dayIndex: number, slotId: number) => {
     setTimeSlotsByDay((prev) => {
       const updated = [...(prev[dayIndex] || [])];
-      updated.splice(slotIndex, 1);
-      return { ...prev, [dayIndex]: updated };
+      const filteredSlots = updated.filter(slot => slot.ID !== slotId);
+      return { ...prev, [dayIndex]: filteredSlots };
     });
   };
 
@@ -89,17 +92,16 @@ const AddConditionpage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Convert timeSlotsByDay to ConditionInterface array
-      const conditionsToSave: ConditionInterface[] = [];
+      // แปลงข้อมูลเป็นรูปแบบที่ API ต้องการ
+      const conditionsToSave: any[] = [];
       
       Object.entries(timeSlotsByDay).forEach(([dayIndex, slots]) => {
         slots.forEach((slot) => {
           if (slot.Start && slot.End) {
             conditionsToSave.push({
-              ID: userID, // ใช้ userID เป็น ID
-              DayOfWeek: days[parseInt(dayIndex)],
-              Start: slot.Start,
-              End: slot.End
+              DayOfWeek: slot.DayOfWeek,
+              StartTime: slot.Start,
+              EndTime: slot.End
             });
           }
         });
@@ -111,22 +113,20 @@ const AddConditionpage: React.FC = () => {
         return;
       }
 
-      // Save each condition
-      const savePromises = conditionsToSave.map(condition => 
-        postCreateConditions(condition)
-      );
+      console.log('Sending to API:', { userID, conditions: conditionsToSave });
 
-      const results = await Promise.all(savePromises);
+      const result = await postCreateConditions(userID, conditionsToSave);
       
-      // Check if all saves were successful
-      const successCount = results.filter(result => result && result.status === 200).length;
-      
-      if (successCount === conditionsToSave.length) {
-        message.success(`บันทึกข้อมูลเวลาที่ไม่สะดวกสำเร็จ! (${successCount} รายการ)`);
-        // Clear the form after successful save
-        setTimeSlotsByDay({});
+      if (result && result.status === 200) {
+        message.success(`บันทึกข้อมูลเวลาที่ไม่สะดวกสำเร็จ! (${conditionsToSave.length} รายการ)`);
+        
+        // รอ 1 วินาทีแล้วไปหน้า Condition
+        setTimeout(() => {
+          navigate('/Conditionpage');
+        }, 1000);
       } else {
-        message.warning(`บันทึกสำเร็จ ${successCount} จาก ${conditionsToSave.length} รายการ`);
+        console.error('API Error:', result);
+        message.error(result?.data?.error || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
       }
 
     } catch (error) {
@@ -239,7 +239,7 @@ const AddConditionpage: React.FC = () => {
                     <td>
                       <div className="time-slot-container">
                         {(timeSlotsByDay[index] || []).map((slot, i) => (
-                          <div key={slot.id} className="time-slot-item">
+                          <div key={slot.ID} className="time-slot-item">
                             <div className="time-slot-number">
                               {i + 1}
                             </div>
@@ -251,12 +251,12 @@ const AddConditionpage: React.FC = () => {
                               <input
                                 type="time"
                                 className="time-input"
-                                value={slot.start}
+                                value={slot.Start}
                                 onChange={(e) =>
                                   updateTime(
                                     index,
-                                    slot.id,
-                                    "start",
+                                    slot.ID,
+                                    "Start",
                                     e.target.value
                                   )
                                 }
@@ -273,9 +273,9 @@ const AddConditionpage: React.FC = () => {
                               <input
                                 type="time"
                                 className="time-input"
-                                value={slot.end}
+                                value={slot.End}
                                 onChange={(e) =>
-                                  updateTime(index, slot.id, "end", e.target.value)
+                                  updateTime(index, slot.ID, "End", e.target.value)
                                 }
                                 disabled={isLoading}
                               />
@@ -283,7 +283,7 @@ const AddConditionpage: React.FC = () => {
                             
                             <button
                               className="remove-time-button"
-                              onClick={() => removeSlot(index, slot.id)}
+                              onClick={() => removeSlot(index, slot.ID)}
                               title="ลบช่วงเวลานี้"
                               disabled={isLoading}
                             >
@@ -357,7 +357,7 @@ const AddConditionpage: React.FC = () => {
               <li>กำหนดเวลาเริ่มต้นและเวลาสิ้นสุดให้ครบถ้วน</li>
               <li>เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุด</li>
               <li>ข้อมูลจะถูกนำไปใช้ในการจัดตารางเรียนอัตโนมัติ</li>
-              <li>ระบบจะบันทึกแต่ละช่วงเวลาแยกกันตาม API</li>
+              <li>หลังจากบันทึกสำเร็จ ระบบจะนำคุณไปยังหน้าดูเงื่อนไขทั้งหมด</li>
             </ul>
           </div>
 

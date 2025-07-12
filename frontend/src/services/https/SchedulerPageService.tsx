@@ -1,4 +1,3 @@
-import {ConditionInterface,} from "../../interfaces/SchedulerIn";
 import axios from "axios";
 
 const apiUrl = "http://localhost:8080";
@@ -14,14 +13,22 @@ const requestOptions = {
 
 //------------------ Conditions ------------------------------//
 
-async function postCreateConditions(data: ConditionInterface) {
+async function postCreateConditions(userID: number, conditions: any[]) {
+  const data = {
+    UserID: userID,
+    Conditions: conditions
+  };
   return await axios
     .post(`${apiUrl}/condition`, data, requestOptions)
     .then((res) => res)
     .catch((e) => e.response);
 }
 
-async function putUpdateConditions(data: ConditionInterface) {
+async function putUpdateConditions(userID: number, conditions: any[]) {
+  const data = {
+    UserID: userID,
+    Conditions: conditions
+  };
   return await axios
     .put(`${apiUrl}/update-conditions`, data, requestOptions)
     .then((res) => res)
@@ -35,7 +42,6 @@ async function getAllConditions() {
     .catch((e) => e.response);
 }
 
-
 async function getConditionsByUserId(userID: string) {
   return await axios
     .get(`${apiUrl}/conditions/user/${userID}`, requestOptions)
@@ -45,12 +51,10 @@ async function getConditionsByUserId(userID: string) {
 
 async function deleteConditionsByUser(userID: string) {
   return await axios
-    .get(`${apiUrl}/conditions-user/${userID}`, requestOptions)
+    .delete(`${apiUrl}/conditions-user/${userID}`, requestOptions)
     .then((res) => res)
     .catch((e) => e.response);
 }
-
-
 
 export {
   postCreateConditions,
@@ -58,5 +62,4 @@ export {
   getAllConditions,
   getConditionsByUserId,
   deleteConditionsByUser,
-
 };
