@@ -38,6 +38,7 @@ export interface CreateUserInterface {
 
 export interface AllTeacher {
   ID: number,
+  DeleteID: number,
   Title: string,
   FirstName: string,
   LastName: string,

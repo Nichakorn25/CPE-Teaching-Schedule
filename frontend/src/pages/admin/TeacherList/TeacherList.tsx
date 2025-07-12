@@ -11,17 +11,24 @@ import { useNavigate } from "react-router-dom";
 const TeacherList = () => {
   const [teacherData, setTeacherData] = useState<AllTeacher[]>([]);
   const navigate = useNavigate();
+  const [perPage, setPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const startIndex = (currentPage - 1) * perPage;
+  const endIndex = startIndex + perPage;
+  const paginatedTeachers = teacherData.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(teacherData.length / perPage);
 
   useEffect(() => {
     const FetchTeacher = async () => {
       const response = await getAllTeachers();
-      console.log(response);
+      console.log("จำนวนทั้งหมด: ", response.data.length);
 
       if (response.status === 200 && Array.isArray(response.data)) {
         const mappedData: AllTeacher[] = response.data
           .filter((item: any) => item.Firstname && item.Lastname)
           .map((item: any, index: number) => ({
             ID: index + 1,
+            DeleteID: item.ID,
             Title: item.Title,
             FirstName: item.Firstname,
             LastName: item.Lastname,
@@ -42,7 +49,7 @@ const TeacherList = () => {
   }, []);
 
   const handleDeleteTeacher = async (
-    id: number,
+    DeleteID: number,
     fullName: string,
     title: string
   ) => {
@@ -58,14 +65,16 @@ const TeacherList = () => {
     });
 
     if (result.isConfirmed) {
-      const response = await deleteUser(id); // ส่ง ID ที่เป็น number
-      console.log("ลบไอดีนี้",response);
+      const response = await deleteUser(DeleteID); // ส่ง ID ที่เป็น number
+      console.log("ลบไอดีนี้", response);
 
       if (response.status === 200) {
         Swal.fire("ลบเรียบร้อย!", `${title} ${fullName} ถูกลบแล้ว`, "success");
 
         //ลบจาก state โดยใช้ ID
-        setTeacherData((prev) => prev.filter((teacher) => teacher.ID !== id));
+        setTeacherData((prev) =>
+          prev.filter((teacher) => teacher.DeleteID !== DeleteID)
+        );
       } else {
         Swal.fire(
           "เกิดข้อผิดพลาด!",
@@ -96,24 +105,32 @@ const TeacherList = () => {
           {/* รายการที่แสดง */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">รายการที่แสดง</span>
-            <select className="border border-gray-300 rounded px-2 py-[2px] text-sm">
-              <option>10</option>
-              <option>20</option>
+            <select
+              value={perPage}
+              onChange={(e) => {
+                setPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="border border-gray-300 rounded px-2 py-[2px] text-sm"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
             </select>
           </div>
 
           {/* Pagination */}
           <div className="flex items-center gap-1 ml-4">
-            {[1, 2, 3, 4, 5].map((p) => (
+            {[...Array(totalPages)].map((_, i) => (
               <button
-                key={p}
+                key={i}
+                onClick={() => setCurrentPage(i + 1)}
                 className={`w-7 h-7 text-sm rounded ${
-                  p === 1
+                  currentPage === i + 1
                     ? "bg-[#F26457] text-white"
                     : "text-black hover:bg-gray-200"
                 }`}
               >
-                {p}
+                {i + 1}
               </button>
             ))}
             <span className="text-sm text-black">... 7</span>
@@ -131,8 +148,10 @@ const TeacherList = () => {
       </div>
 
       <div className="flex justify-end mb-2">
-        <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm"
-        onClick={()=> navigate("/manage-teacher")}>
+        <button
+          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm"
+          onClick={() => navigate("/manage-teacher")}
+        >
           ➕ เพิ่มอาจารย์
         </button>
       </div>
@@ -158,9 +177,9 @@ const TeacherList = () => {
               </tr>
             </thead>
             <tbody>
-              {teacherData.map((teacher) => (
-                <tr key={teacher.ID} className="border-t">
-                  <td className="py-3">{teacher.ID}</td>
+              {paginatedTeachers.map((teacher, index) => (
+                <tr key={teacher.DeleteID} className="border-t">
+                 <td className="py-3">{startIndex + index + 1}</td>
                   <td className="py-3">{teacher.Title}</td>
                   <td className="py-3">{teacher.FirstName}</td>
                   <td className="py-3">{teacher.LastName}</td>
@@ -179,7 +198,7 @@ const TeacherList = () => {
                       className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
                       onClick={() =>
                         handleDeleteTeacher(
-                          teacher.ID,
+                          teacher.DeleteID,
                           `${teacher.FirstName} ${teacher.LastName}`,
                           teacher.Title
                         )
