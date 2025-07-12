@@ -12,31 +12,31 @@ const AllCourse: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [courseData, setCourseData] = useState<AllCourseInterface[]>([]);
 
-  useEffect(() => {
-    const fetchCourses = async () => {
-      const response = await getAllCourses();
-      console.log(response);
+  const fetchCourses = async () => {
+    const response = await getAllCourses();
+    if (response.status === 200 && Array.isArray(response.data)) {
+      const mappedData: AllCourseInterface[] = response.data
+        .filter((item: any) => item.CourseName && item.CourseCode)
+        .map((item: any, index: number) => ({
+          id: index + 1,
+          code: item.CourseCode,
+          name: item.CourseName,
+          credit: item.Credit,
+          category: item.CourseType,
+          instructors: [
+            ...new Set(
+              item.Instructor?.split(",").map((name: string) => name.trim())
+            ),
+          ],
+        }));
+      setCourseData(mappedData);
+    } else {
+      console.error("โหลดข้อมูลรายวิชาไม่สำเร็จ", response);
+    }
+  };
 
-      if (response.status === 200 && Array.isArray(response.data)) {
-        const mappedData: AllCourseInterface[] = response.data
-          .filter((item: any) => item.CourseName && item.CourseCode)
-          .map((item: any, index: number) => ({
-            id: index + 1,
-            code: item.CourseCode,
-            name: item.CourseName,
-            credit: item.Credit,
-            category: item.CourseType,
-            instructors: [
-              ...new Set(
-                item.Instructor?.split(",").map((name: string) => name.trim())
-              ),
-            ],
-          }));
-        setCourseData(mappedData);
-      } else {
-        console.error("โหลดข้อมูลรายวิชาไม่สำเร็จ", response);
-      }
-    };
+  // เรียกตอน component mount
+  useEffect(() => {
     fetchCourses();
   }, []);
 
@@ -183,7 +183,3 @@ const AllCourse: React.FC = () => {
 };
 
 export default AllCourse;
-function fetchCourses() {
-  throw new Error("Function not implemented.");
-}
-
