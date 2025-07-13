@@ -8,7 +8,7 @@ type TeachingAssistant struct {
 	gorm.Model
 	Firstname   string
 	Lastname    string
-	Nickname    string
+	Email    string
 	PhoneNumber string
 
 	TitleID uint

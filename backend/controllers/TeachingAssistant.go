@@ -13,17 +13,17 @@ type (
 	CreateTeachingAssistantInput struct {
 		Firstname   string `binding:"required"`
 		Lastname    string `binding:"required"`
-		Nickname    string
+		Email       string
 		PhoneNumber string
 		TitleID     uint
 	}
 
 	UpdateTeachingAssistantInput struct {
-		Firstname   string 
+		Firstname   string
 		Lastname    string
-		Nickname    string
-		PhoneNumber string 
-		TitleID     uint   
+		Email       string
+		PhoneNumber string
+		TitleID     uint
 	}
 )
 
@@ -63,7 +63,7 @@ func CreateTeachingAssistant(c *gin.Context) {
 	ta := entity.TeachingAssistant{
 		Firstname:   data_ta.Firstname,
 		Lastname:    data_ta.Lastname,
-		Nickname:    data_ta.Nickname,
+		Email:       data_ta.Email,
 		PhoneNumber: data_ta.PhoneNumber,
 		TitleID:     data_ta.TitleID,
 	}
@@ -108,7 +108,7 @@ func UpdateTeachingAssistant(c *gin.Context) {
 	updated := entity.TeachingAssistant{
 		Firstname:   input.Firstname,
 		Lastname:    input.Lastname,
-		Nickname:    input.Nickname,
+		Email:       input.Email,
 		PhoneNumber: input.PhoneNumber,
 		TitleID:     input.TitleID,
 	}

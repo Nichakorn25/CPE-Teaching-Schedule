@@ -18,4 +18,14 @@ export interface UserConInterface {
   CreatedAt: string;
   LastUpdatedAt: string;
 }
-///////////////////////////////////////////////////////////////////////
+////////////////////////////////   เพิ่ม แก้ไขเงื่อนไข   ///////////////////////////////////////
+export interface ConditionInputInterface {
+  DayOfWeek: string;   
+  StartTime: string;   
+  EndTime: string;     
+}
+
+export interface ConditionsRequestInterface {
+  UserID: number;
+  Conditions: ConditionInputInterface[];
+}
