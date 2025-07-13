@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../../components/schedule-sidebar/Sidebar";
 import Header from "../../../components/schedule-header/Header";
 import "./AddConditionpage.css";
 import { message } from 'antd';
 import { postCreateConditions } from "../../../services/https/SchedulerPageService";
-import { ConditionInterface } from "../../../interfaces/SchedulerIn";
+import { ConditionInterface, ConditionsRequestInterface, ConditionInputInterface } from "../../../interfaces/SchedulerIn";
 
 const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 
@@ -15,6 +16,7 @@ const AddConditionpage: React.FC = () => {
   const [userID, setUserID] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  /////////////////////////////////////////////////////////////////// ดึงข้อมูลมาใช้จากการล็อกอิน
   const title = localStorage.getItem("title") || "";
   const firstName = localStorage.getItem("first_name") || "";
   const lastName = localStorage.getItem("last_name") || "";
@@ -30,12 +32,13 @@ const AddConditionpage: React.FC = () => {
     }
   }, []);
 
+  /////////////////////////////////////////////////////////////////// ส่วนการกรอกข้อมูลช่วงเวลา
   const addTimeSlot = (dayIndex: number) => {
     setTimeSlotsByDay((prev) => {
       const existing = prev[dayIndex] || [];
       const newSlot: ConditionInterface = {
-        ID: Date.now(), 
-        DayOfWeek: days[dayIndex],
+        ID: Date.now(),
+        DayOfWeek: days[dayIndex],  // เพื่อให้แต่ละ slot แยกออกจากกันเพื่อระบุแต่ละ slot ได้
         Start: "",
         End: "",
       };
@@ -67,15 +70,25 @@ const AddConditionpage: React.FC = () => {
     });
   };
 
+  //////////////////////////////////////////////////////////////////// ฟอร์มของเวลาถูกต้องไหมก่อนส่งไป API
+
   const validateTimeSlots = () => {
     for (const [dayIndex, slots] of Object.entries(timeSlotsByDay)) {
       for (const slot of slots) {
         if (!slot.Start || !slot.End) {
-          message.error(`กรุณากำหนดเวลาให้ครบถ้วนสำหรับวัน${days[parseInt(dayIndex)]}`);
+          Swal.fire({
+            icon: "warning",
+            title: "ข้อมูลไม่ครบถ้วน",
+            text: `กรุณากำหนดเวลาให้ครบถ้วนสำหรับวัน ${days[parseInt(dayIndex)]}`,
+          });
           return false;
         }
         if (slot.Start >= slot.End) {
-          message.error(`เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุดสำหรับวัน${days[parseInt(dayIndex)]}`);
+          Swal.fire({
+            icon: "error",
+            title: "ช่วงเวลาไม่ถูกต้อง",
+            text: `เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุดสำหรับวัน ${days[parseInt(dayIndex)]}`,
+          });
           return false;
         }
       }
@@ -85,7 +98,11 @@ const AddConditionpage: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!userID) {
-      message.error("ไม่พบข้อมูลผู้ใช้");
+      Swal.fire({
+        icon: "error",
+        title: "ไม่พบข้อมูลผู้ใช้",
+        text: "กรุณาล็อกอินใหม่อีกครั้ง",
+      });
       return;
     }
 
@@ -96,46 +113,62 @@ const AddConditionpage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // แปลงข้อมูลเป็นรูปแบบที่ API ต้องการ
-      const conditionsToSave: any[] = [];
+      const conditionsToSave: ConditionInputInterface[] = [];
 
-      Object.entries(timeSlotsByDay).forEach(([dayIndex, slots]) => {
+      Object.entries(timeSlotsByDay).forEach(([_, slots]) => {
         slots.forEach((slot) => {
           if (slot.Start && slot.End) {
             conditionsToSave.push({
               DayOfWeek: slot.DayOfWeek,
               StartTime: slot.Start,
-              EndTime: slot.End
+              EndTime: slot.End,
             });
           }
         });
       });
 
       if (conditionsToSave.length === 0) {
-        message.warning("กรุณาเพิ่มช่วงเวลาที่ไม่สะดวกอย่างน้อย 1 ช่วงเวลา");
+        Swal.fire({
+          icon: "warning",
+          title: "ยังไม่มีข้อมูล",
+          text: "กรุณาเพิ่มช่วงเวลาที่ไม่สะดวกอย่างน้อย 1 ช่วงเวลา",
+        });
         setIsLoading(false);
         return;
       }
 
-      console.log('Sending to API:', { userID, conditions: conditionsToSave });
+      const payload: ConditionsRequestInterface = {
+        UserID: userID,
+        Conditions: conditionsToSave,
+      };
 
-      const result = await postCreateConditions(userID, conditionsToSave);
+      console.log("Sending to API:", payload);
 
-      if (result && result.status === 200) {
-        message.success(`บันทึกข้อมูลเวลาที่ไม่สะดวกสำเร็จ! (${conditionsToSave.length} รายการ)`);
+      const result = await postCreateConditions(payload);
 
-        // รอ 1 วินาทีแล้วไปหน้า Condition
-        setTimeout(() => {
-          navigate('/Conditionpage');
-        }, 1000);
+      if (result && (result.status === 200 || result.status === 201)) {
+        Swal.fire({
+          icon: "success",
+          title: "บันทึกสำเร็จ",
+          text: `ข้อมูลเวลาที่ไม่สะดวกของคุณถูกบันทึกเรียบร้อยแล้ว (${conditionsToSave.length} รายการ)`,
+        }).then(() => {
+          navigate("/Conditionpage");
+        });
       } else {
-        console.error('API Error:', result);
-        message.error(result?.data?.error || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+        console.error("API Error:", result);
+        Swal.fire({
+          icon: "error",
+          title: "เกิดข้อผิดพลาด",
+          text: result?.data?.error || "ไม่สามารถบันทึกข้อมูลได้",
+        });
       }
-
     } catch (error) {
       console.error("Error saving conditions:", error);
-      message.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง");
+      Swal.fire({
+        icon: "error",
+        title: "ข้อผิดพลาด",
+        text: "เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -143,17 +176,13 @@ const AddConditionpage: React.FC = () => {
 
   return (
     <>
-      {/* Background Layer */}
       <div className="addcondition-background" />
 
-      {/* Sidebar */}
       <div className="addcondition-sidebar">
         <Sidebar />
       </div>
 
-      {/* Main Content */}
       <div className="addcondition-main-content">
-        {/* Header */}
         <div style={{
           position: 'absolute',
           top: '15px',
@@ -188,7 +217,7 @@ const AddConditionpage: React.FC = () => {
             </p>
           </div>
 
-          {/* User Info Display */}
+          {/* userID ที่ใช้งานอยู่ */}
           {userID && (
             <div style={{
               marginBottom: '20px',
@@ -198,8 +227,9 @@ const AddConditionpage: React.FC = () => {
               border: '1px solid #b8e6b8'
             }}>
               <span style={{ fontSize: '14px', color: '#2d5a2d', fontWeight: '500' }}>
-                กำลังจัดการเงื่อนไขสำหรับผู้ใช้ ID: {userID}
+                กำลังจัดการเงื่อนไขสำหรับ: {title} {firstName} {lastName}
               </span>
+
             </div>
           )}
 
@@ -365,7 +395,7 @@ const AddConditionpage: React.FC = () => {
             </ul>
           </div>
 
-          {/* Summary */}
+          {/* สรุปเงื่อนไข */}
           {Object.keys(timeSlotsByDay).length > 0 && (
             <div style={{
               marginTop: '16px',

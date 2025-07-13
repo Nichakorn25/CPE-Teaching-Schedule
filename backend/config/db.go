@@ -393,7 +393,10 @@ func SeedDataUser() {
 // //////////////////////////////////////////////////////////// เงื่อนไข ///////////////////////////////////////////////////////
 // ยังใส่ไม่ครบ
 func SeedConditions() {
-	layout := "15:04"
+	loc, err := time.LoadLocation("Asia/Bangkok")
+	if err != nil {
+		log.Fatalf("ไม่สามารถโหลดโซนเวลา: %v", err)
+	}
 
 	conditions := []struct {
 		DayOfWeek    string
@@ -401,41 +404,17 @@ func SeedConditions() {
 		EndTimeStr   string
 		UserID       uint
 	}{
-		{
-			DayOfWeek:    "จันทร์",
-			StartTimeStr: "08:00",
-			EndTimeStr:   "12:00",
-			UserID:       8,
-		},
-		{
-			DayOfWeek:    "อังคาร",
-			StartTimeStr: "13:00",
-			EndTimeStr:   "17:00",
-			UserID:       2,
-		},
-		{
-			DayOfWeek:    "พุธ",
-			StartTimeStr: "09:30",
-			EndTimeStr:   "11:30",
-			UserID:       3,
-		},
-		{
-			DayOfWeek:    "พุธ",
-			StartTimeStr: "12:30",
-			EndTimeStr:   "16:30",
-			UserID:       6,
-		},
-		{
-			DayOfWeek:    "พฤหัสบดี",
-			StartTimeStr: "09:30",
-			EndTimeStr:   "17:30",
-			UserID:       3,
-		},
+		{"จันทร์", "08:00", "12:00", 8},
+		{"อังคาร", "13:00", "17:00", 2},
+		{"พุธ", "09:30", "11:30", 3},
+		{"พุธ", "12:30", "16:30", 6},
+		{"พฤหัสบดี", "09:30", "17:30", 3},
 	}
 
 	for _, c := range conditions {
-		startTime, _ := time.Parse(layout, c.StartTimeStr)
-		endTime, _ := time.Parse(layout, c.EndTimeStr)
+		const fixedDate = "2000-01-01"
+		startTime, _ := time.ParseInLocation("2006-01-02 15:04", fixedDate+" "+c.StartTimeStr, loc)
+		endTime, _ := time.ParseInLocation("2006-01-02 15:04", fixedDate+" "+c.EndTimeStr, loc)
 
 		db.FirstOrCreate(&entity.Condition{}, &entity.Condition{
 			DayOfWeek: c.DayOfWeek,

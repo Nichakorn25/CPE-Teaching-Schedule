@@ -54,9 +54,13 @@ func CreateConditions(c *gin.Context) {
 		return
 	}
 
+	loc, _ := time.LoadLocation("Asia/Bangkok")
+	const fixedDate = "2000-01-01"
+	layout := "2006-01-02 15:04"
+
 	for _, input := range req.Conditions {
-		startTime, err1 := time.Parse("15:04", input.StartTime)
-		endTime, err2 := time.Parse("15:04", input.EndTime)
+		startTime, err1 := time.ParseInLocation(layout, fixedDate+" "+input.StartTime, loc)
+		endTime, err2 := time.ParseInLocation(layout, fixedDate+" "+input.EndTime, loc)
 
 		if err1 != nil || err2 != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "รูปแบบเวลาไม่ถูกต้อง"})
@@ -79,12 +83,16 @@ func CreateConditions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "บันทึกเงื่อนไขเวลาที่ไม่ว่างสำเร็จ"})
 }
 
-func UpdateConditions(c *gin.Context) { // แก้ไขข้อมูลเฉพาะของคนๆ นั้น
+func UpdateConditions(c *gin.Context) { 
 	var req ConditionsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
 		return
 	}
+
+	loc, _ := time.LoadLocation("Asia/Bangkok")
+	const fixedDate = "2000-01-01"
+	layout := "2006-01-02 15:04"
 
 	if err := config.DB().Transaction(func(tx *gorm.DB) error {
 		// 1) ลบ Condition เดิมทั้งหมดของ User
@@ -95,8 +103,8 @@ func UpdateConditions(c *gin.Context) { // แก้ไขข้อมูลเ�
 
 		// 2) เพิ่ม Condition ใหม่ตามที่รับมา
 		for _, input := range req.Conditions {
-			start, err1 := time.Parse("15:04", input.StartTime)
-			end, err2 := time.Parse("15:04", input.EndTime)
+			start, err1 := time.ParseInLocation(layout, fixedDate+" "+input.StartTime, loc)
+			end, err2 := time.ParseInLocation(layout, fixedDate+" "+input.EndTime, loc)
 			if err1 != nil || err2 != nil {
 				return fmt.Errorf("รูปแบบเวลาไม่ถูกต้อง")
 			}
