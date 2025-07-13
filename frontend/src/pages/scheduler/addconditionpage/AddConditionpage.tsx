@@ -15,7 +15,11 @@ const AddConditionpage: React.FC = () => {
   const [userID, setUserID] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get user ID from localStorage
+  const title = localStorage.getItem("title") || "";
+  const firstName = localStorage.getItem("first_name") || "";
+  const lastName = localStorage.getItem("last_name") || "";
+
+  // ดึงผู้ใช้ที่ login อยู่
   useEffect(() => {
     const storedUserID = localStorage.getItem("user_id");
     if (storedUserID) {
@@ -30,7 +34,7 @@ const AddConditionpage: React.FC = () => {
     setTimeSlotsByDay((prev) => {
       const existing = prev[dayIndex] || [];
       const newSlot: ConditionInterface = {
-        ID: Date.now(), // temporary unique ID
+        ID: Date.now(), 
         DayOfWeek: days[dayIndex],
         Start: "",
         End: "",
@@ -94,7 +98,7 @@ const AddConditionpage: React.FC = () => {
     try {
       // แปลงข้อมูลเป็นรูปแบบที่ API ต้องการ
       const conditionsToSave: any[] = [];
-      
+
       Object.entries(timeSlotsByDay).forEach(([dayIndex, slots]) => {
         slots.forEach((slot) => {
           if (slot.Start && slot.End) {
@@ -116,10 +120,10 @@ const AddConditionpage: React.FC = () => {
       console.log('Sending to API:', { userID, conditions: conditionsToSave });
 
       const result = await postCreateConditions(userID, conditionsToSave);
-      
+
       if (result && result.status === 200) {
         message.success(`บันทึกข้อมูลเวลาที่ไม่สะดวกสำเร็จ! (${conditionsToSave.length} รายการ)`);
-        
+
         // รอ 1 วินาทีแล้วไปหน้า Condition
         setTimeout(() => {
           navigate('/Conditionpage');
@@ -141,12 +145,12 @@ const AddConditionpage: React.FC = () => {
     <>
       {/* Background Layer */}
       <div className="addcondition-background" />
-      
+
       {/* Sidebar */}
       <div className="addcondition-sidebar">
         <Sidebar />
       </div>
-      
+
       {/* Main Content */}
       <div className="addcondition-main-content">
         {/* Header */}
@@ -158,25 +162,25 @@ const AddConditionpage: React.FC = () => {
         }}>
           <Header />
         </div>
-        
+
         {/* White Content Area */}
         <div className="addcondition-content-area">
           {/* Page Title */}
-          <div style={{ 
+          <div style={{
             marginBottom: '24px',
             paddingBottom: '16px',
             borderBottom: '2px solid #F26522'
           }}>
-            <h2 style={{ 
-              margin: 0, 
+            <h2 style={{
+              margin: 0,
               color: '#333',
               fontSize: '24px',
               fontWeight: 'bold'
             }}>
               เพิ่มเงื่อนไขเวลาที่ไม่สะดวก
             </h2>
-            <p style={{ 
-              margin: '8px 0 0 0', 
+            <p style={{
+              margin: '8px 0 0 0',
               color: '#666',
               fontSize: '14px'
             }}>
@@ -200,7 +204,7 @@ const AddConditionpage: React.FC = () => {
           )}
 
           {/* Table Container */}
-          <div style={{ 
+          <div style={{
             backgroundColor: 'white',
             border: '1px solid #d9d9d9',
             borderRadius: '6px',
@@ -219,7 +223,7 @@ const AddConditionpage: React.FC = () => {
                 {days.map((day, index) => (
                   <tr key={index}>
                     <td>
-                      <span style={{ 
+                      <span style={{
                         fontWeight: 'bold',
                         color: '#F26522',
                         fontSize: '16px'
@@ -228,7 +232,7 @@ const AddConditionpage: React.FC = () => {
                       </span>
                     </td>
                     <td>
-                      <span style={{ 
+                      <span style={{
                         fontWeight: '600',
                         color: '#333',
                         fontSize: '14px'
@@ -243,7 +247,7 @@ const AddConditionpage: React.FC = () => {
                             <div className="time-slot-number">
                               {i + 1}
                             </div>
-                            
+
                             <div className="time-input-group">
                               <label className="time-input-label">
                                 เวลาเริ่มต้น
@@ -263,9 +267,9 @@ const AddConditionpage: React.FC = () => {
                                 disabled={isLoading}
                               />
                             </div>
-                            
+
                             <span className="time-separator">-</span>
-                            
+
                             <div className="time-input-group">
                               <label className="time-input-label">
                                 เวลาสิ้นสุด
@@ -280,7 +284,7 @@ const AddConditionpage: React.FC = () => {
                                 disabled={isLoading}
                               />
                             </div>
-                            
+
                             <button
                               className="remove-time-button"
                               onClick={() => removeSlot(index, slot.ID)}
@@ -336,16 +340,16 @@ const AddConditionpage: React.FC = () => {
             borderRadius: '6px',
             border: '1px solid #e9ecef'
           }}>
-            <h4 style={{ 
-              margin: '0 0 8px 0', 
+            <h4 style={{
+              margin: '0 0 8px 0',
               color: '#333',
               fontSize: '14px',
               fontWeight: 'bold'
             }}>
               คำแนะนำการใช้งาน:
             </h4>
-            <ul style={{ 
-              margin: 0, 
+            <ul style={{
+              margin: 0,
               paddingLeft: '20px',
               color: '#666',
               fontSize: '13px',
@@ -370,8 +374,8 @@ const AddConditionpage: React.FC = () => {
               borderRadius: '6px',
               border: '1px solid #ffeaa7'
             }}>
-              <h4 style={{ 
-                margin: '0 0 8px 0', 
+              <h4 style={{
+                margin: '0 0 8px 0',
                 color: '#856404',
                 fontSize: '14px',
                 fontWeight: 'bold'

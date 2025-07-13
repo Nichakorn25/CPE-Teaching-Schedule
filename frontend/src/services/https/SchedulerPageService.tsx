@@ -1,4 +1,5 @@
 import axios from "axios";
+import {ConditionsRequestInterface} from "../../interfaces/SchedulerIn";
 
 const apiUrl = "http://localhost:8080";
 const Authorization = localStorage.getItem("token");
@@ -13,22 +14,14 @@ const requestOptions = {
 
 //------------------ Conditions ------------------------------//
 
-async function postCreateConditions(userID: number, conditions: any[]) {
-  const data = {
-    UserID: userID,
-    Conditions: conditions
-  };
+async function postCreateConditions(data: ConditionsRequestInterface) {
   return await axios
     .post(`${apiUrl}/condition`, data, requestOptions)
     .then((res) => res)
     .catch((e) => e.response);
 }
 
-async function putUpdateConditions(userID: number, conditions: any[]) {
-  const data = {
-    UserID: userID,
-    Conditions: conditions
-  };
+async function putUpdateConditions(data: ConditionsRequestInterface) {
   return await axios
     .put(`${apiUrl}/update-conditions`, data, requestOptions)
     .then((res) => res)
