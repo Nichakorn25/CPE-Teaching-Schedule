@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import Header from "../../../components/header/Header";
 import {
   getAllTitle,
@@ -14,11 +15,14 @@ import {
   MajorInterface,
   AllRoleInterface,
 } from "../../../interfaces/Adminpage";
-// import Title from "antd/es/skeleton/Title";
-import { postCreateUser } from "../../../services/https/AdminPageServices";
+import {
+  postCreateUser,
+  putUpdateUser,
+} from "../../../services/https/AdminPageServices";
 import Swal from "sweetalert2";
 
 const ManageTeacher: React.FC = () => {
+  const navigate = useNavigate();
   const [title, setTitle] = useState<Alltitles[]>([]);
   const [position, setPosition] = useState<Allposition[]>([]);
   const [roles, setRole] = useState<AllRoleInterface[]>([]);
@@ -26,6 +30,8 @@ const ManageTeacher: React.FC = () => {
   const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
   const [majors, setMajors] = useState<MajorInterface[]>([]);
   const [selectedDepartmentID, setSelectedDepartmentID] = useState<number>(0);
+  const location = useLocation();
+  const teacherData = location.state?.teacher;
 
   const filteredMajors = majors.filter(
     (m) => m.DepartmentID === selectedDepartmentID
@@ -78,6 +84,34 @@ const ManageTeacher: React.FC = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (
+      teacherData &&
+      title.length > 0 &&
+      position.length > 0 &&
+      majors.length > 0 &&
+      roles.length > 0
+    ) {
+      setForm({
+        Username: teacherData.EmpId,
+        Password: "****", // ไม่โชว์รหัสผ่านจริง
+        Firstname: teacherData.FirstName,
+        Lastname: teacherData.LastName,
+        Image: teacherData.Image || "",
+        Email: teacherData.Email,
+        PhoneNumber: teacherData.PhoneNumber,
+        Address: teacherData.Address || "",
+        TitleID: teacherData.TitleID,
+        PositionID: teacherData.PositionID,
+        MajorID: teacherData.MajorID,
+        RoleID: teacherData.RoleID,
+      });
+
+      setSelectedDepartmentID(teacherData.DepartmentID);
+      setImagePreview(teacherData.Image || null);
+    }
+  }, [teacherData, title, position, majors, roles]);
+
   const [form, setForm] = useState<CreateUserInterface>({
     Username: "",
     Password: "",
@@ -115,8 +149,48 @@ const ManageTeacher: React.FC = () => {
     }
   };
 
+  const handleUpdate = async () => {
+    const selectedTitle = title.find((t) => t.ID === form.TitleID)?.Title || "";
+    const fullname = `${form.Firstname} ${form.Lastname}`;
+
+    const result = await Swal.fire({
+      title: "ยืนยันการแก้ไข",
+      text: `คุณต้องการอัปเดตข้อมูล ${selectedTitle} ${fullname} หรือไม่?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#f26522",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "ตกลง",
+      cancelButtonText: "ยกเลิก",
+    });
+
+    if (!result.isConfirmed) return;
+
+    const response = await putUpdateUser(teacherData.DeleteID, form);
+
+    if (response.status === 200) {
+      Swal.fire({
+        icon: "success",
+        title: "อัปเดตสำเร็จ",
+        text: `อัปเดตข้อมูลของ ${fullname} เสร็จสิ้น`,
+        confirmButtonText: "ตกลง",
+      }).then(() => {
+        navigate("/teacher-list");
+      });
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาด",
+        text: response.data?.error || "ไม่สามารถอัปเดตข้อมูลได้",
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const selectedTitle = title.find((t) => t.ID === form.TitleID)?.Title || "";
+    const fullname = `${form.Firstname} ${form.Lastname}`;
 
     if (
       !form.Username ||
@@ -138,9 +212,12 @@ const ManageTeacher: React.FC = () => {
       return;
     }
 
-    const selectedTitle = title.find((t) => t.ID === form.TitleID)?.Title || "";
-    const fullname = `${form.Firstname} ${form.Lastname}`;
+    if (teacherData) {
+      handleUpdate(); // 🟠 ถ้ามี teacherData → แก้ไข
+      return;
+    }
 
+    // 🟢 ไม่มี teacherData → สร้างใหม่
     const result = await Swal.fire({
       title: "ยืนยันการบันทึก",
       text: `คุณต้องการบันทึกข้อมูล ${selectedTitle} ${fullname} หรือไม่?`,
@@ -166,6 +243,9 @@ const ManageTeacher: React.FC = () => {
         icon: "success",
         title: "บันทึกสำเร็จ",
         text: `ข้อมูล ${selectedTitle} ${fullname} ถูกบันทึกเรียบร้อยแล้ว`,
+        confirmButtonText: "ตกลง",
+      }).then(() => {
+        navigate("/teacher-list");
       });
     } else {
       Swal.fire({
@@ -345,9 +425,6 @@ const ManageTeacher: React.FC = () => {
       {/* ปุ่มบันทึก */}
       <div className="col-span-1 md:col-span-2 flex justify-end mt-6">
         <button
-          onClick={() => {
-            handleSubmit;
-          }}
           type="submit"
           className="bg-[#f26522] text-white px-6 py-2 rounded hover:bg-[#d9531e]"
         >
