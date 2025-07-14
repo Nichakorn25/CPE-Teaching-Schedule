@@ -36,43 +36,21 @@ export interface CreateUserInterface {
   RoleID: number;
 }
 
-// export interface AllTeacher {
-//   ID: number,
-//   DeleteID: number,
-//   Title: string,
-//   FirstName: string,
-//   LastName: string,
-//   Email: string,
-//   EmpId: string,
-//   Department: string,
-//   Major: string,
-//   Position: string,
-//   Status: string,
-//   Role: string,
-// }
-
 export interface AllTeacher {
-  ID: number;
-  DeleteID: number;
-  Title: string;
-  TitleID: number;
-  FirstName: string;
-  LastName: string;
-  Email: string;
-  EmpId: string;
-  Department: string;
-  DepartmentID: number;
-  Major: string;
-  MajorID: number;
-  Position: string;
-  PositionID: number;
-  Status: string;
-  Role: string;
-  RoleID: number;
-  PhoneNumber?: string;
-  Address?: string;
-  Image?: string;
+  ID: number,
+  DeleteID: number,
+  Title: string,
+  FirstName: string,
+  LastName: string,
+  Email: string,
+  EmpId: string,
+  Department: string,
+  Major: string,
+  Position: string,
+  Status: string,
+  Role: string,
 }
+
 
 export interface Alltitles {
   ID: number;

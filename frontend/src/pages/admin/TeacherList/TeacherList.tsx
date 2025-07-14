@@ -235,7 +235,7 @@ const TeacherList = () => {
                       <button
                         className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-sm"
                         onClick={() => {
-                          navigate("/manage-teacher", { state: { teacher } }); // ส่งข้อมูลผ่าน state
+                          navigate(`/manage-teacher/${teacher.DeleteID}`);
                         }}
                       >
                         แก้ไข

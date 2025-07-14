@@ -48,6 +48,7 @@ const App: React.FC = () => {
           <Route path="/open-course" element={<OpenCourse />} />
           <Route path="/all-course" element={<AllCourse />} />
           <Route path="/manage-teacher" element={<ManageTeacher />} />
+          <Route path="/manage-teacher/:id" element={<ManageTeacher />} />
           <Route path="/manage-course" element={<ManageCourse />} />
           <Route path="/manage-cescourse" element={<ManageCesCourse />} />
           <Route path="/manage-assistance" element={<ManageAssistance />} />

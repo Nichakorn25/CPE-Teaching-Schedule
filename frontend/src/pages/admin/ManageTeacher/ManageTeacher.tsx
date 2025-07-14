@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import Header from "../../../components/header/Header";
 import {
   getAllTitle,
@@ -18,6 +18,7 @@ import {
 import {
   postCreateUser,
   putUpdateUser,
+  getUserById,
 } from "../../../services/https/AdminPageServices";
 import Swal from "sweetalert2";
 
@@ -30,8 +31,7 @@ const ManageTeacher: React.FC = () => {
   const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
   const [majors, setMajors] = useState<MajorInterface[]>([]);
   const [selectedDepartmentID, setSelectedDepartmentID] = useState<number>(0);
-  const location = useLocation();
-  const teacherData = location.state?.teacher;
+  const { id } = useParams();
 
   const filteredMajors = majors.filter(
     (m) => m.DepartmentID === selectedDepartmentID
@@ -85,32 +85,42 @@ const ManageTeacher: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (
-      teacherData &&
-      title.length > 0 &&
-      position.length > 0 &&
-      majors.length > 0 &&
-      roles.length > 0
-    ) {
-      setForm({
-        Username: teacherData.EmpId,
-        Password: "****", // ไม่โชว์รหัสผ่านจริง
-        Firstname: teacherData.FirstName,
-        Lastname: teacherData.LastName,
-        Image: teacherData.Image || "",
-        Email: teacherData.Email,
-        PhoneNumber: teacherData.PhoneNumber,
-        Address: teacherData.Address || "",
-        TitleID: teacherData.TitleID,
-        PositionID: teacherData.PositionID,
-        MajorID: teacherData.MajorID,
-        RoleID: teacherData.RoleID,
-      });
+    const fetchUser = async () => {
+      if (!id) return;
+      const res = await getUserById(id);
 
-      setSelectedDepartmentID(teacherData.DepartmentID);
-      setImagePreview(teacherData.Image || null);
-    }
-  }, [teacherData, title, position, majors, roles]);
+      console.log("👉 User Data", res.data); // ช่วย debug ได้
+
+      if (res.status === 200 && res.data) {
+        const data = res.data;
+
+        setForm({
+          Username: data.username,
+          Password: "****", // ไม่ต้องโชว์รหัสจริง
+          Firstname: data.firstname,
+          Lastname: data.lastname,
+          Image: data.image || "",
+          Email: data.email,
+          PhoneNumber: data.phone_number,
+          Address: data.address || "",
+          TitleID: Number(data.title_id),
+          PositionID: Number(data.position_id),
+          MajorID: Number(data.major_id),
+          RoleID: Number(data.role_id),
+        });
+
+        // ✅ ค้นหา Major เพื่อ set DepartmentID
+        const foundMajor = majors.find((m) => m.ID === Number(data.major_id));
+        setSelectedDepartmentID(foundMajor?.DepartmentID || 0);
+
+        setImagePreview(data.image || null);
+      } else {
+        console.error("ไม่สามารถโหลดข้อมูลผู้ใช้ได้", res);
+      }
+    };
+
+    fetchUser();
+  }, [id, majors]);
 
   const [form, setForm] = useState<CreateUserInterface>({
     Username: "",
@@ -166,7 +176,7 @@ const ManageTeacher: React.FC = () => {
 
     if (!result.isConfirmed) return;
 
-    const response = await putUpdateUser(teacherData.DeleteID, form);
+    const response = await putUpdateUser(Number(id), form);
 
     if (response.status === 200) {
       Swal.fire({
@@ -212,12 +222,12 @@ const ManageTeacher: React.FC = () => {
       return;
     }
 
-    if (teacherData) {
-      handleUpdate(); // 🟠 ถ้ามี teacherData → แก้ไข
+    if (id) {
+      await handleUpdate(); // 🔁 กำลังแก้ไข
       return;
     }
 
-    // 🟢 ไม่มี teacherData → สร้างใหม่
+    // ➕ เพิ่มใหม่
     const result = await Swal.fire({
       title: "ยืนยันการบันทึก",
       text: `คุณต้องการบันทึกข้อมูล ${selectedTitle} ${fullname} หรือไม่?`,

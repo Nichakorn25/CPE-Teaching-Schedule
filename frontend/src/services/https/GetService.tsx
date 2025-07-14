@@ -62,11 +62,11 @@ async function getAllAcademicYears() {
 
 
 export {
-    getAllTitle,
-    getAllPosition,
-    getTypeofCourse,
-    getMajorOfDepathment,
-    getAllRoles,
+    getAllTitle, //used
+    getAllPosition, //used
+    getTypeofCourse, //used
+    getMajorOfDepathment, //used
+    getAllRoles, //used
     getAllAcademicYears,
     
 };

@@ -125,23 +125,23 @@ async function deleteTeachingAssistant(id: number) {
 
 export {
   getAllCourses, //used
-  postCreateCourse, //used
-  putUpdateCourse,
+  postCreateCourse, 
+  putUpdateCourse, 
   deleteCourse, //used
 
   getAllTeachers, //used
-  getUserById,
-  postCreateUser,
-  putUpdateUser,
-  deleteUser,
+  getUserById, //used
+  postCreateUser,//used
+  putUpdateUser,//used
+  deleteUser,//used
 
   getOpenCourses,
 
-  getAllTeachingAssistants,
+  getAllTeachingAssistants, //used
   postCreateTeachingAssistant,
   putUpdateTeachingAssistant,
   deleteTeachingAssistant,
 
-  getTypeofCourse,
+  getTypeofCourse,//used
 
 };
