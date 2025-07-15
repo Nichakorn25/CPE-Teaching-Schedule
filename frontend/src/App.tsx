@@ -6,7 +6,7 @@ import Password from "./pages/forget/FristChangePassword";
 import HomeInstructorPage from "./pages/home/HomeInstructor";
 import HomeSchedulePage from "./pages/home/HomeSchedulor/Homepage";
 
-// import MenuBar from "./components/menu/Menu";
+import Sidebar from "./components/schedule-sidebar/Sidebar";
 
 import TeacherList from "./pages/admin/TeacherList/TeacherList";
 import AssistanceList from "./pages/admin/AssistanceList/AssistanceList";
