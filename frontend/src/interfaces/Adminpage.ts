@@ -100,6 +100,15 @@ export interface OpenCourseInterface {
   IsFixCourses: boolean;
 }
 
+export interface MenuItem {
+  id: number,
+  label: string;
+  icon: string;
+  path: string;
+  roles: string[];
+};
+
+
 //////////////////////////////////// ด้านล่างนี้ยังไม่เช็ค //////////////////////////////////
 export interface OfferedCourseInterface {
   Year: number;

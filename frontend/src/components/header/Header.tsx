@@ -1,5 +1,6 @@
 import React from "react";
 import { FaUserCircle } from "react-icons/fa";
+// import Sidebar from "../schedule-sidebar/Sidebar";
 
 const Header: React.FC = () => {
   const first_name = localStorage.getItem("first_name") || "ชื่อ";

@@ -6,7 +6,7 @@ import Password from "./pages/forget/FristChangePassword";
 import HomeInstructorPage from "./pages/home/HomeInstructor";
 import HomeSchedulePage from "./pages/home/HomeSchedulor/Homepage";
 
-import MenuBar from "./components/menu/Menu";
+// import MenuBar from "./components/menu/Menu";
 
 import TeacherList from "./pages/admin/TeacherList/TeacherList";
 import AssistanceList from "./pages/admin/AssistanceList/AssistanceList";
@@ -41,7 +41,6 @@ const App: React.FC = () => {
         <Route path="/" element={<LoginPage />} />
         <Route path="/change-password" element={<Password />} />
         <Route path="/home-schedule" element={<HomeSchedulePage />} />
-        <Route element={<MenuBar> </MenuBar>}>
           {/* <Route path="/home-admin" element={<PrivateRoute><HomeAdminPage /></PrivateRoute>} /> */}
           {/* <Route path="/home-admin" element={<HomeAdminPage />} /> */}
           <Route path="/teacher-list" element={<TeacherList />} />
@@ -59,7 +58,7 @@ const App: React.FC = () => {
           <Route path="/add-course" element={<AddCourse/>} />
 
           <Route path="/home-instructor" element={<PrivateRoute><HomeInstructorPage /></PrivateRoute>} />
-        </Route>
+
         <Route path="/Homepage" element={<Homepage />} />
         <Route path="/Schedulepage" element={<Schedulepage />} />
         <Route path="/OfferedCoursespage" element={<OfferedCoursespage />} />
@@ -75,34 +74,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
-// import React from "react";
-// import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-//  import Test from "./pages/admin/AllCourse/AllCourse";
-// import Test from "./pages/admin/ManageCesCourse/ManageCesCourse";
-// import Test from "./pages/admin/ManageCourse/ManageCourse";
-// import Test from "./pages/admin/ManageTeacher/ManageTeacher";
-// import Test from "./pages/admin/OpenCourse/OpenCourse";
-// import Test from "./pages/admin/TeacherList/TeacherList";
-////////////////////////////////////////////////////////////////////////////////////
-// import Test from "./pages/scheduler/addconditionpage/AddConditionpage";
-// import Test from "./pages/scheduler/addcoursepage/AddCoursepage";
-// import Test from "./pages/scheduler/allcoursepage/AllCoursepage";
-// import Test from "./pages/scheduler/conditionpage/Conditionpage";
-// import Test from "./pages/scheduler/homepage/Homepage";
-// import Test from "./pages/scheduler/instructorpage/Instructorpage";
-// import Test from "./pages/scheduler/offeredcoursepage/OfferedCoursespage";
-// import Test from "./pages/scheduler/schedulepage/Schedulepage";
-
-// const App: React.FC = () => {
-//   return (
-//     <Router>
-//       <Routes>
-//         <Route path="/" element={<Test />} />
-//       </Routes>
-//     </Router>
-//   );
-// };
-
-// export default App;
-
