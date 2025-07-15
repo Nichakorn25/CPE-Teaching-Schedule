@@ -1,11 +1,13 @@
 import React from "react";
 import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/schedule-header/Header";
+import Header from "../../../components/header/Header";
 import "./Homepage.css";
 
 const Homepage: React.FC = () => {
     return (
-        <>
+        <div className="p-6 font-sarabun mt-16">
+            <Header />
+            
             {/* Background Layer */}
             <div className="homepage-background" />
             
@@ -16,11 +18,6 @@ const Homepage: React.FC = () => {
             
             {/* Main Content */}
             <div className="homepage-main-content">
-                {/* Header */}
-                <div className="homepage-header">
-                    <Header />
-                </div>
-                
                 {/* Welcome Image */}
                 <img 
                     src="/src/assets/Welcome.png"
@@ -28,7 +25,7 @@ const Homepage: React.FC = () => {
                     className="homepage-welcome-image"
                 />
             </div>
-        </>
+        </div>
     );
 };
 

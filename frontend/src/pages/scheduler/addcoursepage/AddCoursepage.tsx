@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/schedule-header/Header";
+import Header from "../../../components/header/Header";
 import "./AddCoursepage.css";
 import { Button, Input, Select, Card, Form, InputNumber, message } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -68,7 +68,9 @@ const AddCoursepage: React.FC = () => {
   };
 
   return (
-    <>
+    <div className="p-6 font-sarabun mt-16">
+      <Header />
+      
       {/* Background Layer */}
       <div className="addcourse-background" />
       
@@ -78,17 +80,7 @@ const AddCoursepage: React.FC = () => {
       </div>
       
       {/* Main Content */}
-      <div className="addcourse-main-content">
-        {/* Header */}
-        <div style={{
-          position: 'absolute',
-          top: '15px',
-          right: '0px',
-          zIndex: 999
-        }}>
-          <Header />
-        </div>
-        
+      <div className="addcourse-main-content">        
         {/* White Content Area */}
         <div className="addcourse-content-area">
           {/* Page Title */}
@@ -416,7 +408,7 @@ const AddCoursepage: React.FC = () => {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

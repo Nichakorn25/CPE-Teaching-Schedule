@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/schedule-header/Header";
+import Header from "../../../components/header/Header";
 import "./Instructorpage.css";
 import { Button, Table, Input, Select, message, Modal, Tag } from 'antd';
 import { SearchOutlined, PlusOutlined } from '@ant-design/icons';
@@ -225,7 +225,9 @@ const Instructorpage: React.FC = () => {
   ];
 
   return (
-    <>
+    <div className="p-6 font-sarabun mt-16">
+      <Header />
+      
       {/* Background Layer */}
       <div className="instructor-background" />
       
@@ -235,17 +237,7 @@ const Instructorpage: React.FC = () => {
       </div>
       
       {/* Main Content */}
-      <div className="instructor-main-content">
-        {/* Header */}
-        <div style={{
-          position: 'absolute',
-          top: '15px',
-          right: '0px',
-          zIndex: 999
-        }}>
-          <Header />
-        </div>
-        
+      <div className="instructor-main-content">        
         {/* White Content Area */}
         <div className="instructor-content-area">
           {/* Page Title */}
@@ -455,7 +447,7 @@ const Instructorpage: React.FC = () => {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
