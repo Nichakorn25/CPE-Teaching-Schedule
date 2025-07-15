@@ -1,4 +1,57 @@
 package config
+////////////////////////////////////// ของไดม่อนอย่าลบ //////////////////////////////////////////////////////////
+// import (
+// 	// "database/sql"
+// 	"errors"
+// 	"fmt"
+// 	"log"
+// 	"os"
+// 	"time"
+
+// 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
+// 	_ "github.com/lib/pq"
+
+// 	// "gorm.io/driver/postgres"
+// 	"gorm.io/driver/sqlite"
+// 	"gorm.io/gorm"
+// )
+
+// var db *gorm.DB
+
+// func DB() *gorm.DB {
+// 	return db
+// }
+
+// func CreateDatabase() {
+// 	dbName := "cpe_schedule.db"
+
+// 	// เช็คว่าไฟล์ฐานข้อมูลมีอยู่แล้วหรือยัง
+// 	if _, err := os.Stat(dbName); os.IsNotExist(err) {
+// 		file, err := os.Create(dbName)
+// 		if err != nil {
+// 			log.Fatal("Failed to create SQLite database file:", err)
+// 		}
+// 		file.Close()
+// 		fmt.Println("Database file created successfully")
+// 	} else {
+// 		fmt.Println("Database file already exists")
+// 	}
+// }
+
+// func ConnectionDB() {
+// 	database, err := gorm.Open(sqlite.Open("CPE_Schdule.db?cache=shared"), &gorm.Config{})
+// 	if err != nil {
+// 		panic("failed to connect database")
+// 	}
+// 	fmt.Println("connected database")
+// 	db = database
+// }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
 
 import (
 	"database/sql"
@@ -19,22 +72,9 @@ func DB() *gorm.DB {
 	return db
 }
 
-// ของไดม่อนนนนนนนนน มันไม่สร้างนะ  ถ้าเธอได้คลุมของเค้าไว้แทนลบออกนะ
-
-// func ConnectionDB() {
-// 	// แก้ตรงนี้ให้เป็นค่าจริงของคุณ
-// 	dsn := "host=localhost user=postgres password=1234 dbname=mydb port=5432 sslmode=disable TimeZone=Asia/Bangkok"
-// 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-// 	if err != nil {
-// 		panic("failed to connect to database")
-// 	}
-// 	fmt.Println("connected to database")
-// 	db = database
-// }
-
 func CreateDatabase() {
-	dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
-	// dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
+	// dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
+	dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
 	dbSQL, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal("Failed to connect to PostgreSQL:", err)
@@ -52,8 +92,8 @@ func CreateDatabase() {
 
 func ConnectionDB() {
 	CreateDatabase()
-	dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
-	// dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
+	// dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
+	dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
