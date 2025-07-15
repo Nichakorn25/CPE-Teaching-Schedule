@@ -13,6 +13,28 @@ import (
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
 )
 
+func GetAllCourseByID(c *gin.Context) {
+    id := c.Param("id")
+
+    var course entity.AllCourses
+    if err := config.DB().
+        Preload("Curriculum").
+        Preload("Curriculum.Major").
+        Preload("Curriculum.Major.Department").
+        Preload("AcademicYear").
+        Preload("TypeOfCourses").
+        Preload("Credit").
+        Preload("UserAllCourses").
+        Preload("OfferedCourses").
+        Preload("TimeFixedCourses").
+        First(&course, id).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบข้อมูลวิชา"})
+        return
+    }
+
+    c.JSON(http.StatusOK, course)
+}
+
 func GetAllCourses(c *gin.Context) {
 	var courses []entity.AllCourses
 

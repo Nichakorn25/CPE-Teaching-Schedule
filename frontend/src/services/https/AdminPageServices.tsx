@@ -1,5 +1,6 @@
 import {CreateCourseInteface,CreateUserInterface,} from "../../interfaces/Adminpage";
 import {TeachingAssistantInterface,} from "../../interfaces/TeachingAssistant";
+import {OpenCourseInterface} from "../../interfaces/OpenCourse";
 import axios from "axios";
 
 const apiUrl = "http://localhost:8080";
@@ -14,6 +15,13 @@ const requestOptions = {
 };
 
 //------------------ Courses ------------------------------//
+async function getCoursebyid(id: number) {
+  return await axios
+    .delete(`${apiUrl}/all-courses/${id}`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 async function getAllCourses() {
   return await axios
     .get(`${apiUrl}/all-courses`, requestOptions)
@@ -50,6 +58,13 @@ async function getTypeofCourse() {   //////////////////////ย้ายไป Ge
 }
 
 //------------------ User ------------------------------//
+async function getTeachers() {  //ดึงวิชาทั้งหมดไปเลือก
+  return await axios
+    .get(`${apiUrl}/all-instructor`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 async function getAllTeachers() {
   return await axios
     .get(`${apiUrl}/all-teachers`, requestOptions)
@@ -93,6 +108,13 @@ async function getOpenCourses() {
     .catch((e) => e.response);
 }
 
+async function postCreateOfferedCourse(data: OpenCourseInterface) {
+  return await axios
+    .post(`${apiUrl}/offered-courses`, data, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 ///////////////////// TeachingAssistant /////////////////////////
 async function getAllTeachingAssistants() {
   return await axios
@@ -124,11 +146,13 @@ async function deleteTeachingAssistant(id: number) {
 
 
 export {
+  getCoursebyid,
   getAllCourses, //used
   postCreateCourse, 
   putUpdateCourse, 
   deleteCourse, //used
 
+  getTeachers,
   getAllTeachers, //used
   getUserById, //used
   postCreateUser,//used
@@ -136,6 +160,7 @@ export {
   deleteUser,//used
 
   getOpenCourses, //used
+  postCreateOfferedCourse,
 
   getAllTeachingAssistants, //used
   postCreateTeachingAssistant, //used

@@ -25,12 +25,14 @@ func main() {
 	{
 		router.Use(middleware.Authorizes())
 		///////////////////// AllCourses /////////////////////////
-		r.GET("/all-courses", controllers.GetAllCourses) //
+		r.GET("/all-courses", controllers.GetAllCourses) 
+		r.GET("/all-courses/:id", controllers.GetAllCourseByID)
 		r.POST("/courses", controllers.CreateCourses)
 		r.PUT("/update-courses/:id", controllers.UpdateAllCourses)
 		r.DELETE("/delete-courses/:id", controllers.DeleteAllCourses)
 
 		///////////////////// USER /////////////////////////
+		r.GET("/all-instructor", controllers.GetTeachers)
 		r.GET("/all-teachers", controllers.GetAllTeachers)
 		r.GET("/users/:id", controllers.GetUserByID)
 		r.POST("/users", controllers.CreateUser)
@@ -39,6 +41,7 @@ func main() {
 
 		///////////////////// openCourse /////////////////////////
 		r.GET("/open-courses", controllers.GetOpenCourses)
+		r.POST("/offered-courses", controllers.CreateOfferedCourse)
 
 		///////////////////// Condition /////////////////////////
 		r.POST("/condition", controllers.CreateConditions)
@@ -60,6 +63,8 @@ func main() {
 		r.GET("/all-majors", controllers.GetAllMajorOfDepathment)
 		r.GET("/all-roles", controllers.GetAllRoles)
 		r.GET("/all-academic-years", controllers.GetAllAcademicYears)
+		r.GET("/all-curriculum", controllers.GetAllCurriculum)
+		r.GET("/all-laboratory", controllers.GetLaboratory)
 
 	}
 

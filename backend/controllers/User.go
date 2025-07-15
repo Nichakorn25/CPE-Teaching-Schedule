@@ -9,7 +9,13 @@ import (
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
 )
 
-func GetAllTeachers(c *gin.Context) {
+func GetTeachers(c *gin.Context) {  // ดึงไปเพื่อใช้เลือก
+    var instructer []entity.User
+    config.DB().Where("id != ?", 1).Preload("Title").Preload("Position").Preload("Major").Preload("Major.Department").Preload("Role").Find(&instructer)
+    c.JSON(http.StatusOK, instructer)
+}
+
+func GetAllTeachers(c *gin.Context) {  //นำไปแสดงเป็น List 
 	var users []entity.User
 
 	err := config.DB().Preload("Title").

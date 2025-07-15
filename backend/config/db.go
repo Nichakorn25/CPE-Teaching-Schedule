@@ -19,22 +19,9 @@ func DB() *gorm.DB {
 	return db
 }
 
-// ของไดม่อนนนนนนนนน มันไม่สร้างนะ  ถ้าเธอได้คลุมของเค้าไว้แทนลบออกนะ
-
-// func ConnectionDB() {
-// 	// แก้ตรงนี้ให้เป็นค่าจริงของคุณ
-// 	dsn := "host=localhost user=postgres password=1234 dbname=mydb port=5432 sslmode=disable TimeZone=Asia/Bangkok"
-// 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-// 	if err != nil {
-// 		panic("failed to connect to database")
-// 	}
-// 	fmt.Println("connected to database")
-// 	db = database
-// }
-
 func CreateDatabase() {
-	dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
-	// dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
+	// dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
+	dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
 	dbSQL, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal("Failed to connect to PostgreSQL:", err)
@@ -52,8 +39,8 @@ func CreateDatabase() {
 
 func ConnectionDB() {
 	CreateDatabase()
-	dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
-	// dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
+	// dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
+	dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
@@ -490,11 +477,11 @@ func SeedTypeOfCourses() {
 // ครบ
 func SeedAcademicYears() {
 	years := []entity.AcademicYear{
-		{Level: 0},
-		{Level: 1},
-		{Level: 2},
-		{Level: 3},
-		{Level: 4},
+		{Level: "เรียนได้ทุกชั้นปี"},
+		{Level: "1"},
+		{Level: "2"},
+		{Level: "3"},
+		{Level: "4"},
 	}
 	for _, y := range years {
 		db.FirstOrCreate(&entity.AcademicYear{}, entity.AcademicYear{
@@ -572,9 +559,9 @@ func SeedAllCourses() {
 	db.First(&typeLanguage, "type_name = ?", "กลุ่มวิชาภาษา")
 	db.First(&typeGeneral, "type_name = ?", "กลุ่มวิชาแกนศึกษาทั่วไป")
 
-	db.First(&year1, "level = ?", 1)
-	db.First(&year2, "level = ?", 2)
-	db.First(&year3, "level = ?", 3)
+	db.First(&year1, "level = ?", "1")
+	db.First(&year2, "level = ?", "2")
+	db.First(&year3, "level = ?", "3")
 
 	courses := []entity.AllCourses{
 		{

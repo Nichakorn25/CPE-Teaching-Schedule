@@ -36,16 +36,6 @@ const AddCourse: React.FC = () => {
       className="max-w-4xl mx-auto p-6 bg-white rounded shadow space-y-6 mt-20"
     >
       {/* ข้อมูลวิชา */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm  text-[#f26522] text-xl">
-            โครงสร้างหลักสูตร
-          </label>
-          <select className="w-full border px-3 py-2 rounded ">
-            <option>107050101650: วิศวกรรมคอมพิวเตอร์-2565</option>
-          </select>
-        </div>
-      </div>
 
       <div>
         <label className="text-sm  text-[#f26522] text-xl">
@@ -138,6 +128,17 @@ const AddCourse: React.FC = () => {
             type="number"
             className="w-full border px-3 py-2 rounded text-[#f26522]"
           />
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm  text-[#f26522] text-xl">
+            โครงสร้างหลักสูตร
+          </label>
+          <select className="w-full border px-3 py-2 rounded ">
+            <option>107050101650: วิศวกรรมคอมพิวเตอร์-2565</option>
+          </select>
         </div>
       </div>
 

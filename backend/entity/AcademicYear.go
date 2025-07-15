@@ -6,7 +6,7 @@ import (
 
 type AcademicYear struct {
 	gorm.Model
-	Level uint
+	Level string
 
 	AllCourses []AllCourses `gorm:"foreignKey:AcademicYearID"`
 }

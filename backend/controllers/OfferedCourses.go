@@ -12,30 +12,40 @@ import (
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
 )
 
-type GroupInfo struct { //วิชาจากศูนย์บริการ
-	Group    uint
-	Room     string
-	Day      string
-	TimeSpan string
-}
+type (
+	GroupInfo struct { //วิชาจากศูนย์บริการ
+		Group    uint
+		Room     string
+		Day      string
+		TimeSpan string
+	}
+	OpenCourseResp struct {
+		ID           uint // ไว้ใช้ตอนลบและแก้ไข
+		Year         uint
+		Term         uint
+		Code         string
+		Name         string
+		Credit       string
+		TypeName     string
+		Teacher      string
+		GroupInfos   []GroupInfo // รายละเอียดกลุ่ม (เฉพาะศูนย์บริการ) // จะรวมกลุ่มเรียนทั้งหมดของวิชานั้น
+		GroupTotal   uint        // จำนวนกลุ่มทั้งหมด
+		CapacityPer  uint
+		Remark       string // “วิชาจากศูนย์บริการ” หรือหมวดวิชา
+		IsFixCourses bool   // true = วิชาที่มาจากศูนย์บริการ
+	}
+	CreateOfferedCourseInput struct {
+		Year         uint `binding:"required"`
+		Term         uint `binding:"required"`
+		Section      uint
+		Capacity     uint
+		UserID       uint `binding:"required"`
+		AllCoursesID uint `binding:"required"`
+		LaboratoryID *uint
+	}
+)
 
-type OpenCourseResp struct {
-	ID           uint // ไว้ใช้ตอนลบและแก้ไข
-	Year         uint
-	Term         uint
-	Code         string
-	Name         string
-	Credit       string
-	TypeName     string
-	Teacher      string
-	GroupInfos   []GroupInfo // รายละเอียดกลุ่ม (เฉพาะศูนย์บริการ) // จะรวมกลุ่มเรียนทั้งหมดของวิชานั้น
-	GroupTotal   uint        // จำนวนกลุ่มทั้งหมด
-	CapacityPer  uint
-	Remark       string // “วิชาจากศูนย์บริการ” หรือหมวดวิชา
-	IsFixCourses bool   // true = วิชาที่มาจากศูนย์บริการ
-}
-
-func GetOpenCourses(c *gin.Context) { 
+func GetOpenCourses(c *gin.Context) {
 	yearQ := c.Query("year")
 	termQ := c.Query("term")
 	search := strings.TrimSpace(c.Query("search"))
@@ -116,4 +126,31 @@ func GetOpenCourses(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": resp})
+}
+
+//////////////////////////////////// add open course //////////////////////////
+func CreateOfferedCourse(c *gin.Context) {
+    var input CreateOfferedCourseInput
+    if err := c.ShouldBindJSON(&input); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    offered := entity.OfferedCourses{
+        Year:         input.Year,
+        Term:         input.Term,
+        Section:      input.Section,
+        Capacity:     input.Capacity,
+        IsFixCourses: false, 
+        UserID:       input.UserID,
+        AllCoursesID: input.AllCoursesID,
+        LaboratoryID: input.LaboratoryID,
+    }
+
+    if err := config.DB().Create(&offered).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้างวิชาที่เปิดสอนได้"})
+        return
+    }
+
+    c.JSON(http.StatusCreated, offered)
 }

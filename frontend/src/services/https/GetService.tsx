@@ -60,6 +60,22 @@ async function getAllAcademicYears() {
         .catch((e) => e.response);
 }
 
+//------------------ Curriculum ------------------------------//
+async function getAllCurriculum() {
+    return await axios
+        .get(`${apiUrl}/all-curriculum`, requestOptions)
+        .then((res) => res)
+        .catch((e) => e.response);
+}
+
+//------------------ Laboratory ------------------------------//
+async function getLaboratory() {
+    return await axios
+        .get(`${apiUrl}/all-laboratory`, requestOptions)
+        .then((res) => res)
+        .catch((e) => e.response);
+}
+
 
 export {
     getAllTitle, //used
@@ -68,5 +84,7 @@ export {
     getMajorOfDepathment, //used
     getAllRoles, //used
     getAllAcademicYears,
+    getAllCurriculum,
+    getLaboratory,
     
 };
