@@ -1,44 +1,70 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/header/Header";
+import Header from "../../../components/schedule-header/Header";
 import "./AddConditionpage.css";
 import { message } from 'antd';
-import { postCreateConditions } from "../../../services/https/SchedulerPageService";
+import { putUpdateConditions, deleteConditionsByUser } from "../../../services/https/SchedulerPageService";
 import { ConditionInterface, ConditionsRequestInterface, ConditionInputInterface } from "../../../interfaces/SchedulerIn";
 
 const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 
-const AddConditionpage: React.FC = () => {
+interface LocationState {
+  userID: number;
+  fullname: string;
+  existingConditions: ConditionInterface[];
+}
+
+const EditConditionpage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as LocationState;
+  
   const [timeSlotsByDay, setTimeSlotsByDay] = useState<Record<number, ConditionInterface[]>>({});
   const [userID, setUserID] = useState<number | null>(null);
+  const [fullname, setFullname] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
-  /////////////////////////////////////////////////////////////////// ดึงข้อมูลมาใช้จากการล็อกอิน
-  const title = localStorage.getItem("title") || "";
-  const firstName = localStorage.getItem("first_name") || "";
-  const lastName = localStorage.getItem("last_name") || "";
-
-  // ดึงผู้ใช้ที่ login อยู่
+  // โหลดข้อมูลเงื่อนไขเดิม
   useEffect(() => {
-    const storedUserID = localStorage.getItem("user_id");
-    if (storedUserID) {
-      const parsedUserID = parseInt(storedUserID);
-      setUserID(parsedUserID);
+    if (state && state.userID && state.existingConditions) {
+      setUserID(state.userID);
+      setFullname(state.fullname);
+      
+      console.log('Loading existing conditions:', state.existingConditions);
+      
+      // แปลงข้อมูลเงื่อนไขเดิมไปยัง timeSlotsByDay format
+      const conditionsByDay: Record<number, ConditionInterface[]> = {};
+      
+      state.existingConditions.forEach((condition) => {
+        const dayIndex = days.indexOf(condition.DayOfWeek);
+        if (dayIndex !== -1) {
+          if (!conditionsByDay[dayIndex]) {
+            conditionsByDay[dayIndex] = [];
+          }
+          conditionsByDay[dayIndex].push({
+            ...condition,
+            ID: condition.ID || Date.now() + Math.random() // ใช้ ID เดิมหรือสร้างใหม่
+          });
+        }
+      });
+      
+      console.log('Processed conditions by day:', conditionsByDay);
+      setTimeSlotsByDay(conditionsByDay);
     } else {
-      message.error("ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่");
+      // ถ้าไม่มีข้อมูล redirect กลับไปหน้า Condition
+      message.error("ไม่พบข้อมูลเงื่อนไขที่ต้องการแก้ไข");
+      navigate('/Conditionpage');
     }
-  }, []);
+  }, [state, navigate]);
 
-  /////////////////////////////////////////////////////////////////// ส่วนการกรอกข้อมูลช่วงเวลา
   const addTimeSlot = (dayIndex: number) => {
     setTimeSlotsByDay((prev) => {
       const existing = prev[dayIndex] || [];
       const newSlot: ConditionInterface = {
-        ID: Date.now(),
-        DayOfWeek: days[dayIndex],  // เพื่อให้แต่ละ slot แยกออกจากกันเพื่อระบุแต่ละ slot ได้
+        ID: Date.now() + Math.random(),
+        DayOfWeek: days[dayIndex],
         Start: "",
         End: "",
       };
@@ -70,25 +96,15 @@ const AddConditionpage: React.FC = () => {
     });
   };
 
-  //////////////////////////////////////////////////////////////////// ฟอร์มของเวลาถูกต้องไหมก่อนส่งไป API
-
   const validateTimeSlots = () => {
     for (const [dayIndex, slots] of Object.entries(timeSlotsByDay)) {
       for (const slot of slots) {
         if (!slot.Start || !slot.End) {
-          Swal.fire({
-            icon: "warning",
-            title: "ข้อมูลไม่ครบถ้วน",
-            text: `กรุณากำหนดเวลาให้ครบถ้วนสำหรับวัน ${days[parseInt(dayIndex)]}`,
-          });
+          message.error(`กรุณากำหนดเวลาให้ครบถ้วนสำหรับวัน ${days[parseInt(dayIndex)]}`);
           return false;
         }
         if (slot.Start >= slot.End) {
-          Swal.fire({
-            icon: "error",
-            title: "ช่วงเวลาไม่ถูกต้อง",
-            text: `เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุดสำหรับวัน ${days[parseInt(dayIndex)]}`,
-          });
+          message.error(`เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุดสำหรับวัน ${days[parseInt(dayIndex)]}`);
           return false;
         }
       }
@@ -98,11 +114,7 @@ const AddConditionpage: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!userID) {
-      Swal.fire({
-        icon: "error",
-        title: "ไม่พบข้อมูลผู้ใช้",
-        text: "กรุณาล็อกอินใหม่อีกครั้ง",
-      });
+      message.error("ไม่พบข้อมูลผู้ใช้");
       return;
     }
 
@@ -127,57 +139,81 @@ const AddConditionpage: React.FC = () => {
         });
       });
 
-      if (conditionsToSave.length === 0) {
-        Swal.fire({
-          icon: "warning",
-          title: "ยังไม่มีข้อมูล",
-          text: "กรุณาเพิ่มช่วงเวลาที่ไม่สะดวกอย่างน้อย 1 ช่วงเวลา",
-        });
-        setIsLoading(false);
-        return;
-      }
-
       const payload: ConditionsRequestInterface = {
         UserID: userID,
         Conditions: conditionsToSave,
       };
 
-      console.log("Sending to API:", payload);
+      console.log("Updating conditions:", payload);
 
-      const result = await postCreateConditions(payload);
+      const result = await putUpdateConditions(payload);
 
       if (result && (result.status === 200 || result.status === 201)) {
-        Swal.fire({
-          icon: "success",
-          title: "บันทึกสำเร็จ",
-          text: `ข้อมูลเวลาที่ไม่สะดวกของคุณถูกบันทึกเรียบร้อยแล้ว (${conditionsToSave.length} รายการ)`,
-        }).then(() => {
+        message.success(`เงื่อนไขเวลาที่ไม่สะดวกของ ${fullname} ถูกอัปเดตเรียบร้อยแล้ว`);
+        
+        setTimeout(() => {
           navigate("/Conditionpage");
-        });
+        }, 1000);
       } else {
         console.error("API Error:", result);
-        Swal.fire({
-          icon: "error",
-          title: "เกิดข้อผิดพลาด",
-          text: result?.data?.error || "ไม่สามารถบันทึกข้อมูลได้",
-        });
+        message.error(result?.data?.error || "ไม่สามารถอัปเดตข้อมูลได้");
       }
     } catch (error) {
-      console.error("Error saving conditions:", error);
-      Swal.fire({
-        icon: "error",
-        title: "ข้อผิดพลาด",
-        text: "เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง",
-      });
+      console.error("Error updating conditions:", error);
+      message.error("เกิดข้อผิดพลาดในการอัปเดตข้อมูล กรุณาลองใหม่อีกครั้ง");
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <div className="p-6 font-sarabun mt-16">
-      <Header />
+  const handleCancel = () => {
+    const hasChanges = Object.keys(timeSlotsByDay).length > 0;
+    
+    if (hasChanges) {
+      const confirmCancel = window.confirm(
+        'การเปลี่ยนแปลงที่ยังไม่ได้บันทึกจะสูญหาย\nคุณต้องการยกเลิกการแก้ไขหรือไม่?'
+      );
       
+      if (confirmCancel) {
+        navigate('/Conditionpage');
+      }
+    } else {
+      navigate('/Conditionpage');
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!userID) return;
+    
+    const confirmDelete = window.confirm(
+      `คุณต้องการลบเงื่อนไขทั้งหมดของ "${fullname}" หรือไม่?\n\n⚠️ การดำเนินการนี้ไม่สามารถยกเลิกได้`
+    );
+    
+    if (confirmDelete) {
+      try {
+        setIsLoading(true);
+        const deleteResult = await deleteConditionsByUser(userID.toString());
+        
+        if (deleteResult && (deleteResult.status === 200 || deleteResult.status === 204)) {
+          message.success(`ลบเงื่อนไขทั้งหมดของ ${fullname} เรียบร้อยแล้ว`);
+          
+          setTimeout(() => {
+            navigate("/Conditionpage");
+          }, 1000);
+        } else {
+          message.error("ไม่สามารถลบเงื่อนไขได้");
+        }
+      } catch (error) {
+        console.error("Error deleting conditions:", error);
+        message.error("เกิดข้อผิดพลาดในการลบเงื่อนไข");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  return (
+    <>
       <div className="addcondition-background" />
 
       <div className="addcondition-sidebar">
@@ -185,6 +221,15 @@ const AddConditionpage: React.FC = () => {
       </div>
 
       <div className="addcondition-main-content">
+        <div style={{
+          position: 'absolute',
+          top: '15px',
+          right: '0px',
+          zIndex: 999
+        }}>
+          <Header />
+        </div>
+
         {/* White Content Area */}
         <div className="addcondition-content-area">
           {/* Page Title */}
@@ -199,30 +244,29 @@ const AddConditionpage: React.FC = () => {
               fontSize: '24px',
               fontWeight: 'bold'
             }}>
-              เพิ่มเงื่อนไขเวลาที่ไม่สะดวก
+              แก้ไขเงื่อนไขเวลาที่ไม่สะดวก
             </h2>
             <p style={{
               margin: '8px 0 0 0',
               color: '#666',
               fontSize: '14px'
             }}>
-              กำหนดช่วงเวลาที่ไม่สะดวกสำหรับการจัดตารางเรียน
+              แก้ไขช่วงเวลาที่ไม่สะดวกสำหรับการจัดตารางเรียน
             </p>
           </div>
 
-          {/* userID ที่ใช้งานอยู่ */}
-          {userID && (
+          {/* User Info Display */}
+          {userID && fullname && (
             <div style={{
               marginBottom: '20px',
               padding: '12px 16px',
-              backgroundColor: '#e8f5e8',
+              backgroundColor: '#fff3cd',
               borderRadius: '6px',
-              border: '1px solid #b8e6b8'
+              border: '1px solid #ffeaa7'
             }}>
-              <span style={{ fontSize: '14px', color: '#2d5a2d', fontWeight: '500' }}>
-                กำลังจัดการเงื่อนไขสำหรับ: {title} {firstName} {lastName}
+              <span style={{ fontSize: '14px', color: '#856404', fontWeight: '500' }}>
+                กำลังแก้ไขเงื่อนไขของ: {fullname} (ID: {userID})
               </span>
-
             </div>
           )}
 
@@ -334,8 +378,13 @@ const AddConditionpage: React.FC = () => {
             </table>
           </div>
 
-          {/* Save Button */}
-          <div className="save-button-container">
+          {/* Action Buttons */}
+          <div className="save-button-container" style={{
+            display: 'flex',
+            gap: '12px',
+            justifyContent: 'flex-end', // เปลี่ยนจาก center เป็น flex-end
+            flexWrap: 'wrap'
+          }}>
             <button
               onClick={handleSubmit}
               className="addcondition-primary-button"
@@ -348,10 +397,49 @@ const AddConditionpage: React.FC = () => {
                 borderRadius: '6px',
                 cursor: isLoading ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s ease',
+                opacity: isLoading ? 0.7 : 1,
+                backgroundColor: '#F26522'
+              }}
+            >
+              {isLoading ? 'กำลังอัปเดต...' : 'อัปเดตข้อมูล'}
+            </button>
+
+            <button
+              onClick={handleCancel}
+              disabled={isLoading}
+              style={{
+                padding: '12px 32px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                border: '2px solid #6c757d',
+                borderRadius: '6px',
+                backgroundColor: 'white',
+                color: '#6c757d',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
                 opacity: isLoading ? 0.7 : 1
               }}
             >
-              {isLoading ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+              ยกเลิก
+            </button>
+
+            <button
+              onClick={handleDeleteAll}
+              disabled={isLoading}
+              style={{
+                padding: '12px 32px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                border: 'none',
+                borderRadius: '6px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                opacity: isLoading ? 0.7 : 1
+              }}
+            >
+              ลบทั้งหมด
             </button>
           </div>
 
@@ -369,7 +457,7 @@ const AddConditionpage: React.FC = () => {
               fontSize: '14px',
               fontWeight: 'bold'
             }}>
-              คำแนะนำการใช้งาน:
+              คำแนะนำการแก้ไข:
             </h4>
             <ul style={{
               margin: 0,
@@ -378,34 +466,32 @@ const AddConditionpage: React.FC = () => {
               fontSize: '13px',
               lineHeight: '1.6'
             }}>
-              <li>คลิก "เพิ่มช่วงเวลาไม่สะดวก" เพื่อเพิ่มช่วงเวลาที่ไม่สะดวกในแต่ละวัน</li>
-              <li>สามารถเพิ่มหลายช่วงเวลาในวันเดียวกันได้</li>
-              <li>คลิก "ลบ" เพื่อลบช่วงเวลาที่ไม่ต้องการ</li>
-              <li>กำหนดเวลาเริ่มต้นและเวลาสิ้นสุดให้ครบถ้วน</li>
-              <li>เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุด</li>
-              <li>ข้อมูลจะถูกนำไปใช้ในการจัดตารางเรียนอัตโนมัติ</li>
-              <li>หลังจากบันทึกสำเร็จ ระบบจะนำคุณไปยังหน้าดูเงื่อนไขทั้งหมด</li>
+              <li>แก้ไขเวลาที่ต้องการเปลี่ยนแปลง</li>
+              <li>เพิ่มช่วงเวลาใหม่หรือลบช่วงเวลาที่ไม่ต้องการ</li>
+              <li>คลิก "อัปเดตข้อมูล" เพื่อบันทึกการเปลี่ยนแปลง</li>
+              <li>คลิก "ลบทั้งหมด" เพื่อลบเงื่อนไขทั้งหมดของผู้ใช้นี้</li>
+              <li>คลิก "ยกเลิก" เพื่อกลับไปหน้าเงื่อนไขโดยไม่บันทึก</li>
             </ul>
           </div>
 
-          {/* สรุปเงื่อนไข */}
+          {/* Summary */}
           {Object.keys(timeSlotsByDay).length > 0 && (
             <div style={{
               marginTop: '16px',
               padding: '12px 16px',
-              backgroundColor: '#fff3cd',
+              backgroundColor: '#d1ecf1',
               borderRadius: '6px',
-              border: '1px solid #ffeaa7'
+              border: '1px solid #bee5eb'
             }}>
               <h4 style={{
                 margin: '0 0 8px 0',
-                color: '#856404',
+                color: '#0c5460',
                 fontSize: '14px',
                 fontWeight: 'bold'
               }}>
-                สรุปเงื่อนไขที่จะบันทึก:
+                สรุปเงื่อนไขปัจจุบัน:
               </h4>
-              <div style={{ fontSize: '13px', color: '#856404' }}>
+              <div style={{ fontSize: '13px', color: '#0c5460' }}>
                 {Object.entries(timeSlotsByDay).map(([dayIndex, slots]) => (
                   slots.length > 0 && (
                     <div key={dayIndex} style={{ marginBottom: '4px' }}>
@@ -418,8 +504,8 @@ const AddConditionpage: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
-export default AddConditionpage;
+export default EditConditionpage;

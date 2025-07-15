@@ -1,4 +1,57 @@
 package config
+////////////////////////////////////// ของไดม่อนอย่าลบ //////////////////////////////////////////////////////////
+// import (
+// 	// "database/sql"
+// 	"errors"
+// 	"fmt"
+// 	"log"
+// 	"os"
+// 	"time"
+
+// 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
+// 	_ "github.com/lib/pq"
+
+// 	// "gorm.io/driver/postgres"
+// 	"gorm.io/driver/sqlite"
+// 	"gorm.io/gorm"
+// )
+
+// var db *gorm.DB
+
+// func DB() *gorm.DB {
+// 	return db
+// }
+
+// func CreateDatabase() {
+// 	dbName := "cpe_schedule.db"
+
+// 	// เช็คว่าไฟล์ฐานข้อมูลมีอยู่แล้วหรือยัง
+// 	if _, err := os.Stat(dbName); os.IsNotExist(err) {
+// 		file, err := os.Create(dbName)
+// 		if err != nil {
+// 			log.Fatal("Failed to create SQLite database file:", err)
+// 		}
+// 		file.Close()
+// 		fmt.Println("Database file created successfully")
+// 	} else {
+// 		fmt.Println("Database file already exists")
+// 	}
+// }
+
+// func ConnectionDB() {
+// 	database, err := gorm.Open(sqlite.Open("CPE_Schdule.db?cache=shared"), &gorm.Config{})
+// 	if err != nil {
+// 		panic("failed to connect database")
+// 	}
+// 	fmt.Println("connected database")
+// 	db = database
+// }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
 
 import (
 	"database/sql"

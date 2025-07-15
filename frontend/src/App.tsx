@@ -19,6 +19,7 @@ import ManageAssistance from "./pages/admin/ManageAssistance/ManageAssistance";
 
 import ChangePassword from "./pages/instructor/ChangePassword/ChangePassword";
 import AddCondition from "./pages/instructor/AddCondition/AddCondition";
+import EditConditionpage from "./pages/scheduler/addconditionpage/EditConditionpage";
 import AddCourse from "./pages/instructor/AddCourse/AddCourse";
 
 import Homepage from "./pages/home/HomeSchedulor/Homepage";
@@ -66,6 +67,7 @@ const App: React.FC = () => {
         <Route path="/Instructorpage" element={<Instructorpage/>} />
         <Route path="/AllCoursepage" element={<AllCoursepage/>} />
         <Route path="/AddConditionpage" element={<AddConditionpage/>} />
+        <Route path="/EditConditionpage" element={<EditConditionpage/>} />
         <Route path="/AddCoursepage" element={<AddCoursepage/>} />
       </Routes>
     </Router>
