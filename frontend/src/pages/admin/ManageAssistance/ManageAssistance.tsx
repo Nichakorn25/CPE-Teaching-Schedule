@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Header from "../../../components/header/Header";
+import Sidebar from "../../../components/schedule-sidebar/Sidebar";
 import { getAllTitle } from "../../../services/https/GetService";
 import {
   TitleInterface,
@@ -113,6 +114,7 @@ const ManageAssistance: React.FC = () => {
       className="p-10 font-sarabun grid grid-cols-1 md:grid-cols-2 gap-y-14 gap-x-12 w-full mt-20 bg-white"
     >
       <Header />
+      <Sidebar/>
       {/* Left side */}
       <div className="flex flex-col gap-4 col-span-1 md:col-span-2">
         <label className="text-sm text-[#f26522]">คำนำหน้า</label>
