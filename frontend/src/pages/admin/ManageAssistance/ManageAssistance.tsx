@@ -7,10 +7,12 @@ import {
 } from "../../../interfaces/TeachingAssistant";
 import { postCreateTeachingAssistant } from "../../../services/https/AdminPageServices";
 import Swal from "sweetalert2";
+import { useNavigate } from "react-router-dom";
 
 const ManageAssistance: React.FC = () => {
   const [title, setTitle] = useState<TitleInterface[]>([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -28,7 +30,7 @@ const ManageAssistance: React.FC = () => {
     ID: 0,
     Firstname: "",
     Lastname: "",
-    Nickname: "",
+    Email: "",
     PhoneNumber: "",
     TitleID: 0,
     Title: {
@@ -66,8 +68,7 @@ const ManageAssistance: React.FC = () => {
     if (
       !form.Firstname ||
       !form.Lastname ||
-      !form.Nickname ||
-      !form.Lastname ||
+      !form.Email ||
       !form.PhoneNumber ||
       form.TitleID === 0
     ) {
@@ -85,10 +86,24 @@ const ManageAssistance: React.FC = () => {
 
     const res = await postCreateTeachingAssistant(dataToSubmit);
 
+    const selectedTitle = title.find((t) => t.ID === form.TitleID)?.Title || "";
+    const fullname = `${form.Firstname} ${form.Lastname}`;
+
     if (res.status === 201 || res.status === 200) {
-      alert("บันทึกสำเร็จ");
+      Swal.fire({
+        icon: "success",
+        title: "บันทึกสำเร็จ",
+        text: `ข้อมูล ${selectedTitle} ${fullname} ถูกบันทึกเรียบร้อยแล้ว`,
+        confirmButtonText: "ตกลง",
+      }).then(() => {
+        navigate("/assistance-list"); // 🔁 เปลี่ยน path ได้ตามจริง
+      });
     } else {
-      alert("บันทึกล้มเหลว: " + res?.data?.error);
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาด",
+        text: res?.data?.error || "ไม่สามารถบันทึกข้อมูลได้",
+      });
     }
   };
 
@@ -122,7 +137,7 @@ const ManageAssistance: React.FC = () => {
           <div className="flex flex-col">
             <label className="text-sm text-[#f26522]">ชื่อ</label>
             <input
-              name="firstName"
+              name="Firstname"
               value={form.Firstname}
               onChange={handleChange}
               className="w-full border border-orange-400 rounded px-3 py-2 text-sm"
@@ -131,7 +146,7 @@ const ManageAssistance: React.FC = () => {
           <div className="flex flex-col">
             <label className="text-sm text-[#f26522]">นามสกุล</label>
             <input
-              name="lastName"
+              name="Lastname"
               value={form.Lastname}
               onChange={handleChange}
               className="w-full border border-orange-400 rounded px-3 py-2 text-sm"
@@ -144,8 +159,8 @@ const ManageAssistance: React.FC = () => {
           <div className="flex flex-col">
             <label className="text-sm text-[#f26522]">อีเมล</label>
             <input
-              name="email"
-              value={form.ID}
+              name="Email"
+              value={form.Email}
               onChange={handleChange}
               className="w-full border border-orange-400 rounded px-3 py-2 text-sm font-bold"
             />
@@ -153,7 +168,7 @@ const ManageAssistance: React.FC = () => {
           <div className="flex flex-col">
             <label className="text-sm text-[#f26522]">หมายเลขโทรศัพท์</label>
             <input
-              name="phone"
+              name="PhoneNumber"
               value={form.PhoneNumber}
               onChange={handleChange}
               className="w-full border border-orange-400 rounded px-3 py-2 text-sm font-bold"

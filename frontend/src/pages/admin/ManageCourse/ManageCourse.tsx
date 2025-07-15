@@ -94,7 +94,7 @@ const ManageCourse: React.FC = () => {
       Code: courseCode,
       EnglishName: englishName,
       ThaiName: thaiName,
-      CurriculumID: 1, // สมมุติเป็น ID จริง (ดึงจากระบบในอนาคต)
+      CurriculumID: 1, // สมมุติเป็น ID จริง (ดึงจากระบบ)
       AcademicYearID: 1, // ปี 2565 เป็นต้น
       TypeOfCoursesID: parseInt(courseType),
       CreditID: 1, // ต้อง match กับฐานข้อมูล

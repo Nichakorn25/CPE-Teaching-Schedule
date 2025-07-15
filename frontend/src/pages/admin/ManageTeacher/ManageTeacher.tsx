@@ -89,7 +89,7 @@ const ManageTeacher: React.FC = () => {
       if (!id) return;
       const res = await getUserById(id);
 
-      console.log("👉 User Data", res.data); // ช่วย debug ได้
+      console.log("User Data", res.data); // ช่วย debug 
 
       if (res.status === 200 && res.data) {
         const data = res.data;
@@ -109,7 +109,7 @@ const ManageTeacher: React.FC = () => {
           RoleID: Number(data.role_id),
         });
 
-        // ✅ ค้นหา Major เพื่อ set DepartmentID
+        //ค้นหา Major เพื่อ set DepartmentID
         const foundMajor = majors.find((m) => m.ID === Number(data.major_id));
         setSelectedDepartmentID(foundMajor?.DepartmentID || 0);
 

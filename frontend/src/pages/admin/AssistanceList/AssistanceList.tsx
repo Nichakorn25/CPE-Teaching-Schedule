@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import Header from "../../../components/header/Header";
-import { getAllTeachingAssistants } from "../../../services/https/AdminPageServices";
+import {
+  getAllTeachingAssistants,
+  deleteTeachingAssistant,
+} from "../../../services/https/AdminPageServices";
 import { TeachingAssistantInterface } from "../../../interfaces/TeachingAssistant";
+import Swal from "sweetalert2";
 
 const AssistanceList = () => {
   const [assistanceData, setAssistanceData] = useState<
@@ -16,13 +20,13 @@ const AssistanceList = () => {
       if (response.status === 200 && Array.isArray(response.data)) {
         const mappedData: TeachingAssistantInterface[] = response.data
           .filter((item: any) => item.Firstname && item.Lastname)
-          .map((item: any, index: number) => ({
+          .map((item: any) => ({
             ID: item.ID,
             TitleID: item.TitleID,
-            Title: item.Title, // ✅ เพิ่ม Title แบบ object
+            Title: item.Title,
             Firstname: item.Firstname,
             Lastname: item.Lastname,
-            Nickname: item.Nickname,
+            Email: item.Email,
             PhoneNumber: item.PhoneNumber,
             ScheduleTeachingAssistant: [],
           }));
@@ -34,6 +38,46 @@ const AssistanceList = () => {
     };
     FetchAssistance();
   }, []);
+
+  const handleDeleteAssistance = async (
+    DeleteID: number,
+    fullName: string,
+    title: string
+  ) => {
+    const result = await Swal.fire({
+      title: "คุณแน่ใจหรือไม่?",
+      text: `คุณต้องการลบ ${title} ${fullName} หรือไม่?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#f26522",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "ตกลง",
+      cancelButtonText: "ยกเลิก",
+    });
+
+    if (result.isConfirmed) {
+      const response = await deleteTeachingAssistant(DeleteID); // ส่ง ID ที่เป็น number
+      console.log("ลบไอดีนี้", response);
+
+      if (response.status === 200) {
+        Swal.fire("ลบเรียบร้อย!", `${title} ${fullName} ถูกลบแล้ว`, "success");
+
+        setAssistanceData((prev) => {
+          const updated = prev.filter((ass) => ass.ID !== DeleteID);
+          return updated.map((item, index) => ({
+            ...item,
+            ID: index + 1, // จัดลำดับใหม่
+          }));
+        });
+      } else {
+        Swal.fire(
+          "เกิดข้อผิดพลาด!",
+          response.data?.error || "ไม่สามารถลบอาจารย์ได้",
+          "error"
+        );
+      }
+    }
+  };
 
   return (
     <div className="font-sarabun p-6 mt-10">
@@ -105,7 +149,7 @@ const AssistanceList = () => {
                 <th className="w-[120px]">คำนำหน้า</th>
                 <th className="w-[100px]">ชื่อ</th>
                 <th className="w-[120px]">นามสกุล</th>
-                <th className="w-[220px]">ชื่อเล่น</th>
+                <th className="w-[220px]">อีเมล</th>
                 <th className="w-[120px]">หมายเลขโทรศัพท์</th>
                 <th className="w-[120px]">จัดการ</th>
               </tr>
@@ -117,13 +161,22 @@ const AssistanceList = () => {
                   <td className="py-3">{assistance.Title?.Title}</td>
                   <td className="py-3">{assistance.Firstname}</td>
                   <td className="py-3">{assistance.Lastname}</td>
-                  <td className="py-3">{assistance.Nickname}</td>
+                  <td className="py-3">{assistance.Email}</td>
                   <td className="py-3">{assistance.PhoneNumber}</td>
                   <td className="py-3 flex justify-center gap-2">
                     <button className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-sm">
                       แก้ไข
                     </button>
-                    <button className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm">
+                    <button
+                      className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm"
+                      onClick={() =>
+                        handleDeleteAssistance(
+                          assistance.ID,
+                          `${assistance.Firstname} ${assistance.Lastname}`,
+                          assistance.Title?.Title || ""
+                        )
+                      }
+                    >
                       ลบ
                     </button>
                   </td>

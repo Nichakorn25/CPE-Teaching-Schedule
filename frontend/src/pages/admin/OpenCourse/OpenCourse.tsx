@@ -1,114 +1,67 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaSearch } from "react-icons/fa";
 import Header from "../../../components/header/Header";
-
-interface Course {
-  id: number;
-  code: string;
-  name: string;
-  credit: string;
-  category: string;
-  teacher: string;
-  room: string;
-  group: string;
-  day: string;
-  time: string;
-  groupCount: number;
-  studentPerGroup: number;
-  note?: string;
-}
+import { OpenCourseInterface } from "../../../interfaces/Adminpage";
+import { getOpenCourses } from "../../../services/https/AdminPageServices";
 
 const OpenCourse: React.FC = () => {
+  const [courseData, setCourseData] = useState<OpenCourseInterface[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [academicYear, setAcademicYear] = useState("2567");
-  const [semester, setSemester] = useState("3");
+  const [academicYear, setAcademicYear] = useState("");
+  const [semester, setSemester] = useState("");
   const [perPage, setPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const courseData: Course[] = [
-    {
-      id: 1,
-      code: "IST20 1001",
-      name: "DIGITAL LITERACY",
-      credit: "2(2–0–4)",
-      category: "หมวดวิชาศึกษาทั่วไป",
-      teacher: "อ.ดร.ปราโมทย์ ภักดีณรงค์",
-      room: "B4101",
-      group: "1",
-      day: "จันทร์",
-      time: "13:00–15:00",
-      groupCount: 1,
-      studentPerGroup: 1500,
-      note: "วิชาจากศูนย์บริการ",
-    },
-    {
-      id: 2,
-      code: "IST20 1502",
-      name: "ART APPRECIATION",
-      credit: "2(2–0–4)",
-      category: "หมวดวิชาศึกษาทั่วไป",
-      teacher: "อ.ดร.ปราโมทย์ ภักดีณรงค์",
-      room: "B4101",
-      group: "1",
-      day: "พุธ",
-      time: "17:00–19:00",
-      groupCount: 1,
-      studentPerGroup: 1500,
-      note: "วิชาจากศูนย์บริการ",
-    },
-    {
-      id: 3,
-      code: "ENG323 3017",
-      name: "INTRODUCTION TO DATA ENGINEERING",
-      credit: "4(3–3–9)",
-      category: "หมวดวิชาเฉพาะ",
-      teacher: "รศ.ดร.ศรัญญา กาญจนวัฒนา",
-      room: "DIGITAL TECH LAB 01",
-      group: "1",
-      day: "",
-      time: "",
-      groupCount: 1,
-      studentPerGroup: 45,
-    },
-    ...Array.from({ length: 24 }, (_, i) => {
-      const groupNumber = i + 1;
-      return {
-        id: 4 + i,
-        code: "ENG323 2001",
-        name: "COMPUTER PROGRAMMING 1",
-        credit: "2(1–3–5)",
-        category: "หมวดวิชาเฉพาะ",
-        teacher: "รศ.ดร.ศรัญญา กาญจนวัฒนา",
-        room: `DIGITAL TECH LAB ${String(groupNumber).padStart(2, "0")}`,
-        group: `${groupNumber}`,
-        day: groupNumber === 9 ? "พุธ" : groupNumber === 24 ? "พฤหัสบดี" : "",
-        time: groupNumber === 9 || groupNumber === 24 ? "16:00–19:00" : "",
-        groupCount: 30,
-        studentPerGroup: 45,
-        note: groupNumber === 9 ? "วิชาจากศูนย์บริการ" : "",
-      };
-    }),
-  ];
+  const fetchOpenCourses = async () => {
+    const response = await getOpenCourses();
+    console.log(response)
 
-  const filteredData = courseData.filter((course) =>
-    course.name.toLowerCase().includes(searchTerm.toLowerCase())
+    if (response.status === 200 && Array.isArray(response.data?.data)) {
+      const mappedData: OpenCourseInterface[] = response.data.data.map(
+        (item: any) => ({
+          ID: item.ID,
+          Year: item.Year,
+          Term: item.Term,
+          Code: item.Code,
+          Name: item.Name,
+          Credit: item.Credit,
+          TypeName: item.TypeName,
+          Teacher: item.Teacher,
+          GroupInfos: item.GroupInfos || [],
+          GroupTotal: item.GroupTotal,
+          CapacityPer: item.CapacityPer,
+          Remark: item.Remark,
+          IsFixCourses: item.IsFixCourses,
+        })
+      );
+
+      setCourseData(mappedData);
+    } else {
+      console.error("โหลดข้อมูลรายวิชาไม่สำเร็จ", response);
+    }
+  };
+
+  useEffect(() => {
+    fetchOpenCourses();
+  }, []);
+
+  const filteredCourses = courseData
+  .filter((course) =>
+    academicYear ? String(course.Year) === academicYear : true
+  )
+  .filter((course) =>
+    semester ? String(course.Term) === semester : true
+  )
+  .filter((course) =>
+    course.Name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const groupedCourses = filteredData.reduce<Record<string, Course[]>>(
-    (acc, course) => {
-      if (!acc[course.code]) acc[course.code] = [];
-      acc[course.code].push(course);
-      return acc;
-    },
-    {}
-  );
 
   return (
     <div className="p-6 font-sarabun mt-10">
       <Header />
-      {/* Filters */}
-      <div className="flex flex-wrap justify-between items-center gap-4 bg-[#f5f5f5] p-4 rounded-md mb-4">
 
+      <div className="flex flex-wrap justify-between items-center gap-4 bg-[#f5f5f5] p-4 rounded-md mb-4">
         <div className="flex items-center border border-black rounded px-2 py-1">
           <input
             type="text"
@@ -177,7 +130,6 @@ const OpenCourse: React.FC = () => {
         </select>
       </div>
 
-      {/* Table */}
       <div className="overflow-x-auto bg-white shadow rounded-lg">
         <table className="min-w-full border text-sm text-center">
           <thead className="bg-gray-100 text-[#5d7285]">
@@ -188,10 +140,6 @@ const OpenCourse: React.FC = () => {
               <th className="border p-2">หน่วยกิต</th>
               <th className="border p-2">หมวดวิชา</th>
               <th className="border p-2">อาจารย์ผู้สอน</th>
-              <th className="border p-2">ห้องเรียน</th>
-              <th className="border p-2">กลุ่ม</th>
-              <th className="border p-2">วัน</th>
-              <th className="border p-2">เวลา</th>
               <th className="border p-2">จำนวนกลุ่ม</th>
               <th className="border p-2">นักศึกษาต่อกลุ่ม</th>
               <th className="border p-2">หมายเหตุ</th>
@@ -199,67 +147,29 @@ const OpenCourse: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {Object.entries(groupedCourses).map(([code, group]) =>
-              group.map((course, index) => (
-                <tr key={`${course.code}-${course.group}`} className="border-t">
-                  {index === 0 && (
-                    <>
-                      <td className="border p-2" rowSpan={group.length}>
-                        {course.id}
-                      </td>
-                      <td className="border p-2" rowSpan={group.length}>
-                        {course.code}
-                      </td>
-                      <td className="border p-2" rowSpan={group.length}>
-                        {course.name}
-                      </td>
-                      <td className="border p-2" rowSpan={group.length}>
-                        {course.credit}
-                      </td>
-                      <td className="border p-2" rowSpan={group.length}>
-                        {course.category}
-                      </td>
-                      <td className="border p-2" rowSpan={group.length}>
-                        {course.teacher}
-                      </td>
-                    </>
-                  )}
-
-                  <td className="border p-2">{course.room}</td>
-                  <td className="border p-2">{course.group}</td>
-
-                  {index === 0 && (
-                    <>
-                      <td className="border p-2" rowSpan={group.length}>
-                        {course.day || "-"}
-                      </td>
-                      <td className="border p-2" rowSpan={group.length}>
-                        {course.time || "-"}
-                      </td>
-                      <td className="border p-2" rowSpan={group.length}>
-                        {course.groupCount}
-                      </td>
-                      <td className="border p-2" rowSpan={group.length}>
-                        {course.studentPerGroup}
-                      </td>
-                      <td className="border p-2" rowSpan={group.length}>
-                        {course.note || "-"}
-                      </td>
-                      <td className="border p-2" rowSpan={group.length}>
-                        <div className="flex justify-center gap-2">
-                          <button className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm">
-                            แก้ไข
-                          </button>
-                          <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
-                            ลบ
-                          </button>
-                        </div>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))
-            )}
+            {filteredCourses.map((course, index) => (
+              <tr key={course.ID} className="border-t">
+                <td className="border p-2">{index + 1}</td>
+                <td className="border p-2">{course.Code || "-"}</td>
+                <td className="border p-2">{course.Name || "-"}</td>
+                <td className="border p-2">{course.Credit}</td>
+                <td className="border p-2">{course.TypeName}</td>
+                <td className="border p-2">{course.Teacher}</td>
+                <td className="border p-2">{course.GroupTotal}</td>
+                <td className="border p-2">{course.CapacityPer}</td>
+                <td className="border p-2">{course.Remark || "-"}</td>
+                <td className="border p-2">
+                  <div className="flex justify-center gap-2">
+                    <button className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm">
+                      แก้ไข
+                    </button>
+                    <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                      ลบ
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

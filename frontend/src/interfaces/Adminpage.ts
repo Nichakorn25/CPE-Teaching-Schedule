@@ -79,6 +79,26 @@ export interface MajorInterface {
   Department: DepartmentInterface;
 }
 
+export interface OpenCourseInterface {
+  ID: number;
+  Year: number;
+  Term: number;
+  Code: string;
+  Name: string;
+  Credit: string;
+  TypeName: string;
+  Teacher: string;
+  GroupInfos: {
+    Room: string;
+    Group: string;
+    Day: string;
+    Time: string;
+  }[];
+  GroupTotal: number;
+  CapacityPer: number;
+  Remark: string;
+  IsFixCourses: boolean;
+}
 
 //////////////////////////////////// ด้านล่างนี้ยังไม่เช็ค //////////////////////////////////
 export interface OfferedCourseInterface {

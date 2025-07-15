@@ -135,12 +135,12 @@ export {
   putUpdateUser,//used
   deleteUser,//used
 
-  getOpenCourses,
+  getOpenCourses, //used
 
   getAllTeachingAssistants, //used
-  postCreateTeachingAssistant,
+  postCreateTeachingAssistant, //used
   putUpdateTeachingAssistant,
-  deleteTeachingAssistant,
+  deleteTeachingAssistant, //used
 
   getTypeofCourse,//used
 
