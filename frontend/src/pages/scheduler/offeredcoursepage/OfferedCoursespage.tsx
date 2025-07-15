@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/schedule-header/Header";
+import Header from "../../../components/header/Header";
 import "./OfferedCoursespage.css";
 import { Button, Table, Input, Select, Typography } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
@@ -424,7 +424,9 @@ const OfferedCoursespage: React.FC = () => {
     ];
 
     return (
-        <>
+        <div className="p-6 font-sarabun mt-16">
+            <Header />
+            
             {/* Background Layer */}
             <div className="schedule-background" />
             
@@ -434,19 +436,32 @@ const OfferedCoursespage: React.FC = () => {
             </div>
             
             {/* Main Content */}
-            <div className="schedule-main-content">
-                {/* Header  */}
-                <div style={{
-                    position: 'absolute',
-                    top: '15px',
-                    right: '0px',
-                    zIndex: 999
-                }}>
-                    <Header />
-                </div>
-                
+            <div className="schedule-main-content">                
                 {/* ✅ White Content Area */}
                 <div className="schedule-content-area">
+                    {/* Page Title */}
+                    <div style={{ 
+                        marginBottom: '20px',
+                        paddingBottom: '12px',
+                        borderBottom: '2px solid #F26522'
+                    }}>
+                        <h2 style={{ 
+                            margin: '0 0 8px 0', 
+                            color: '#333',
+                            fontSize: '20px',
+                            fontWeight: 'bold'
+                        }}>
+                            รายวิชาที่เปิดสอน
+                        </h2>
+                        <p style={{ 
+                            margin: 0, 
+                            color: '#666',
+                            fontSize: '13px'
+                        }}>
+                            จัดการรายวิชาที่เปิดสอนในแต่ละภาคเรียน
+                        </p>
+                    </div>
+
                     {/* Controls Section */}
                     <div style={{ 
                         marginBottom: '20px'
@@ -621,11 +636,48 @@ const OfferedCoursespage: React.FC = () => {
                                 fontSize: '12px'
                             }}
                             className="custom-table"
+                            locale={{
+                                emptyText: (
+                                    <div style={{ 
+                                        padding: '40px', 
+                                        textAlign: 'center', 
+                                        color: '#999' 
+                                    }}>
+                                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
+                                        <div style={{ fontSize: '16px', marginBottom: '8px' }}>
+                                            ไม่พบรายวิชาที่เปิดสอน
+                                        </div>
+                                        <div style={{ fontSize: '14px', color: '#ccc' }}>
+                                            ยังไม่มีรายวิชาที่เปิดสอนในภาคเรียนนี้
+                                        </div>
+                                    </div>
+                                )
+                            }}
                         />
+                    </div>
+
+                    {/* Footer Info */}
+                    <div style={{
+                        marginTop: '16px',
+                        padding: '12px 16px',
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: '6px',
+                        border: '1px solid #e9ecef',
+                        fontSize: '12px',
+                        color: '#666'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                💡 <strong>หมายเหตุ:</strong> รายวิชาเหล่านี้เป็นรายวิชาที่เปิดสอนในภาคเรียนปัจจุบัน
+                            </div>
+                            <div>
+                                ข้อมูลล่าสุด: {new Date().toLocaleString('th-TH')}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 

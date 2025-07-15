@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/schedule-header/Header";
+import Header from "../../../components/header/Header";
 import "./Conditionpage.css";
 import { Button, Table, Input, Select, message, Modal } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
@@ -348,7 +348,9 @@ const Conditionpage: React.FC = () => {
     ];
 
     return (
-        <>
+        <div className="p-6 font-sarabun mt-16">
+            <Header />
+            
             {/* Background Layer */}
             <div className="condition-background" />
             
@@ -359,16 +361,6 @@ const Conditionpage: React.FC = () => {
             
             {/* Main Content */}
             <div className="condition-main-content">
-                {/* Header */}
-                <div style={{
-                    position: 'absolute',
-                    top: '15px',
-                    right: '0px',
-                    zIndex: 999
-                }}>
-                    <Header />
-                </div>
-                
                 {/* White Content Area */}
                 <div className="condition-content-area">
                     {/* Page Title */}
@@ -614,7 +606,7 @@ const Conditionpage: React.FC = () => {
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/schedule-header/Header";
+import Header from "../../../components/header/Header";
 import "./AllCoursepage.css";
 import { Button, Table, Input, Select, message, Modal } from 'antd';
 import { SearchOutlined, PlusOutlined } from '@ant-design/icons';
@@ -35,7 +35,7 @@ const AllCoursepage: React.FC = () => {
       id: 1,
       code: "IST20 1001",
       name: "DIGITAL LITERACY",
-      credit: "2(2-0-4)",
+      credit: "2(2–0–4)",
       category: "หมวดวิชาศึกษาทั่วไป",
       instructors: ["อ.ดร.ปราโมทย์ ภักดีณรงค์"],
     },
@@ -43,7 +43,7 @@ const AllCoursepage: React.FC = () => {
       id: 2,
       code: "IST20 1502",
       name: "ART APPRECIATION",
-      credit: "2(2-0-4)",
+      credit: "2(2–0–4)",
       category: "หมวดวิชาศึกษาทั่วไป",
       instructors: ["อ.ดร.ปราโมทย์ ภักดีณรงค์"],
     },
@@ -212,8 +212,9 @@ const AllCoursepage: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 font-sarabun mt-10">
-    <>
+    <div className="p-6 font-sarabun mt-16">
+      <Header />
+      
       {/* Background Layer */}
       <div className="allcourse-background" />
       
@@ -224,16 +225,6 @@ const AllCoursepage: React.FC = () => {
       
       {/* Main Content */}
       <div className="allcourse-main-content">
-        {/* Header */}
-        <div style={{
-          position: 'absolute',
-          top: '15px',
-          right: '0px',
-          zIndex: 999
-        }}>
-          <Header />
-        </div>
-        
         {/* White Content Area */}
         <div className="allcourse-content-area">
           {/* Page Title */}
@@ -444,7 +435,6 @@ const AllCoursepage: React.FC = () => {
           </div>
         </div>
       </div>
-    </>
     </div>
   );
 };

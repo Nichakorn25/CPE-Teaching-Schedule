@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/schedule-header/Header";
+import Header from "../../../components/header/Header";
 import "./Schedulepage.css";
 import { Button, Flex, Table, Modal, Input, List, Card, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -886,7 +886,9 @@ const Schedulepage: React.FC = () => {
     });
 
     return (
-        <>
+        <div className="p-6 font-sarabun mt-16">
+            <Header />
+            
             {/* Background Layer */}
             <div className="schedule-background" />
             
@@ -897,18 +899,31 @@ const Schedulepage: React.FC = () => {
             
             {/* Main Content */}
             <div className="schedule-main-content">
-                {/* Header  */}
-                <div style={{
-                    position: 'absolute',
-                    top: '15px',
-                    right: '0px',
-                    zIndex: 999
-                }}>
-                    <Header />
-                </div>
-                
                 {/* ✅ White Content Area */}
                 <div className="schedule-content-area">
+                    {/* Page Title */}
+                    <div style={{ 
+                        marginBottom: '20px',
+                        paddingBottom: '12px',
+                        borderBottom: '2px solid #F26522'
+                    }}>
+                        <h2 style={{ 
+                            margin: '0 0 8px 0', 
+                            color: '#333',
+                            fontSize: '20px',
+                            fontWeight: 'bold'
+                        }}>
+                            จัดตารางเรียน
+                        </h2>
+                        <p style={{ 
+                            margin: 0, 
+                            color: '#666',
+                            fontSize: '13px'
+                        }}>
+                            สร้างและจัดการตารางเรียนแบบ Drag & Drop
+                        </p>
+                    </div>
+
                     <Flex className="schedule-button" gap="small" wrap style={{ marginBottom: '20px' }}>
                         <Button type="primary" className="primary-button" onClick={saveScheduleData}>
                             บันทึก
@@ -1039,7 +1054,7 @@ const Schedulepage: React.FC = () => {
                     </Modal>
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 

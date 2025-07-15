@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/schedule-header/Header";
+import Header from "../../../components/header/Header";
 import "./AddConditionpage.css";
 import { message } from 'antd';
 import { postCreateConditions } from "../../../services/https/SchedulerPageService";
@@ -175,7 +175,9 @@ const AddConditionpage: React.FC = () => {
   };
 
   return (
-    <>
+    <div className="p-6 font-sarabun mt-16">
+      <Header />
+      
       <div className="addcondition-background" />
 
       <div className="addcondition-sidebar">
@@ -183,15 +185,6 @@ const AddConditionpage: React.FC = () => {
       </div>
 
       <div className="addcondition-main-content">
-        <div style={{
-          position: 'absolute',
-          top: '15px',
-          right: '0px',
-          zIndex: 999
-        }}>
-          <Header />
-        </div>
-
         {/* White Content Area */}
         <div className="addcondition-content-area">
           {/* Page Title */}
@@ -425,7 +418,7 @@ const AddConditionpage: React.FC = () => {
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
