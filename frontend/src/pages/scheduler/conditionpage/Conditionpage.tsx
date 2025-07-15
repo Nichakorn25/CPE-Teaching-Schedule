@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../../../components/schedule-sidebar/Sidebar";
 import Header from "../../../components/schedule-header/Header";
 import "./Conditionpage.css";
 import { Button, Table, Input, Select, message, Modal } from 'antd';
-import { SearchOutlined, PlusOutlined } from '@ant-design/icons';
+import { SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { getAllConditions } from "../../../services/https/SchedulerPageService";
+import { getAllConditions, deleteConditionsByUser } from "../../../services/https/SchedulerPageService";
 import { UserConInterface, ConditionInterface } from "../../../interfaces/SchedulerIn";
 
 const { Option } = Select;
@@ -16,20 +17,29 @@ interface ConditionTableData extends UserConInterface {
 }
 
 const Conditionpage: React.FC = () => {
+    const navigate = useNavigate();
     const [searchText, setSearchText] = useState('');
     const [selectedDepartment, setSelectedDepartment] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [conditionsData, setConditionsData] = useState<UserConInterface[]>([]);
+    const [loading, setLoading] = useState(false);
 
     const getAllUserConditions = async () => {
-    try {
-        let res = await getAllConditions();
-        if (res) {
-            setConditionsData(res.data);
-        }
+        try {
+            setLoading(true);
+            let res = await getAllConditions();
+            if (res && res.status === 200) {
+                setConditionsData(res.data);
+            } else {
+                console.error('Error response:', res);
+                message.error('ไม่สามารถโหลดข้อมูลเงื่อนไขได้');
+            }
         } catch (error) {
             console.error('Error fetching conditions:', error);
+            message.error('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -53,7 +63,7 @@ const Conditionpage: React.FC = () => {
     const tableData: ConditionTableData[] = filteredConditions.map((condition, index) => ({
         ...condition,
         key: condition.UserID?.toString() || `${index}`,
-        order: index + 1
+        order: (currentPage - 1) * pageSize + index + 1
     }));
 
     // Calculate pagination
@@ -83,7 +93,14 @@ const Conditionpage: React.FC = () => {
         return (
             <div className="time-slots-container">
                 {conditions.map((condition, index) => (
-                    <div key={`${condition.ID}-${index}`} className="time-slot-display">
+                    <div key={`${condition.ID}-${index}`} className="time-slot-display" style={{
+                        padding: '2px 6px',
+                        margin: '2px',
+                        backgroundColor: '#e6f4ff',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        display: 'inline-block'
+                    }}>
                         {condition.DayOfWeek}: {condition.Start}-{condition.End}
                     </div>
                 ))}
@@ -91,30 +108,95 @@ const Conditionpage: React.FC = () => {
         );
     };
 
-    // ฟังก์ชันลบเงื่อนไข
-    const handleDeleteCondition = (userID: number, fullname: string) => {
-        Modal.confirm({
-            title: 'ยืนยันการลบ',
-            content: `คุณต้องการลบเงื่อนไขของ "${fullname}" หรือไม่?`,
-            okText: 'ลบ',
-            okType: 'danger',
-            cancelText: 'ยกเลิก',
-            onOk() {
-                setConditionsData(prev => prev.filter(item => item.UserID !== userID));
-                message.success(`ลบเงื่อนไขของ ${fullname} สำเร็จ`);
+    // ฟังก์ชันลบเงื่อนไข - ใช้ window.confirm แทน Modal.confirm
+    const handleDeleteCondition = async (userID: number, fullname: string) => {
+        console.log('=== DELETE CONDITION DEBUG ===');
+        console.log('UserID to delete:', userID);
+        console.log('Fullname:', fullname);
+        
+        const confirmDelete = window.confirm(
+            `คุณต้องการลบเงื่อนไขทั้งหมดของ "${fullname}" หรือไม่?\n\n⚠️ การดำเนินการนี้ไม่สามารถยกเลิกได้`
+        );
+        
+        if (confirmDelete) {
+            console.log('=== USER CONFIRMED DELETE ===');
+            
+            try {
+                console.log('=== STARTING DELETE PROCESS ===');
+                console.log('Calling deleteConditionsByUser with userID:', userID.toString());
                 
-                // ปรับหน้าถ้าจำเป็น
-                if (currentData.length === 1 && currentPage > 1) {
-                    setCurrentPage(currentPage - 1);
+                // แสดง loading message
+                const loadingMessage = message.loading('กำลังลบเงื่อนไข...', 0);
+                
+                const result = await deleteConditionsByUser(userID.toString());
+                
+                // ปิด loading message
+                loadingMessage();
+                
+                console.log('=== DELETE API RESULT ===');
+                console.log('Full result object:', result);
+                console.log('Result status:', result?.status);
+                console.log('Result data:', result?.data);
+                
+                // ตรวจสอบผลลัพธ์
+                if (result && (result.status === 200 || result.status === 204 || result.status === 201)) {
+                    console.log('=== DELETE SUCCESS ===');
+                    
+                    // ลบออกจาก state
+                    setConditionsData(prev => {
+                        const filtered = prev.filter(item => item.UserID !== userID);
+                        console.log('Updated conditions data length:', filtered.length);
+                        return filtered;
+                    });
+                    
+                    message.success(`ลบเงื่อนไขของ ${fullname} สำเร็จ`);
+                    
+                    // ปรับหน้าถ้าจำเป็น
+                    if (currentData.length === 1 && currentPage > 1) {
+                        console.log('Adjusting pagination from page', currentPage, 'to', currentPage - 1);
+                        setCurrentPage(currentPage - 1);
+                    }
+                } else {
+                    console.log('=== DELETE FAILED ===');
+                    console.log('Status was not 200/201/204');
+                    console.log('Status:', result?.status);
+                    console.log('Data:', result?.data);
+                    
+                    const errorMsg = result?.data?.error || 
+                                    result?.data?.message || 
+                                    result?.statusText ||
+                                    'ไม่สามารถลบเงื่อนไขได้';
+                    message.error(`เกิดข้อผิดพลาด: ${errorMsg}`);
                 }
+            } catch (error) {
+                console.log('=== DELETE EXCEPTION ===');
+                console.error('Exception during delete:', error);
+                console.error('Error type:', typeof error);
+                console.error('Error message:', (error as any)?.message);
+                console.error('Error stack:', (error as any)?.stack);
+                
+                message.error('เกิดข้อผิดพลาดในการลบเงื่อนไข กรุณาลองใหม่อีกครั้ง');
             }
-        });
+        } else {
+            console.log('Delete cancelled by user');
+        }
     };
 
-    // ฟังก์ชันแก้ไขเงื่อนไข
-    const handleEditCondition = (userID: number, fullname: string) => {
-        message.info(`เปิดหน้าแก้ไขเงื่อนไขของ ${fullname}`);
-        // TODO: นำไปยังหน้าแก้ไขเงื่อนไข หรือเปิด Modal แก้ไข
+    // ฟังก์ชันแก้ไขเงื่อนไข - ไปหน้า EditCondition พร้อมข้อมูลเดิม
+    const handleEditCondition = (userID: number, fullname: string, conditions: ConditionInterface[]) => {
+        console.log('=== EDIT CONDITION DEBUG ===');
+        console.log('UserID:', userID);
+        console.log('Fullname:', fullname);
+        console.log('Existing conditions:', conditions);
+        
+        // ส่งข้อมูลไปหน้า EditCondition ผ่าน state
+        navigate('/EditConditionpage', {
+            state: {
+                userID: userID,
+                fullname: fullname,
+                existingConditions: conditions
+            }
+        });
     };
 
     // คอลัมน์ของตาราง
@@ -170,7 +252,7 @@ const Conditionpage: React.FC = () => {
             title: 'เงื่อนไขเวลาที่ไม่สะดวก',
             dataIndex: 'Conditions',
             key: 'Conditions',
-            width: 250,
+            width: 280,
             render: (value: ConditionInterface[]) => renderTimeSlots(value)
         },
         {
@@ -181,13 +263,13 @@ const Conditionpage: React.FC = () => {
             align: 'center',
             render: (value: number) => (
                 <span style={{ 
-                    backgroundColor: '#f8f9fa',
-                    color: '#333',
+                    backgroundColor: value > 0 ? '#e6f7ff' : '#f5f5f5',
+                    color: value > 0 ? '#1890ff' : '#999',
                     padding: '2px 8px',
                     borderRadius: '4px',
                     fontSize: '11px',
                     fontWeight: 'bold',
-                    border: '1px solid #e9ecef'
+                    border: `1px solid ${value > 0 ? '#91d5ff' : '#d9d9d9'}`
                 }}>
                     {value} ช่วง
                 </span>
@@ -222,38 +304,46 @@ const Conditionpage: React.FC = () => {
             key: 'action',
             width: 120,
             align: 'center',
-            render: (_, record: ConditionTableData) => (
-                <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                    <Button
-                        size="small"
-                        style={{
-                            backgroundColor: '#F26522',
-                            borderColor: '#F26522',
-                            color: 'white',
-                            fontSize: '11px',
-                            padding: '2px 8px',
-                            height: 'auto'
-                        }}
-                        onClick={() => handleEditCondition(record.UserID, record.Fullname)}
-                    >
-                        แก้ไข
-                    </Button>
-                    <Button
-                        size="small"
-                        style={{
-                            backgroundColor: '#ff4d4f',
-                            borderColor: '#ff4d4f',
-                            color: 'white',
-                            fontSize: '11px',
-                            padding: '2px 8px',
-                            height: 'auto'
-                        }}
-                        onClick={() => handleDeleteCondition(record.UserID, record.Fullname)}
-                    >
-                        ลบ
-                    </Button>
-                </div>
-            )
+            render: (_, record: ConditionTableData) => {
+                const hasConditions = record.Conditions && record.Conditions.length > 0;
+                
+                return (
+                    <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <Button
+                            size="small"
+                            style={{
+                                backgroundColor: hasConditions ? '#F26522' : '#f5f5f5',
+                                borderColor: hasConditions ? '#F26522' : '#d9d9d9',
+                                color: hasConditions ? 'white' : '#999',
+                                fontSize: '11px',
+                                padding: '2px 8px',
+                                height: 'auto'
+                            }}
+                            onClick={() => handleEditCondition(record.UserID, record.Fullname, record.Conditions)}
+                            disabled={!hasConditions}
+                            title={hasConditions ? 'แก้ไขเงื่อนไข' : 'ไม่มีเงื่อนไขให้แก้ไข'}
+                        >
+                            แก้ไข
+                        </Button>
+                        <Button
+                            size="small"
+                            style={{
+                                backgroundColor: hasConditions ? '#ff4d4f' : '#f5f5f5',
+                                borderColor: hasConditions ? '#ff4d4f' : '#d9d9d9',
+                                color: hasConditions ? 'white' : '#999',
+                                fontSize: '11px',
+                                padding: '2px 8px',
+                                height: 'auto'
+                            }}
+                            onClick={() => handleDeleteCondition(record.UserID, record.Fullname)}
+                            disabled={!hasConditions}
+                            title={hasConditions ? 'ลบเงื่อนไขทั้งหมด' : 'ไม่มีเงื่อนไขให้ลบ'}
+                        >
+                            ลบ
+                        </Button>
+                    </div>
+                );
+            }
         }
     ];
 
@@ -422,8 +512,40 @@ const Conditionpage: React.FC = () => {
                                     แสดง {startIndex + 1}-{Math.min(endIndex, totalItems)} จาก {totalItems} รายการ
                                 </span>
                             </div>
+
+                            {/* Spacer */}
+                            <div style={{ flex: 1 }}></div>
+
+                            {/* Refresh Button */}
+                            <Button
+                                onClick={getAllUserConditions}
+                                disabled={loading}
+                                style={{ 
+                                    fontSize: '12px',
+                                    color: '#666'
+                                }}
+                                size="small"
+                            >
+                                🔄 รีเฟรช
+                            </Button>
                         </div>
                     </div>
+
+                    {/* Summary Stats */}
+                    {conditionsData.length > 0 && (
+                        <div style={{
+                            marginBottom: '16px',
+                            padding: '12px 16px',
+                            backgroundColor: '#e6f7ff',
+                            borderRadius: '6px',
+                            border: '1px solid #91d5ff',
+                            fontSize: '13px'
+                        }}>
+                            <strong>สรุป:</strong> อาจารย์ทั้งหมด {conditionsData.length} คน | 
+                            มีเงื่อนไข {conditionsData.filter(c => c.Conditions && c.Conditions.length > 0).length} คน | 
+                            ไม่มีเงื่อนไข {conditionsData.filter(c => !c.Conditions || c.Conditions.length === 0).length} คน
+                        </div>
+                    )}
 
                     {/* Main Table */}
                     <div style={{ 
@@ -439,6 +561,7 @@ const Conditionpage: React.FC = () => {
                             size="small"
                             bordered
                             scroll={{ x: 1600, y: 600 }}
+                            loading={loading}
                             style={{
                                 fontSize: '12px'
                             }}
@@ -478,7 +601,14 @@ const Conditionpage: React.FC = () => {
                                 💡 <strong>หมายเหตุ:</strong> เงื่อนไขเหล่านี้จะถูกนำไปใช้ในการจัดตารางเรียนอัตโนมัติ
                             </div>
                             <div>
-                                ข้อมูลล่าสุด: {new Date().toLocaleString('th-TH')}
+                                ข้อมูลล่าสุด: {new Date().toLocaleString('th-TH')} | 
+                                <span 
+                                    style={{ marginLeft: '8px', cursor: 'pointer', color: '#F26522' }}
+                                    onClick={getAllUserConditions}
+                                    title="รีเฟรชข้อมูล"
+                                >
+                                    🔄 รีเฟรช
+                                </span>
                             </div>
                         </div>
                     </div>
