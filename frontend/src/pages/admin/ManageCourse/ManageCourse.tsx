@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/header/Header";
+
+
 import {
   postCreateCourse,
   getTypeofCourse,
@@ -19,6 +19,10 @@ import {
   DepartmentInterface,
   AllTeacher,
 } from "../../../interfaces/Adminpage";
+
+import { postCreateCourse } from "../../../services/https/AdminPageServices";
+import { getTypeofCourse } from "../../../services/https/AdminPageServices";
+
 
 const ManageCourse: React.FC = () => {
   const [majors, setMajors] = useState<MajorInterface[]>([]);
@@ -204,8 +208,6 @@ const ManageCourse: React.FC = () => {
 
   return (
     <>
-      <Header />
-      <Sidebar />
       <div className="pt-16 px-6 font-sarabun">
         <form className="w-full p-10 space-y-10 bg-white">
           <div>

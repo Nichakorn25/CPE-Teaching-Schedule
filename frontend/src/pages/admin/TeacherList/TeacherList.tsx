@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Header from "../../../components/header/Header";
-import Sidebar from "../../../components/schedule-sidebar/Sidebar";
 import {
   getAllTeachers,
   deleteUser,
@@ -94,8 +92,6 @@ const TeacherList = () => {
 
   return (
     <>
-      <Header />
-      <Sidebar />
       <div className="font-sarabun p-6 mt-10">
         {/* Header */}
         <div className="flex items-center justify-between  px-4 py-2 rounded mb-4">

@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { FaSearch } from "react-icons/fa";
-import Header from "../../../components/header/Header";
-import Sidebar from "../../../components/schedule-sidebar/Sidebar";
 import { getAllCourses } from "../../../services/https/AdminPageServices";
 import Swal from "sweetalert2";
 import { deleteCourse } from "../../../services/https/AdminPageServices";
@@ -81,8 +79,6 @@ const AllCourse: React.FC = () => {
 
   return (
     <div className="p-6 font-sarabun mt-10">
-      <Header />
-      <Sidebar/>
       {/* Filters */}
       <div className="flex flex-wrap justify-between items-center gap-4 bg-[#f5f5f5] p-4 rounded-md mb-4">
         <div className="flex items-center border border-orange-400 rounded px-2 py-1 bg-white">
