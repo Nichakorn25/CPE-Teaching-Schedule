@@ -20,9 +20,6 @@ import {
   AllTeacher,
 } from "../../../interfaces/Adminpage";
 
-import { postCreateCourse } from "../../../services/https/AdminPageServices";
-import { getTypeofCourse } from "../../../services/https/AdminPageServices";
-
 
 const ManageCourse: React.FC = () => {
   const [majors, setMajors] = useState<MajorInterface[]>([]);
