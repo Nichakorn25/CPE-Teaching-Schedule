@@ -11,7 +11,7 @@ import (
 
 func GetAllCurriculum(c *gin.Context) {
 
-    var cur []entity.Position
+    var cur []entity.Curriculum
     config.DB().Preload("Major").Preload("Major.Department").Find(&cur)
 
     c.JSON(http.StatusOK, cur)
