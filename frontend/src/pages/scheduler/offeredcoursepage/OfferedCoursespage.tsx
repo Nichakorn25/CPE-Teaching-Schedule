@@ -424,21 +424,7 @@ const OfferedCoursespage: React.FC = () => {
     ];
 
     return (
-        <div className="p-6 font-sarabun mt-16">
-            <Header />
-            
-            {/* Background Layer */}
-            <div className="schedule-background" />
-            
-            {/* Sidebar */}
-            <div className="schedule-sidebar">
-                <Sidebar />
-            </div>
-            
-            {/* Main Content */}
-            <div className="schedule-main-content">                
-                {/* ✅ White Content Area */}
-                <div className="schedule-content-area">
+            <>
                     {/* Page Title */}
                     <div style={{ 
                         marginBottom: '20px',
@@ -675,9 +661,7 @@ const OfferedCoursespage: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
+          </>
     );
 };
 

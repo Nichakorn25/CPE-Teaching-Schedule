@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import Header from "../../../components/header/Header";
-import Sidebar from "../../../components/schedule-sidebar/Sidebar";
 import {
   getAllTitle,
   getAllPosition,
@@ -270,8 +268,6 @@ const ManageTeacher: React.FC = () => {
 
   return (
      <>
-      <Header />
-      <Sidebar />
     <form
       onSubmit={handleSubmit}
       className="p-10 font-sarabun grid grid-cols-1 md:grid-cols-2 gap-y-14 gap-x-12 w-full mt-20 bg-white"

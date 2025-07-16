@@ -225,21 +225,7 @@ const Instructorpage: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 font-sarabun mt-16">
-      <Header />
-      
-      {/* Background Layer */}
-      <div className="instructor-background" />
-      
-      {/* Sidebar */}
-      <div className="instructor-sidebar">
-        <Sidebar />
-      </div>
-      
-      {/* Main Content */}
-      <div className="instructor-main-content">        
-        {/* White Content Area */}
-        <div className="instructor-content-area">
+    <>
           {/* Page Title */}
           <div style={{ 
             marginBottom: '20px',
@@ -445,9 +431,7 @@ const Instructorpage: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+      </>
   );
 };
 

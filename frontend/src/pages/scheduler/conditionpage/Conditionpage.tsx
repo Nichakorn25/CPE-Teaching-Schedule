@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/header/Header";
 import "./Conditionpage.css";
 import { Button, Table, Input, Select, message, Modal } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
@@ -348,265 +346,262 @@ const Conditionpage: React.FC = () => {
     ];
 
     return (
-        <div className="p-6 font-sarabun mt-16">
-            <Header />
-            
-            {/* Background Layer */}
-            <div className="condition-background" />
-            
-            {/* Sidebar */}
-            <div className="condition-sidebar">
-                <Sidebar />
+        <>
+            {/* Page Title */}
+            <div style={{ 
+                marginBottom: '20px',
+                paddingBottom: '12px',
+                borderBottom: '2px solid #F26522'
+            }}>
+                <h2 style={{ 
+                    margin: '0 0 8px 0', 
+                    color: '#333',
+                    fontSize: '20px',
+                    fontWeight: 'bold'
+                }}>
+                    เงื่อนไขเวลาที่ไม่สะดวกของอาจารย์
+                </h2>
+                <p style={{ 
+                    margin: 0, 
+                    color: '#666',
+                    fontSize: '13px'
+                }}>
+                    จัดการและดูเงื่อนไขเวลาที่ไม่สะดวกของอาจารย์ทุกคน สำหรับการจัดตารางเรียน
+                </p>
             </div>
-            
-            {/* Main Content */}
-            <div className="condition-main-content">
-                {/* White Content Area */}
-                <div className="condition-content-area">
-                    {/* Page Title */}
-                    <div style={{ 
-                        marginBottom: '20px',
-                        paddingBottom: '12px',
-                        borderBottom: '2px solid #F26522'
-                    }}>
-                        <h2 style={{ 
-                            margin: '0 0 8px 0', 
-                            color: '#333',
-                            fontSize: '20px',
-                            fontWeight: 'bold'
-                        }}>
-                            เงื่อนไขเวลาที่ไม่สะดวกของอาจารย์
-                        </h2>
-                        <p style={{ 
-                            margin: 0, 
-                            color: '#666',
-                            fontSize: '13px'
-                        }}>
-                            จัดการและดูเงื่อนไขเวลาที่ไม่สะดวกของอาจารย์ทุกคน สำหรับการจัดตารางเรียน
-                        </p>
-                    </div>
 
-                    {/* Controls Section */}
-                    <div style={{ 
-                        marginBottom: '20px'
-                    }}>
-                        {/* Top row - Main controls */}
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            backgroundColor: '#f8f9fa',
-                            padding: '12px 16px',
-                            borderRadius: '8px',
-                            border: '1px solid #e9ecef',
-                            minHeight: '48px',
-                            flexWrap: 'nowrap',
-                            overflow: 'hidden'
-                        }}>
-                            {/* Left group - Search controls */}
-                            <div style={{ 
-                                display: 'flex', 
-                                gap: '12px', 
-                                alignItems: 'center',
-                                flexShrink: 0
-                            }}>
-                                <Select
-                                    value={selectedDepartment}
-                                    onChange={setSelectedDepartment}
-                                    style={{ width: 150 }}
-                                    placeholder="เลือกแผนก"
-                                    size="small"
-                                >
-                                    <Option value="all">ทุกแผนก</Option>
-                                    <Option value="เทคโนโลยีสารสนเทศ">เทคโนโลยีสารสนเทศ</Option>
-                                    <Option value="วิศวกรรมคอมพิวเตอร์">วิศวกรรมคอมพิวเตอร์</Option>
-                                    <Option value="วิทยาการคอมพิวเตอร์">วิทยาการคอมพิวเตอร์</Option>
-                                </Select>
-                                
-                                <Input
-                                    placeholder="ค้นหาอาจารย์..."
-                                    prefix={<SearchOutlined />}
-                                    value={searchText}
-                                    onChange={(e) => setSearchText(e.target.value)}
-                                    style={{ width: 180 }}
-                                    size="small"
-                                />
-                                
-                                {/* Pagination controls */}
-                                <span style={{ whiteSpace: 'nowrap', fontSize: '12px', color: '#666' }}>รายการที่แสดง</span>
-                                <Select
-                                    value={pageSize.toString()}
-                                    style={{ width: 50 }}
-                                    size="small"
-                                    onChange={(value) => {
-                                        const newSize = parseInt(value);
-                                        handlePageSizeChange(newSize);
-                                    }}
-                                >
-                                    <Option value="5">5</Option>
-                                    <Option value="10">10</Option>
-                                    <Option value="20">20</Option>
-                                    <Option value="50">50</Option>
-                                </Select>
-                                
-                                {/* Compact pagination numbers */}
-                                {totalPages > 1 && (
-                                    <>
-                                        {[1, 2, 3, 4, 5].map((page) => (
-                                            page <= totalPages && (
-                                                <span
-                                                    key={page}
-                                                    style={{ 
-                                                        backgroundColor: currentPage === page ? '#F26522' : 'transparent',
-                                                        color: currentPage === page ? 'white' : '#666',
-                                                        padding: '2px 6px',
-                                                        borderRadius: '3px',
-                                                        fontSize: '11px',
-                                                        fontWeight: currentPage === page ? 'bold' : 'normal',
-                                                        minWidth: '18px',
-                                                        textAlign: 'center',
-                                                        cursor: 'pointer',
-                                                        display: 'inline-block'
-                                                    }}
-                                                    onClick={() => handlePageChange(page)}
-                                                >
-                                                    {page}
-                                                </span>
-                                            )
-                                        ))}
-                                        
-                                        {totalPages > 5 && (
-                                            <>
-                                                <span style={{ color: '#666', fontSize: '11px' }}>... {totalPages}</span>
-                                            </>
-                                        )}
-                                        
-                                        {currentPage < totalPages && (
-                                            <span 
-                                                style={{ 
-                                                    cursor: 'pointer', 
-                                                    color: '#666', 
-                                                    fontSize: '11px', 
-                                                    whiteSpace: 'nowrap'
-                                                }}
-                                                onClick={() => handlePageChange(currentPage + 1)}
-                                            >
-                                                ถัดไป
-                                            </span>
-                                        )}
-                                    </>
-                                )}
-                                
-                                <span style={{ 
-                                    fontSize: '10px', 
-                                    whiteSpace: 'nowrap',
-                                    color: '#666'
-                                }}>
-                                    แสดง {startIndex + 1}-{Math.min(endIndex, totalItems)} จาก {totalItems} รายการ
-                                </span>
-                            </div>
-
-                            {/* Spacer */}
-                            <div style={{ flex: 1 }}></div>
-
-                            {/* Refresh Button */}
-                            <Button
-                                onClick={getAllUserConditions}
-                                disabled={loading}
-                                style={{ 
-                                    fontSize: '12px',
-                                    color: '#666'
-                                }}
-                                size="small"
-                            >
-                                🔄 รีเฟรช
-                            </Button>
-                        </div>
-                    </div>
-
-                    {/* Summary Stats */}
-                    {conditionsData.length > 0 && (
-                        <div style={{
-                            marginBottom: '16px',
-                            padding: '12px 16px',
-                            backgroundColor: '#e6f7ff',
-                            borderRadius: '6px',
-                            border: '1px solid #91d5ff',
-                            fontSize: '13px'
-                        }}>
-                            <strong>สรุป:</strong> อาจารย์ทั้งหมด {conditionsData.length} คน | 
-                            มีเงื่อนไข {conditionsData.filter(c => c.Conditions && c.Conditions.length > 0).length} คน | 
-                            ไม่มีเงื่อนไข {conditionsData.filter(c => !c.Conditions || c.Conditions.length === 0).length} คน
-                        </div>
-                    )}
-
-                    {/* Main Table */}
-                    <div style={{ 
-                        backgroundColor: 'white',
-                        border: '1px solid #d9d9d9',
-                        borderRadius: '6px',
+            {/* Main Content Area */}
+            <div style={{
+                width: '100%',
+                maxWidth: '1600px',
+                margin: '0 auto',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e0e0e0',
+                padding: '24px',
+                borderRadius: '8px',
+                minHeight: 'calc(100vh - 200px)'
+            }}>
+                {/* Controls Section */}
+                <div style={{ 
+                    marginBottom: '20px'
+                }}>
+                    {/* Top row - Main controls */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        backgroundColor: '#f8f9fa',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        border: '1px solid #e9ecef',
+                        minHeight: '48px',
+                        flexWrap: 'nowrap',
                         overflow: 'hidden'
                     }}>
-                        <Table
-                            columns={columns}
-                            dataSource={currentData}
-                            pagination={false}
-                            size="small"
-                            bordered
-                            scroll={{ x: 1600, y: 600 }}
-                            loading={loading}
-                            style={{
-                                fontSize: '12px'
-                            }}
-                            className="custom-table"
-                            locale={{
-                                emptyText: (
-                                    <div style={{ 
-                                        padding: '40px', 
-                                        textAlign: 'center', 
-                                        color: '#999' 
-                                    }}>
-                                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
-                                        <div style={{ fontSize: '16px', marginBottom: '8px' }}>
-                                            ไม่พบข้อมูลเงื่อนไข
-                                        </div>
-                                        <div style={{ fontSize: '14px', color: '#ccc' }}>
-                                            ยังไม่มีอาจารย์คนใดเพิ่มเงื่อนไขเวลาที่ไม่สะดวก
-                                        </div>
-                                    </div>
-                                )
-                            }}
-                        />
-                    </div>
+                        {/* Left group - Search controls */}
+                        <div style={{ 
+                            display: 'flex', 
+                            gap: '12px', 
+                            alignItems: 'center',
+                            flexShrink: 0
+                        }}>
+                            <Select
+                                value={selectedDepartment}
+                                onChange={setSelectedDepartment}
+                                style={{ width: 150 }}
+                                placeholder="เลือกแผนก"
+                                size="small"
+                            >
+                                <Option value="all">ทุกแผนก</Option>
+                                <Option value="เทคโนโลยีสารสนเทศ">เทคโนโลยีสารสนเทศ</Option>
+                                <Option value="วิศวกรรมคอมพิวเตอร์">วิศวกรรมคอมพิวเตอร์</Option>
+                                <Option value="วิทยาการคอมพิวเตอร์">วิทยาการคอมพิวเตอร์</Option>
+                            </Select>
+                            
+                            <Input
+                                placeholder="ค้นหาอาจารย์..."
+                                prefix={<SearchOutlined />}
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
+                                style={{ width: 180 }}
+                                size="small"
+                            />
+                            
+                            {/* Pagination controls */}
+                            <span style={{ whiteSpace: 'nowrap', fontSize: '12px', color: '#666' }}>รายการที่แสดง</span>
+                            <Select
+                                value={pageSize.toString()}
+                                style={{ width: 50 }}
+                                size="small"
+                                onChange={(value) => {
+                                    const newSize = parseInt(value);
+                                    handlePageSizeChange(newSize);
+                                }}
+                            >
+                                <Option value="5">5</Option>
+                                <Option value="10">10</Option>
+                                <Option value="20">20</Option>
+                                <Option value="50">50</Option>
+                            </Select>
+                            
+                            {/* Compact pagination numbers */}
+                            {totalPages > 1 && (
+                                <>
+                                    {[1, 2, 3, 4, 5].map((page) => (
+                                        page <= totalPages && (
+                                            <span
+                                                key={page}
+                                                style={{ 
+                                                    backgroundColor: currentPage === page ? '#F26522' : 'transparent',
+                                                    color: currentPage === page ? 'white' : '#666',
+                                                    padding: '2px 6px',
+                                                    borderRadius: '3px',
+                                                    fontSize: '11px',
+                                                    fontWeight: currentPage === page ? 'bold' : 'normal',
+                                                    minWidth: '18px',
+                                                    textAlign: 'center',
+                                                    cursor: 'pointer',
+                                                    display: 'inline-block'
+                                                }}
+                                                onClick={() => handlePageChange(page)}
+                                            >
+                                                {page}
+                                            </span>
+                                        )
+                                    ))}
+                                    
+                                    {totalPages > 5 && (
+                                        <>
+                                            <span style={{ color: '#666', fontSize: '11px' }}>... {totalPages}</span>
+                                        </>
+                                    )}
+                                    
+                                    {currentPage < totalPages && (
+                                        <span 
+                                            style={{ 
+                                                cursor: 'pointer', 
+                                                color: '#666', 
+                                                fontSize: '11px', 
+                                                whiteSpace: 'nowrap'
+                                            }}
+                                            onClick={() => handlePageChange(currentPage + 1)}
+                                        >
+                                            ถัดไป
+                                        </span>
+                                    )}
+                                </>
+                            )}
+                            
+                            <span style={{ 
+                                fontSize: '10px', 
+                                whiteSpace: 'nowrap',
+                                color: '#666'
+                            }}>
+                                แสดง {startIndex + 1}-{Math.min(endIndex, totalItems)} จาก {totalItems} รายการ
+                            </span>
+                        </div>
 
-                    {/* Footer Info */}
+                        {/* Spacer */}
+                        <div style={{ flex: 1 }}></div>
+
+                        {/* Refresh Button */}
+                        <Button
+                            onClick={getAllUserConditions}
+                            disabled={loading}
+                            style={{ 
+                                fontSize: '12px',
+                                color: '#666'
+                            }}
+                            size="small"
+                        >
+                            🔄 รีเฟรช
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Summary Stats */}
+                {conditionsData.length > 0 && (
                     <div style={{
-                        marginTop: '16px',
+                        marginBottom: '16px',
                         padding: '12px 16px',
-                        backgroundColor: '#f8f9fa',
+                        backgroundColor: '#e6f7ff',
                         borderRadius: '6px',
-                        border: '1px solid #e9ecef',
-                        fontSize: '12px',
-                        color: '#666'
+                        border: '1px solid #91d5ff',
+                        fontSize: '13px'
                     }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                                💡 <strong>หมายเหตุ:</strong> เงื่อนไขเหล่านี้จะถูกนำไปใช้ในการจัดตารางเรียนอัตโนมัติ
-                            </div>
-                            <div>
-                                ข้อมูลล่าสุด: {new Date().toLocaleString('th-TH')} | 
-                                <span 
-                                    style={{ marginLeft: '8px', cursor: 'pointer', color: '#F26522' }}
-                                    onClick={getAllUserConditions}
-                                    title="รีเฟรชข้อมูล"
-                                >
-                                    🔄 รีเฟรช
-                                </span>
-                            </div>
+                        <strong>สรุป:</strong> อาจารย์ทั้งหมด {conditionsData.length} คน | 
+                        มีเงื่อนไข {conditionsData.filter(c => c.Conditions && c.Conditions.length > 0).length} คน | 
+                        ไม่มีเงื่อนไข {conditionsData.filter(c => !c.Conditions || c.Conditions.length === 0).length} คน
+                    </div>
+                )}
+
+                {/* Main Table */}
+                <div style={{ 
+                    backgroundColor: 'white',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: '6px',
+                    overflow: 'hidden'
+                }}>
+                    <Table
+                        columns={columns}
+                        dataSource={currentData}
+                        pagination={false}
+                        size="small"
+                        bordered
+                        scroll={{ x: 1600, y: 600 }}
+                        loading={loading}
+                        style={{
+                            fontSize: '12px'
+                        }}
+                        className="custom-table"
+                        locale={{
+                            emptyText: (
+                                <div style={{ 
+                                    padding: '40px', 
+                                    textAlign: 'center', 
+                                    color: '#999' 
+                                }}>
+                                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+                                    <div style={{ fontSize: '16px', marginBottom: '8px' }}>
+                                        ไม่พบข้อมูลเงื่อนไข
+                                    </div>
+                                    <div style={{ fontSize: '14px', color: '#ccc' }}>
+                                        ยังไม่มีอาจารย์คนใดเพิ่มเงื่อนไขเวลาที่ไม่สะดวก
+                                    </div>
+                                </div>
+                            )
+                        }}
+                    />
+                </div>
+
+                {/* Footer Info */}
+                <div style={{
+                    marginTop: '16px',
+                    padding: '12px 16px',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '6px',
+                    border: '1px solid #e9ecef',
+                    fontSize: '12px',
+                    color: '#666'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            💡 <strong>หมายเหตุ:</strong> เงื่อนไขเหล่านี้จะถูกนำไปใช้ในการจัดตารางเรียนอัตโนมัติ
+                        </div>
+                        <div>
+                            ข้อมูลล่าสุด: {new Date().toLocaleString('th-TH')} | 
+                            <span 
+                                style={{ marginLeft: '8px', cursor: 'pointer', color: '#F26522' }}
+                                onClick={getAllUserConditions}
+                                title="รีเฟรชข้อมูล"
+                            >
+                                🔄 รีเฟรช
+                            </span>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 
