@@ -27,6 +27,22 @@ type (
 	}
 )
 
+func GetTeachingAssistantByID(c *gin.Context) {
+    id := c.Param("id")
+
+    var teachingAssistant entity.TeachingAssistant
+
+    if err := config.DB().Preload("Title").
+        Preload("ScheduleTeachingAssistant").
+        First(&teachingAssistant, id).Error; err != nil {
+
+        c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบผู้ช่วยสอน"})
+        return
+    }
+
+    c.JSON(http.StatusOK, teachingAssistant)
+}
+
 func GetAllTeachingAssistants(c *gin.Context) {
 	var teachingAssistants []entity.TeachingAssistant
 

@@ -116,6 +116,13 @@ async function postCreateOfferedCourse(data: OpenCourseInterface) {
 }
 
 ///////////////////// TeachingAssistant /////////////////////////
+async function getTeachingAssistantsById(id: string) {
+  return await axios
+    .get(`${apiUrl}/teaching_assistants/${id}`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 async function getAllTeachingAssistants() {
   return await axios
     .get(`${apiUrl}/all-teaching-assistants`, requestOptions)
@@ -162,6 +169,7 @@ export {
   getOpenCourses, //used
   postCreateOfferedCourse,
 
+  getTeachingAssistantsById,
   getAllTeachingAssistants, //used
   postCreateTeachingAssistant, //used
   putUpdateTeachingAssistant,
