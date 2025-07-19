@@ -137,7 +137,9 @@ const LoginPage: React.FC = () => {
             navigate("/change-password");
           } else if (role === "Admin") {
             navigate("/home-admin");
-          } else if (role === "Scheduler" || role === "Instructor") {
+          } else if (role === "Scheduler") {
+            navigate("/home-schedule");
+          } else if (role === "Instructor") {
             navigate("/home-instructor");
           } else {
             setMessage("ไม่สามารถระบุสิทธิ์ผู้ใช้งานได้");
