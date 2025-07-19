@@ -2,10 +2,11 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/login/Login";
 import Password from "./pages/forget/FristChangePassword";
-// import HomeAdminPage from "./pages/home/HomeAdmin";
-import HomeInstructorPage from "./pages/home/HomeInstructor";
+////////////////////////////////////////////// Homepage
+import HomeAdminPage from "./pages//home/HomeAdmin/HomeAdmin";
+import HomeInstructorPage from "./pages/home/HomeInstructor/HomeInstructor";
 import HomeSchedulePage from "./pages/home/HomeSchedulor/Homepage";
-
+/////////////////////////////////////////////
 import Sidebar from "./components/schedule-sidebar/Sidebar";
 
 import TeacherList from "./pages/admin/TeacherList/TeacherList";
@@ -17,7 +18,6 @@ import ManageCourse from "./pages/admin/ManageCourse/ManageCourse";
 import ManageCesCourse from "./pages/admin/ManageCesCourse/ManageCesCourse";
 import ManageAssistance from "./pages/admin/ManageAssistance/ManageAssistance";
 
-import ChangePassword from "./pages/instructor/ChangePassword/ChangePassword";
 import AddCondition from "./pages/instructor/AddCondition/AddCondition";
 import EditConditionpage from "./pages/scheduler/addconditionpage/EditConditionpage";
 import AddCourse from "./pages/instructor/AddCourse/AddCourse";
@@ -38,15 +38,14 @@ const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        {/* Routes without Layout (Login, etc.) */}
         <Route path="/" element={<LoginPage />} />
         <Route path="/change-password" element={<Password />} />
         
-        {/* Routes with Layout */}
         <Route path="/" element={<Layout />}>
           <Route path="home-schedule" element={<HomeSchedulePage />} />
-          {/* <Route path="home-admin" element={<PrivateRoute><HomeAdminPage /></PrivateRoute>} /> */}
-          {/* <Route path="home-admin" element={<HomeAdminPage />} /> */}
+          <Route path="home-instructor" element={<HomeInstructorPage />} />
+          <Route path="home-admin" element={<HomeAdminPage />} />
+
           <Route path="teacher-list" element={<TeacherList />} />
           <Route path="assistance-list" element={<AssistanceList />} />
           <Route path="open-course" element={<OpenCourse />} />
@@ -57,13 +56,9 @@ const App: React.FC = () => {
           <Route path="manage-cescourse" element={<ManageCesCourse />} />
           <Route path="manage-assistance" element={<ManageAssistance />} />
 
-          <Route path="change-password-instructor" element={<ChangePassword/>} />
           <Route path="add-condition" element={<AddCondition/>} />
           <Route path="add-course" element={<AddCourse/>} />
 
-          <Route path="home-instructor" element={<PrivateRoute><HomeInstructorPage /></PrivateRoute>} />
-
-          <Route path="Homepage" element={<Homepage />} />
           <Route path="Schedulepage" element={<Schedulepage />} />
           <Route path="OfferedCoursespage" element={<OfferedCoursespage />} />
           <Route path="Conditionpage" element={<Conditionpage/>} />
