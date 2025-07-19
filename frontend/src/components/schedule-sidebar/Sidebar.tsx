@@ -126,6 +126,18 @@ const Sidebar: React.FC = () => {
     },
   ];
 
+  const role = localStorage.getItem("role"); // ได้ค่ามาเป็น string | null
+
+  const filteredMenuItems: MenuItem[] = menuItems.filter((item) =>
+    role ? item.roles.includes(role) : false
+  );
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/"); 
+    window.location.reload;
+  };
+
   useEffect(() => {
     const currentItem = menuItems.find(
       (item) => item.path === location.pathname
@@ -188,8 +200,8 @@ const Sidebar: React.FC = () => {
               alignItems: "center",
               justifyContent: isOpen ? "flex-start" : "center",
               color: "#FF6B35",
-              width: "40px", 
-              height: "40px", 
+              width: "40px",
+              height: "40px",
             }}
           >
             {isOpen ? <IoClose /> : <IoMenu />}
@@ -223,7 +235,7 @@ const Sidebar: React.FC = () => {
             overflowY: "auto",
           }}
         >
-          {menuItems.map((item) => (
+          {filteredMenuItems.map((item) => (
             <div
               key={item.id}
               onClick={() => handleNavigation(item)}
@@ -276,12 +288,9 @@ const Sidebar: React.FC = () => {
               alignItems: "center",
               gap: "8px",
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.backgroundColor = "#5a6c7d")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.backgroundColor = "#6c7a89")
-            }
+            onClick={handleLogout}
+            onMouseEnter={(e) =>(e.currentTarget.style.backgroundColor = "#5a6c7d")}
+            onMouseLeave={(e) =>(e.currentTarget.style.backgroundColor = "#6c7a89")}
           >
             <span>🚪</span>
             {isOpen && "ออกจากระบบ"}
