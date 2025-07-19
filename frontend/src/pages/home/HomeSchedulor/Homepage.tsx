@@ -1,61 +1,64 @@
-import React from 'react';
-import ScheduleCard from '../ScheduleCard';
-import StatCard from '../StatCard';
-import { Calendar } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import './Homepage.css';
+import { Clock } from 'lucide-react';
 
-interface Task {
-  day?: string;
+interface ScheduleItem {
+  day: string;
   time: string;
-  subject?: string;
-  task?: string;
-  room?: string;
-  location?: string;
+  subject: string;
+  room: string;
+  students?: number;
 }
 
-interface SchedulerData {
-  activeTermCourses: number;
-  termGrowth: string;
-  schedule: Task[];
-  todayTasks: Task[];
-  accent: string;
-  color: string;
+interface SchedulerDashboardProps {
+  schedule: ScheduleItem[];
+  todayTasks: ScheduleItem[];
 }
 
-interface Props {
-  data?: SchedulerData;
-}
+const ScheduleCard = ({ schedule, title }: { schedule: ScheduleItem[]; title: string }) => (
+  <div className="schedule-card">
+    <h3 className="schedule-title">
+      <Clock className="schedule-icon" />
+      {title}
+    </h3>
+    <div className="schedule-list">
+      {schedule.length === 0 ? (
+        <p className="schedule-empty">ไม่มีข้อมูล</p>
+      ) : (
+        schedule.map((item, index) => (
+          <div key={index} className="schedule-item">
+            <div>
+              <p className="schedule-subject">{item.subject}</p>
+              <p className="schedule-time">{item.time} | {item.room}</p>
+              {item.students && <p className="schedule-students">นักเรียน: {item.students} คน</p>}
+            </div>
+            <span className="schedule-day">{item.day}</span>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+);
 
-const SchedulerDashboard: React.FC<Props> = ({ data }) => {
-  const fallbackData: SchedulerData = {
-    activeTermCourses: 0,
-    termGrowth: '0%',
-    schedule: [],
-    todayTasks: [],
-    accent: 'gray',
-    color: 'lightgray'
-  };
+const SchedulerDashboard: React.FC<SchedulerDashboardProps> = ({ schedule, todayTasks }) => {
+  const [role, setRole] = useState<string | null>(null);
 
-  const finalData = data || fallbackData;
+  useEffect(() => {
+    const storedRole = localStorage.getItem('role');
+    setRole(storedRole);
+  }, []);
 
   return (
     <div className="scheduler-dashboard">
-      <div className="scheduler-stats">
-        <StatCard
-          title="วิชาเปิดสอนในเทอมนี้"
-          value={finalData.activeTermCourses}
-          growth={finalData.termGrowth}
-          icon={<Calendar size={32} />}
-          accent={finalData.accent}
-          color={finalData.color}
-        />
-      </div>
-      <div className="scheduler-schedule">
-        <ScheduleCard schedule={finalData.schedule} title="ตารางงานประจำสัปดาห์" />
-        <ScheduleCard schedule={finalData.todayTasks} title="งานวันนี้" />
+      <h2 className="dashboard-title">Scheduler Dashboard</h2>
+      {role && <p className="dashboard-role">คุณกำลังเข้าสู่ระบบในบทบาท: <strong>{role}</strong></p>}
+
+      <div className="scheduler-grid">
+        <ScheduleCard schedule={schedule} title="รายการตารางที่จัดไว้" />
+        <ScheduleCard schedule={todayTasks} title="งานที่ต้องจัดวันนี้" />
       </div>
     </div>
   );
 };
-
 
 export default SchedulerDashboard;

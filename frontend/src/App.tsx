@@ -6,6 +6,7 @@ import Password from "./pages/forget/FristChangePassword";
 import HomeAdminPage from "./pages//home/HomeAdmin/HomeAdmin";
 import HomeInstructorPage from "./pages/home/HomeInstructor/HomeInstructor";
 import HomeSchedulePage from "./pages/home/HomeSchedulor/Homepage";
+import Test from "./pages/home/Dash";
 /////////////////////////////////////////////
 import Sidebar from "./components/schedule-sidebar/Sidebar";
 
@@ -42,9 +43,11 @@ const App: React.FC = () => {
         <Route path="/change-password" element={<Password />} />
         
         <Route path="/" element={<Layout />}>
-          <Route path="home-schedule" element={<HomeSchedulePage />} />
+          <Route path="home-test" element={<Test />} />
+          
+          {/* <Route path="home-schedule" element={<HomeSchedulePage />} />
           <Route path="home-instructor" element={<HomeInstructorPage />} />
-          <Route path="home-admin" element={<HomeAdminPage />} />
+          <Route path="home-admin" element={<HomeAdminPage />} /> */}
 
           <Route path="teacher-list" element={<TeacherList />} />
           <Route path="assistance-list" element={<AssistanceList />} />
