@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Conditionpage.css";
-import { Button, Table, Input, Select, message, Modal } from 'antd';
+import { Button, Table, Input, Select, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { getAllConditions, deleteConditionsByUser } from "../../../services/https/SchedulerPageService";
@@ -22,6 +22,21 @@ const Conditionpage: React.FC = () => {
     const [pageSize, setPageSize] = useState(10);
     const [conditionsData, setConditionsData] = useState<UserConInterface[]>([]);
     const [loading, setLoading] = useState(false);
+    const [containerWidth, setContainerWidth] = useState(window.innerWidth);
+
+    // Monitor container width for responsive behavior
+    useEffect(() => {
+        const handleResize = () => {
+            setContainerWidth(window.innerWidth);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // Determine responsive breakpoints
+    const isSmallScreen = containerWidth < 1400;
+    const isMobile = containerWidth < 768;
 
     const getAllUserConditions = async () => {
         try {
@@ -89,15 +104,23 @@ const Conditionpage: React.FC = () => {
         }
         
         return (
-            <div className="time-slots-container">
+            <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '4px',
+                maxWidth: isSmallScreen ? '150px' : '200px'
+            }}>
                 {conditions.map((condition, index) => (
-                    <div key={`${condition.ID}-${index}`} className="time-slot-display" style={{
+                    <div key={`${condition.ID}-${index}`} style={{
                         padding: '2px 6px',
-                        margin: '2px',
+                        margin: '1px',
                         backgroundColor: '#e6f4ff',
                         borderRadius: '4px',
-                        fontSize: '11px',
-                        display: 'inline-block'
+                        fontSize: isSmallScreen ? '9px' : '10px',
+                        display: 'inline-block',
+                        border: '1px solid #91d5ff',
+                        color: '#1890ff',
+                        fontWeight: '500'
                     }}>
                         {condition.DayOfWeek}: {condition.Start}-{condition.End}
                     </div>
@@ -106,88 +129,37 @@ const Conditionpage: React.FC = () => {
         );
     };
 
-    // ฟังก์ชันลบเงื่อนไข - ใช้ window.confirm แทน Modal.confirm
+    // ฟังก์ชันลบเงื่อนไข
     const handleDeleteCondition = async (userID: number, fullname: string) => {
-        console.log('=== DELETE CONDITION DEBUG ===');
-        console.log('UserID to delete:', userID);
-        console.log('Fullname:', fullname);
-        
         const confirmDelete = window.confirm(
             `คุณต้องการลบเงื่อนไขทั้งหมดของ "${fullname}" หรือไม่?\n\n⚠️ การดำเนินการนี้ไม่สามารถยกเลิกได้`
         );
         
         if (confirmDelete) {
-            console.log('=== USER CONFIRMED DELETE ===');
-            
             try {
-                console.log('=== STARTING DELETE PROCESS ===');
-                console.log('Calling deleteConditionsByUser with userID:', userID.toString());
-                
-                // แสดง loading message
                 const loadingMessage = message.loading('กำลังลบเงื่อนไข...', 0);
-                
                 const result = await deleteConditionsByUser(userID.toString());
-                
-                // ปิด loading message
                 loadingMessage();
                 
-                console.log('=== DELETE API RESULT ===');
-                console.log('Full result object:', result);
-                console.log('Result status:', result?.status);
-                console.log('Result data:', result?.data);
-                
-                // ตรวจสอบผลลัพธ์
                 if (result && (result.status === 200 || result.status === 204 || result.status === 201)) {
-                    console.log('=== DELETE SUCCESS ===');
-                    
-                    // ลบออกจาก state
-                    setConditionsData(prev => {
-                        const filtered = prev.filter(item => item.UserID !== userID);
-                        console.log('Updated conditions data length:', filtered.length);
-                        return filtered;
-                    });
-                    
+                    setConditionsData(prev => prev.filter(item => item.UserID !== userID));
                     message.success(`ลบเงื่อนไขของ ${fullname} สำเร็จ`);
                     
-                    // ปรับหน้าถ้าจำเป็น
                     if (currentData.length === 1 && currentPage > 1) {
-                        console.log('Adjusting pagination from page', currentPage, 'to', currentPage - 1);
                         setCurrentPage(currentPage - 1);
                     }
                 } else {
-                    console.log('=== DELETE FAILED ===');
-                    console.log('Status was not 200/201/204');
-                    console.log('Status:', result?.status);
-                    console.log('Data:', result?.data);
-                    
-                    const errorMsg = result?.data?.error || 
-                                    result?.data?.message || 
-                                    result?.statusText ||
-                                    'ไม่สามารถลบเงื่อนไขได้';
+                    const errorMsg = result?.data?.error || result?.data?.message || result?.statusText || 'ไม่สามารถลบเงื่อนไขได้';
                     message.error(`เกิดข้อผิดพลาด: ${errorMsg}`);
                 }
             } catch (error) {
-                console.log('=== DELETE EXCEPTION ===');
-                console.error('Exception during delete:', error);
-                console.error('Error type:', typeof error);
-                console.error('Error message:', (error as any)?.message);
-                console.error('Error stack:', (error as any)?.stack);
-                
                 message.error('เกิดข้อผิดพลาดในการลบเงื่อนไข กรุณาลองใหม่อีกครั้ง');
             }
-        } else {
-            console.log('Delete cancelled by user');
         }
     };
 
-    // ฟังก์ชันแก้ไขเงื่อนไข - ไปหน้า EditCondition พร้อมข้อมูลเดิม
+    // ฟังก์ชันแก้ไขเงื่อนไข
     const handleEditCondition = (userID: number, fullname: string, conditions: ConditionInterface[]) => {
-        console.log('=== EDIT CONDITION DEBUG ===');
-        console.log('UserID:', userID);
-        console.log('Fullname:', fullname);
-        console.log('Existing conditions:', conditions);
-        
-        // ส่งข้อมูลไปหน้า EditCondition ผ่าน state
         navigate('/EditConditionpage', {
             state: {
                 userID: userID,
@@ -197,107 +169,238 @@ const Conditionpage: React.FC = () => {
         });
     };
 
-    // คอลัมน์ของตาราง
-    const columns: ColumnsType<ConditionTableData> = [
-        {
-            title: 'ลำดับ',
-            dataIndex: 'order',
-            key: 'order',
-            width: 60,
-            align: 'center',
-            render: (value: number) => <span style={{ fontWeight: 'bold' }}>{value}</span>
-        },
-        {
-            title: 'รหัสอาจารย์',
-            dataIndex: 'Code',
-            key: 'Code',
-            width: 100,
-            render: (value: string) => <span style={{ fontWeight: 'bold', color: '#1890ff' }}>{value}</span>
-        },
-        {
-            title: 'ชื่อ-นามสกุล',
-            dataIndex: 'Fullname',
-            key: 'Fullname',
-            width: 200,
-            render: (value: string) => <span style={{ fontWeight: '500' }}>{value}</span>
-        },
-        {
-            title: 'แผนก/สาขา',
-            dataIndex: 'Major',
-            key: 'Major',
-            width: 150,
-            align: 'center'
-        },
-        {
-            title: 'อีเมล',
-            dataIndex: 'Email',
-            key: 'Email',
-            width: 180,
-            render: (value: string) => (
-                <a href={`mailto:${value}`} style={{ color: '#1890ff' }}>
-                    {value}
-                </a>
-            )
-        },
-        {
-            title: 'เบอร์โทร',
-            dataIndex: 'Phone',
-            key: 'Phone',
-            width: 120,
-            align: 'center'
-        },
-        {
-            title: 'เงื่อนไขเวลาที่ไม่สะดวก',
-            dataIndex: 'Conditions',
-            key: 'Conditions',
-            width: 280,
-            render: (value: ConditionInterface[]) => renderTimeSlots(value)
-        },
-        {
-            title: 'จำนวนช่วงเวลา',
-            dataIndex: 'ItemCount',
-            key: 'ItemCount',
-            width: 100,
-            align: 'center',
-            render: (value: number) => (
-                <span style={{ 
-                    backgroundColor: value > 0 ? '#e6f7ff' : '#f5f5f5',
-                    color: value > 0 ? '#1890ff' : '#999',
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    border: `1px solid ${value > 0 ? '#91d5ff' : '#d9d9d9'}`
-                }}>
-                    {value} ช่วง
-                </span>
-            )
-        },
-        {
-            title: 'วันที่สร้าง',
-            dataIndex: 'CreatedAt',
-            key: 'CreatedAt',
-            width: 130,
-            align: 'center',
-            render: (value: string) => (
-                <span style={{ fontSize: '10px', color: '#666' }}>
-                    {new Date(value).toLocaleDateString('th-TH')}
-                </span>
-            )
-        },
-        {
-            title: 'แก้ไขล่าสุด',
-            dataIndex: 'LastUpdatedAt',
-            key: 'LastUpdatedAt',
-            width: 130,
-            align: 'center',
-            render: (value: string) => (
-                <span style={{ fontSize: '10px', color: '#666' }}>
-                    {new Date(value).toLocaleDateString('th-TH')}
-                </span>
-            )
-        },
-        {
+    // Responsive columns configuration
+    const getColumns = (): ColumnsType<ConditionTableData> => {
+        if (isMobile) {
+            // Mobile layout - Show only essential columns
+            return [
+                {
+                    title: '#',
+                    dataIndex: 'order',
+                    key: 'order',
+                    width: 40,
+                    align: 'center',
+                    render: (value: number) => <span style={{ fontWeight: 'bold', fontSize: '10px' }}>{value}</span>
+                },
+                {
+                    title: 'อาจารย์',
+                    key: 'teacher',
+                    width: 140,
+                    render: (_, record: ConditionTableData) => (
+                        <div style={{ fontSize: '11px' }}>
+                            <div style={{ fontWeight: 'bold', color: '#1890ff', marginBottom: '2px' }}>
+                                {record.Code}
+                            </div>
+                            <div style={{ fontWeight: '500' }}>
+                                {record.Fullname}
+                            </div>
+                            <div style={{ color: '#666', fontSize: '9px' }}>
+                                {record.Major}
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    title: 'เงื่อนไข',
+                    key: 'conditions',
+                    width: 100,
+                    render: (_, record: ConditionTableData) => {
+                        const hasConditions = record.Conditions && record.Conditions.length > 0;
+                        return (
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{
+                                    backgroundColor: hasConditions ? '#e6f7ff' : '#f5f5f5',
+                                    color: hasConditions ? '#1890ff' : '#999',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    fontSize: '10px',
+                                    fontWeight: 'bold',
+                                    border: `1px solid ${hasConditions ? '#91d5ff' : '#d9d9d9'}`,
+                                    marginBottom: '4px'
+                                }}>
+                                    {record.ItemCount || 0} ช่วง
+                                </div>
+                                {hasConditions && (
+                                    <div style={{ fontSize: '8px', color: '#666' }}>
+                                        มีเงื่อนไข
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    }
+                },
+                {
+                    title: 'จัดการ',
+                    key: 'action',
+                    width: 70,
+                    align: 'center',
+                    render: (_, record: ConditionTableData) => {
+                        const hasConditions = record.Conditions && record.Conditions.length > 0;
+                        
+                        return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <Button
+                                    size="small"
+                                    style={{
+                                        backgroundColor: hasConditions ? '#F26522' : '#f5f5f5',
+                                        borderColor: hasConditions ? '#F26522' : '#d9d9d9',
+                                        color: hasConditions ? 'white' : '#999',
+                                        fontSize: '9px',
+                                        padding: '1px 4px',
+                                        height: '20px',
+                                        lineHeight: '18px'
+                                    }}
+                                    onClick={() => handleEditCondition(record.UserID, record.Fullname, record.Conditions)}
+                                    disabled={!hasConditions}
+                                    title={hasConditions ? 'แก้ไขเงื่อนไข' : 'ไม่มีเงื่อนไขให้แก้ไข'}
+                                >
+                                    แก้ไข
+                                </Button>
+                                <Button
+                                    size="small"
+                                    style={{
+                                        backgroundColor: hasConditions ? '#ff4d4f' : '#f5f5f5',
+                                        borderColor: hasConditions ? '#ff4d4f' : '#d9d9d9',
+                                        color: hasConditions ? 'white' : '#999',
+                                        fontSize: '9px',
+                                        padding: '1px 4px',
+                                        height: '20px',
+                                        lineHeight: '18px'
+                                    }}
+                                    onClick={() => handleDeleteCondition(record.UserID, record.Fullname)}
+                                    disabled={!hasConditions}
+                                    title={hasConditions ? 'ลบเงื่อนไขทั้งหมด' : 'ไม่มีเงื่อนไขให้ลบ'}
+                                >
+                                    ลบ
+                                </Button>
+                            </div>
+                        );
+                    }
+                }
+            ];
+        }
+
+        // Desktop/Tablet layout
+        const columns: ColumnsType<ConditionTableData> = [
+            {
+                title: 'ลำดับ',
+                dataIndex: 'order',
+                key: 'order',
+                width: 60,
+                align: 'center',
+                render: (value: number) => <span style={{ fontWeight: 'bold' }}>{value}</span>
+            },
+            {
+                title: 'รหัสอาจารย์',
+                dataIndex: 'Code',
+                key: 'Code',
+                width: 100,
+                render: (value: string) => <span style={{ fontWeight: 'bold', color: '#1890ff' }}>{value}</span>
+            },
+            {
+                title: 'ชื่อ-นามสกุล',
+                dataIndex: 'Fullname',
+                key: 'Fullname',
+                width: 200,
+                render: (value: string) => <span style={{ fontWeight: '500' }}>{value}</span>
+            },
+            {
+                title: 'แผนก/สาขา',
+                dataIndex: 'Major',
+                key: 'Major',
+                width: isSmallScreen ? 120 : 150,
+                align: 'center'
+            }
+        ];
+
+        // Add email and phone for large screens only
+        if (!isSmallScreen) {
+            columns.push(
+                {
+                    title: 'อีเมล',
+                    dataIndex: 'Email',
+                    key: 'Email',
+                    width: 180,
+                    render: (value: string) => (
+                        <a href={`mailto:${value}`} style={{ color: '#1890ff', fontSize: '12px' }}>
+                            {value}
+                        </a>
+                    )
+                },
+                {
+                    title: 'เบอร์โทร',
+                    dataIndex: 'Phone',
+                    key: 'Phone',
+                    width: 120,
+                    align: 'center',
+                    render: (value: string) => <span style={{ fontSize: '12px' }}>{value}</span>
+                }
+            );
+        }
+
+        // Add conditions and count columns
+        columns.push(
+            {
+                title: 'เงื่อนไขเวลาที่ไม่สะดวก',
+                dataIndex: 'Conditions',
+                key: 'Conditions',
+                width: isSmallScreen ? 200 : 280,
+                render: (value: ConditionInterface[]) => renderTimeSlots(value)
+            },
+            {
+                title: 'จำนวนช่วงเวลา',
+                dataIndex: 'ItemCount',
+                key: 'ItemCount',
+                width: isSmallScreen ? 80 : 100,
+                align: 'center',
+                render: (value: number) => (
+                    <span style={{ 
+                        backgroundColor: value > 0 ? '#e6f7ff' : '#f5f5f5',
+                        color: value > 0 ? '#1890ff' : '#999',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        border: `1px solid ${value > 0 ? '#91d5ff' : '#d9d9d9'}`
+                    }}>
+                        {value || 0} ช่วง
+                    </span>
+                )
+            }
+        );
+
+        // Add dates columns for large screens
+        if (!isSmallScreen) {
+            columns.push(
+                {
+                    title: 'วันที่สร้าง',
+                    dataIndex: 'CreatedAt',
+                    key: 'CreatedAt',
+                    width: 120,
+                    align: 'center',
+                    render: (value: string) => (
+                        <span style={{ fontSize: '10px', color: '#666' }}>
+                            {value ? new Date(value).toLocaleDateString('th-TH') : '-'}
+                        </span>
+                    )
+                },
+                {
+                    title: 'แก้ไขล่าสุด',
+                    dataIndex: 'LastUpdatedAt',
+                    key: 'LastUpdatedAt',
+                    width: 120,
+                    align: 'center',
+                    render: (value: string) => (
+                        <span style={{ fontSize: '10px', color: '#666' }}>
+                            {value ? new Date(value).toLocaleDateString('th-TH') : '-'}
+                        </span>
+                    )
+                }
+            );
+        }
+
+        // Add action column
+        columns.push({
             title: 'จัดการ',
             key: 'action',
             width: 120,
@@ -342,11 +445,17 @@ const Conditionpage: React.FC = () => {
                     </div>
                 );
             }
-        }
-    ];
+        });
+
+        return columns;
+    };
 
     return (
-        <>
+        <div style={{ 
+            fontFamily: 'Sarabun, sans-serif',
+            padding: 0,
+            margin: 0
+        }}>
             {/* Page Title */}
             <div style={{ 
                 marginBottom: '20px',
@@ -356,87 +465,83 @@ const Conditionpage: React.FC = () => {
                 <h2 style={{ 
                     margin: '0 0 8px 0', 
                     color: '#333',
-                    fontSize: '20px',
-                    fontWeight: 'bold'
+                    fontSize: isMobile ? '18px' : '20px',
+                    fontWeight: 'bold',
+                    fontFamily: 'Sarabun, sans-serif'
                 }}>
                     เงื่อนไขเวลาที่ไม่สะดวกของอาจารย์
                 </h2>
                 <p style={{ 
                     margin: 0, 
                     color: '#666',
-                    fontSize: '13px'
+                    fontSize: isMobile ? '12px' : '13px',
+                    fontFamily: 'Sarabun, sans-serif'
                 }}>
                     จัดการและดูเงื่อนไขเวลาที่ไม่สะดวกของอาจารย์ทุกคน สำหรับการจัดตารางเรียน
                 </p>
             </div>
 
-            {/* Main Content Area */}
-            <div style={{
-                width: '100%',
-                maxWidth: '1600px',
-                margin: '0 auto',
-                backgroundColor: '#ffffff',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-                border: '1px solid #e0e0e0',
-                padding: '24px',
-                borderRadius: '8px',
-                minHeight: 'calc(100vh - 200px)'
-            }}>
-                {/* Controls Section */}
-                <div style={{ 
-                    marginBottom: '20px'
+            {/* Controls Section */}
+            <div style={{ marginBottom: '20px' }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    backgroundColor: '#f8f9fa',
+                    padding: isMobile ? '8px 12px' : '12px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #e9ecef',
+                    minHeight: '48px',
+                    flexWrap: isMobile ? 'wrap' : 'nowrap',
+                    gap: isMobile ? '8px' : '12px'
                 }}>
-                    {/* Top row - Main controls */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        backgroundColor: '#f8f9fa',
-                        padding: '12px 16px',
-                        borderRadius: '8px',
-                        border: '1px solid #e9ecef',
-                        minHeight: '48px',
-                        flexWrap: 'nowrap',
-                        overflow: 'hidden'
-                    }}>
-                        {/* Left group - Search controls */}
-                        <div style={{ 
-                            display: 'flex', 
-                            gap: '12px', 
-                            alignItems: 'center',
-                            flexShrink: 0
-                        }}>
-                            <Select
-                                value={selectedDepartment}
-                                onChange={setSelectedDepartment}
-                                style={{ width: 150 }}
-                                placeholder="เลือกแผนก"
-                                size="small"
-                            >
-                                <Option value="all">ทุกแผนก</Option>
-                                <Option value="เทคโนโลยีสารสนเทศ">เทคโนโลยีสารสนเทศ</Option>
-                                <Option value="วิศวกรรมคอมพิวเตอร์">วิศวกรรมคอมพิวเตอร์</Option>
-                                <Option value="วิทยาการคอมพิวเตอร์">วิทยาการคอมพิวเตอร์</Option>
-                            </Select>
-                            
-                            <Input
-                                placeholder="ค้นหาอาจารย์..."
-                                prefix={<SearchOutlined />}
-                                value={searchText}
-                                onChange={(e) => setSearchText(e.target.value)}
-                                style={{ width: 180 }}
-                                size="small"
-                            />
-                            
-                            {/* Pagination controls */}
-                            <span style={{ whiteSpace: 'nowrap', fontSize: '12px', color: '#666' }}>รายการที่แสดง</span>
+                    {/* Search controls */}
+                    <Select
+                        value={selectedDepartment}
+                        onChange={setSelectedDepartment}
+                        style={{ 
+                            width: isMobile ? '100%' : 150,
+                            fontFamily: 'Sarabun, sans-serif'
+                        }}
+                        placeholder="เลือกแผนก"
+                        size="small"
+                    >
+                        <Option value="all">ทุกแผนก</Option>
+                        <Option value="เทคโนโลยีสารสนเทศ">เทคโนโลยีสารสนเทศ</Option>
+                        <Option value="วิศวกรรมคอมพิวเตอร์">วิศวกรรมคอมพิวเตอร์</Option>
+                        <Option value="วิทยาการคอมพิวเตอร์">วิทยาการคอมพิวเตอร์</Option>
+                    </Select>
+                    
+                    <Input
+                        placeholder="ค้นหาอาจารย์..."
+                        prefix={<SearchOutlined />}
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        style={{ 
+                            width: isMobile ? '100%' : 180,
+                            fontFamily: 'Sarabun, sans-serif'
+                        }}
+                        size="small"
+                    />
+
+                    {/* Pagination controls for desktop */}
+                    {!isMobile && (
+                        <>
+                            <span style={{ 
+                                whiteSpace: 'nowrap', 
+                                fontSize: '12px', 
+                                color: '#666',
+                                fontFamily: 'Sarabun, sans-serif'
+                            }}>
+                                รายการที่แสดง
+                            </span>
                             <Select
                                 value={pageSize.toString()}
-                                style={{ width: 50 }}
-                                size="small"
-                                onChange={(value) => {
-                                    const newSize = parseInt(value);
-                                    handlePageSizeChange(newSize);
+                                style={{ 
+                                    width: 50,
+                                    fontFamily: 'Sarabun, sans-serif'
                                 }}
+                                size="small"
+                                onChange={(value) => handlePageSizeChange(parseInt(value))}
                             >
                                 <Option value="5">5</Option>
                                 <Option value="10">10</Option>
@@ -444,9 +549,9 @@ const Conditionpage: React.FC = () => {
                                 <Option value="50">50</Option>
                             </Select>
                             
-                            {/* Compact pagination numbers */}
+                            {/* Page numbers */}
                             {totalPages > 1 && (
-                                <>
+                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                                     {[1, 2, 3, 4, 5].map((page) => (
                                         page <= totalPages && (
                                             <span
@@ -461,7 +566,8 @@ const Conditionpage: React.FC = () => {
                                                     minWidth: '18px',
                                                     textAlign: 'center',
                                                     cursor: 'pointer',
-                                                    display: 'inline-block'
+                                                    display: 'inline-block',
+                                                    fontFamily: 'Sarabun, sans-serif'
                                                 }}
                                                 onClick={() => handlePageChange(page)}
                                             >
@@ -469,139 +575,211 @@ const Conditionpage: React.FC = () => {
                                             </span>
                                         )
                                     ))}
-                                    
                                     {totalPages > 5 && (
-                                        <>
-                                            <span style={{ color: '#666', fontSize: '11px' }}>... {totalPages}</span>
-                                        </>
-                                    )}
-                                    
-                                    {currentPage < totalPages && (
-                                        <span 
-                                            style={{ 
-                                                cursor: 'pointer', 
-                                                color: '#666', 
-                                                fontSize: '11px', 
-                                                whiteSpace: 'nowrap'
-                                            }}
-                                            onClick={() => handlePageChange(currentPage + 1)}
-                                        >
-                                            ถัดไป
+                                        <span style={{ 
+                                            color: '#666', 
+                                            fontSize: '11px',
+                                            fontFamily: 'Sarabun, sans-serif'
+                                        }}>
+                                            ... {totalPages}
                                         </span>
                                     )}
-                                </>
+                                </div>
                             )}
-                            
-                            <span style={{ 
-                                fontSize: '10px', 
-                                whiteSpace: 'nowrap',
-                                color: '#666'
-                            }}>
-                                แสดง {startIndex + 1}-{Math.min(endIndex, totalItems)} จาก {totalItems} รายการ
-                            </span>
-                        </div>
 
-                        {/* Spacer */}
-                        <div style={{ flex: 1 }}></div>
+                            <div style={{ flex: 1 }}></div>
+                        </>
+                    )}
 
-                        {/* Refresh Button */}
-                        <Button
-                            onClick={getAllUserConditions}
-                            disabled={loading}
+                    {/* Refresh Button */}
+                    <Button
+                        onClick={getAllUserConditions}
+                        disabled={loading}
+                        style={{ 
+                            fontSize: '12px',
+                            color: '#666',
+                            width: isMobile ? '100%' : 'auto',
+                            fontFamily: 'Sarabun, sans-serif'
+                        }}
+                        size="small"
+                    >
+                        🔄 รีเฟรช
+                    </Button>
+                </div>
+
+                {/* Mobile pagination */}
+                {isMobile && totalPages > 1 && (
+                    <div style={{
+                        marginTop: '12px',
+                        padding: '8px 12px',
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                    }}>
+                        <Select
+                            value={pageSize.toString()}
                             style={{ 
-                                fontSize: '12px',
-                                color: '#666'
+                                width: 70,
+                                fontFamily: 'Sarabun, sans-serif'
                             }}
                             size="small"
+                            onChange={(value) => handlePageSizeChange(parseInt(value))}
                         >
-                            🔄 รีเฟรช
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Summary Stats */}
-                {conditionsData.length > 0 && (
-                    <div style={{
-                        marginBottom: '16px',
-                        padding: '12px 16px',
-                        backgroundColor: '#e6f7ff',
-                        borderRadius: '6px',
-                        border: '1px solid #91d5ff',
-                        fontSize: '13px'
-                    }}>
-                        <strong>สรุป:</strong> อาจารย์ทั้งหมด {conditionsData.length} คน | 
-                        มีเงื่อนไข {conditionsData.filter(c => c.Conditions && c.Conditions.length > 0).length} คน | 
-                        ไม่มีเงื่อนไข {conditionsData.filter(c => !c.Conditions || c.Conditions.length === 0).length} คน
+                            <Option value="5">5</Option>
+                            <Option value="10">10</Option>
+                            <Option value="20">20</Option>
+                        </Select>
+                        
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                            <Button
+                                size="small"
+                                disabled={currentPage === 1}
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                style={{ fontFamily: 'Sarabun, sans-serif' }}
+                            >
+                                ←
+                            </Button>
+                            <span style={{ 
+                                fontSize: '12px', 
+                                padding: '0 8px',
+                                fontFamily: 'Sarabun, sans-serif'
+                            }}>
+                                {currentPage}/{totalPages}
+                            </span>
+                            <Button
+                                size="small"
+                                disabled={currentPage === totalPages}
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                style={{ fontFamily: 'Sarabun, sans-serif' }}
+                            >
+                                →
+                            </Button>
+                        </div>
                     </div>
                 )}
+            </div>
 
-                {/* Main Table */}
-                <div style={{ 
-                    backgroundColor: 'white',
-                    border: '1px solid #d9d9d9',
-                    borderRadius: '6px',
-                    overflow: 'hidden'
-                }}>
-                    <Table
-                        columns={columns}
-                        dataSource={currentData}
-                        pagination={false}
-                        size="small"
-                        bordered
-                        scroll={{ x: 1600, y: 600 }}
-                        loading={loading}
-                        style={{
-                            fontSize: '12px'
-                        }}
-                        className="custom-table"
-                        locale={{
-                            emptyText: (
-                                <div style={{ 
-                                    padding: '40px', 
-                                    textAlign: 'center', 
-                                    color: '#999' 
-                                }}>
-                                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
-                                    <div style={{ fontSize: '16px', marginBottom: '8px' }}>
-                                        ไม่พบข้อมูลเงื่อนไข
-                                    </div>
-                                    <div style={{ fontSize: '14px', color: '#ccc' }}>
-                                        ยังไม่มีอาจารย์คนใดเพิ่มเงื่อนไขเวลาที่ไม่สะดวก
-                                    </div>
-                                </div>
-                            )
-                        }}
-                    />
-                </div>
-
-                {/* Footer Info */}
+            {/* Summary Stats */}
+            {conditionsData.length > 0 && (
                 <div style={{
-                    marginTop: '16px',
-                    padding: '12px 16px',
-                    backgroundColor: '#f8f9fa',
+                    marginBottom: '16px',
+                    padding: isMobile ? '8px 12px' : '12px 16px',
+                    backgroundColor: '#e6f7ff',
                     borderRadius: '6px',
-                    border: '1px solid #e9ecef',
-                    fontSize: '12px',
-                    color: '#666'
+                    border: '1px solid #91d5ff',
+                    fontSize: isMobile ? '12px' : '13px',
+                    fontFamily: 'Sarabun, sans-serif'
                 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            💡 <strong>หมายเหตุ:</strong> เงื่อนไขเหล่านี้จะถูกนำไปใช้ในการจัดตารางเรียนอัตโนมัติ
-                        </div>
-                        <div>
-                            ข้อมูลล่าสุด: {new Date().toLocaleString('th-TH')} | 
-                            <span 
-                                style={{ marginLeft: '8px', cursor: 'pointer', color: '#F26522' }}
-                                onClick={getAllUserConditions}
-                                title="รีเฟรชข้อมูล"
-                            >
-                                🔄 รีเฟรช
-                            </span>
-                        </div>
+                    <strong>สรุป:</strong> อาจารย์ทั้งหมด {conditionsData.length} คน | 
+                    มีเงื่อนไข {conditionsData.filter(c => c.Conditions && c.Conditions.length > 0).length} คน | 
+                    ไม่มีเงื่อนไข {conditionsData.filter(c => !c.Conditions || c.Conditions.length === 0).length} คน
+                </div>
+            )}
+
+            {/* Main Table */}
+            <div style={{ 
+                backgroundColor: 'white',
+                border: '1px solid #d9d9d9',
+                borderRadius: '6px',
+                overflow: 'hidden'
+            }}>
+                <Table
+                    columns={getColumns()}
+                    dataSource={currentData}
+                    pagination={false}
+                    size="small"
+                    bordered
+                    scroll={{ 
+                        x: isMobile ? 350 : isSmallScreen ? 800 : 1600, 
+                        y: isMobile ? 400 : 600 
+                    }}
+                    loading={loading}
+                    style={{ 
+                        fontSize: isMobile ? '11px' : '12px',
+                        fontFamily: 'Sarabun, sans-serif'
+                    }}
+                    className="custom-table"
+                    locale={{
+                        emptyText: (
+                            <div style={{ 
+                                padding: isMobile ? '20px' : '40px', 
+                                textAlign: 'center', 
+                                color: '#999',
+                                fontFamily: 'Sarabun, sans-serif'
+                            }}>
+                                <div style={{ fontSize: isMobile ? '32px' : '48px', marginBottom: '16px' }}>📋</div>
+                                <div style={{ fontSize: isMobile ? '14px' : '16px', marginBottom: '8px' }}>
+                                    ไม่พบข้อมูลเงื่อนไข
+                                </div>
+                                <div style={{ fontSize: isMobile ? '12px' : '14px', color: '#ccc' }}>
+                                    ยังไม่มีอาจารย์คนใดเพิ่มเงื่อนไขเวลาที่ไม่สะดวก
+                                </div>
+                            </div>
+                        )
+                    }}
+                />
+            </div>
+
+            {/* Footer Info */}
+            <div style={{
+                marginTop: '16px',
+                padding: isMobile ? '8px 12px' : '12px 16px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '6px',
+                border: '1px solid #e9ecef',
+                fontSize: isMobile ? '11px' : '12px',
+                color: '#666',
+                fontFamily: 'Sarabun, sans-serif'
+            }}>
+                <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: isMobile ? '8px' : '0'
+                }}>
+                    <div>
+                        💡 <strong>หมายเหตุ:</strong> เงื่อนไขเหล่านี้จะถูกนำไปใช้ในการจัดตารางเรียนอัตโนมัติ
+                    </div>
+                    <div>
+                        ข้อมูลล่าสุด: {new Date().toLocaleString('th-TH')} | 
+                        <span 
+                            style={{ 
+                                marginLeft: '8px', 
+                                cursor: 'pointer', 
+                                color: '#F26522',
+                                fontWeight: '500'
+                            }}
+                            onClick={getAllUserConditions}
+                            title="รีเฟรชข้อมูล"
+                        >
+                            🔄 รีเฟรช
+                        </span>
                     </div>
                 </div>
             </div>
-        </>
+
+            {/* Additional Info for Mobile */}
+            {isMobile && (
+                <div style={{
+                    marginTop: '12px',
+                    padding: '8px 12px',
+                    backgroundColor: '#fff3cd',
+                    borderRadius: '6px',
+                    border: '1px solid #ffeaa7',
+                    fontSize: '11px',
+                    color: '#856404',
+                    fontFamily: 'Sarabun, sans-serif'
+                }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>💡 เคล็ดลับการใช้งาน:</div>
+                    <div>• กดที่ชื่ออาจารย์เพื่อดูรายละเอียดเพิ่มเติม</div>
+                    <div>• หมุนหน้าจอเป็นแนวนอนเพื่อดูข้อมูลเพิ่มเติม</div>
+                    <div>• ใช้การค้นหาเพื่อหาอาจารย์ที่ต้องการได้เร็วขึ้น</div>
+                </div>
+            )}
+        </div>
     );
 };
 

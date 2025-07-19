@@ -2,12 +2,8 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/login/Login";
 import Password from "./pages/forget/FristChangePassword";
-////////////////////////////////////////////// Homepage
-import HomeAdminPage from "./pages//home/HomeAdmin/HomeAdmin";
-import HomeInstructorPage from "./pages/home/HomeInstructor/HomeInstructor";
+// import HomeInstructorPage from "./pages/home/HomeInstructor";
 import HomeSchedulePage from "./pages/home/HomeSchedulor/Homepage";
-/////////////////////////////////////////////
-import Sidebar from "./components/schedule-sidebar/Sidebar";
 
 import TeacherList from "./pages/admin/TeacherList/TeacherList";
 import AssistanceList from "./pages/admin/AssistanceList/AssistanceList";
@@ -18,6 +14,7 @@ import ManageCourse from "./pages/admin/ManageCourse/ManageCourse";
 import ManageCesCourse from "./pages/admin/ManageCesCourse/ManageCesCourse";
 import ManageAssistance from "./pages/admin/ManageAssistance/ManageAssistance";
 
+// import ChangePassword from "./pages/instructor/ChangePassword/ChangePassword";
 import AddCondition from "./pages/instructor/AddCondition/AddCondition";
 import EditConditionpage from "./pages/scheduler/addconditionpage/EditConditionpage";
 import AddCourse from "./pages/instructor/AddCourse/AddCourse";
@@ -31,43 +28,48 @@ import AllCoursepage from './pages/scheduler/allcoursepage/AllCoursepage';
 import AddCoursepage from './pages/scheduler/addcoursepage/AddCoursepage';
 import Instructorpage from './pages/scheduler/instructorpage/Instructorpage';
 
-import Layout from "./layout/layout";
+import MainLayout from "./layout/MainLayout";
 import PrivateRoute from "./PrivateRoute";
 
 const App: React.FC = () => {
   return (
     <Router>
       <Routes>
+        {/* Routes without Layout (Login, etc.) */}
         <Route path="/" element={<LoginPage />} />
         <Route path="/change-password" element={<Password />} />
         
-        <Route path="/" element={<Layout />}>
-          <Route path="home-schedule" element={<HomeSchedulePage />} />
-          <Route path="home-instructor" element={<HomeInstructorPage />} />
-          <Route path="home-admin" element={<HomeAdminPage />} />
+        {/* Routes with MainLayout */}
+        <Route path="/home-schedule" element={<MainLayout><HomeSchedulePage /></MainLayout>} />
+        <Route path="/teacher-list" element={<MainLayout><TeacherList /></MainLayout>} />
+        <Route path="/assistance-list" element={<MainLayout><AssistanceList /></MainLayout>} />
+        <Route path="/open-course" element={<MainLayout><OpenCourse /></MainLayout>} />
+        <Route path="/all-course" element={<MainLayout><AllCourse /></MainLayout>} />
+        <Route path="/manage-teacher" element={<MainLayout><ManageTeacher /></MainLayout>} />
+        <Route path="/manage-teacher/:id" element={<MainLayout><ManageTeacher /></MainLayout>} />
+        <Route path="/manage-course" element={<MainLayout><ManageCourse /></MainLayout>} />
+        <Route path="/manage-cescourse" element={<MainLayout><ManageCesCourse /></MainLayout>} />
+        <Route path="/manage-assistance" element={<MainLayout><ManageAssistance /></MainLayout>} />
 
-          <Route path="teacher-list" element={<TeacherList />} />
-          <Route path="assistance-list" element={<AssistanceList />} />
-          <Route path="open-course" element={<OpenCourse />} />
-          <Route path="all-course" element={<AllCourse />} />
-          <Route path="manage-teacher" element={<ManageTeacher />} />
-          <Route path="manage-teacher/:id" element={<ManageTeacher />} />
-          <Route path="manage-course" element={<ManageCourse />} />
-          <Route path="manage-cescourse" element={<ManageCesCourse />} />
-          <Route path="manage-assistance" element={<ManageAssistance />} />
+        {/* <Route path="/change-password-instructor" element={<MainLayout><ChangePassword /></MainLayout>} /> */}
+        <Route path="/add-condition" element={<MainLayout><AddCondition /></MainLayout>} />
+        <Route path="/add-course" element={<MainLayout><AddCourse /></MainLayout>} />
 
-          <Route path="add-condition" element={<AddCondition/>} />
-          <Route path="add-course" element={<AddCourse/>} />
+        {/* <Route path="/home-instructor" element={
+          <MainLayout>
+            <PrivateRoute><HomeInstructorPage /></PrivateRoute>
+          </MainLayout>
+        } /> */}
 
-          <Route path="Schedulepage" element={<Schedulepage />} />
-          <Route path="OfferedCoursespage" element={<OfferedCoursespage />} />
-          <Route path="Conditionpage" element={<Conditionpage/>} />
-          <Route path="Instructorpage" element={<Instructorpage/>} />
-          <Route path="AllCoursepage" element={<AllCoursepage/>} />
-          <Route path="AddConditionpage" element={<AddConditionpage/>} />
-          <Route path="EditConditionpage" element={<EditConditionpage/>} />
-          <Route path="AddCoursepage" element={<AddCoursepage/>} />
-        </Route>
+        <Route path="/Homepage" element={<MainLayout><Homepage /></MainLayout>} />
+        <Route path="/Schedulepage" element={<MainLayout><Schedulepage /></MainLayout>} />
+        <Route path="/OfferedCoursespage" element={<MainLayout><OfferedCoursespage /></MainLayout>} />
+        <Route path="/Conditionpage" element={<MainLayout><Conditionpage /></MainLayout>} />
+        <Route path="/Instructorpage" element={<MainLayout><Instructorpage /></MainLayout>} />
+        <Route path="/AllCoursepage" element={<MainLayout><AllCoursepage /></MainLayout>} />
+        <Route path="/AddConditionpage" element={<MainLayout><AddConditionpage /></MainLayout>} />
+        <Route path="/EditConditionpage" element={<MainLayout><EditConditionpage /></MainLayout>} />
+        <Route path="/AddCoursepage" element={<MainLayout><AddCoursepage /></MainLayout>} />
       </Routes>
     </Router>
   );
