@@ -72,6 +72,9 @@ const LoginPage: React.FC = () => {
   const handleInvalid = (e: React.FormEvent<HTMLInputElement>) => {
     const target = e.target as HTMLInputElement;
 
+    if (location.pathname === "/") return null;
+
+
     if (target.name === "Username" && target.value === "") {
       target.setCustomValidity("กรุณากรอกรหัสพนักงาน");
     } else if (target.name === "Password" && target.value === "") {
