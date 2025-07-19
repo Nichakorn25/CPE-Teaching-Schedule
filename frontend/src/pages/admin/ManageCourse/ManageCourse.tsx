@@ -17,6 +17,7 @@ import {
   DepartmentInterface,
   AllTeacher,
 } from "../../../interfaces/Adminpage";
+import Swal from "sweetalert2"
 
 const ManageCourse: React.FC = () => {
   const [majors, setMajors] = useState<MajorInterface[]>([]);
@@ -204,9 +205,18 @@ const ManageCourse: React.FC = () => {
     const response = await postCreateCourse(data);
 
     if (response.status === 200) {
-      alert("เพิ่มรายวิชาเรียบร้อย");
+      Swal.fire({
+        icon: "success",
+        title: "เพิ่มรายวิชาเรียบร้อย",
+        showConfirmButton: false,
+        timer: 1500,
+      });
     } else {
-      alert("เกิดข้อผิดพลาดในการเพิ่มรายวิชา");
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาดในการเพิ่มรายวิชา",
+        text: response?.data?.message || "ไม่สามารถเพิ่มรายวิชาได้",
+      });
       console.error(response.data);
     }
   };
@@ -307,6 +317,12 @@ const ManageCourse: React.FC = () => {
                 <option value="2">2</option>
                 <option value="3">3</option>
                 <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
               </select>
             </div>
             <div>
@@ -335,6 +351,12 @@ const ManageCourse: React.FC = () => {
                       <option value="2">2</option>
                       <option value="3">3</option>
                       <option value="4">4</option>
+                      <option value="5">5</option>
+                      <option value="6">6</option>
+                      <option value="7">7</option>
+                      <option value="8">8</option>
+                      <option value="9">9</option>
+                      <option value="10">10</option>
                     </select>
                   </div>
                 ))}
