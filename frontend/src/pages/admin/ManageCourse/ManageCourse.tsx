@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-
-
 import {
   postCreateCourse,
   getTypeofCourse,
@@ -19,7 +17,6 @@ import {
   DepartmentInterface,
   AllTeacher,
 } from "../../../interfaces/Adminpage";
-
 
 const ManageCourse: React.FC = () => {
   const [majors, setMajors] = useState<MajorInterface[]>([]);
@@ -106,12 +103,23 @@ const ManageCourse: React.FC = () => {
         setTeacherOptions([]);
         return;
       }
+
       const res = await getTeachers();
+      console.log("result", res.data);
+
       if (res.status === 200) {
-        setAllTeachers(res.data);
-        setTeacherOptions(res.data); // <- เพิ่มบรรทัดนี้
+        const all = res.data;
+
+        //กรองเฉพาะอาจารย์ที่มี MajorID ตรงกับ selectedMajorID
+        const filtered = all.filter(
+          (teacher) => teacher.MajorID === selectedMajorID
+        );
+
+        setAllTeachers(filtered);
+        setTeacherOptions(filtered);
       }
     };
+
     fetchTeachers();
   }, [selectedMajorID]);
 
@@ -122,8 +130,8 @@ const ManageCourse: React.FC = () => {
         ID: 0,
         DeleteID: 0,
         Title: "",
-        FirstName: "",
-        LastName: "",
+        Firstname: "",
+        Lastname: "",
         Email: "",
         EmpId: "",
         Department: "",
@@ -164,7 +172,7 @@ const ManageCourse: React.FC = () => {
     if (!hours.lecture || !hours.practice || !hours.selfStudy) return false;
 
     for (const teacher of teachers) {
-      if (!teacher.Title || !teacher.FirstName || !teacher.LastName)
+      if (!teacher.Title || !teacher.Firstname || !teacher.Lastname)
         return false;
     }
 
@@ -422,11 +430,18 @@ const ManageCourse: React.FC = () => {
                     }}
                   >
                     <option value="">-- เลือกอาจารย์ --</option>
-                    {teacherOptions.map((teacher) => (
-                      <option key={teacher.ID} value={teacher.ID}>
-                        {`${teacher.Title} ${teacher.FirstName} ${teacher.LastName}`}
-                      </option>
-                    ))}
+                    {teacherOptions.map((teacher) => {
+                      const titleStr =
+                        typeof teacher.Title === "string"
+                          ? teacher.Title
+                          : teacher.Title?.Title || "";
+
+                      return (
+                        <option key={teacher.ID} value={teacher.ID}>
+                          {`${titleStr} ${teacher.Firstname} ${teacher.Lastname}`}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 
