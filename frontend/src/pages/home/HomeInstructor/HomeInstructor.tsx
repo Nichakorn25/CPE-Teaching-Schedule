@@ -1,42 +1,61 @@
-import React from 'react';
-import ScheduleCard from '../ScheduleCard';
+import React, { useEffect, useState } from 'react';
+import './HomeInstructor.css';
+import { Clock } from 'lucide-react';
 
-interface Class {
-  day?: string;
+interface ScheduleItem {
+  day: string;
   time: string;
   subject: string;
   room: string;
   students?: number;
 }
 
-interface InstructorData {
-  schedule: Class[];
-  todayClasses: Class[];
+interface InstructorDashboardProps {
+  schedule: ScheduleItem[];
+  todayClasses: ScheduleItem[];
 }
 
-interface Props {
-  data?: InstructorData; // ✅ เปลี่ยนเป็น optional
-}
+const ScheduleCard = ({ schedule, title }: { schedule: ScheduleItem[]; title: string }) => (
+  <div className="schedule-card">
+    <h3 className="schedule-title">
+      <Clock className="schedule-icon" />
+      {title}
+    </h3>
+    <div className="schedule-list">
+      {schedule.length === 0 ? (
+        <p className="schedule-empty">ไม่มีข้อมูล</p>
+      ) : (
+        schedule.map((item, index) => (
+          <div key={index} className="schedule-item">
+            <div>
+              <p className="schedule-subject">{item.subject}</p>
+              <p className="schedule-time">{item.time} | {item.room}</p>
+              {item.students && <p className="schedule-students">นักเรียน: {item.students} คน</p>}
+            </div>
+            <span className="schedule-day">{item.day}</span>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+);
 
-const InstructorDashboard: React.FC<Props> = ({ data }) => {
-  // ✅ fallback data ถ้าไม่มี prop data ถูกส่งมา
-  const defaultData: InstructorData = {
-    schedule: [
-      { day: 'Monday', time: '09:00', subject: 'Math', room: '101', students: 30 },
-      { day: 'Tuesday', time: '11:00', subject: 'Physics', room: '202', students: 25 },
-    ],
-    todayClasses: [
-      { time: '09:00', subject: 'Math', room: '101', students: 30 },
-    ],
-  };
+const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ schedule, todayClasses }) => {
+  const [role, setRole] = useState<string | null>(null);
 
-  const finalData = data || defaultData;
+  useEffect(() => {
+    const storedRole = localStorage.getItem('role');
+    setRole(storedRole);
+  }, []);
 
   return (
     <div className="instructor-dashboard">
-      <div className="instructor-schedule">
-        <ScheduleCard schedule={finalData.schedule} title="ตารางสอนประจำสัปดาห์" />
-        <ScheduleCard schedule={finalData.todayClasses} title="วิชาที่สอนวันนี้" />
+      <h2 className="dashboard-title">Instructor Dashboard</h2>
+      {role && <p className="dashboard-role">คุณกำลังเข้าสู่ระบบในบทบาท: <strong>{role}</strong></p>}
+
+      <div className="instructor-grid">
+        <ScheduleCard schedule={schedule} title="ตารางสอนประจำสัปดาห์" />
+        <ScheduleCard schedule={todayClasses} title="วิชาที่สอนวันนี้" />
       </div>
     </div>
   );

@@ -2,8 +2,13 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/login/Login";
 import Password from "./pages/forget/FristChangePassword";
-// import HomeInstructorPage from "./pages/home/HomeInstructor";
+
+import HomeAdminPage from "./pages//home/HomeAdmin/HomeAdmin";
+import HomeInstructorPage from "./pages/home/HomeInstructor/HomeInstructor";
 import HomeSchedulePage from "./pages/home/HomeSchedulor/Homepage";
+import Test from "./pages/home/Dash";
+/////////////////////////////////////////////
+import Sidebar from "./components/schedule-sidebar/Sidebar";
 
 import TeacherList from "./pages/admin/TeacherList/TeacherList";
 import AssistanceList from "./pages/admin/AssistanceList/AssistanceList";
@@ -39,6 +44,12 @@ const App: React.FC = () => {
         <Route path="/" element={<LoginPage />} />
         <Route path="/change-password" element={<Password />} />
         
+        <Route path="/" element={<Layout />}>
+          <Route path="home-test" element={<Test />} />
+          
+          {/* <Route path="home-schedule" element={<HomeSchedulePage />} />
+          <Route path="home-instructor" element={<HomeInstructorPage />} />
+          <Route path="home-admin" element={<HomeAdminPage />} /> */}
         {/* Routes with MainLayout */}
         <Route path="/home-schedule" element={<MainLayout><HomeSchedulePage /></MainLayout>} />
         <Route path="/teacher-list" element={<MainLayout><TeacherList /></MainLayout>} />
