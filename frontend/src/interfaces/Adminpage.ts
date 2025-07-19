@@ -42,9 +42,9 @@ export interface CreateUserInterface {
 export interface AllTeacher {
   ID: number,
   DeleteID: number,
-  Title: string,
-  FirstName: string,
-  LastName: string,
+  Title?: string | { Title: string };
+  Firstname: string,
+  Lastname: string,
   Email: string,
   EmpId: string,
   Department: string,
