@@ -134,6 +134,18 @@ const Sidebar: React.FC = () => {
     },
   ];
 
+  const role = localStorage.getItem("role"); // ได้ค่ามาเป็น string | null
+
+  const filteredMenuItems: MenuItem[] = menuItems.filter((item) =>
+    role ? item.roles.includes(role) : false
+  );
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/"); 
+    window.location.reload;
+  };
+
   useEffect(() => {
     const currentItem = menuItems.find(
       (item) => item.path === location.pathname
@@ -141,20 +153,17 @@ const Sidebar: React.FC = () => {
     if (currentItem) setActiveItem(currentItem.id);
   }, [location.pathname]);
 
-  const handleNavigation = useCallback((item: MenuItem) => {
+  const handleNavigation = (item: MenuItem) => {
     setActiveItem(item.id);
     navigate(item.path);
-  }, [navigate]);
+  };
 
-  const handleLogout = useCallback(() => {
-    // Clear user data from localStorage
-    localStorage.removeItem("isLogin");
-    localStorage.removeItem("first_name");
-    localStorage.removeItem("last_name");
-    
-    // Navigate to login page
-    navigate("/");
-  }, [navigate]);
+  useEffect(() => {
+    const currentItem = menuItems.find(
+      (item) => item.path === location.pathname
+    );
+    if (currentItem) setActiveItem(currentItem.id);
+  }, [location.pathname]);
 
   return (
     <>
@@ -258,7 +267,7 @@ const Sidebar: React.FC = () => {
             overflowX: "hidden",
           }}
         >
-          {menuItems.map((item) => (
+          {filteredMenuItems.map((item) => (
             <div
               key={item.id}
               onClick={() => handleNavigation(item)}
