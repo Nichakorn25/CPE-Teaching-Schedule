@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { IoMenu, IoClose } from "react-icons/io5";
 import { useNavigate, useLocation } from "react-router-dom";
 import { MenuItem } from "../../interfaces/Adminpage";
@@ -10,20 +10,28 @@ const Sidebar: React.FC = () => {
   const [activeItem, setActiveItem] = useState<number>(1);
   const [isOpen, setIsOpen] = useState(true);
 
-  const toggleSidebar = () => setIsOpen(!isOpen);
-
-  useEffect(() => {
-    updateBodyMargin(isOpen);
-  }, []);
-
-  useEffect(() => {
-    updateBodyMargin(isOpen);
+  const toggleSidebar = useCallback(() => {
+    const newIsOpen = !isOpen;
+    setIsOpen(newIsOpen);
+    
+    // Dispatch custom event to notify Layout component
+    window.dispatchEvent(new CustomEvent('sidebarToggle', { 
+      detail: { 
+        isOpen: newIsOpen, 
+        width: newIsOpen ? 280 : 60 
+      } 
+    }));
   }, [isOpen]);
 
-  const updateBodyMargin = (open: boolean) => {
-    const margin = open ? 324 : 84; // 300 หรือ 60 + 24px ช่องว่าง
-    document.body.style.marginLeft = `${margin}px`;
-  };
+  // Initial event dispatch
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('sidebarToggle', { 
+      detail: { 
+        isOpen: isOpen, 
+        width: isOpen ? 280 : 60 
+      } 
+    }));
+  }, []);
 
   const menuItems: MenuItem[] = [
     {
@@ -133,40 +141,47 @@ const Sidebar: React.FC = () => {
     if (currentItem) setActiveItem(currentItem.id);
   }, [location.pathname]);
 
-  const handleNavigation = (item: MenuItem) => {
+  const handleNavigation = useCallback((item: MenuItem) => {
     setActiveItem(item.id);
     navigate(item.path);
-  };
+  }, [navigate]);
+
+  const handleLogout = useCallback(() => {
+    // Clear user data from localStorage
+    localStorage.removeItem("isLogin");
+    localStorage.removeItem("first_name");
+    localStorage.removeItem("last_name");
+    
+    // Navigate to login page
+    navigate("/");
+  }, [navigate]);
 
   return (
     <>
       <style>
         {`
-      nav::-webkit-scrollbar {
-        display: none;
-      }
-      nav {
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE 10+ */
-      }
-    `}
+          .sidebar-scrollbar::-webkit-scrollbar {
+            display: none;
+          }
+          .sidebar-scrollbar {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
+        `}
       </style>
 
-      <Header />
       <div
         style={{
-          width: isOpen ? "280px" : "60px",
+          width: "100%",
           height: "100vh",
           backgroundColor: "#ffffff",
           borderRight: "1px solid #e0e0e0",
-          position: "fixed",
-          left: 0,
-          top: 0,
-          zIndex: 1000,
           display: "flex",
           flexDirection: "column",
-          transition: "width 0.3s ease",
-          // marginRight: 10,
+          boxShadow: "2px 0 8px rgba(0,0,0,0.1)",
+          position: "relative",
+          zIndex: 1001,
+          transition: "all 0.3s ease"
         }}
       >
         {/* Toggle Button */}
@@ -175,6 +190,9 @@ const Sidebar: React.FC = () => {
             display: "flex",
             justifyContent: "flex-end",
             padding: "8px",
+            borderBottom: "1px solid #f0f0f0",
+            minHeight: "56px",
+            alignItems: "center"
           }}
         >
           <button
@@ -186,11 +204,20 @@ const Sidebar: React.FC = () => {
               fontSize: "24px",
               display: "flex",
               alignItems: "center",
-              justifyContent: isOpen ? "flex-start" : "center",
+              justifyContent: "center",
               color: "#FF6B35",
               width: "40px", 
-              height: "40px", 
+              height: "40px",
+              borderRadius: "8px",
+              transition: "background-color 0.2s ease",
             }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#f5f5f5";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            title={isOpen ? "ซ่อน Sidebar" : "แสดง Sidebar"}
           >
             {isOpen ? <IoClose /> : <IoMenu />}
           </button>
@@ -199,9 +226,12 @@ const Sidebar: React.FC = () => {
         {/* Logo */}
         <div
           style={{
-            marginLeft: "20px",
+            padding: "16px 20px",
             display: "flex",
-            justifyContent: "flex-start",
+            justifyContent: isOpen ? "flex-start" : "center",
+            borderBottom: "1px solid #f0f0f0",
+            minHeight: "80px",
+            alignItems: "center"
           }}
         >
           <img
@@ -211,16 +241,21 @@ const Sidebar: React.FC = () => {
               width: isOpen ? "120px" : "30px",
               height: "auto",
               transition: "width 0.3s ease",
+              cursor: "pointer",
             }}
+            onClick={() => navigate("/Homepage")}
+            title="กลับสู่หน้าแรก"
           />
         </div>
 
         {/* Menu */}
         <nav
+          className="sidebar-scrollbar"
           style={{
             flex: 1,
-            paddingTop: "10px",
+            padding: "10px 8px",
             overflowY: "auto",
+            overflowX: "hidden",
           }}
         >
           {menuItems.map((item) => (
@@ -228,53 +263,110 @@ const Sidebar: React.FC = () => {
               key={item.id}
               onClick={() => handleNavigation(item)}
               style={{
-                padding: "12px",
+                padding: isOpen ? "12px 16px" : "12px 8px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: isOpen ? "flex-start" : "center",
-                gap: "12px",
+                gap: isOpen ? "12px" : "0",
                 cursor: "pointer",
-                backgroundColor:
-                  activeItem === item.id ? "#FF6B35" : "transparent",
+                backgroundColor: activeItem === item.id ? "#FF6B35" : "transparent",
                 color: activeItem === item.id ? "white" : "#333",
-                borderRadius: "4px",
-                margin: "4px 8px",
+                borderRadius: "6px",
+                margin: "2px 0",
                 transition: "all 0.2s ease",
+                position: "relative",
+                overflow: "hidden",
+                minHeight: "44px"
               }}
+              onMouseEnter={(e) => {
+                if (activeItem !== item.id) {
+                  e.currentTarget.style.backgroundColor = "#f8f9fa";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeItem !== item.id) {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }
+              }}
+              title={!isOpen ? item.label : undefined}
             >
-              <span style={{ fontSize: "18px", minWidth: "24px" }}>
+              <span style={{ 
+                fontSize: "18px", 
+                minWidth: "24px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}>
                 {item.icon}
               </span>
+              
               {isOpen && (
                 <span
                   style={{
                     fontSize: "14px",
                     fontWeight: activeItem === item.id ? "500" : "400",
+                    whiteSpace: "nowrap",
+                    opacity: 1,
+                    transition: "opacity 0.3s ease"
                   }}
                 >
                   {item.label}
                 </span>
               )}
+              
+              {/* Active indicator */}
+              {activeItem === item.id && (
+                <div style={{
+                  position: "absolute",
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: "3px",
+                  backgroundColor: "white",
+                  borderRadius: "3px 0 0 3px"
+                }} />
+              )}
             </div>
           ))}
         </nav>
 
-        {/* Logout */}
-        <div style={{ padding: "20px" }}>
+        {/* User Info & Logout */}
+        <div style={{ 
+          padding: "16px",
+          borderTop: "1px solid #f0f0f0",
+          backgroundColor: "#fafafa"
+        }}>
+          {isOpen && (
+            <div style={{
+              marginBottom: "12px",
+              padding: "8px",
+              fontSize: "12px",
+              color: "#666",
+              textAlign: "center",
+              borderRadius: "4px",
+              backgroundColor: "white"
+            }}>
+              {localStorage.getItem("first_name")} {localStorage.getItem("last_name")}
+            </div>
+          )}
+          
           <button
+            onClick={handleLogout}
             style={{
               width: "100%",
-              padding: "12px",
+              padding: isOpen ? "12px" : "8px",
               backgroundColor: "#6c7a89",
               color: "white",
               border: "none",
               borderRadius: "8px",
-              fontSize: "14px",
+              fontSize: isOpen ? "14px" : "12px",
               cursor: "pointer",
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              gap: "8px",
+              gap: isOpen ? "8px" : "0",
+              transition: "all 0.2s ease",
+              minHeight: "40px"
             }}
             onMouseEnter={(e) =>
               (e.currentTarget.style.backgroundColor = "#5a6c7d")
@@ -282,8 +374,9 @@ const Sidebar: React.FC = () => {
             onMouseLeave={(e) =>
               (e.currentTarget.style.backgroundColor = "#6c7a89")
             }
+            title={!isOpen ? "ออกจากระบบ" : undefined}
           >
-            <span>🚪</span>
+            <span style={{ fontSize: isOpen ? "16px" : "18px" }}>🚪</span>
             {isOpen && "ออกจากระบบ"}
           </button>
         </div>

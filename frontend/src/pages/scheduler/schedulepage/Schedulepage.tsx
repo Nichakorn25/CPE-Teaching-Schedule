@@ -1,8 +1,6 @@
 import React, { useState, useRef } from "react";
-import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/header/Header";
 import "./Schedulepage.css";
-import { Button, Flex, Table, Modal, Input, List, Card, message } from 'antd';
+import { Button, Flex, Table, Modal, Input, List, Card, message, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import jsPDF from 'jspdf';
 
@@ -85,6 +83,46 @@ const Schedulepage: React.FC = () => {
     const getRandomBackgroundColor = () => {
         return backgroundColors[Math.floor(Math.random() * backgroundColors.length)];
     };
+
+    // ฟังก์ชันสำหรับสร้าง Tooltip Content
+    const createTooltipContent = (cls: ClassInfo, time: string, day: string) => (
+        <div style={{ fontFamily: 'Sarabun, sans-serif' }}>
+            <div style={{ 
+                fontSize: '14px', 
+                fontWeight: 'bold', 
+                marginBottom: '8px',
+                color: '#F26522',
+                borderBottom: '1px solid #eee',
+                paddingBottom: '4px'
+            }}>
+                📚 รายละเอียดวิชา
+            </div>
+            <div style={{ marginBottom: '6px' }}>
+                <strong>🏷️ รหัสวิชา:</strong> {cls.subject}
+            </div>
+            <div style={{ marginBottom: '6px' }}>
+                <strong>👩‍🏫 อาจารย์:</strong> {cls.teacher}
+            </div>
+            <div style={{ marginBottom: '6px' }}>
+                <strong>🏢 ห้องเรียน:</strong> {cls.room}
+            </div>
+            <div style={{ marginBottom: '6px' }}>
+                <strong>📅 วัน:</strong> {day}
+            </div>
+            <div style={{ marginBottom: '8px' }}>
+                <strong>🕐 เวลา:</strong> {time}
+            </div>
+            <div style={{ 
+                fontSize: '11px', 
+                color: '#666',
+                fontStyle: 'italic',
+                borderTop: '1px solid #eee',
+                paddingTop: '4px'
+            }}>
+                💡 เคล็ดลับ: ลากเพื่อย้าย | ดับเบิลคลิกเพื่อลบ
+            </div>
+        </div>
+    );
 
     // ฟังก์ชันสำหรับ drag start
     const handleDragStart = (e: React.DragEvent, day: string, time: string, classIndex: number, classData: ClassInfo) => {
@@ -739,7 +777,7 @@ const Schedulepage: React.FC = () => {
                     );
                 }
                 
-                // แสดงคาบเรียนแยกเป็นก้อนๆ
+                // แสดงคาบเรียนแยกเป็นก้อนๆ พร้อม Tooltip
                 return (
                     <div
                         style={{
@@ -759,89 +797,105 @@ const Schedulepage: React.FC = () => {
                         onDrop={(e) => handleDrop(e, record.day, time)}
                     >
                         {classes.map((cls: ClassInfo, index: number) => (
-                            <div
+                            <Tooltip
                                 key={index}
-                                draggable={true}
-                                style={{
-                                    backgroundColor: getRandomBackgroundColor(),
-                                    borderRadius: '2px',
-                                    padding: '2px 4px',
-                                    fontSize: '7px',
-                                    lineHeight: '1.1',
-                                    textAlign: 'center',
-                                    border: '1px solid rgba(0,0,0,0.1)',
+                                title={createTooltipContent(cls, time, record.day)}
+                                placement="top"
+                                overlayStyle={{ 
+                                    maxWidth: '350px',
+                                    fontFamily: 'Sarabun, sans-serif'
+                                }}
+                                color="#ffffff"
+                                overlayInnerStyle={{
                                     color: '#333',
-                                    minHeight: '14px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'center',
-                                    cursor: 'grab',
-                                    transition: 'all 0.2s ease',
-                                    position: 'relative',
-                                    overflow: 'hidden',
-                                    maxWidth: '100%'
+                                    border: '1px solid #F26522',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                                 }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = 'scale(1.01)';
-                                    e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.15)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = 'scale(1)';
-                                    e.currentTarget.style.boxShadow = 'none';
-                                }}
-                                onDragStart={(e) => {
-                                    handleDragStart(e, record.day, time, index, cls);
-                                    e.currentTarget.style.cursor = 'grabbing';
-                                    e.currentTarget.style.opacity = '0.5';
-                                }}
-                                onDragEnd={(e) => {
-                                    e.currentTarget.style.cursor = 'grab';
-                                    e.currentTarget.style.opacity = '1';
-                                }}
-                                onDoubleClick={() => removeClass(record.day, time, index)}
-                                title="ลากเพื่อย้าย | ดับเบิลคลิกเพื่อลบ"
                             >
-                                <div style={{ fontWeight: 'bold', marginBottom: '1px', fontSize: '7px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {cls.subject}
-                                </div>
-                                <div style={{ fontSize: '6px', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {cls.teacher}
-                                </div>
-                                <div style={{ fontSize: '6px', color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {cls.room}
-                                </div>
-                                {/* ไอคอนลบมุมขวาบน */}
                                 <div
+                                    draggable={true}
                                     style={{
-                                        position: 'absolute',
-                                        top: '1px',
-                                        right: '1px',
-                                        width: '10px',
-                                        height: '10px',
-                                        backgroundColor: 'rgba(255,0,0,0.7)',
-                                        borderRadius: '50%',
+                                        backgroundColor: getRandomBackgroundColor(),
+                                        borderRadius: '2px',
+                                        padding: '2px 4px',
+                                        fontSize: '7px',
+                                        lineHeight: '1.1',
+                                        textAlign: 'center',
+                                        border: '1px solid rgba(0,0,0,0.1)',
+                                        color: '#333',
+                                        minHeight: '14px',
                                         display: 'flex',
-                                        alignItems: 'center',
+                                        flexDirection: 'column',
                                         justifyContent: 'center',
-                                        fontSize: '10px',
-                                        color: 'white',
-                                        cursor: 'pointer',
-                                        opacity: '0.7'
-                                    }}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        removeClass(record.day, time, index);
+                                        cursor: 'grab',
+                                        transition: 'all 0.2s ease',
+                                        position: 'relative',
+                                        overflow: 'hidden',
+                                        maxWidth: '100%'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.opacity = '1';
+                                        e.currentTarget.style.transform = 'scale(1.01)';
+                                        e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.15)';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.opacity = '0.7';
+                                        e.currentTarget.style.transform = 'scale(1)';
+                                        e.currentTarget.style.boxShadow = 'none';
                                     }}
+                                    onDragStart={(e) => {
+                                        handleDragStart(e, record.day, time, index, cls);
+                                        e.currentTarget.style.cursor = 'grabbing';
+                                        e.currentTarget.style.opacity = '0.5';
+                                    }}
+                                    onDragEnd={(e) => {
+                                        e.currentTarget.style.cursor = 'grab';
+                                        e.currentTarget.style.opacity = '1';
+                                    }}
+                                    onDoubleClick={() => removeClass(record.day, time, index)}
+                                    title=""
                                 >
-                                    ×
+                                    <div style={{ fontWeight: 'bold', marginBottom: '1px', fontSize: '7px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {cls.subject}
+                                    </div>
+                                    <div style={{ fontSize: '6px', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {cls.teacher}
+                                    </div>
+                                    <div style={{ fontSize: '6px', color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {cls.room}
+                                    </div>
+                                    {/* ไอคอนลบมุมขวาบน */}
+                                    <div
+                                        style={{
+                                            position: 'absolute',
+                                            top: '1px',
+                                            right: '1px',
+                                            width: '10px',
+                                            height: '10px',
+                                            backgroundColor: 'rgba(255,0,0,0.7)',
+                                            borderRadius: '50%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '10px',
+                                            color: 'white',
+                                            cursor: 'pointer',
+                                            opacity: '0.7'
+                                        }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            removeClass(record.day, time, index);
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.opacity = '1';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.opacity = '0.7';
+                                        }}
+                                    >
+                                        ×
+                                    </div>
                                 </div>
-                            </div>
+                            </Tooltip>
                         ))}
                         
                         {/* Drop zone indicator */}
@@ -906,7 +960,7 @@ const Schedulepage: React.FC = () => {
                             color: '#666',
                             fontSize: '13px'
                         }}>
-                            สร้างและจัดการตารางเรียนแบบ Drag & Drop
+                            สร้างและจัดการตารางเรียนแบบ Drag & Drop 🎯 เลื่อนเมาส์ไปที่วิชาเพื่อดูรายละเอียด
                         </p>
                     </div>
 

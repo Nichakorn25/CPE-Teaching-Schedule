@@ -25,6 +25,7 @@
     width: 300px;
     height: 100vh;
     z-index: 1000;
+    transition: width 0.3s ease;
 }
 
 /* Main Content Container */
@@ -41,11 +42,26 @@
     padding: 88px 40px 100px 40px;
     overflow-y: scroll;
     box-sizing: border-box;
+    transition: left 0.3s ease, width 0.3s ease;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 1400px) {
+    .condition-main-content {
+        padding: 88px 20px 100px 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .condition-main-content {
+        padding: 88px 10px 100px 10px;
+    }
 }
 
 /* White Content Area */
 .condition-content-area {
-    width: 1200px;
+    width: 100%;
+    max-width: 1200px;
     min-height: calc(100vh - 300px);
     background-color: #ffffff;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
@@ -60,6 +76,27 @@
     margin: 15px 15px 60px 15px;
     border-radius: 8px;
     box-sizing: border-box;
+    transition: max-width 0.3s ease, padding 0.3s ease;
+}
+
+/* Responsive content area adjustments */
+@media (max-width: 1400px) {
+    .condition-content-area {
+        max-width: 900px;
+        padding: 10px;
+        padding-top: 40px;
+        padding-bottom: 25px;
+    }
+}
+
+@media (max-width: 768px) {
+    .condition-content-area {
+        max-width: 100%;
+        padding: 8px;
+        padding-top: 35px;
+        padding-bottom: 20px;
+        margin: 10px 5px 40px 5px;
+    }
 }
 
 .condition-button {
@@ -100,6 +137,19 @@
     font-family: 'Sarabun', sans-serif;
 }
 
+/* Mobile table adjustments */
+@media (max-width: 768px) {
+    .custom-table .ant-table-thead > tr > th {
+        font-size: 10px !important;
+        padding: 6px 2px !important;
+    }
+    
+    .custom-table .ant-table-tbody > tr > td {
+        font-size: 10px !important;
+        padding: 4px 2px !important;
+    }
+}
+
 .custom-table .ant-table-tbody > tr:nth-child(even) {
     background-color: #fafafa;
 }
@@ -111,6 +161,12 @@
 .custom-table .ant-table {
     font-size: 11px;
     font-family: 'Sarabun', sans-serif;
+}
+
+@media (max-width: 768px) {
+    .custom-table .ant-table {
+        font-size: 10px;
+    }
 }
 
 .custom-table .ant-table-container {
@@ -128,6 +184,7 @@
     font-size: 10px;
     color: #495057;
     font-family: 'Sarabun', sans-serif;
+    transition: background-color 0.2s ease;
 }
 
 .time-slot-display:hover {
@@ -139,6 +196,133 @@
     flex-wrap: wrap;
     gap: 4px;
     max-width: 200px;
+}
+
+@media (max-width: 768px) {
+    .time-slots-container {
+        max-width: 150px;
+    }
+    
+    .time-slot-display {
+        font-size: 9px;
+        padding: 2px 6px;
+    }
+}
+
+/* Responsive Controls Section */
+.controls-section {
+    margin-bottom: 20px;
+}
+
+.controls-row {
+    display: flex;
+    align-items: center;
+    background-color: #f8f9fa;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    min-height: 48px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    gap: 12px;
+}
+
+@media (max-width: 768px) {
+    .controls-row {
+        flex-wrap: wrap;
+        padding: 8px 12px;
+        gap: 8px;
+    }
+}
+
+/* Search Controls Group */
+.search-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .search-controls {
+        width: 100%;
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* Pagination Controls */
+.pagination-controls {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .pagination-controls {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 8px;
+    }
+}
+
+/* Mobile Pagination */
+.mobile-pagination {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Summary Stats */
+.summary-stats {
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background-color: #e6f7ff;
+    border-radius: 6px;
+    border: 1px solid #91d5ff;
+    font-size: 13px;
+}
+
+@media (max-width: 768px) {
+    .summary-stats {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+}
+
+/* Footer Info */
+.footer-info {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+    font-size: 12px;
+    color: #666;
+}
+
+@media (max-width: 768px) {
+    .footer-info {
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .footer-content {
+        flex-direction: column;
+        gap: 8px;
+    }
 }
 
 /* Ant Design component overrides for Sarabun font */
@@ -268,4 +452,65 @@ input, textarea, select, button {
 /* Empty state content */
 .custom-table .ant-table-placeholder {
     font-family: 'Sarabun', sans-serif;
+}
+
+/* Page Title Responsive */
+.page-title {
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #F26522;
+}
+
+.page-title h2 {
+    margin: 0 0 8px 0;
+    color: #333;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.page-title p {
+    margin: 0;
+    color: #666;
+    font-size: 13px;
+}
+
+@media (max-width: 768px) {
+    .page-title h2 {
+        font-size: 18px;
+    }
+    
+    .page-title p {
+        font-size: 12px;
+    }
+}
+
+/* Main Content Area Responsive */
+.main-content-area {
+    width: 100%;
+    margin: 0 auto;
+    background-color: #ffffff;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+    padding: 24px;
+    border-radius: 8px;
+    min-height: calc(100vh - 200px);
+}
+
+@media (max-width: 768px) {
+    .main-content-area {
+        padding: 16px;
+    }
+}
+
+/* Action Buttons Responsive */
+.action-buttons {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+    }
 }
