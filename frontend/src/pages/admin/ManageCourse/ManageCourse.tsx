@@ -3,6 +3,8 @@ import {
   postCreateCourse,
   getTypeofCourse,
   getTeachers,
+  getCoursebyid,
+  putUpdateCourse,
 } from "../../../services/https/AdminPageServices";
 import {
   getAllAcademicYears,
@@ -16,10 +18,13 @@ import {
   MajorInterface,
   DepartmentInterface,
   AllTeacher,
+  CourseType,
 } from "../../../interfaces/Adminpage";
-import Swal from "sweetalert2"
+import Swal from "sweetalert2";
+import { useParams } from "react-router-dom";
 
 const ManageCourse: React.FC = () => {
+  const { id } = useParams();
   const [majors, setMajors] = useState<MajorInterface[]>([]);
   const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
   const [selectedDepartmentID, setSelectedDepartmentID] = useState<number>(0);
@@ -36,7 +41,6 @@ const ManageCourse: React.FC = () => {
   );
   const [selectedAcademicYear, setSelectedAcademicYear] =
     useState<AcademicYearInterface | null>(null);
-
   const [courseType, setCourseType] = useState("");
   const [courseCode, setCourseCode] = useState("");
   const [credit, setCredit] = useState("");
@@ -47,9 +51,7 @@ const ManageCourse: React.FC = () => {
   });
   const [thaiName, setThaiName] = useState("");
   const [englishName, setEnglishName] = useState("");
-  const [typeOfCoursesList, setTypeOfCoursesList] = useState<
-    { id: number; TypeName: string }[]
-  >([]);
+  const [typeOfCoursesList, setTypeOfCoursesList] = useState<CourseType[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -144,21 +146,9 @@ const ManageCourse: React.FC = () => {
     ]);
   };
 
-  // const addAssistant = () => {
-  //   const nextId = assistants.length + 1;
-  //   setAssistants([
-  //     ...assistants,
-  //     { id: nextId, title: "", firstName: "", lastName: "" },
-  //   ]);
-  // };
-
   const removeTeacher = (id: number) => {
     setTeachers(teachers.filter((t) => t.ID !== id));
   };
-
-  // const removeAssistant = (id: number) => {
-  //   setAssistants(assistants.filter((a) => a.id !== id));
-  // };
 
   const isFormValid = () => {
     if (
@@ -176,14 +166,66 @@ const ManageCourse: React.FC = () => {
       if (!teacher.Title || !teacher.Firstname || !teacher.Lastname)
         return false;
     }
-
-    // for (const assistant of assistants) {
-    //   if (!assistant.title || !assistant.firstName || !assistant.lastName)
-    //     return false;
-    // }
-
     return true;
   };
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!id) return;
+      const res = await getCoursebyid(id);
+
+      if (res.status === 200 && res.data) {
+        const data = res.data;
+
+        setCourseCode(data.code || "");
+        setThaiName(data.thai_name || "");
+        setEnglishName(data.english_name || "");
+        setCredit(data.credit_id ? data.credit_id.toString() : "");
+        setCourseType(
+          data.type_of_courses_id ? data.type_of_courses_id.toString() : ""
+        );
+        setHours({
+          lecture: data.lecture ? data.lecture.toString() : "",
+          practice: data.lab ? data.lab.toString() : "",
+          selfStudy: data.self ? data.self.toString() : "",
+        });
+
+        // ตั้ง selectedCurriculum
+        const foundCurriculum = curriculums.find(
+          (c) => c.ID === data.curriculum_id
+        );
+        if (foundCurriculum) setSelectedCurriculum(foundCurriculum);
+
+        // ตั้ง selectedAcademicYear
+        const foundAcademicYear = academicYears.find(
+          (a) => a.ID === data.academic_year_id
+        );
+        if (foundAcademicYear) setSelectedAcademicYear(foundAcademicYear);
+
+        // รอ majors โหลดก่อนค่อยตั้ง selectedDepartmentID และ selectedMajorID
+        const foundMajor = majors.find((m) => m.ID === data.major_id);
+        if (foundMajor) {
+          setSelectedDepartmentID(foundMajor.Department.ID); // หรือ foundMajor.DepartmentID
+          setSelectedMajorID(foundMajor.ID);
+        }
+
+        // อาจารย์ผู้สอน (ตั้ง teachers ถ้ามี)
+        // ถ้าข้อมูลผู้สอนมาจาก backend เช่น data.teachers
+        if (data.teachers && Array.isArray(data.teachers)) {
+          setTeachers(data.teachers);
+        }
+      }
+    };
+
+    // เรียก fetchUser ก็ต่อเมื่อ majors, curriculums, academicYears โหลดแล้ว
+    if (
+      majors.length > 0 &&
+      curriculums.length > 0 &&
+      academicYears.length > 0
+    ) {
+      fetchUser();
+    }
+  }, [id, majors, curriculums, academicYears]);
 
   const handleSubmit = async () => {
     if (!selectedCurriculum || !selectedAcademicYear) return;
@@ -202,22 +244,25 @@ const ManageCourse: React.FC = () => {
       UserIDs: teachers.map((t) => t.ID).filter((id) => id && id !== 0),
     };
 
-    const response = await postCreateCourse(data);
+    console.log("ส่งไปยัง backend", data);
 
-    if (response.status === 200) {
-      Swal.fire({
-        icon: "success",
-        title: "เพิ่มรายวิชาเรียบร้อย",
-        showConfirmButton: false,
-        timer: 1500,
-      });
-    } else {
+    try {
+      const response = await postCreateCourse(data);
+      if (response.status === 200) {
+        Swal.fire({
+          icon: "success",
+          title: "เพิ่มรายวิชาเรียบร้อย",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+      }
+    } catch (error: any) {
       Swal.fire({
         icon: "error",
         title: "เกิดข้อผิดพลาดในการเพิ่มรายวิชา",
-        text: response?.data?.message || "ไม่สามารถเพิ่มรายวิชาได้",
+        text: error?.response?.data?.message || "ไม่สามารถเพิ่มรายวิชาได้",
       });
-      console.error(response.data);
+      console.error("Error submitting course", error);
     }
   };
 
@@ -230,8 +275,7 @@ const ManageCourse: React.FC = () => {
               โครงสร้างหลักสูตร
             </label>
             <select
-              className="border px-3 py-2 rounded w-full"
-              value={selectedCurriculum?.ID || ""}
+              value={(selectedCurriculum?.ID ?? "").toString()}
               onChange={(e) => {
                 const found = curriculums.find(
                   (c) => c.ID === Number(e.target.value)
@@ -241,8 +285,8 @@ const ManageCourse: React.FC = () => {
             >
               <option value="">-- กรุณาเลือก --</option>
               {curriculums.map((c) => (
-                <option key={c.ID} value={c.ID}>
-                  {`${c.CurriculumName}`}
+                <option key={c.ID} value={c.ID.toString()}>
+                  {c.CurriculumName}
                 </option>
               ))}
             </select>
@@ -261,7 +305,7 @@ const ManageCourse: React.FC = () => {
                 >
                   <option value="">-- กรุณาเลือก --</option>
                   {typeOfCoursesList.map((type) => (
-                    <option key={type.id} value={type.id}>
+                    <option key={type.ID} value={type.ID}>
                       {type.TypeName}
                     </option>
                   ))}
@@ -543,7 +587,11 @@ const ManageCourse: React.FC = () => {
           {/* ปุ่มบันทึก */}
           <div className="text-right">
             <button
-              onClick={handleSubmit}
+              type="submit"
+              onClick={(e) => {
+                e.preventDefault(); // ป้องกัน form reload
+                handleSubmit();
+              }}
               disabled={!isFormValid()}
               className={`px-6 py-2 rounded text-white ${
                 isFormValid()

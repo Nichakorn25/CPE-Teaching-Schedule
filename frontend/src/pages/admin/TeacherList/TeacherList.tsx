@@ -220,9 +220,13 @@ const TeacherList = () => {
                   {paginatedTeachers.map((teacher, index) => (
                     <tr key={teacher.DeleteID} className="border-t">
                       <td className="py-3">{startIndex + index + 1}</td>
-                      <td className="py-3">{teacher.Title}</td>
-                      <td className="py-3">{teacher.FirstName}</td>
-                      <td className="py-3">{teacher.LastName}</td>
+                      <td className="py-3">
+                        {typeof teacher.Title === "string"
+                          ? teacher.Title
+                          : teacher.Title?.Title || "-"}
+                      </td>
+                      <td className="py-3">{teacher.Firstname}</td>
+                      <td className="py-3">{teacher.Lastname}</td>
                       <td className="py-3">{teacher.Email}</td>
                       <td className="py-3">{teacher.EmpId}</td>
                       <td className="py-3">{teacher.Department}</td>
@@ -244,8 +248,10 @@ const TeacherList = () => {
                           onClick={() =>
                             handleDeleteTeacher(
                               teacher.DeleteID,
-                              `${teacher.FirstName} ${teacher.LastName}`,
-                              teacher.Title
+                              `${teacher.Firstname} ${teacher.Lastname}`,
+                              typeof teacher.Title === "string"
+                                ? teacher.Title
+                                : teacher.Title?.Title || ""
                             )
                           }
                         >

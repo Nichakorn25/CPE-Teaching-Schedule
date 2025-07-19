@@ -4,12 +4,14 @@ import { getAllCourses } from "../../../services/https/AdminPageServices";
 import Swal from "sweetalert2";
 import { deleteCourse } from "../../../services/https/AdminPageServices";
 import { AllCourseInterface } from "../../../interfaces/Adminpage";
+import { useNavigate } from "react-router-dom";
 
 const AllCourse: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [perPage, setPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [courseData, setCourseData] = useState<AllCourseInterface[]>([]);
+  const navigate = useNavigate();
 
   const fetchCourses = async () => {
     const response = await getAllCourses();
@@ -159,7 +161,10 @@ const AllCourse: React.FC = () => {
                 <td className="border p-2">{course.instructors.join(", ")}</td>
                 <td className="border p-2">
                   <div className="flex justify-center gap-2">
-                    <button className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm">
+                    <button
+                      className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm"
+                      onClick={() => navigate(`/manage-course/${course.id}`)}
+                    >
                       แก้ไข
                     </button>
                     <button

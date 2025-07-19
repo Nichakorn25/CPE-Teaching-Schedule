@@ -121,6 +121,11 @@ export interface AcademicYearInterface{
   Level: string;
 }
 
+export interface CourseType{
+  ID: number;
+  TypeName: string;
+}
+
 
 //////////////////////////////////// ด้านล่างนี้ยังไม่เช็ค //////////////////////////////////
 export interface OfferedCourseInterface {
