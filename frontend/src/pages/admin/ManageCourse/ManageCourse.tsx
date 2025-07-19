@@ -1,27 +1,47 @@
 import React, { useState, useEffect } from "react";
-import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/header/Header";
-import { postCreateCourse } from "../../../services/https/AdminPageServices";
-import { getTypeofCourse } from "../../../services/https/AdminPageServices";
+
+
+import {
+  postCreateCourse,
+  getTypeofCourse,
+  getTeachers,
+} from "../../../services/https/AdminPageServices";
+import {
+  getAllAcademicYears,
+  getAllCurriculum,
+  getMajorOfDepathment,
+} from "../../../services/https/GetService";
+import {
+  CurriculumInterface,
+  AcademicYearInterface,
+  CreateCourseInteface,
+  MajorInterface,
+  DepartmentInterface,
+  AllTeacher,
+} from "../../../interfaces/Adminpage";
+
 
 const ManageCourse: React.FC = () => {
-  const [teachers, setTeachers] = useState([
-    { id: 1, title: "ผศ.ดร.", firstName: "นันทวุฒิ", lastName: "คะอังกุ" },
-    { id: 2, title: "ผศ.ดร.", firstName: "ศรัญญา", lastName: "กาญจนวัฒนา" },
-  ]);
-
-  const [assistants, setAssistants] = useState([
-    { id: 1, title: "นาย", firstName: "ธนวัฒน์", lastName: "สีแก้วสิ่ว" },
-    { id: 2, title: "นาย", firstName: "ภูวดล", lastName: "เดชารัมย์" },
-  ]);
-
-  const [courseStructure, setCourseStructure] = useState(
-    "10705001165 วิศวกรรมคอมพิวเตอร์ 2565"
+  const [majors, setMajors] = useState<MajorInterface[]>([]);
+  const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
+  const [selectedDepartmentID, setSelectedDepartmentID] = useState<number>(0);
+  const [filteredMajors, setFilteredMajors] = useState<MajorInterface[]>([]);
+  const [selectedMajorID, setSelectedMajorID] = useState<number>(0);
+  const [allTeachers, setAllTeachers] = useState<AllTeacher[]>([]);
+  const [teacherOptions, setTeacherOptions] = useState<AllTeacher[]>([]);
+  const [teachers, setTeachers] = useState<AllTeacher[]>([]);
+  const [curriculums, setCurriculums] = useState<CurriculumInterface[]>([]);
+  const [selectedCurriculum, setSelectedCurriculum] =
+    useState<CurriculumInterface | null>(null);
+  const [academicYears, setAcademicYears] = useState<AcademicYearInterface[]>(
+    []
   );
+  const [selectedAcademicYear, setSelectedAcademicYear] =
+    useState<AcademicYearInterface | null>(null);
+
   const [courseType, setCourseType] = useState("");
   const [courseCode, setCourseCode] = useState("");
   const [credit, setCredit] = useState("");
-  const [academicYear, setAcademicYear] = useState("");
   const [hours, setHours] = useState({
     lecture: "",
     practice: "",
@@ -34,6 +54,16 @@ const ManageCourse: React.FC = () => {
   >([]);
 
   useEffect(() => {
+    const fetchData = async () => {
+      const curriculum = await getAllCurriculum();
+      const years = await getAllAcademicYears();
+      setCurriculums(curriculum.data);
+      setAcademicYears(years.data);
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
     const fetchTypes = async () => {
       const result = await getTypeofCourse();
       console.log(result);
@@ -42,33 +72,88 @@ const ManageCourse: React.FC = () => {
     fetchTypes();
   }, []);
 
+  useEffect(() => {
+    const fetchMajors = async () => {
+      const res = await getMajorOfDepathment();
+      if (res.status === 200 && Array.isArray(res.data)) {
+        const majorData = res.data as MajorInterface[];
+        setMajors(majorData);
+
+        const uniqueDepartments = Array.from(
+          new Map(
+            majorData.map((m) => [m.Department.ID, m.Department])
+          ).values()
+        );
+
+        setDepartments(uniqueDepartments); // ไม่มี error แล้ว
+      }
+    };
+    fetchMajors();
+  }, []);
+
+  useEffect(() => {
+    const filtered = majors.filter(
+      (m) => m.Department.ID === selectedDepartmentID
+    );
+    setFilteredMajors(filtered);
+    setSelectedMajorID(0); // reset major เมื่อเปลี่ยนสำนักวิชา
+  }, [selectedDepartmentID, majors]);
+
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      if (selectedMajorID === 0) {
+        setAllTeachers([]);
+        setTeacherOptions([]);
+        return;
+      }
+      const res = await getTeachers();
+      if (res.status === 200) {
+        setAllTeachers(res.data);
+        setTeacherOptions(res.data); // <- เพิ่มบรรทัดนี้
+      }
+    };
+    fetchTeachers();
+  }, [selectedMajorID]);
+
   const addTeacher = () => {
-    const nextId = teachers.length + 1;
     setTeachers([
       ...teachers,
-      { id: nextId, title: "", firstName: "", lastName: "" },
+      {
+        ID: 0,
+        DeleteID: 0,
+        Title: "",
+        FirstName: "",
+        LastName: "",
+        Email: "",
+        EmpId: "",
+        Department: "",
+        Major: "",
+        Position: "",
+        Status: "",
+        Role: "",
+      },
     ]);
   };
 
-  const addAssistant = () => {
-    const nextId = assistants.length + 1;
-    setAssistants([
-      ...assistants,
-      { id: nextId, title: "", firstName: "", lastName: "" },
-    ]);
-  };
+  // const addAssistant = () => {
+  //   const nextId = assistants.length + 1;
+  //   setAssistants([
+  //     ...assistants,
+  //     { id: nextId, title: "", firstName: "", lastName: "" },
+  //   ]);
+  // };
 
   const removeTeacher = (id: number) => {
-    setTeachers(teachers.filter((t) => t.id !== id));
+    setTeachers(teachers.filter((t) => t.ID !== id));
   };
 
-  const removeAssistant = (id: number) => {
-    setAssistants(assistants.filter((a) => a.id !== id));
-  };
+  // const removeAssistant = (id: number) => {
+  //   setAssistants(assistants.filter((a) => a.id !== id));
+  // };
 
   const isFormValid = () => {
     if (
-      !courseStructure ||
+      !curriculums ||
       !courseType ||
       !courseCode ||
       !credit ||
@@ -79,35 +164,39 @@ const ManageCourse: React.FC = () => {
     if (!hours.lecture || !hours.practice || !hours.selfStudy) return false;
 
     for (const teacher of teachers) {
-      if (!teacher.title || !teacher.firstName || !teacher.lastName)
+      if (!teacher.Title || !teacher.FirstName || !teacher.LastName)
         return false;
     }
 
-    for (const assistant of assistants) {
-      if (!assistant.title || !assistant.firstName || !assistant.lastName)
-        return false;
-    }
+    // for (const assistant of assistants) {
+    //   if (!assistant.title || !assistant.firstName || !assistant.lastName)
+    //     return false;
+    // }
 
     return true;
   };
 
   const handleSubmit = async () => {
-    const data = {
+    if (!selectedCurriculum || !selectedAcademicYear) return;
+
+    const data: CreateCourseInteface = {
       Code: courseCode,
       EnglishName: englishName,
       ThaiName: thaiName,
-      CurriculumID: 1, // สมมุติเป็น ID จริง (ดึงจากระบบ)
-      AcademicYearID: 1, // ปี 2565 เป็นต้น
+      CurriculumID: selectedCurriculum.ID,
+      AcademicYearID: selectedAcademicYear.ID,
       TypeOfCoursesID: parseInt(courseType),
-      CreditID: 1, // ต้อง match กับฐานข้อมูล
-      UserIDs: teachers.map((t) => t.id), // ใช้ id จริงของอาจารย์จากระบบ
+      CreditID: parseInt(credit),
+      Lecture: parseInt(hours.lecture),
+      Lab: parseInt(hours.practice),
+      Self: parseInt(hours.selfStudy),
+      UserIDs: teachers.map((t) => t.ID).filter((id) => id && id !== 0),
     };
 
     const response = await postCreateCourse(data);
 
     if (response.status === 200) {
       alert("เพิ่มรายวิชาเรียบร้อย");
-      // รีเซ็ตฟอร์มหรือ redirect ได้
     } else {
       alert("เกิดข้อผิดพลาดในการเพิ่มรายวิชา");
       console.error(response.data);
@@ -116,8 +205,6 @@ const ManageCourse: React.FC = () => {
 
   return (
     <>
-      <Header />
-      <Sidebar />
       <div className="pt-16 px-6 font-sarabun">
         <form className="w-full p-10 space-y-10 bg-white">
           <div>
@@ -126,10 +213,20 @@ const ManageCourse: React.FC = () => {
             </label>
             <select
               className="border px-3 py-2 rounded w-full"
-              value={courseStructure}
-              onChange={(e) => setCourseStructure(e.target.value)}
+              value={selectedCurriculum?.ID || ""}
+              onChange={(e) => {
+                const found = curriculums.find(
+                  (c) => c.ID === Number(e.target.value)
+                );
+                if (found) setSelectedCurriculum(found);
+              }}
             >
-              <option>10705001165 วิศวกรรมคอมพิวเตอร์ 2565</option>
+              <option value="">-- กรุณาเลือก --</option>
+              {curriculums.map((c) => (
+                <option key={c.ID} value={c.ID}>
+                  {`${c.CurriculumName}`}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -168,14 +265,20 @@ const ManageCourse: React.FC = () => {
                 </label>
                 <select
                   className="border px-3 py-2 rounded w-full"
-                  value={academicYear}
-                  onChange={(e) => setAcademicYear(e.target.value)}
+                  value={selectedAcademicYear?.ID || ""}
+                  onChange={(e) => {
+                    const found = academicYears.find(
+                      (a) => a.ID === Number(e.target.value)
+                    );
+                    if (found) setSelectedAcademicYear(found);
+                  }}
                 >
-                  <option value="0">ทุกชั้นปี</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
+                  <option value="">-- กรุณาเลือก --</option>
+                  {academicYears.map((a) => (
+                    <option key={a.ID} value={a.ID}>
+                      {a.Level}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -254,41 +357,85 @@ const ManageCourse: React.FC = () => {
             </div>
           </div>
 
+          <div>
+            <label className="text-[#f26522] font-medium text-xl block mb-2">
+              สำนักวิชา
+            </label>
+            <select
+              className="border px-3 py-2 rounded w-full"
+              value={selectedDepartmentID || ""}
+              onChange={(e) => setSelectedDepartmentID(Number(e.target.value))}
+            >
+              <option value="">-- กรุณาเลือก --</option>
+              {departments.map((d) => (
+                <option key={d.ID} value={d.ID}>
+                  {d.DepartmentName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[#f26522] font-medium text-xl block mb-2">
+              สาขา
+            </label>
+            <select
+              className="border px-3 py-2 rounded w-full"
+              value={selectedMajorID || ""}
+              onChange={(e) => setSelectedMajorID(Number(e.target.value))}
+            >
+              <option value="">-- กรุณาเลือก --</option>
+              {filteredMajors.map((m) => (
+                <option key={m.ID} value={m.ID}>
+                  {m.MajorName}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* อาจารย์ผู้สอน */}
           <div className="space-y-4">
             <h2 className="text-orange-500 font-semibold text-xl">
               เพิ่มอาจารย์ผู้สอน
             </h2>
+
             {teachers.map((t, index) => (
-              <div key={t.id} className="grid grid-cols-12 gap-4 items-center">
+              <div key={index} className="grid grid-cols-12 gap-4 items-center">
                 <div className="w-8 h-8 bg-[#f26522] text-white rounded-full flex items-center justify-center font-semibold text-sm">
                   {index + 1}
                 </div>
-                <div className="col-span-2">
-                  <select className="border px-3 py-2 rounded w-full">
-                    <option>รศ.ดร.</option>
-                    <option>อ.ดร.</option>
-                    <option>ผศ.ดร.</option>
+
+                <div className="col-span-10">
+                  <select
+                    className="border px-3 py-2 rounded w-full"
+                    value={t.ID || ""}
+                    onChange={(e) => {
+                      const selectedId = Number(e.target.value);
+                      const selected = teacherOptions.find(
+                        (opt) => opt.ID === selectedId
+                      );
+                      if (!selected) return;
+
+                      const updatedTeachers = [...teachers];
+                      updatedTeachers[index] = selected;
+                      setTeachers(updatedTeachers);
+                    }}
+                  >
+                    <option value="">-- เลือกอาจารย์ --</option>
+                    {teacherOptions.map((teacher) => (
+                      <option key={teacher.ID} value={teacher.ID}>
+                        {`${teacher.Title} ${teacher.FirstName} ${teacher.LastName}`}
+                      </option>
+                    ))}
                   </select>
                 </div>
-                <div className="col-span-4">
-                  <input
-                    className="border px-3 py-2 rounded w-full"
-                    defaultValue={t.firstName}
-                    placeholder="ชื่อ"
-                  />
-                </div>
-                <div className="col-span-4">
-                  <input
-                    className="border px-3 py-2 rounded w-full"
-                    defaultValue={t.lastName}
-                    placeholder="นามสกุล"
-                  />
-                </div>
+
                 <div className="col-span-1 text-center">
                   <button
                     type="button"
-                    onClick={() => removeTeacher(t.id)}
+                    onClick={() => {
+                      setTeachers(teachers.filter((_, i) => i !== index));
+                    }}
                     className="bg-red-500 text-white px-6 py-2 rounded hover:bg-orange-600"
                   >
                     ลบ
@@ -296,6 +443,7 @@ const ManageCourse: React.FC = () => {
                 </div>
               </div>
             ))}
+
             <button
               type="button"
               onClick={addTeacher}
@@ -306,7 +454,7 @@ const ManageCourse: React.FC = () => {
           </div>
 
           {/* ผู้ช่วยสอน */}
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <h2 className="text-orange-500 font-semibold text-xl">
               เพิ่มผู้ช่วยสอน
             </h2>
@@ -353,7 +501,7 @@ const ManageCourse: React.FC = () => {
             >
               + เพิ่มผู้ช่วยสอน
             </button>
-          </div>
+          </div> */}
 
           {/* ปุ่มบันทึก */}
           <div className="text-right">

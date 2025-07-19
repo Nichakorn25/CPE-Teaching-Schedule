@@ -1,6 +1,4 @@
 import React, { useState } from "react";
-import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/header/Header";
 import "./AllCoursepage.css";
 import { Button, Table, Input, Select, message, Modal } from 'antd';
 import { SearchOutlined, PlusOutlined } from '@ant-design/icons';
@@ -212,230 +210,227 @@ const AllCoursepage: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 font-sarabun mt-16">
-      <Header />
-      
-      {/* Background Layer */}
-      <div className="allcourse-background" />
-      
-      {/* Sidebar */}
-      <div className="allcourse-sidebar">
-        <Sidebar />
+    <>
+      {/* Page Title */}
+      <div style={{ 
+        marginBottom: '20px',
+        paddingBottom: '12px',
+        borderBottom: '2px solid #F26522'
+      }}>
+        <h2 style={{ 
+          margin: '0 0 8px 0', 
+          color: '#333',
+          fontSize: '20px',
+          fontWeight: 'bold'
+        }}>
+          รายวิชาทั้งหมด
+        </h2>
+        <p style={{ 
+          margin: 0, 
+          color: '#666',
+          fontSize: '13px'
+        }}>
+          จัดการข้อมูลรายวิชาทั้งหมดในระบบ
+        </p>
       </div>
-      
-      {/* Main Content */}
-      <div className="allcourse-main-content">
-        {/* White Content Area */}
-        <div className="allcourse-content-area">
-          {/* Page Title */}
-          <div style={{ 
-            marginBottom: '20px',
-            paddingBottom: '12px',
-            borderBottom: '2px solid #F26522'
-          }}>
-            <h2 style={{ 
-              margin: '0 0 8px 0', 
-              color: '#333',
-              fontSize: '20px',
-              fontWeight: 'bold'
-            }}>
-              รายวิชาทั้งหมด
-            </h2>
-            <p style={{ 
-              margin: 0, 
-              color: '#666',
-              fontSize: '13px'
-            }}>
-              จัดการข้อมูลรายวิชาทั้งหมดในระบบ
-            </p>
-          </div>
 
-          {/* Controls Section */}
-          <div style={{ 
-            marginBottom: '20px'
-          }}>
-            {/* Controls Bar */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              backgroundColor: '#f8f9fa',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: '1px solid #e9ecef',
-              gap: '12px',
-              flexWrap: 'wrap'
-            }}>
-              {/* Search Input */}
-              <Input
-                placeholder="ค้นหารายวิชา"
-                suffix={<SearchOutlined style={{ color: '#F26522' }} />}
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                style={{ 
-                  width: 150,
-                  borderColor: '#F26522'
-                }}
-                size="small"
-              />
-              
-              {/* Items per page */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '12px', color: '#666' }}>รายการที่แสดง</span>
-                <Select
-                  value={pageSize.toString()}
-                  style={{ width: 50 }}
-                  size="small"
-                  onChange={(value) => {
-                    const newSize = parseInt(value);
-                    handlePageSizeChange(newSize);
-                  }}
-                >
-                  <Option value="5">5</Option>
-                  <Option value="10">10</Option>
-                  <Option value="20">20</Option>
-                  <Option value="50">50</Option>
-                </Select>
-              </div>
-              
-              {/* Pagination Numbers */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {[1, 2, 3, 4, 5].map((page) => (
-                  page <= totalPages && (
-                    <span
-                      key={page}
-                      style={{ 
-                        backgroundColor: currentPage === page ? '#F26522' : 'transparent',
-                        color: currentPage === page ? 'white' : '#333',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: currentPage === page ? 'bold' : 'normal',
-                        minWidth: '20px',
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        display: 'inline-block',
-                        border: currentPage === page ? 'none' : '1px solid #ddd'
-                      }}
-                      onClick={() => handlePageChange(page)}
-                    >
-                      {page}
-                    </span>
-                  )
-                ))}
-                
-                {totalPages > 5 && (
-                  <>
-                    <span style={{ color: '#666', fontSize: '12px', margin: '0 4px' }}>...</span>
-                    <span
-                      style={{ 
-                        backgroundColor: 'transparent',
-                        color: '#333',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        minWidth: '20px',
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        display: 'inline-block',
-                        border: '1px solid #ddd'
-                      }}
-                      onClick={() => handlePageChange(totalPages)}
-                    >
-                      {totalPages}
-                    </span>
-                  </>
-                )}
-                
-                <span style={{ 
-                  fontSize: '12px',
-                  color: '#333',
-                  fontWeight: 'bold',
-                  margin: '0 8px'
-                }}>
-                  ถัดไป
-                </span>
-              </div>
-
-              {/* Spacer */}
-              <div style={{ flex: 1 }}></div>
-
-              {/* Category Filter */}
-              <Select
-                value={selectedCategory}
-                onChange={setSelectedCategory}
-                style={{ width: 160 }}
-                placeholder="รายวิชาทั้งหมด"
-                size="small"
-              >
-                <Option value="all">รายวิชาทั้งหมด</Option>
-                <Option value="หมวดวิชาศึกษาทั่วไป">หมวดวิชาศึกษาทั่วไป</Option>
-                <Option value="หมวดวิชาพื้นฐาน">หมวดวิชาพื้นฐาน</Option>
-                <Option value="หมวดวิชาเฉพาะ">หมวดวิชาเฉพาะ</Option>
-                <Option value="หมวดวิชาเลือก">หมวดวิชาเลือก</Option>
-              </Select>
-            </div>
-          </div>
-
-          {/* Main Table */}
-          <div style={{ 
-            backgroundColor: 'white',
-            border: '1px solid #d9d9d9',
-            borderRadius: '6px',
-            overflow: 'hidden'
-          }}>
-            <Table
-              columns={columns}
-              dataSource={currentData}
-              pagination={false}
-              size="small"
-              bordered
-              scroll={{ x: 1400, y: 600 }}
-              style={{
-                fontSize: '12px'
-              }}
-              className="custom-table"
-              locale={{
-                emptyText: (
-                  <div style={{ 
-                    padding: '40px', 
-                    textAlign: 'center', 
-                    color: '#999' 
-                  }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
-                    <div style={{ fontSize: '16px', marginBottom: '8px' }}>
-                      ไม่พบข้อมูลรายวิชา
-                    </div>
-                    <div style={{ fontSize: '14px', color: '#ccc' }}>
-                      ยังไม่มีรายวิชาในระบบ หรือไม่พบผลการค้นหา
-                    </div>
-                  </div>
-                )
-              }}
-            />
-          </div>
-
-          {/* Footer Info */}
+      {/* Main Content Area */}
+      <div style={{
+        width: '100%',
+        maxWidth: '1400px',
+        margin: '0 auto',
+        backgroundColor: '#ffffff',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+        border: '1px solid #e0e0e0',
+        padding: '24px',
+        borderRadius: '8px',
+        minHeight: 'calc(100vh - 200px)'
+      }}>
+        {/* Controls Section */}
+        <div style={{ 
+          marginBottom: '20px'
+        }}>
+          {/* Controls Bar */}
           <div style={{
-            marginTop: '16px',
-            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
             backgroundColor: '#f8f9fa',
+            padding: '8px 16px',
             borderRadius: '6px',
             border: '1px solid #e9ecef',
-            fontSize: '12px',
-            color: '#666'
+            gap: '12px',
+            flexWrap: 'wrap'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                💡 <strong>หมายเหตุ:</strong> รายวิชาเหล่านี้จะถูกนำไปใช้ในการจัดตารางเรียน
-              </div>
-              <div>
-                ข้อมูลล่าสุด: {new Date().toLocaleString('th-TH')}
-              </div>
+            {/* Search Input */}
+            <Input
+              placeholder="ค้นหารายวิชา"
+              suffix={<SearchOutlined style={{ color: '#F26522' }} />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ 
+                width: 150,
+                borderColor: '#F26522'
+              }}
+              size="small"
+            />
+            
+            {/* Items per page */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '12px', color: '#666' }}>รายการที่แสดง</span>
+              <Select
+                value={pageSize.toString()}
+                style={{ width: 50 }}
+                size="small"
+                onChange={(value) => {
+                  const newSize = parseInt(value);
+                  handlePageSizeChange(newSize);
+                }}
+              >
+                <Option value="5">5</Option>
+                <Option value="10">10</Option>
+                <Option value="20">20</Option>
+                <Option value="50">50</Option>
+              </Select>
+            </div>
+            
+            {/* Pagination Numbers */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {[1, 2, 3, 4, 5].map((page) => (
+                page <= totalPages && (
+                  <span
+                    key={page}
+                    style={{ 
+                      backgroundColor: currentPage === page ? '#F26522' : 'transparent',
+                      color: currentPage === page ? 'white' : '#333',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: currentPage === page ? 'bold' : 'normal',
+                      minWidth: '20px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      display: 'inline-block',
+                      border: currentPage === page ? 'none' : '1px solid #ddd'
+                    }}
+                    onClick={() => handlePageChange(page)}
+                  >
+                    {page}
+                  </span>
+                )
+              ))}
+              
+              {totalPages > 5 && (
+                <>
+                  <span style={{ color: '#666', fontSize: '12px', margin: '0 4px' }}>...</span>
+                  <span
+                    style={{ 
+                      backgroundColor: 'transparent',
+                      color: '#333',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      minWidth: '20px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      display: 'inline-block',
+                      border: '1px solid #ddd'
+                    }}
+                    onClick={() => handlePageChange(totalPages)}
+                  >
+                    {totalPages}
+                  </span>
+                </>
+              )}
+              
+              <span style={{ 
+                fontSize: '12px',
+                color: '#333',
+                fontWeight: 'bold',
+                margin: '0 8px'
+              }}>
+                ถัดไป
+              </span>
+            </div>
+
+            {/* Spacer */}
+            <div style={{ flex: 1 }}></div>
+
+            {/* Category Filter */}
+            <Select
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+              style={{ width: 160 }}
+              placeholder="รายวิชาทั้งหมด"
+              size="small"
+            >
+              <Option value="all">รายวิชาทั้งหมด</Option>
+              <Option value="หมวดวิชาศึกษาทั่วไป">หมวดวิชาศึกษาทั่วไป</Option>
+              <Option value="หมวดวิชาพื้นฐาน">หมวดวิชาพื้นฐาน</Option>
+              <Option value="หมวดวิชาเฉพาะ">หมวดวิชาเฉพาะ</Option>
+              <Option value="หมวดวิชาเลือก">หมวดวิชาเลือก</Option>
+            </Select>
+          </div>
+        </div>
+
+        {/* Main Table */}
+        <div style={{ 
+          backgroundColor: 'white',
+          border: '1px solid #d9d9d9',
+          borderRadius: '6px',
+          overflow: 'hidden'
+        }}>
+          <Table
+            columns={columns}
+            dataSource={currentData}
+            pagination={false}
+            size="small"
+            bordered
+            scroll={{ x: 1400, y: 600 }}
+            style={{
+              fontSize: '12px'
+            }}
+            className="custom-table"
+            locale={{
+              emptyText: (
+                <div style={{ 
+                  padding: '40px', 
+                  textAlign: 'center', 
+                  color: '#999' 
+                }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
+                  <div style={{ fontSize: '16px', marginBottom: '8px' }}>
+                    ไม่พบข้อมูลรายวิชา
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#ccc' }}>
+                    ยังไม่มีรายวิชาในระบบ หรือไม่พบผลการค้นหา
+                  </div>
+                </div>
+              )
+            }}
+          />
+        </div>
+
+        {/* Footer Info */}
+        <div style={{
+          marginTop: '16px',
+          padding: '12px 16px',
+          backgroundColor: '#f8f9fa',
+          borderRadius: '6px',
+          border: '1px solid #e9ecef',
+          fontSize: '12px',
+          color: '#666'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              💡 <strong>หมายเหตุ:</strong> รายวิชาเหล่านี้จะถูกนำไปใช้ในการจัดตารางเรียน
+            </div>
+            <div>
+              ข้อมูลล่าสุด: {new Date().toLocaleString('th-TH')}
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

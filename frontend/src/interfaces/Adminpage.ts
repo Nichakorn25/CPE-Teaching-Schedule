@@ -9,6 +9,9 @@ export interface CreateCourseInteface {
   AcademicYearID: number;
   TypeOfCoursesID: number;
   CreditID: number;
+  Lecture:number;
+  Lab:number;
+  Self:number;
   UserIDs: number[]; 
 }
 
@@ -101,12 +104,22 @@ export interface OpenCourseInterface {
 }
 
 export interface MenuItem {
-  id: number,
+  id: number;
   label: string;
   icon: string;
   path: string;
   roles: string[];
 };
+
+export interface CurriculumInterface{
+  ID: number;
+  CurriculumName: string;
+}
+
+export interface AcademicYearInterface{
+  ID: number;
+  Level: string;
+}
 
 
 //////////////////////////////////// ด้านล่างนี้ยังไม่เช็ค //////////////////////////////////

@@ -83,8 +83,8 @@ export {
     getTypeofCourse, //used
     getMajorOfDepathment, //used
     getAllRoles, //used
-    getAllAcademicYears,
-    getAllCurriculum,
+    getAllAcademicYears, //used
+    getAllCurriculum, //used
     getLaboratory,
     
 };

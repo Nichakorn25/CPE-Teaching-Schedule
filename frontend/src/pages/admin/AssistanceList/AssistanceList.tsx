@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Header from "../../../components/header/Header";
-import Sidebar from "../../../components/schedule-sidebar/Sidebar";
 import {
   getAllTeachingAssistants,
   deleteTeachingAssistant,
@@ -82,8 +80,6 @@ const AssistanceList = () => {
 
   return (
     <div className="font-sarabun p-6 mt-10">
-      <Header />
-      <Sidebar/>
       {/* Header */}
       <div className="flex items-center justify-between  px-4 py-2 rounded mb-4">
         {/* ซ้าย: ค้นหา */}

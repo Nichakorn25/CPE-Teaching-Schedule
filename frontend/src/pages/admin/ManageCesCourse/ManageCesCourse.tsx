@@ -1,6 +1,4 @@
 import React, { useState } from "react";
-import Sidebar from "../../../components/schedule-sidebar/Sidebar";
-import Header from "../../../components/header/Header";
 
 const ManageCesCourse: React.FC = () => {
   type Assistant = {
@@ -142,8 +140,6 @@ const ManageCesCourse: React.FC = () => {
 
   return (
     <>
-    <Header/>
-    <Sidebar/>
     <div className="p-8 space-y-10 bg-white font-sarabun mt-20">
       {/* หมวดวิชา + รหัสวิชา */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
