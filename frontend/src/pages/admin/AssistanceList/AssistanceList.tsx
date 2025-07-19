@@ -4,12 +4,14 @@ import {
   deleteTeachingAssistant,
 } from "../../../services/https/AdminPageServices";
 import { TeachingAssistantInterface } from "../../../interfaces/TeachingAssistant";
+import { useNavigate } from "react-router-dom"; // เพิ่ม import นี้
 import Swal from "sweetalert2";
 
 const AssistanceList = () => {
   const [assistanceData, setAssistanceData] = useState<
     TeachingAssistantInterface[]
   >([]);
+  const navigate = useNavigate(); // เพิ่ม hook นี้
 
   useEffect(() => {
     const FetchAssistance = async () => {
@@ -55,7 +57,7 @@ const AssistanceList = () => {
     });
 
     if (result.isConfirmed) {
-      const response = await deleteTeachingAssistant(DeleteID); // ส่ง ID ที่เป็น number
+      const response = await deleteTeachingAssistant(DeleteID);
       console.log("ลบไอดีนี้", response);
 
       if (response.status === 200) {
@@ -65,7 +67,7 @@ const AssistanceList = () => {
           const updated = prev.filter((ass) => ass.ID !== DeleteID);
           return updated.map((item, index) => ({
             ...item,
-            ID: index + 1, // จัดลำดับใหม่
+            ID: index + 1,
           }));
         });
       } else {
@@ -132,7 +134,10 @@ const AssistanceList = () => {
       </div>
 
       <div className="flex justify-end mb-2">
-        <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+        <button 
+          onClick={() => navigate('/manage-assistance')}
+          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm"
+        >
           ➕ เพิ่มอาจารย์
         </button>
       </div>
@@ -162,7 +167,10 @@ const AssistanceList = () => {
                   <td className="py-3">{assistance.Email}</td>
                   <td className="py-3">{assistance.PhoneNumber}</td>
                   <td className="py-3 flex justify-center gap-2">
-                    <button className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-sm">
+                    <button 
+                      onClick={() => navigate(`/manage-assistance/${assistance.ID}`)} 
+                      className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-sm"
+                    >
                       แก้ไข
                     </button>
                     <button
