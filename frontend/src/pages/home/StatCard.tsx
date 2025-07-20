@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 interface StatCardProps {
   title: string;
@@ -9,20 +9,29 @@ interface StatCardProps {
   color: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, growth, icon, accent, color }) => {
+const StatCard: React.FC<StatCardProps> = ({
+  title,
+  value,
+  growth,
+  icon,
+  accent,
+  color,
+}) => {
   return (
     <div className={`stat-card ${accent}`}>
       <div className="stat-card-inner">
         <div>
           <p className="stat-title">{title}</p>
           <h3 className="stat-value">{value.toLocaleString()}</h3>
-          <p className={`stat-growth ${growth.startsWith('+') ? 'positive' : 'negative'}`}>
+          <p
+            className={`stat-growth ${
+              growth.startsWith("+") ? "positive" : "negative"
+            }`}
+          >
             {growth} จากเดือนที่แล้ว
           </p>
         </div>
-        <div className={`stat-icon ${color}`}>
-          {icon}
-        </div>
+        <div className={`stat-icon ${color}`}>{icon}</div>
       </div>
     </div>
   );
