@@ -29,6 +29,7 @@ const ManageCourse: React.FC = () => {
   const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
   const [selectedDepartmentID, setSelectedDepartmentID] = useState<number>(0);
   const [filteredMajors, setFilteredMajors] = useState<MajorInterface[]>([]);
+  const [selectedMajorName, setSelectedMajorName] = useState("");
   const [selectedMajorID, setSelectedMajorID] = useState<number>(0);
   const [allTeachers, setAllTeachers] = useState<AllTeacher[]>([]);
   const [teacherOptions, setTeacherOptions] = useState<AllTeacher[]>([]);
@@ -170,49 +171,56 @@ const ManageCourse: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchCourseData = async () => {
       if (!id) return;
-      const res = await getCoursebyid(id);
+      const res = await getCoursebyid(Number(id));
+      console.log("rftyghuij", res.data);
 
       if (res.status === 200 && res.data) {
         const data = res.data;
 
-        setCourseCode(data.code || "");
-        setThaiName(data.thai_name || "");
-        setEnglishName(data.english_name || "");
-        setCredit(data.credit_id ? data.credit_id.toString() : "");
+        setCourseCode(data.Code || "");
+        setThaiName(data.ThaiName || "");
+        setEnglishName(data.EnglishName || "");
+        setCredit(data.Credit.Unit ? data.Credit.Unit.toString() : "");
         setCourseType(
-          data.type_of_courses_id ? data.type_of_courses_id.toString() : ""
+          data.TypeOfCoursesID ? data.TypeOfCoursesID.toString() : ""
         );
         setHours({
-          lecture: data.lecture ? data.lecture.toString() : "",
-          practice: data.lab ? data.lab.toString() : "",
-          selfStudy: data.self ? data.self.toString() : "",
+          lecture: data.Credit.Lecture ? data.Credit.Lecture.toString() : "",
+          practice: data.Credit.Lab ? data.Credit.Lab.toString() : "",
+          selfStudy: data.Credit.Self ? data.Credit.Self.toString() : "",
         });
 
         // ตั้ง selectedCurriculum
         const foundCurriculum = curriculums.find(
-          (c) => c.ID === data.curriculum_id
+          (c) => c.ID === data.CurriculumID
         );
         if (foundCurriculum) setSelectedCurriculum(foundCurriculum);
 
         // ตั้ง selectedAcademicYear
         const foundAcademicYear = academicYears.find(
-          (a) => a.ID === data.academic_year_id
+          (a) => a.ID === data.AcademicYearID
         );
         if (foundAcademicYear) setSelectedAcademicYear(foundAcademicYear);
 
         // รอ majors โหลดก่อนค่อยตั้ง selectedDepartmentID และ selectedMajorID
-        const foundMajor = majors.find((m) => m.ID === data.major_id);
+        const foundMajor = majors.find(
+          (m) => m.ID === data.Curriculum?.Major?.ID
+        );
         if (foundMajor) {
-          setSelectedDepartmentID(foundMajor.Department.ID); // หรือ foundMajor.DepartmentID
+          setSelectedDepartmentID(foundMajor.Department.ID);
           setSelectedMajorID(foundMajor.ID);
+          setSelectedMajorName(foundMajor.MajorName);
         }
 
         // อาจารย์ผู้สอน (ตั้ง teachers ถ้ามี)
         // ถ้าข้อมูลผู้สอนมาจาก backend เช่น data.teachers
-        if (data.teachers && Array.isArray(data.teachers)) {
-          setTeachers(data.teachers);
+        if (data.UserAllCourses && Array.isArray(data.UserAllCourses)) {
+          const fullTeacherObjects = data.UserAllCourses.map(
+            (item) => item.User
+          ).filter((user) => !!user); // ตัด null
+          setTeachers(fullTeacherObjects); //ไม่ใช่ชื่ออย่างเดียว แต่เป็น object เต็ม
         }
       }
     };
@@ -223,7 +231,7 @@ const ManageCourse: React.FC = () => {
       curriculums.length > 0 &&
       academicYears.length > 0
     ) {
-      fetchUser();
+      fetchCourseData();
     }
   }, [id, majors, curriculums, academicYears]);
 

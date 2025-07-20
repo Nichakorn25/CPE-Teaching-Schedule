@@ -19,7 +19,8 @@ const AllCourse: React.FC = () => {
       const mappedData: AllCourseInterface[] = response.data
         .filter((item: any) => item.CourseName && item.CourseCode)
         .map((item: any, index: number) => ({
-          id: index + 1,
+          seq:index + 1,
+          id: item.ID,
           code: item.CourseCode,
           name: item.CourseName,
           credit: item.Credit,
@@ -152,7 +153,7 @@ const AllCourse: React.FC = () => {
           </thead>
           <tbody>
             {filteredCourses.map((course) => (
-              <tr key={course.id} className="border-t">
+              <tr key={course.seq} className="border-t">
                 <td className="border p-2">{course.id}</td>
                 <td className="border p-2">{course.code}</td>
                 <td className="border p-2">{course.name}</td>

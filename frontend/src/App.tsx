@@ -32,6 +32,7 @@ import Conditionpage from './pages/scheduler/conditionpage/Conditionpage';
 import AllCoursepage from './pages/scheduler/allcoursepage/AllCoursepage';
 import AddCoursepage from './pages/scheduler/addcoursepage/AddCoursepage';
 import Instructorpage from './pages/scheduler/instructorpage/Instructorpage';
+import Layout from "antd/es/layout/layout";
 
 import MainLayout from "./layout/MainLayout";
 import PrivateRoute from "./PrivateRoute";
@@ -44,14 +45,14 @@ const App: React.FC = () => {
         <Route path="/" element={<LoginPage />} />
         <Route path="/change-password" element={<Password />} />
         
-        <Route path="/" element={<Layout />}>
+        <Route path="/" element={<Layout />}/>
           <Route path="home-test" element={<Test />} />
           
           {/* <Route path="home-schedule" element={<HomeSchedulePage />} />
           <Route path="home-instructor" element={<HomeInstructorPage />} />
           <Route path="home-admin" element={<HomeAdminPage />} /> */}
         {/* Routes with MainLayout */}
-        <Route path="/home-schedule" element={<MainLayout><HomeSchedulePage /></MainLayout>} />
+        {/* <Route path="/home-schedule" element={<MainLayout><HomeSchedulePage /></MainLayout>} /> */}
         <Route path="/teacher-list" element={<MainLayout><TeacherList /></MainLayout>} />
         <Route path="/assistance-list" element={<MainLayout><AssistanceList /></MainLayout>} />
         <Route path="/open-course" element={<MainLayout><OpenCourse /></MainLayout>} />
@@ -59,7 +60,7 @@ const App: React.FC = () => {
         <Route path="/manage-teacher" element={<MainLayout><ManageTeacher /></MainLayout>} />
         <Route path="/manage-teacher/:id" element={<MainLayout><ManageTeacher /></MainLayout>} />
         <Route path="/manage-course" element={<MainLayout><ManageCourse /></MainLayout>} />
-        <Route path="/manage-course/:id" element={<ManageCourse />} />
+        <Route path="/manage-course/:id" element={<MainLayout><ManageCourse /></MainLayout>} />
         <Route path="/manage-cescourse" element={<MainLayout><ManageCesCourse /></MainLayout>} />
         <Route path="/manage-assistance" element={<MainLayout><ManageAssistance /></MainLayout>} />
         <Route path="/manage-assistance/:id" element={<MainLayout><ManageAssistance /></MainLayout>} />
@@ -74,7 +75,7 @@ const App: React.FC = () => {
           </MainLayout>
         } /> */}
 
-        <Route path="/Homepage" element={<MainLayout><Homepage /></MainLayout>} />
+        {/* <Route path="/Homepage" element={<MainLayout><Homepage /></MainLayout>} /> */}
         <Route path="/Schedulepage" element={<MainLayout><Schedulepage /></MainLayout>} />
         <Route path="/OfferedCoursespage" element={<MainLayout><OfferedCoursespage /></MainLayout>} />
         <Route path="/Conditionpage" element={<MainLayout><Conditionpage /></MainLayout>} />

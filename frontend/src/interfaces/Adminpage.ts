@@ -16,6 +16,7 @@ export interface CreateCourseInteface {
 }
 
 export interface AllCourseInterface {
+  seq:number;
   id: number;
   code: string;
   name: string;
@@ -53,7 +54,6 @@ export interface AllTeacher {
   Status: string,
   Role: string,
 }
-
 
 export interface Alltitles {
   ID: number;

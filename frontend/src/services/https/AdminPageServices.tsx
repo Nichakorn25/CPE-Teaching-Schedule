@@ -17,7 +17,7 @@ const requestOptions = {
 //------------------ Courses ------------------------------//
 async function getCoursebyid(id: number) {
   return await axios
-    .delete(`${apiUrl}/all-courses/${id}`, requestOptions)
+    .get(`${apiUrl}/all-courses/${id}`, requestOptions)
     .then((res) => res)
     .catch((e) => e.response);
 }
