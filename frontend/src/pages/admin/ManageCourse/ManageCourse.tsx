@@ -21,9 +21,10 @@ import {
   CourseType,
 } from "../../../interfaces/Adminpage";
 import Swal from "sweetalert2";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 const ManageCourse: React.FC = () => {
+  const navigate = useNavigate();
   const { id } = useParams();
   const [majors, setMajors] = useState<MajorInterface[]>([]);
   const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
@@ -152,29 +153,29 @@ const ManageCourse: React.FC = () => {
   };
 
   const isFormValid = () => {
-    if (
-      !curriculums ||
-      !courseType ||
-      !courseCode ||
-      !credit ||
-      !thaiName ||
-      !englishName
-    )
-      return false;
-    if (!hours.lecture || !hours.practice || !hours.selfStudy) return false;
+    // ถ้าเป็นการแก้ไข อนุญาตให้ส่งได้เลย
+    if (id) return true;
 
-    for (const teacher of teachers) {
-      if (!teacher.Title || !teacher.Firstname || !teacher.Lastname)
-        return false;
-    }
-    return true;
+    // ถ้าเป็นการเพิ่มใหม่ ให้ตรวจสอบความครบถ้วน
+    return (
+      courseType &&
+      courseCode &&
+      credit &&
+      thaiName &&
+      englishName &&
+      hours.lecture &&
+      hours.practice &&
+      hours.selfStudy &&
+      teachers.length > 0 &&
+      teachers.every((t) => t.ID)
+    );
   };
 
   useEffect(() => {
     const fetchCourseData = async () => {
       if (!id) return;
       const res = await getCoursebyid(Number(id));
-      console.log("rftyghuij", res.data);
+      console.log("ข้อมูลจากแบคเอน : ", res.data);
 
       if (res.status === 200 && res.data) {
         const data = res.data;
@@ -220,7 +221,7 @@ const ManageCourse: React.FC = () => {
           const fullTeacherObjects = data.UserAllCourses.map(
             (item) => item.User
           ).filter((user) => !!user); // ตัด null
-          setTeachers(fullTeacherObjects); //ไม่ใช่ชื่ออย่างเดียว แต่เป็น object เต็ม
+          setTeachers(fullTeacherObjects); // ใช้ตามลำดับที่ backend ส่งมา
         }
       }
     };
@@ -245,30 +246,39 @@ const ManageCourse: React.FC = () => {
       CurriculumID: selectedCurriculum.ID,
       AcademicYearID: selectedAcademicYear.ID,
       TypeOfCoursesID: parseInt(courseType),
-      CreditID: parseInt(credit),
+      Unit: parseInt(credit),
       Lecture: parseInt(hours.lecture),
       Lab: parseInt(hours.practice),
       Self: parseInt(hours.selfStudy),
       UserIDs: teachers.map((t) => t.ID).filter((id) => id && id !== 0),
     };
-
-    console.log("ส่งไปยัง backend", data);
+    console.log("guhijok",data)
 
     try {
-      const response = await postCreateCourse(data);
+      let response;
+      if (id) {
+        // ถ้ามี id แสดงว่าเป็นการแก้ไข
+        response = await putUpdateCourse(Number(id), data);
+      } else {
+        // ถ้าไม่มี id เป็นการเพิ่มใหม่
+        response = await postCreateCourse(data);
+      }
+
       if (response.status === 200) {
         Swal.fire({
           icon: "success",
-          title: "เพิ่มรายวิชาเรียบร้อย",
+          title: id ? "แก้ไขรายวิชาเรียบร้อย" : "เพิ่มรายวิชาเรียบร้อย",
           showConfirmButton: false,
           timer: 1500,
+        }).then(() => {
+          navigate("/all-course");
         });
       }
     } catch (error: any) {
       Swal.fire({
         icon: "error",
-        title: "เกิดข้อผิดพลาดในการเพิ่มรายวิชา",
-        text: error?.response?.data?.message || "ไม่สามารถเพิ่มรายวิชาได้",
+        title: "เกิดข้อผิดพลาด",
+        text: error?.response?.data?.message || "ไม่สามารถดำเนินการได้",
       });
       console.error("Error submitting course", error);
     }
@@ -364,7 +374,7 @@ const ManageCourse: React.FC = () => {
                 value={credit}
                 onChange={(e) => setCredit(e.target.value)}
               >
-                <option value="">--</option>
+                <option value="0">0</option>
                 <option value="1">1</option>
                 <option value="2">2</option>
                 <option value="3">3</option>
@@ -398,7 +408,7 @@ const ManageCourse: React.FC = () => {
                         setHours({ ...hours, [key]: e.target.value })
                       }
                     >
-                      <option value="">--</option>
+                      <option value="0">0</option>
                       <option value="1">1</option>
                       <option value="2">2</option>
                       <option value="3">3</option>

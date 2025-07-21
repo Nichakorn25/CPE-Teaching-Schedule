@@ -153,10 +153,10 @@ async function deleteTeachingAssistant(id: number) {
 
 
 export {
-  getCoursebyid,
+  getCoursebyid, //used
   getAllCourses, //used
   postCreateCourse, //used
-  putUpdateCourse, 
+  putUpdateCourse, //used 
   deleteCourse, //used
 
   getTeachers,//used
@@ -167,7 +167,7 @@ export {
   deleteUser,//used
 
   getOpenCourses, //used
-  postCreateOfferedCourse,
+  postCreateOfferedCourse, 
 
   getTeachingAssistantsById, //used
   getAllTeachingAssistants, //used

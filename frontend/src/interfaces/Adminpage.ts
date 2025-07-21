@@ -8,7 +8,7 @@ export interface CreateCourseInteface {
   CurriculumID: number;
   AcademicYearID: number;
   TypeOfCoursesID: number;
-  CreditID: number;
+  Unit: number;
   Lecture:number;
   Lab:number;
   Self:number;
@@ -143,6 +143,7 @@ export interface OfferedCourseInterface {
 }
 
 export interface CreateLaboratoryInterface {
+  ID:number;
   Room: string;
   Building: string;
   Capacity: string;

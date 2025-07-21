@@ -19,7 +19,7 @@ const AllCourse: React.FC = () => {
       const mappedData: AllCourseInterface[] = response.data
         .filter((item: any) => item.CourseName && item.CourseCode)
         .map((item: any, index: number) => ({
-          seq:index + 1,
+          seq: index + 1,
           id: item.ID,
           code: item.CourseCode,
           name: item.CourseName,
@@ -47,6 +47,11 @@ const AllCourse: React.FC = () => {
       course.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const startIndex = (currentPage - 1) * perPage;
+  const endIndex = startIndex + perPage;
+  const sortedCourses = [...filteredCourses].sort((a, b) => a.id - b.id);
+  const paginatedCourses = sortedCourses.slice(startIndex, endIndex);
 
   const handleDeleteCourse = async (id: number, courseName: string) => {
     const result = await Swal.fire({
@@ -132,7 +137,8 @@ const AllCourse: React.FC = () => {
           </button>
         </div>
 
-        <button className="bg-orange-500 text-white rounded px-4 py-2 hover:bg-orange-600 transition-all">
+        <button className="bg-orange-500 text-white rounded px-4 py-2 hover:bg-orange-600 transition-all"
+        onClick={()=>navigate("/manage-course")}>
           + เพิ่ม
         </button>
       </div>
@@ -152,9 +158,9 @@ const AllCourse: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredCourses.map((course) => (
-              <tr key={course.seq} className="border-t">
-                <td className="border p-2">{course.id}</td>
+            {paginatedCourses.map((course, index) => (
+              <tr key={course.id} className="border-t">
+                <td className="border p-2">{startIndex + index + 1}</td>
                 <td className="border p-2">{course.code}</td>
                 <td className="border p-2">{course.name}</td>
                 <td className="border p-2">{course.credit}</td>
