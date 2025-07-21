@@ -143,6 +143,7 @@ export interface OfferedCourseInterface {
 }
 
 export interface CreateLaboratoryInterface {
+  ID:number;
   Room: string;
   Building: string;
   Capacity: string;

@@ -156,7 +156,7 @@ export {
   getCoursebyid, //used
   getAllCourses, //used
   postCreateCourse, //used
-  putUpdateCourse, //used มีปัญหาที่หน่วยกิต
+  putUpdateCourse, //used 
   deleteCourse, //used
 
   getTeachers,//used
