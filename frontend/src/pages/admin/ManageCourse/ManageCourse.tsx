@@ -246,12 +246,13 @@ const ManageCourse: React.FC = () => {
       CurriculumID: selectedCurriculum.ID,
       AcademicYearID: selectedAcademicYear.ID,
       TypeOfCoursesID: parseInt(courseType),
-      CreditID: parseInt(credit),
+      Unit: parseInt(credit),
       Lecture: parseInt(hours.lecture),
       Lab: parseInt(hours.practice),
       Self: parseInt(hours.selfStudy),
       UserIDs: teachers.map((t) => t.ID).filter((id) => id && id !== 0),
     };
+    console.log("guhijok",data)
 
     try {
       let response;
