@@ -70,8 +70,8 @@ func DB() *gorm.DB {
 }
 
 func CreateDatabase() {
-	dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
-	// dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
+	// dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
+	dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
 	dbSQL, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal("Failed to connect to PostgreSQL:", err)
@@ -89,8 +89,8 @@ func CreateDatabase() {
 
 func ConnectionDB() {
 	CreateDatabase()
-	dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
-	// dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
+	// dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
+	dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
@@ -642,12 +642,11 @@ func SeedAllCourses() {
 	db.First(&credit9_0_0, "unit = ? AND lecture = ? AND lab = ?", 9, 0, 0)
 	db.First(&credit2_4_8, "unit = ? AND lecture = ? AND lab = ?", 2, 4, 8)
 
-
 	db.First(&typeSpecific, "type_name = ?", "หมวดวิชาเฉพาะ")
 	db.First(&typeLanguage, "type_name = ?", "กลุ่มวิชาภาษา")
 	db.First(&typeGeneral, "type_name = ?", "กลุ่มวิชาแกนศึกษาทั่วไป")
 
-	db.First(&year1, "level = ?", "1") 
+	db.First(&year1, "level = ?", "1")
 	db.First(&year2, "level = ?", "2")
 	db.First(&year3, "level = ?", "3")
 	db.First(&year4, "level = ?", "4")
@@ -800,7 +799,7 @@ func SeedAllCourses() {
 			TypeOfCoursesID: 1,
 			CreditID:        credit3_0_6.ID,
 		},
-				{
+		{
 			Code:            "IST30 1101",
 			EnglishName:     "English for Communication I",
 			ThaiName:        "ภาษาอังกฤษเพื่อการสื่อสาร 1",
@@ -1491,7 +1490,7 @@ func SeedAllCourses() {
 			CurriculumID:    curriculumComEng2566.ID,
 			AcademicYearID:  &year6.ID,
 			TypeOfCoursesID: 6,
-			CreditID:        credit1_0_0.ID, 
+			CreditID:        credit1_0_0.ID,
 		},
 		{
 			Code:            "ENG23 4091",
@@ -1500,7 +1499,7 @@ func SeedAllCourses() {
 			CurriculumID:    curriculumComEng2566.ID,
 			AcademicYearID:  &year6.ID,
 			TypeOfCoursesID: 6,
-			CreditID:        credit8_0_0.ID, 
+			CreditID:        credit8_0_0.ID,
 		},
 		{
 			Code:            "ENG23 4092",
@@ -1518,7 +1517,7 @@ func SeedAllCourses() {
 			CurriculumID:    curriculumComEng2566.ID,
 			AcademicYearID:  &year6.ID,
 			TypeOfCoursesID: 6,
-			CreditID:        credit9_0_0.ID, 
+			CreditID:        credit9_0_0.ID,
 		},
 		{
 			Code:            "ENG20 2010",
@@ -1574,8 +1573,6 @@ func SeedAllCourses() {
 			TypeOfCoursesID: 6,
 			CreditID:        credit2_4_8.ID,
 		},
-
-
 	}
 
 	for _, course := range courses {
@@ -1645,12 +1642,7 @@ func SeedUserAllCourses() {
 		{UserID: c1234.ID, AllCoursesID: comp301.ID},
 	}
 	for _, enroll := range enrollments {
-		err := db.Create(&enroll).Error
-		if err != nil {
-			log.Printf("❌ พบข้อผิดพลาดในการลงทะเบียน: ผู้ใช้ user_id=%d กับรายวิชา course_id=%d : %v", enroll.UserID, enroll.AllCoursesID, err)
-		} else {
-			log.Printf("✅ ลงทะเบียนสำเร็จ: ผู้ใช้ user_id=%d กับรายวิชา course_id=%d", enroll.UserID, enroll.AllCoursesID)
-		}
+		db.Where("user_id = ? AND all_courses_id = ?", enroll.UserID, enroll.AllCoursesID).FirstOrCreate(&enroll)
 	}
 }
 
