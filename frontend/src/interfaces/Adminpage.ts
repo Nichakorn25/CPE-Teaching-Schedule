@@ -153,7 +153,7 @@ export interface OfferedCourseInterface {
   Schedule: CreateScheduleInterface[];
 }
 
-export interface CreateLaboratoryInterface {
+export interface LaboratoryInterface {
   ID:number;
   Room: string;
   Building: string;

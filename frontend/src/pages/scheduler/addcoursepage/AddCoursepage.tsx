@@ -11,6 +11,7 @@ import {
 import {
   CurriculumInterface,
   AllCourseinOpenCourseInterface,
+  LaboratoryInterface,
 } from "../../../interfaces/Adminpage";
 
 const { Option } = Select;
@@ -19,9 +20,21 @@ const AddCoursepage: React.FC = () => {
   const [form] = Form.useForm();
   const [curriculums, setCurriculums] = useState<CurriculumInterface[]>([]);
   const [courses, setCourses] = useState<AllCourseinOpenCourseInterface[]>([]);
+  const [lab, setLab] = useState<LaboratoryInterface[]>([]);
   const [selectedCurriculumID, setSelectedCurriculumID] = useState<
     number | null
   >(null);
+
+  useEffect(() => {
+    const fetchLab = async () => {
+      const response = await getLaboratory();
+      console.log("Lab: ", response);
+      if (response.status === 200) {
+        setLab(response.data);
+      }
+    };
+    fetchLab();
+  },[]);
 
   useEffect(() => {
     const fetchCurriculums = async () => {
@@ -39,27 +52,28 @@ const AddCoursepage: React.FC = () => {
     console.log(response);
     if (response.status === 200) {
       const filtered = response.data.filter(
-        (course: AllCourseinOpenCourseInterface) => course.CurriculumID === value
+        (course: AllCourseinOpenCourseInterface) =>
+          course.CurriculumID === value
       );
       setCourses(filtered);
     }
   };
 
-  const handleCourseCodeChange = async (value: string) => {
-    const selectedCourse = courses.find((course) => course.CourseCode === value);
+  const handleCourseCodeChange = async (courseId: number) => {
+    const selectedCourse = courses.find((course) => course.ID === courseId);
     if (selectedCourse) {
-      const response = await getCoursebyid(selectedCourse.ID);
+      const response = await getCoursebyid(courseId);
       console.log("data getCoursebyid: ", response);
       if (response.status === 200) {
         const course = response.data;
         form.setFieldsValue({
-          courseCode: course.code,
-          courseNameTh: course.name,
-          courseNameEn: course.name_en,
-          credits: course.credit,
-          labRoom: course.lab_room,
-          groupCount: course.group_count,
-          studentsPerGroup: course.students_per_group,
+          courseCode: selectedCourse.CourseCode, // ใช้จาก courses
+          courseNameTh: course.ThaiName,
+          courseNameEn: course.EnglishName,
+          credits: course.Credit?.Unit || 0,
+          labRoom: course.Laboratory?.ID || null,
+          groupCount: "",
+          studentsPerGroup: 45,
         });
       }
     }
@@ -237,12 +251,11 @@ const AddCoursepage: React.FC = () => {
                   name="labRoom"
                 >
                   <Select placeholder="เลือกห้องปฏิบัติการ" size="large">
-                    <Option value="none">
-                      ไม่มีการเรียนการสอนในห้องปฏิบัติการ
-                    </Option>
-                    <Option value="F11-421">F11-421 Hardware</Option>
-                    <Option value="F11-422">F11-422 Software</Option>
-                    <Option value="F11-423">F11-423 Network</Option>
+                    {lab.map((l) => (
+                      <Option key={l.ID} value={l.ID}>
+                        {l.Room}
+                      </Option>
+                    ))}
                   </Select>
                 </Form.Item>
               </div>
