@@ -6,7 +6,7 @@ import (
 
 type AllCourses struct {
 	gorm.Model
-	Code        string
+	Code        string `gorm:"unique"`
 	EnglishName string
 	ThaiName    string
 
