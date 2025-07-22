@@ -8,6 +8,86 @@ import { ConditionInterface, ConditionsRequestInterface, ConditionInputInterface
 
 const days = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 
+// Custom Time Input Component
+const CustomTimeInput: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  label: string;
+}> = ({ value, onChange, disabled = false, label }) => {
+  const [hour, setHour] = useState(value.split(':')[0] || '00');
+  const [minute, setMinute] = useState(value.split(':')[1] || '00');
+
+  useEffect(() => {
+    if (value) {
+      const [h, m] = value.split(':');
+      setHour(h || '00');
+      setMinute(m || '00');
+    }
+  }, [value]);
+
+  const handleHourChange = (newHour: string) => {
+    const paddedHour = newHour.padStart(2, '0');
+    setHour(paddedHour);
+    onChange(`${paddedHour}:${minute}`);
+  };
+
+  const handleMinuteChange = (newMinute: string) => {
+    const paddedMinute = newMinute.padStart(2, '0');
+    setMinute(paddedMinute);
+    onChange(`${hour}:${paddedMinute}`);
+  };
+
+  return (
+    <div className="time-input-group">
+      <label className="time-input-label">{label}</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <select
+          value={hour}
+          onChange={(e) => handleHourChange(e.target.value)}
+          disabled={disabled}
+          style={{
+            padding: '6px 8px',
+            border: '1px solid #d9d9d9',
+            borderRadius: '4px',
+            fontSize: '14px',
+            minWidth: '60px',
+            textAlign: 'center'
+          }}
+        >
+          {Array.from({ length: 24 }, (_, i) => {
+            const h = i.toString().padStart(2, '0');
+            return (
+              <option key={h} value={h}>{h}</option>
+            );
+          })}
+        </select>
+        <span style={{ fontSize: '16px', fontWeight: 'bold' }}>:</span>
+        <select
+          value={minute}
+          onChange={(e) => handleMinuteChange(e.target.value)}
+          disabled={disabled}
+          style={{
+            padding: '6px 8px',
+            border: '1px solid #d9d9d9',
+            borderRadius: '4px',
+            fontSize: '14px',
+            minWidth: '60px',
+            textAlign: 'center'
+          }}
+        >
+          {Array.from({ length: 60 }, (_, i) => {
+            const m = i.toString().padStart(2, '0');
+            return (
+              <option key={m} value={m}>{m}</option>
+            );
+          })}
+        </select>
+      </div>
+    </div>
+  );
+};
+
 const AddConditionpage: React.FC = () => {
   const navigate = useNavigate();
   const [timeSlotsByDay, setTimeSlotsByDay] = useState<Record<number, ConditionInterface[]>>({});
@@ -37,8 +117,8 @@ const AddConditionpage: React.FC = () => {
       const newSlot: ConditionInterface = {
         ID: Date.now(),
         DayOfWeek: days[dayIndex],  // เพื่อให้แต่ละ slot แยกออกจากกันเพื่อระบุแต่ละ slot ได้
-        Start: "",
-        End: "",
+        Start: "00:00", // เริ่มต้นที่ 00:00
+        End: "01:00",   // ค่าเริ่มต้นสิ้นสุดที่ 01:00
       };
       return { ...prev, [dayIndex]: [...existing, newSlot] };
     });
@@ -193,7 +273,7 @@ const AddConditionpage: React.FC = () => {
           color: '#666',
           fontSize: '14px'
         }}>
-          กำหนดช่วงเวลาที่ไม่สะดวกสำหรับการจัดตารางเรียน
+          กำหนดช่วงเวลาที่ไม่สะดวกสำหรับการจัดตารางเรียน (รูปแบบ 24 ชั่วโมง: 00:00 - 23:59)
         </p>
       </div>
 
@@ -237,7 +317,7 @@ const AddConditionpage: React.FC = () => {
               <tr>
                 <th style={{ width: '80px' }}>ลำดับที่</th>
                 <th style={{ width: '120px' }}>วันที่ไม่สะดวก</th>
-                <th>เวลาที่ไม่สะดวก</th>
+                <th>เวลาที่ไม่สะดวก (24 ชั่วโมง)</th>
               </tr>
             </thead>
             <tbody>
@@ -269,42 +349,21 @@ const AddConditionpage: React.FC = () => {
                             {i + 1}
                           </div>
 
-                          <div className="time-input-group">
-                            <label className="time-input-label">
-                              เวลาเริ่มต้น
-                            </label>
-                            <input
-                              type="time"
-                              className="time-input"
-                              value={slot.Start}
-                              onChange={(e) =>
-                                updateTime(
-                                  index,
-                                  slot.ID,
-                                  "Start",
-                                  e.target.value
-                                )
-                              }
-                              disabled={isLoading}
-                            />
-                          </div>
+                          <CustomTimeInput
+                            label="เวลาเริ่มต้น"
+                            value={slot.Start}
+                            onChange={(value) => updateTime(index, slot.ID, "Start", value)}
+                            disabled={isLoading}
+                          />
 
                           <span className="time-separator">-</span>
 
-                          <div className="time-input-group">
-                            <label className="time-input-label">
-                              เวลาสิ้นสุด
-                            </label>
-                            <input
-                              type="time"
-                              className="time-input"
-                              value={slot.End}
-                              onChange={(e) =>
-                                updateTime(index, slot.ID, "End", e.target.value)
-                              }
-                              disabled={isLoading}
-                            />
-                          </div>
+                          <CustomTimeInput
+                            label="เวลาสิ้นสุด"
+                            value={slot.End}
+                            onChange={(value) => updateTime(index, slot.ID, "End", value)}
+                            disabled={isLoading}
+                          />
 
                           <button
                             className="remove-time-button"
@@ -379,6 +438,8 @@ const AddConditionpage: React.FC = () => {
             <li>คลิก "เพิ่มช่วงเวลาไม่สะดวก" เพื่อเพิ่มช่วงเวลาที่ไม่สะดวกในแต่ละวัน</li>
             <li>สามารถเพิ่มหลายช่วงเวลาในวันเดียวกันได้</li>
             <li>คลิก "ลบ" เพื่อลบช่วงเวลาที่ไม่ต้องการ</li>
+            <li>เลือกชั่วโมงจาก 00-23 และนาทีจาก 00-59</li>
+            <li>ช่วงเวลาเริ่มต้นจะถูกตั้งค่าเป็น 00:00 - 01:00</li>
             <li>กำหนดเวลาเริ่มต้นและเวลาสิ้นสุดให้ครบถ้วน</li>
             <li>เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุด</li>
             <li>ข้อมูลจะถูกนำไปใช้ในการจัดตารางเรียนอัตโนมัติ</li>
