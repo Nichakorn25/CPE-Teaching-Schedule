@@ -163,17 +163,6 @@ const ManageAssistance: React.FC = () => {
         alignItems: 'center',
         gap: '16px'
       }}>
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate('/assistance-list')}
-          style={{
-            backgroundColor: '#6c757d',
-            borderColor: '#6c757d',
-            color: 'white'
-          }}
-        >
-          กลับ
-        </Button>
         <div>
           <h1 style={{ 
             margin: 0, 
