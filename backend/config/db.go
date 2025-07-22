@@ -140,10 +140,10 @@ func SetupDatabase() {
 	SeedUserAllCourses()
 	SeedTeachingAssistants()
 	SeedConditions()
-	SeedOfferedCourses()
-	SeedSchedules()
-	SeedTimeFixedCourses()
-	SeedScheduleTeachingAssistants()
+	// SeedOfferedCourses()
+	// SeedSchedules()
+	// SeedTimeFixedCourses()
+	// SeedScheduleTeachingAssistants()
 }
 
 // //////////////////////////////////////////////////// ผู้ใช้งาน ///////////////////////////////////////////////
@@ -213,7 +213,7 @@ func SeedDepartments() {
 // พอแล้ว
 func SeedMajors() {
 	var M1, M2, M3 entity.Department
-	db.First(&M1, "department_name = ?", "สำนักวิชาวิศวกรรม")
+	db.First(&M1, "department_name = ?", "สำนักวิชาวิศวกรรมศาสตร์")
 	db.First(&M2, "department_name = ?", "สำนักวิชาแพทยศาสตร์")
 	db.First(&M3, "department_name = ?", "สำนักวิชาวิทยาศาสตร์")
 
@@ -234,14 +234,8 @@ func SeedMajors() {
 
 // ครบ
 func SeedDataUser() {
-	hashedPassword01, err := HashPassword("admin")
-	if err != nil {
-		log.Fatalf("Failed to hash admin password: %v", err)
-	}
-	hashedPassword, err := HashPassword("1234")
-	if err != nil {
-		log.Fatalf("Failed to hash user password: %v", err)
-	}
+	hashedPassword01, _ := HashPassword("admin")
+	hashedPassword, _ := HashPassword("1234")
 
 	users := []entity.User{
 		{
@@ -412,17 +406,9 @@ func SeedDataUser() {
 	}
 	for _, user := range users {
 		var existing entity.User
-		err := db.Where("username = ?", user.Username).First(&existing).Error
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			if err := db.Create(&user).Error; err != nil {
-				log.Printf("Error creating user %s: %v\n", user.Username, err)
-			} else {
-				log.Printf("User %s created successfully.\n", user.Username)
-			}
-		} else if err != nil {
-			log.Printf("DB error checking user %s: %v\n", user.Username, err)
-		} else {
-			log.Printf("User %s already exists.\n", user.Username)
+		db.Where("username = ?", user.Username).First(&existing)
+		if existing.ID == 0 {
+			db.Create(&user)
 		}
 	}
 }
@@ -798,15 +784,6 @@ func SeedAllCourses() {
 		},
 		{
 			Code:            "IST20 1504",
-			EnglishName:     "LAW IN DAILY LIFE",
-			ThaiName:        "กฎหมายในชีวิตประจำวัน",
-			CurriculumID:    curriculumComEng1.ID,
-			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
-			CreditID:        credit2_2_0_4.ID,
-		},
-		{
-			Code:            "IST20 1507",
 			EnglishName:     "LAW IN DAILY LIFE",
 			ThaiName:        "กฎหมายในชีวิตประจำวัน",
 			CurriculumID:    curriculumComEng1.ID,
@@ -1310,7 +1287,7 @@ func SeedAllCourses() {
 			CreditID:        credit4_4_0_8.ID,
 		},
 		{
-			Code:            "ENG23 4033",
+			Code:            "ENG23 4053",
 			EnglishName:     "Computer Vision",
 			ThaiName:        "การมองเห็นด้วยคอมพิวเตอร์",
 			CurriculumID:    curriculumComEng1.ID,
@@ -1508,15 +1485,20 @@ func SeedAllCourses() {
 			CreditID:        credit4_2_4_8.ID,
 		},
 	}
-	for _, course := range courses {
-		var existing entity.AllCourses
-		db.Where("code = ?", course.Code).First(&existing)
-
-		if existing.ID == 0 {
-			db.Create(&course)
-		}
+	for _, c := range courses {
+		var course entity.AllCourses
+		db.
+			Where("code = ?", c.Code).
+			FirstOrCreate(&course, entity.AllCourses{
+				Code:            c.Code,
+				EnglishName:     c.EnglishName,
+				ThaiName:        c.ThaiName,
+				CurriculumID:    c.CurriculumID,
+				AcademicYearID:  c.AcademicYearID,
+				TypeOfCoursesID: c.TypeOfCoursesID,
+				CreditID:        c.CreditID,
+			})
 	}
-
 }
 
 // ยังใส่ไม่ครบ
@@ -1553,7 +1535,6 @@ func SeedUserAllCourses() {
 		ist201502 entity.AllCourses
 		ist201503 entity.AllCourses
 		ist201504 entity.AllCourses
-		ist201507 entity.AllCourses
 		ist202501 entity.AllCourses
 		ist202502 entity.AllCourses
 		ist202503 entity.AllCourses
@@ -1610,6 +1591,7 @@ func SeedUserAllCourses() {
 		eng234031 entity.AllCourses
 		eng234032 entity.AllCourses
 		eng234034 entity.AllCourses
+		eng234053 entity.AllCourses
 		eng234060 entity.AllCourses
 		eng234071 entity.AllCourses
 		eng234072 entity.AllCourses
@@ -1663,7 +1645,6 @@ func SeedUserAllCourses() {
 	db.First(&ist201502, "code = ?", "IST20 1502")
 	db.First(&ist201503, "code = ?", "IST20 1503")
 	db.First(&ist201504, "code = ?", "IST20 1504")
-	db.First(&ist201507, "code = ?", "IST20 1507")
 	db.First(&ist202501, "code = ?", "IST20 2501")
 	db.First(&ist202502, "code = ?", "IST20 2502")
 	db.First(&ist202503, "code = ?", "IST20 2503")
@@ -1720,6 +1701,7 @@ func SeedUserAllCourses() {
 	db.First(&eng234031, "code = ?", "ENG23 4031")
 	db.First(&eng234032, "code = ?", "ENG23 4032")
 	db.First(&eng234034, "code = ?", "ENG23 4034")
+	db.First(&eng234053, "code = ?", "ENG23 4053")
 	db.First(&eng234060, "code = ?", "ENG23 4060")
 	db.First(&eng234071, "code = ?", "ENG23 4071")
 	db.First(&eng234072, "code = ?", "ENG23 4072")
@@ -1761,7 +1743,6 @@ func SeedUserAllCourses() {
 		{UserID: admin.ID, AllCoursesID: ist201502.ID},
 		{UserID: admin.ID, AllCoursesID: ist201503.ID},
 		{UserID: admin.ID, AllCoursesID: ist201504.ID},
-		{UserID: admin.ID, AllCoursesID: ist201507.ID},
 		{UserID: admin.ID, AllCoursesID: ist202501.ID},
 		{UserID: admin.ID, AllCoursesID: ist202502.ID},
 		{UserID: admin.ID, AllCoursesID: ist202503.ID},
@@ -1793,6 +1774,7 @@ func SeedUserAllCourses() {
 		{UserID: g1234.ID, AllCoursesID: eng232071.ID},
 		{UserID: b1234.ID, AllCoursesID: eng232072.ID},
 		{UserID: g1234.ID, AllCoursesID: eng232072.ID},
+		{UserID: g1234.ID, AllCoursesID: eng234053.ID},
 		{UserID: b1234.ID, AllCoursesID: eng232073.ID},
 		{UserID: b1234.ID, AllCoursesID: eng232074.ID},
 		{UserID: ss1234.ID, AllCoursesID: eng232075.ID},
@@ -1892,212 +1874,212 @@ func SeedTeachingAssistants() {
 }
 
 // ยังไม่ครบ
-func SeedScheduleTeachingAssistants() {
-	entries := []struct {
-		TeachingAssistantID uint
-		ScheduleID          uint
-	}{
-		{TeachingAssistantID: 1, ScheduleID: 1},
-		{TeachingAssistantID: 1, ScheduleID: 2},
-		{TeachingAssistantID: 2, ScheduleID: 1},
-		{TeachingAssistantID: 3, ScheduleID: 2},
-	}
+// func SeedScheduleTeachingAssistants() {
+// 	entries := []struct {
+// 		TeachingAssistantID uint
+// 		ScheduleID          uint
+// 	}{
+// 		{TeachingAssistantID: 1, ScheduleID: 1},
+// 		{TeachingAssistantID: 1, ScheduleID: 2},
+// 		{TeachingAssistantID: 2, ScheduleID: 1},
+// 		{TeachingAssistantID: 3, ScheduleID: 2},
+// 	}
 
-	for _, e := range entries {
-		db.FirstOrCreate(&entity.ScheduleTeachingAssistant{}, &entity.ScheduleTeachingAssistant{
-			TeachingAssistantID: e.TeachingAssistantID,
-			ScheduleID:          e.ScheduleID,
-		})
-	}
-}
+// 	for _, e := range entries {
+// 		db.FirstOrCreate(&entity.ScheduleTeachingAssistant{}, &entity.ScheduleTeachingAssistant{
+// 			TeachingAssistantID: e.TeachingAssistantID,
+// 			ScheduleID:          e.ScheduleID,
+// 		})
+// 	}
+// }
 
 // //////////////////////////////////////////////////////////// วิชาที่จะเปิดสอนในเทอมนั้น ///////////////////////////////////////////////////////
 // ยังไม่ครบ
-func SeedOfferedCourses() {
-	labID3 := uint(3)
+// func SeedOfferedCourses() {
+// 	labID3 := uint(3)
 
-	courses := []entity.OfferedCourses{
-		{
-			Year:         2566,
-			Term:         1,
-			Section:      2,
-			Capacity:     30,
-			IsFixCourses: false,
-			UserID:       3,
-			AllCoursesID: 3,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2567,
-			Term:         1,
-			Section:      1,
-			Capacity:     30,
-			IsFixCourses: false,
-			UserID:       2,
-			AllCoursesID: 10,
-			LaboratoryID: &labID3,
-		},
-		{
-			Year:         2567,
-			Term:         1,
-			Section:      1,
-			Capacity:     40,
-			IsFixCourses: false,
-			UserID:       3,
-			AllCoursesID: 3,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2567,
-			Term:         2,
-			Section:      1,
-			Capacity:     35,
-			IsFixCourses: true,
-			UserID:       6,
-			AllCoursesID: 5,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2566,
-			Term:         1,
-			Section:      1,
-			Capacity:     40,
-			IsFixCourses: true,
-			UserID:       6,
-			AllCoursesID: 6,
-			LaboratoryID: nil,
-		},
-	}
+// 	courses := []entity.OfferedCourses{
+// 		{
+// 			Year:         2566,
+// 			Term:         1,
+// 			Section:      2,
+// 			Capacity:     30,
+// 			IsFixCourses: false,
+// 			UserID:       3,
+// 			AllCoursesID: 3,
+// 			LaboratoryID: nil,
+// 		},
+// 		{
+// 			Year:         2567,
+// 			Term:         1,
+// 			Section:      1,
+// 			Capacity:     30,
+// 			IsFixCourses: false,
+// 			UserID:       2,
+// 			AllCoursesID: 10,
+// 			LaboratoryID: &labID3,
+// 		},
+// 		{
+// 			Year:         2567,
+// 			Term:         1,
+// 			Section:      1,
+// 			Capacity:     40,
+// 			IsFixCourses: false,
+// 			UserID:       3,
+// 			AllCoursesID: 3,
+// 			LaboratoryID: nil,
+// 		},
+// 		{
+// 			Year:         2567,
+// 			Term:         2,
+// 			Section:      1,
+// 			Capacity:     35,
+// 			IsFixCourses: true,
+// 			UserID:       6,
+// 			AllCoursesID: 5,
+// 			LaboratoryID: nil,
+// 		},
+// 		{
+// 			Year:         2566,
+// 			Term:         1,
+// 			Section:      1,
+// 			Capacity:     40,
+// 			IsFixCourses: true,
+// 			UserID:       6,
+// 			AllCoursesID: 6,
+// 			LaboratoryID: nil,
+// 		},
+// 	}
 
-	for _, c := range courses {
-		db.FirstOrCreate(&entity.OfferedCourses{}, &entity.OfferedCourses{
-			Year:         c.Year,
-			Term:         c.Term,
-			Section:      c.Section,
-			Capacity:     c.Capacity,
-			IsFixCourses: c.IsFixCourses,
-			UserID:       c.UserID,
-			AllCoursesID: c.AllCoursesID,
-			LaboratoryID: c.LaboratoryID,
-		})
-	}
-}
+// 	for _, c := range courses {
+// 		db.FirstOrCreate(&entity.OfferedCourses{}, &entity.OfferedCourses{
+// 			Year:         c.Year,
+// 			Term:         c.Term,
+// 			Section:      c.Section,
+// 			Capacity:     c.Capacity,
+// 			IsFixCourses: c.IsFixCourses,
+// 			UserID:       c.UserID,
+// 			AllCoursesID: c.AllCoursesID,
+// 			LaboratoryID: c.LaboratoryID,
+// 		})
+// 	}
+// }
 
-// ยังไม่ครบ
-func SeedTimeFixedCourses() {
-	layout := "15:04"
+// // ยังไม่ครบ
+// func SeedTimeFixedCourses() {
+// 	layout := "15:04"
 
-	entries := []struct {
-		Year         uint
-		Term         uint
-		DayOfWeek    string
-		StartTimeStr string
-		EndTimeStr   string
-		RoomFix      string
-		Section      uint
-		Capacity     uint
-		AllCoursesID uint
-		ScheduleID   uint
-	}{
-		{
-			Year:         2566,
-			Term:         1,
-			DayOfWeek:    "จันทร์",
-			StartTimeStr: "09:00",
-			EndTimeStr:   "11:00",
-			RoomFix:      "Lecture 101",
-			Section:      1,
-			Capacity:     40,
-			AllCoursesID: 6,
-			ScheduleID:   1,
-		},
-		{
-			Year:         2567,
-			Term:         1,
-			DayOfWeek:    "อังคาร",
-			StartTimeStr: "13:00",
-			EndTimeStr:   "15:00",
-			RoomFix:      "Lecture 102",
-			Section:      2,
-			Capacity:     35,
-			AllCoursesID: 6,
-			ScheduleID:   1,
-		},
-		{
-			Year:         2567,
-			Term:         2,
-			DayOfWeek:    "พฤหัสบดี",
-			StartTimeStr: "10:30",
-			EndTimeStr:   "12:30",
-			RoomFix:      "Lecture 201",
-			Section:      1,
-			Capacity:     30,
-			AllCoursesID: 5,
-			ScheduleID:   2,
-		},
-	}
+// 	entries := []struct {
+// 		Year         uint
+// 		Term         uint
+// 		DayOfWeek    string
+// 		StartTimeStr string
+// 		EndTimeStr   string
+// 		RoomFix      string
+// 		Section      uint
+// 		Capacity     uint
+// 		AllCoursesID uint
+// 		ScheduleID   uint
+// 	}{
+// 		{
+// 			Year:         2566,
+// 			Term:         1,
+// 			DayOfWeek:    "จันทร์",
+// 			StartTimeStr: "09:00",
+// 			EndTimeStr:   "11:00",
+// 			RoomFix:      "Lecture 101",
+// 			Section:      1,
+// 			Capacity:     40,
+// 			AllCoursesID: 6,
+// 			ScheduleID:   1,
+// 		},
+// 		{
+// 			Year:         2567,
+// 			Term:         1,
+// 			DayOfWeek:    "อังคาร",
+// 			StartTimeStr: "13:00",
+// 			EndTimeStr:   "15:00",
+// 			RoomFix:      "Lecture 102",
+// 			Section:      2,
+// 			Capacity:     35,
+// 			AllCoursesID: 6,
+// 			ScheduleID:   1,
+// 		},
+// 		{
+// 			Year:         2567,
+// 			Term:         2,
+// 			DayOfWeek:    "พฤหัสบดี",
+// 			StartTimeStr: "10:30",
+// 			EndTimeStr:   "12:30",
+// 			RoomFix:      "Lecture 201",
+// 			Section:      1,
+// 			Capacity:     30,
+// 			AllCoursesID: 5,
+// 			ScheduleID:   2,
+// 		},
+// 	}
 
-	for _, entry := range entries {
-		startTime, _ := time.Parse(layout, entry.StartTimeStr)
-		endTime, _ := time.Parse(layout, entry.EndTimeStr)
+// 	for _, entry := range entries {
+// 		startTime, _ := time.Parse(layout, entry.StartTimeStr)
+// 		endTime, _ := time.Parse(layout, entry.EndTimeStr)
 
-		db.FirstOrCreate(&entity.TimeFixedCourses{}, &entity.TimeFixedCourses{
-			Year:         entry.Year,
-			Term:         entry.Term,
-			DayOfWeek:    entry.DayOfWeek,
-			StartTime:    startTime,
-			EndTime:      endTime,
-			RoomFix:      entry.RoomFix,
-			Section:      entry.Section,
-			Capacity:     entry.Capacity,
-			AllCoursesID: entry.AllCoursesID,
-			ScheduleID:   entry.ScheduleID,
-		})
-	}
-}
+// 		db.FirstOrCreate(&entity.TimeFixedCourses{}, &entity.TimeFixedCourses{
+// 			Year:         entry.Year,
+// 			Term:         entry.Term,
+// 			DayOfWeek:    entry.DayOfWeek,
+// 			StartTime:    startTime,
+// 			EndTime:      endTime,
+// 			RoomFix:      entry.RoomFix,
+// 			Section:      entry.Section,
+// 			Capacity:     entry.Capacity,
+// 			AllCoursesID: entry.AllCoursesID,
+// 			ScheduleID:   entry.ScheduleID,
+// 		})
+// 	}
+// }
 
-// //////////////////////////////////////////////////////////// ตารางสอน ///////////////////////////////////////////////////////
-// ยังไม่ครบ
-func SeedSchedules() {
-	layout := "15:04"
+// // //////////////////////////////////////////////////////////// ตารางสอน ///////////////////////////////////////////////////////
+// // ยังไม่ครบ
+// func SeedSchedules() {
+// 	layout := "15:04"
 
-	schedules := []entity.Schedule{
-		{
-			NameTable:        "ตารางเรียนปี 2567 เทอม 1",
-			SectionNumber:    1,
-			DayOfWeek:        "จันทร์",
-			StartTime:        mustParseTime(layout, "09:00"),
-			EndTime:          mustParseTime(layout, "11:00"),
-			OfferedCoursesID: 1, // ต้องตรงกับ ID ของ OfferedCourses ที่มีอยู่ใน DB
-		},
-		{
-			NameTable:        "ตารางเรียนปี 2567 เทอม 1",
-			SectionNumber:    2,
-			DayOfWeek:        "อังคาร",
-			StartTime:        mustParseTime(layout, "13:00"),
-			EndTime:          mustParseTime(layout, "15:00"),
-			OfferedCoursesID: 2,
-		},
-		{
-			NameTable:        "ตารางเรียนปี 2567 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        mustParseTime(layout, "10:30"),
-			EndTime:          mustParseTime(layout, "12:30"),
-			OfferedCoursesID: 4,
-		},
-	}
+// 	schedules := []entity.Schedule{
+// 		{
+// 			NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+// 			SectionNumber:    1,
+// 			DayOfWeek:        "จันทร์",
+// 			StartTime:        mustParseTime(layout, "09:00"),
+// 			EndTime:          mustParseTime(layout, "11:00"),
+// 			OfferedCoursesID: 1, // ต้องตรงกับ ID ของ OfferedCourses ที่มีอยู่ใน DB
+// 		},
+// 		{
+// 			NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+// 			SectionNumber:    2,
+// 			DayOfWeek:        "อังคาร",
+// 			StartTime:        mustParseTime(layout, "13:00"),
+// 			EndTime:          mustParseTime(layout, "15:00"),
+// 			OfferedCoursesID: 2,
+// 		},
+// 		{
+// 			NameTable:        "ตารางเรียนปี 2567 เทอม 2",
+// 			SectionNumber:    1,
+// 			DayOfWeek:        "พฤหัสบดี",
+// 			StartTime:        mustParseTime(layout, "10:30"),
+// 			EndTime:          mustParseTime(layout, "12:30"),
+// 			OfferedCoursesID: 4,
+// 		},
+// 	}
 
-	for _, s := range schedules {
-		db.FirstOrCreate(&entity.Schedule{}, &s)
-	}
-}
+// 	for _, s := range schedules {
+// 		db.FirstOrCreate(&entity.Schedule{}, &s)
+// 	}
+// }
 
-// ตัวช่วยแปลงเวลาหรือ panic ถ้าพลาด
-func mustParseTime(layout, value string) time.Time {
-	t, err := time.Parse(layout, value)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
+// // ตัวช่วยแปลงเวลาหรือ panic ถ้าพลาด
+// func mustParseTime(layout, value string) time.Time {
+// 	t, err := time.Parse(layout, value)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	return t
+// }
