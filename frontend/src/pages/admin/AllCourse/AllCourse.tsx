@@ -15,6 +15,7 @@ const AllCourse: React.FC = () => {
 
   const fetchCourses = async () => {
     const response = await getAllCourses();
+    console.log("dftghj: ",response)
     if (response.status === 200 && Array.isArray(response.data)) {
       const mappedData: AllCourseInterface[] = response.data
         .filter((item: any) => item.CourseName && item.CourseCode)

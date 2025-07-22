@@ -25,6 +25,17 @@ export interface AllCourseInterface {
   instructors: string[];
 }
 
+export interface AllCourseinOpenCourseInterface {
+  ID: number;
+  CourseCode: string;
+  CourseName: string;
+  CourseType: string;
+  Credit: string;
+  Instructor: string;
+  CurriculumID: number;
+}
+
+
 export interface CreateUserInterface {
   Username: string;
   Password: string;

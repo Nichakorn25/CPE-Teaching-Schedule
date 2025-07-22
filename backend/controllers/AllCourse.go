@@ -68,6 +68,7 @@ func GetAllCourses(c *gin.Context) {
 			"Credit":      fmt.Sprintf("%d (%d-%d-%d)", course.Credit.Unit, course.Credit.Lecture, course.Credit.Lab, course.Credit.Self),
 			"CourseType":      course.TypeOfCourses.TypeName,
 			"Instructor": strings.Join(teachers, ", "),
+			"CurriculumID": course.CurriculumID,
 		})
 	}
 
