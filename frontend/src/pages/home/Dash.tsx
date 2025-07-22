@@ -32,40 +32,26 @@ interface ScheduleItem {
   task?: string;
   room?: string;
   location?: string;
-  students?: number;
-}
-
-interface Notification {
-  id: number;
-  type: "urgent" | "reminder" | "info";
-  title: string;
-  time: string;
-  message: string;
 }
 
 interface DashboardData {
-  admin: {
+  Admin: {
     totalUsers: number;
     totalCourses: number;
     activeTermCourses: number;
-    userGrowth: string;
-    courseGrowth: string;
-    termGrowth: string;
   };
-  instructor: {
+  Instructor: {
     todayClasses: ScheduleItem[];
   };
-  scheduler: {
+  Scheduler: {
     activeTermCourses: number;
-    termGrowth: string;
-    schedule: ScheduleItem[];
+    todayClasses: ScheduleItem[];
   };
 }
 
 interface StatCardProps {
   title: string;
   value: number;
-  growth: string;
   icon: React.ReactNode;
   delay: number;
 }
@@ -84,105 +70,70 @@ const Dashboard: React.FC = () => {
   ///////////////////////////////// ด้านบนแก้แล้ว
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [showTaskModal, setShowTaskModal] = useState<boolean>(false);
   const [globalTasks, setGlobalTasks] = useState<Record<string, Task[]>>({});
   const [personalTasks, setPersonalTasks] = useState<Record<string, Task[]>>(
     {}
   );
-  const [newTask, setNewTask] = useState<{
-    title: string;
-    time: string;
-    type: TaskType;
-  }>({ title: "", time: "", type: "meeting" });
 
   // Mock data for different roles
   const dashboardData: DashboardData = {
-    admin: {
+    Admin: {
       totalUsers: 1247,
       totalCourses: 89,
       activeTermCourses: 34,
-      userGrowth: "+12%",
-      courseGrowth: "+8%",
-      termGrowth: "+15%",
     },
-    instructor: {
+    Instructor: {
       todayClasses: [
         {
           time: "08:00-10:00",
           subject: "คณิตศาสตร์ 101",
           room: "A-201",
-          students: 45,
         },
         {
           time: "13:00-15:00",
           subject: "สถิติเบื้องต้น",
           room: "B-105",
-          students: 32,
         },
       ],
     },
-    scheduler: {
+    Scheduler: {
       activeTermCourses: 28,
-      termGrowth: "+12%",
-      schedule: [
+      todayClasses: [
         {
-          day: "จันทร์",
-          time: "09:00-11:00",
-          subject: "ประชุมแผนการสอน",
-          room: "Conference Room",
+          time: "08:00-10:00",
+          subject: "คณิตศาสตร์ 101",
+          room: "A-201",
         },
         {
-          day: "อังคาร",
-          time: "14:00-15:00",
-          subject: "ตรวจสอบตารางสอน",
-          room: "Office",
-        },
-        {
-          day: "พุธ",
-          time: "10:00-12:00",
-          subject: "ประชุมอาจารย์",
-          room: "Conference Room",
-        },
-        {
-          day: "ศุกร์",
-          time: "13:00-14:00",
-          subject: "วางแผนเทอมใหม่",
-          room: "Office",
+          time: "13:00-15:00",
+          subject: "สถิติเบื้องต้น",
+          room: "B-105",
         },
       ],
     },
   };
 
-  const notifications: Notification[] = [
-    {
-      id: 1,
-      type: "urgent",
-      title: "ประชุมฉุกเฉิน",
-      time: "14:00 วันนี้",
-      message: "ประชุมผู้บริหารเรื่องการปรับตารางเรียน",
-    },
-    {
-      id: 2,
-      type: "reminder",
-      title: "เตือนส่งเอกสาร",
-      time: "พรุ่งนี้",
-      message: "ส่งแผนการสอนเทอมใหม่",
-    },
-    {
-      id: 3,
-      type: "info",
-      title: "อัพเดทระบบ",
-      time: "2 ชม. ที่แล้ว",
-      message: "ระบบจะปิดปรับปรุงวันเสาร์ 02:00-04:00",
-    },
-  ];
+  const user = {
+    Username: "jdoe",
+    Firstname: "John",
+    Lastname: "Doe",
+    Email: "jdoe@example.com",
+    PhoneNumber: "0912345678",
+    Address: "123 ถนนมหาวิทยาลัย กรุงเทพฯ",
+    Image: "https://via.placeholder.com/100", // หรือ URL จริง
+    Title: { Name: "อาจารย์" },
+    Position: { Name: "อาจารย์ประจำ" },
+    Major: { Name: "วิทยาการคอมพิวเตอร์" },
+    Role: { Name: currentRole },
+  };
+
   ////////////////////////////////////////////   dash-role
 
   const data = currentRole ? dashboardData[currentRole] : null;
 
-  const adminData = currentRole === "Admin" ? dashboardData.admin : null;
+  const adminData = currentRole === "Admin" ? dashboardData.Admin : null;
   const schedulerData =
-    currentRole === "Scheduler" ? dashboardData.scheduler : null;
+    currentRole === "Scheduler" ? dashboardData.Scheduler : null;
 
   // Calendar functions
   const getDaysInMonth = (date: Date): number => {
@@ -206,61 +157,6 @@ const Dashboard: React.FC = () => {
     setCurrentDate(newDate);
   };
 
-  const handleDateClick = (day: number): void => {
-    const clickedDate = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      day
-    );
-    setSelectedDate(clickedDate);
-    setShowTaskModal(true);
-  };
-
-  const addTask = (): void => {
-    if (selectedDate && newTask.title) {
-      const dateKey = selectedDate.toDateString();
-      const taskWithRole: Task = {
-        ...newTask,
-        id: Date.now(),
-        createdBy: currentRole ?? "unknown",
-        isGlobal: currentRole === "admin",
-      };
-
-      if (currentRole === "admin") {
-        setGlobalTasks((prev) => ({
-          ...prev,
-          [dateKey]: [...(prev[dateKey] || []), taskWithRole],
-        }));
-      } else {
-        setPersonalTasks((prev) => ({
-          ...prev,
-          [`${currentRole}_${dateKey}`]: [
-            ...(prev[`${currentRole}_${dateKey}`] || []),
-            taskWithRole,
-          ],
-        }));
-      }
-
-      setNewTask({ title: "", time: "", type: "meeting" });
-      setShowTaskModal(false);
-    }
-  };
-
-  const hasTask = (day: number): boolean => {
-    const date = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      day
-    );
-    const dateKey = date.toDateString();
-    const personalKey = `${currentRole}_${dateKey}`;
-
-    const hasGlobalTask = (globalTasks[dateKey]?.length || 0) > 0;
-    const hasPersonalTask = (personalTasks[personalKey]?.length || 0) > 0;
-
-    return hasGlobalTask || hasPersonalTask;
-  };
-
   const getTasksForDate = (date: Date): Task[] => {
     const dateKey = date.toDateString();
     const personalKey = `${currentRole}_${dateKey}`;
@@ -271,28 +167,15 @@ const Dashboard: React.FC = () => {
     return [...global, ...personal];
   };
 
-  const StatCard: React.FC<StatCardProps> = ({
-    title,
-    value,
-    growth,
-    icon,
-    delay,
-  }) => (
-    <div 
-      className={`stat-card accent-blue`}
+  const StatCard: React.FC<StatCardProps> = ({ title, value, icon, delay }) => (
+    <div
+      className={`stat-card bg-red-500 text-green`}
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="stat-card-content">
         <div className="stat-info">
           <p className="stat-title">{title}</p>
           <h3 className="stat-value">{value.toLocaleString()}</h3>
-          <p
-            className={`stat-growth ${
-              growth.startsWith("+") ? "positive" : "negative"
-            }`}
-          >
-            {growth} จากเดือนที่แล้ว
-          </p>
         </div>
         <div className={`stat-icon-container color-green`}>{icon}</div>
       </div>
@@ -306,73 +189,57 @@ const Dashboard: React.FC = () => {
         {title}
       </h3>
       <div className="schedule-list">
-        {schedule.map((item, index) => (
-          <div key={index} className="schedule-item">
-            <div className="schedule-item-content">
-              <p className="schedule-subject">{item.subject || item.task}</p>
-              <p className="schedule-details">
-                {item.time} | {item.room || item.location}
-              </p>
-              {item.students && (
-                <p className="schedule-students">
-                  นักเรียน: {item.students} คน
+        {Array.isArray(schedule) &&
+          schedule.map((item, index) => (
+            <div key={index} className="schedule-item">
+              <div className="schedule-item-content">
+                <p className="schedule-subject">{item.subject || item.task}</p>
+                <p className="schedule-details">
+                  {item.time} | {item.room || item.location}
                 </p>
-              )}
-            </div>
-            <span className="schedule-day">{item.day || "วันนี้"}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const NotificationCard: React.FC = () => (
-    <div className="notification-card">
-      <h3 className="notification-title">
-        <Bell className="notification-icon" />
-        การแจ้งเตือน
-      </h3>
-      <div className="notification-list">
-        {notifications.map((notification) => (
-          <div
-            key={notification.id}
-            className={`notification-item ${notification.type}`}
-          >
-            <div className="notification-content">
-              <div className="notification-header">
-                <AlertCircle
-                  className={`notification-alert-icon ${notification.type}`}
-                />
-                <h4 className="notification-item-title">
-                  {notification.title}
-                </h4>
               </div>
-              <p className="notification-message">{notification.message}</p>
-              <p className="notification-time">{notification.time}</p>
+              <span className="schedule-day">{item.day || "วันนี้"}</span>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     </div>
   );
 
-  const handleTaskTitleChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ): void => {
-    setNewTask({ ...newTask, title: e.target.value });
-  };
-
-  const handleTaskTimeChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ): void => {
-    setNewTask({ ...newTask, time: e.target.value });
-  };
-
-  const handleTaskTypeChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ): void => {
-    setNewTask({ ...newTask, type: e.target.value as TaskType });
-  };
+  const UserProfileCard: React.FC = () => (
+    <div className="user-profile-card">
+      <h3 className="profile-title">
+        <User className="profile-icon" />
+        ข้อมูลผู้ใช้
+      </h3>
+      <div className="profile-content">
+        <img src={user.Image} alt="User Profile" className="profile-image" />
+        <div className="profile-info">
+          <p>
+            <strong>ชื่อ:</strong> {user.Title.Name} {user.Firstname}{" "}
+            {user.Lastname}
+          </p>
+          <p>
+            <strong>ตำแหน่ง:</strong> {user.Position.Name}
+          </p>
+          <p>
+            <strong>สาขา:</strong> {user.Major.Name}
+          </p>
+          <p>
+            <strong>Email:</strong> {user.Email}
+          </p>
+          <p>
+            <strong>เบอร์โทร:</strong> {user.PhoneNumber}
+          </p>
+          <p>
+            <strong>ที่อยู่:</strong> {user.Address}
+          </p>
+          <p>
+            <strong>บทบาท:</strong> {user.Role.Name}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="dashboard">
@@ -381,25 +248,22 @@ const Dashboard: React.FC = () => {
           {/* Left Side Content */}
           <div className="main-content">
             {currentRole === "Admin" && adminData && (
-              <div className="stats-grid">
+              <div className="flex flex-col md:flex-column gap-4">
                 <StatCard
                   title="จำนวน Users ทั้งหมด"
                   value={adminData.totalUsers}
-                  growth={adminData.userGrowth}
                   icon={<Users className="stat-icon" />}
                   delay={0}
                 />
                 <StatCard
                   title="จำนวน Course ทั้งหมด"
                   value={adminData.totalCourses}
-                  growth={adminData.courseGrowth}
                   icon={<BookOpen className="stat-icon" />}
                   delay={100}
                 />
                 <StatCard
                   title="วิชาเปิดสอนในเทอมนี้"
                   value={adminData.activeTermCourses}
-                  growth={adminData.termGrowth}
                   icon={<Calendar className="stat-icon" />}
                   delay={200}
                 />
@@ -411,7 +275,6 @@ const Dashboard: React.FC = () => {
                 <StatCard
                   title="วิชาเปิดสอนในเทอมนี้"
                   value={schedulerData.activeTermCourses}
-                  growth={schedulerData.termGrowth}
                   icon={<Calendar className="stat-icon" />}
                   delay={0}
                 />
@@ -439,8 +302,7 @@ const Dashboard: React.FC = () => {
 
           {/* Right Side - Notifications and Calendar */}
           <div className="sidebar">
-            {/* Notifications */}
-            <NotificationCard />
+            <UserProfileCard />
 
             {/* Calendar */}
             <div className="calendar-card">
@@ -482,7 +344,6 @@ const Dashboard: React.FC = () => {
                   )
                 )}
 
-                {/* Days of the month */}
                 {Array.from({ length: getDaysInMonth(currentDate) }, (_, i) => {
                   const day = i + 1;
                   const isToday =
@@ -492,20 +353,15 @@ const Dashboard: React.FC = () => {
                       currentDate.getMonth(),
                       day
                     ).toDateString();
-                  const hasTaskToday = hasTask(day);
 
                   return (
                     <div
                       key={day}
-                      onClick={() => handleDateClick(day)}
-                      className={`
-                        calendar-day
-                        ${isToday ? "today bg-blue-500 text-white" : ""}
-                        ${hasTaskToday && !isToday ? "has-task" : ""}
-                      `}
+                      className={`calendar-day ${
+                        isToday ? "today bg-blue-500 text-white" : ""
+                      }`}
                     >
                       {day}
-                      {hasTaskToday && <div className="task-indicator"></div>}
                     </div>
                   );
                 })}
@@ -541,9 +397,9 @@ const Dashboard: React.FC = () => {
                           {task.createdBy && (
                             <span className="task-creator">
                               โดย:{" "}
-                              {task.createdBy === "admin"
+                              {task.createdBy === "Admin"
                                 ? "Admin"
-                                : task.createdBy === "instructor"
+                                : task.createdBy === "Instructor"
                                 ? "อาจารย์"
                                 : "ผู้จัดตาราง"}
                             </span>
@@ -558,66 +414,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Task Modal */}
-      {showTaskModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3 className="modal-title">
-              เพิ่ม Task - {selectedDate?.getDate()}{" "}
-              {selectedDate?.toLocaleDateString("th-TH", { month: "long" })}
-              {currentRole === "Admin" && (
-                <div className="modal-subtitle">
-                  * Task ที่ Admin เพิ่มจะแสดงให้ทุก role เห็น
-                </div>
-              )}
-              {currentRole !== "Admin" && (
-                <div className="modal-subtitle">
-                  * Task นี้จะแสดงเฉพาะคุณเท่านั้น
-                </div>
-              )}
-            </h3>
-            <div className="modal-form">
-              <input
-                type="text"
-                placeholder="ชื่อ Task"
-                value={newTask.title}
-                onChange={handleTaskTitleChange}
-                className="modal-input"
-              />
-              <input
-                type="time"
-                value={newTask.time}
-                onChange={handleTaskTimeChange}
-                className="modal-input"
-              />
-              <select
-                value={newTask.type}
-                onChange={handleTaskTypeChange}
-                className="modal-select"
-              >
-                <option value="meeting">ประชุม</option>
-                <option value="class">สอน</option>
-                <option value="other">อื่นๆ</option>
-              </select>
-            </div>
-            <div className="modal-actions">
-              <button
-                onClick={addTask}
-                className={"modal-button primary bg-blue-500"}
-              >
-                เพิ่ม Task
-              </button>
-              <button
-                onClick={() => setShowTaskModal(false)}
-                className="modal-button secondary"
-              >
-                ยกเลิก
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
