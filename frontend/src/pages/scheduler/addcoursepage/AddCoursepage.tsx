@@ -72,8 +72,8 @@ const AddCoursepage: React.FC = () => {
           courseNameEn: course.EnglishName,
           credits: course.Credit?.Unit || 0,
           labRoom: course.Laboratory?.ID || null,
-          groupCount: "",
-          studentsPerGroup: 45,
+          groupCount: 0,
+          studentsPerGroup: 0,
         });
       }
     }
@@ -306,7 +306,7 @@ const AddCoursepage: React.FC = () => {
                 ]}
               >
                 <InputNumber
-                  placeholder="45"
+                  placeholder="1"
                   min={1}
                   max={200}
                   size="large"
