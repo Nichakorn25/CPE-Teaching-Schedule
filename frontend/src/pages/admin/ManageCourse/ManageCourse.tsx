@@ -22,10 +22,16 @@ import {
 } from "../../../interfaces/Adminpage";
 import Swal from "sweetalert2";
 import { useParams, useNavigate } from "react-router-dom";
+import { Button, Input, Select, Card, Form, Row, Col, Divider, message } from 'antd';
+import { SaveOutlined, PlusOutlined, DeleteOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+
+const { Option } = Select;
 
 const ManageCourse: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [form] = Form.useForm();
+  
   const [majors, setMajors] = useState<MajorInterface[]>([]);
   const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
   const [selectedDepartmentID, setSelectedDepartmentID] = useState<number>(0);
@@ -36,13 +42,9 @@ const ManageCourse: React.FC = () => {
   const [teacherOptions, setTeacherOptions] = useState<AllTeacher[]>([]);
   const [teachers, setTeachers] = useState<AllTeacher[]>([]);
   const [curriculums, setCurriculums] = useState<CurriculumInterface[]>([]);
-  const [selectedCurriculum, setSelectedCurriculum] =
-    useState<CurriculumInterface | null>(null);
-  const [academicYears, setAcademicYears] = useState<AcademicYearInterface[]>(
-    []
-  );
-  const [selectedAcademicYear, setSelectedAcademicYear] =
-    useState<AcademicYearInterface | null>(null);
+  const [selectedCurriculum, setSelectedCurriculum] = useState<CurriculumInterface | null>(null);
+  const [academicYears, setAcademicYears] = useState<AcademicYearInterface[]>([]);
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<AcademicYearInterface | null>(null);
   const [courseType, setCourseType] = useState("");
   const [courseCode, setCourseCode] = useState("");
   const [credit, setCredit] = useState("");
@@ -54,51 +56,70 @@ const ManageCourse: React.FC = () => {
   const [thaiName, setThaiName] = useState("");
   const [englishName, setEnglishName] = useState("");
   const [typeOfCoursesList, setTypeOfCoursesList] = useState<CourseType[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [containerWidth, setContainerWidth] = useState(window.innerWidth);
+
+  // Monitor container width for responsive behavior
+  useEffect(() => {
+    const handleResize = () => {
+      setContainerWidth(window.innerWidth);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = containerWidth < 768;
 
   useEffect(() => {
     const fetchData = async () => {
-      const curriculum = await getAllCurriculum();
-      const years = await getAllAcademicYears();
-      setCurriculums(curriculum.data);
-      setAcademicYears(years.data);
+      try {
+        const curriculum = await getAllCurriculum();
+        const years = await getAllAcademicYears();
+        setCurriculums(curriculum.data);
+        setAcademicYears(years.data);
+      } catch (error) {
+        message.error('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+      }
     };
     fetchData();
   }, []);
 
   useEffect(() => {
     const fetchTypes = async () => {
-      const result = await getTypeofCourse();
-      console.log(result);
-      setTypeOfCoursesList(result.data);
+      try {
+        const result = await getTypeofCourse();
+        setTypeOfCoursesList(result.data);
+      } catch (error) {
+        message.error('เกิดข้อผิดพลาดในการโหลดข้อมูลประเภทรายวิชา');
+      }
     };
     fetchTypes();
   }, []);
 
   useEffect(() => {
     const fetchMajors = async () => {
-      const res = await getMajorOfDepathment();
-      if (res.status === 200 && Array.isArray(res.data)) {
-        const majorData = res.data as MajorInterface[];
-        setMajors(majorData);
+      try {
+        const res = await getMajorOfDepathment();
+        if (res.status === 200 && Array.isArray(res.data)) {
+          const majorData = res.data as MajorInterface[];
+          setMajors(majorData);
 
-        const uniqueDepartments = Array.from(
-          new Map(
-            majorData.map((m) => [m.Department.ID, m.Department])
-          ).values()
-        );
-
-        setDepartments(uniqueDepartments); // ไม่มี error แล้ว
+          const uniqueDepartments = Array.from(
+            new Map(majorData.map((m) => [m.Department.ID, m.Department])).values()
+          );
+          setDepartments(uniqueDepartments);
+        }
+      } catch (error) {
+        message.error('เกิดข้อผิดพลาดในการโหลดข้อมูลสาขาวิชา');
       }
     };
     fetchMajors();
   }, []);
 
   useEffect(() => {
-    const filtered = majors.filter(
-      (m) => m.Department.ID === selectedDepartmentID
-    );
+    const filtered = majors.filter((m) => m.Department.ID === selectedDepartmentID);
     setFilteredMajors(filtered);
-    setSelectedMajorID(0); // reset major เมื่อเปลี่ยนสำนักวิชา
+    setSelectedMajorID(0);
   }, [selectedDepartmentID, majors]);
 
   useEffect(() => {
@@ -109,19 +130,16 @@ const ManageCourse: React.FC = () => {
         return;
       }
 
-      const res = await getTeachers();
-      console.log("result", res.data);
-
-      if (res.status === 200) {
-        const all = res.data;
-
-        //กรองเฉพาะอาจารย์ที่มี MajorID ตรงกับ selectedMajorID
-        const filtered = all.filter(
-          (teacher) => teacher.MajorID === selectedMajorID
-        );
-
-        setAllTeachers(filtered);
-        setTeacherOptions(filtered);
+      try {
+        const res = await getTeachers();
+        if (res.status === 200) {
+          const all = res.data;
+          const filtered = all.filter((teacher) => teacher.MajorID === selectedMajorID);
+          setAllTeachers(filtered);
+          setTeacherOptions(filtered);
+        }
+      } catch (error) {
+        message.error('เกิดข้อผิดพลาดในการโหลดข้อมูลอาจารย์');
       }
     };
 
@@ -148,15 +166,12 @@ const ManageCourse: React.FC = () => {
     ]);
   };
 
-  const removeTeacher = (id: number) => {
-    setTeachers(teachers.filter((t) => t.ID !== id));
+  const removeTeacher = (index: number) => {
+    setTeachers(teachers.filter((_, i) => i !== index));
   };
 
   const isFormValid = () => {
-    // ถ้าเป็นการแก้ไข อนุญาตให้ส่งได้เลย
     if (id) return true;
-
-    // ถ้าเป็นการเพิ่มใหม่ ให้ตรวจสอบความครบถ้วน
     return (
       courseType &&
       courseCode &&
@@ -174,70 +189,56 @@ const ManageCourse: React.FC = () => {
   useEffect(() => {
     const fetchCourseData = async () => {
       if (!id) return;
-      const res = await getCoursebyid(Number(id));
-      console.log("ข้อมูลจากแบคเอน : ", res.data);
+      
+      try {
+        const res = await getCoursebyid(Number(id));
+        if (res.status === 200 && res.data) {
+          const data = res.data;
 
-      if (res.status === 200 && res.data) {
-        const data = res.data;
+          setCourseCode(data.Code || "");
+          setThaiName(data.ThaiName || "");
+          setEnglishName(data.EnglishName || "");
+          setCredit(data.Credit.Unit ? data.Credit.Unit.toString() : "");
+          setCourseType(data.TypeOfCoursesID ? data.TypeOfCoursesID.toString() : "");
+          setHours({
+            lecture: data.Credit.Lecture ? data.Credit.Lecture.toString() : "",
+            practice: data.Credit.Lab ? data.Credit.Lab.toString() : "",
+            selfStudy: data.Credit.Self ? data.Credit.Self.toString() : "",
+          });
 
-        setCourseCode(data.Code || "");
-        setThaiName(data.ThaiName || "");
-        setEnglishName(data.EnglishName || "");
-        setCredit(data.Credit.Unit ? data.Credit.Unit.toString() : "");
-        setCourseType(
-          data.TypeOfCoursesID ? data.TypeOfCoursesID.toString() : ""
-        );
-        setHours({
-          lecture: data.Credit.Lecture ? data.Credit.Lecture.toString() : "",
-          practice: data.Credit.Lab ? data.Credit.Lab.toString() : "",
-          selfStudy: data.Credit.Self ? data.Credit.Self.toString() : "",
-        });
+          const foundCurriculum = curriculums.find((c) => c.ID === data.CurriculumID);
+          if (foundCurriculum) setSelectedCurriculum(foundCurriculum);
 
-        // ตั้ง selectedCurriculum
-        const foundCurriculum = curriculums.find(
-          (c) => c.ID === data.CurriculumID
-        );
-        if (foundCurriculum) setSelectedCurriculum(foundCurriculum);
+          const foundAcademicYear = academicYears.find((a) => a.ID === data.AcademicYearID);
+          if (foundAcademicYear) setSelectedAcademicYear(foundAcademicYear);
 
-        // ตั้ง selectedAcademicYear
-        const foundAcademicYear = academicYears.find(
-          (a) => a.ID === data.AcademicYearID
-        );
-        if (foundAcademicYear) setSelectedAcademicYear(foundAcademicYear);
+          const foundMajor = majors.find((m) => m.ID === data.Curriculum?.Major?.ID);
+          if (foundMajor) {
+            setSelectedDepartmentID(foundMajor.Department.ID);
+            setSelectedMajorID(foundMajor.ID);
+            setSelectedMajorName(foundMajor.MajorName);
+          }
 
-        // รอ majors โหลดก่อนค่อยตั้ง selectedDepartmentID และ selectedMajorID
-        const foundMajor = majors.find(
-          (m) => m.ID === data.Curriculum?.Major?.ID
-        );
-        if (foundMajor) {
-          setSelectedDepartmentID(foundMajor.Department.ID);
-          setSelectedMajorID(foundMajor.ID);
-          setSelectedMajorName(foundMajor.MajorName);
+          if (data.UserAllCourses && Array.isArray(data.UserAllCourses)) {
+            const fullTeacherObjects = data.UserAllCourses.map((item) => item.User).filter((user) => !!user);
+            setTeachers(fullTeacherObjects);
+          }
         }
-
-        // อาจารย์ผู้สอน (ตั้ง teachers ถ้ามี)
-        // ถ้าข้อมูลผู้สอนมาจาก backend เช่น data.teachers
-        if (data.UserAllCourses && Array.isArray(data.UserAllCourses)) {
-          const fullTeacherObjects = data.UserAllCourses.map(
-            (item) => item.User
-          ).filter((user) => !!user); // ตัด null
-          setTeachers(fullTeacherObjects); // ใช้ตามลำดับที่ backend ส่งมา
-        }
+      } catch (error) {
+        message.error('เกิดข้อผิดพลาดในการโหลดข้อมูลรายวิชา');
       }
     };
 
-    // เรียก fetchUser ก็ต่อเมื่อ majors, curriculums, academicYears โหลดแล้ว
-    if (
-      majors.length > 0 &&
-      curriculums.length > 0 &&
-      academicYears.length > 0
-    ) {
+    if (majors.length > 0 && curriculums.length > 0 && academicYears.length > 0) {
       fetchCourseData();
     }
   }, [id, majors, curriculums, academicYears]);
 
   const handleSubmit = async () => {
-    if (!selectedCurriculum || !selectedAcademicYear) return;
+    if (!selectedCurriculum || !selectedAcademicYear) {
+      message.error('กรุณากรอกข้อมูลให้ครบถ้วน');
+      return;
+    }
 
     const data: CreateCourseInteface = {
       Code: courseCode,
@@ -252,377 +253,476 @@ const ManageCourse: React.FC = () => {
       Self: parseInt(hours.selfStudy),
       UserIDs: teachers.map((t) => t.ID).filter((id) => id && id !== 0),
     };
-    console.log("guhijok",data)
 
     try {
+      setLoading(true);
       let response;
       if (id) {
-        // ถ้ามี id แสดงว่าเป็นการแก้ไข
         response = await putUpdateCourse(Number(id), data);
       } else {
-        // ถ้าไม่มี id เป็นการเพิ่มใหม่
         response = await postCreateCourse(data);
       }
 
       if (response.status === 200) {
-        Swal.fire({
-          icon: "success",
-          title: id ? "แก้ไขรายวิชาเรียบร้อย" : "เพิ่มรายวิชาเรียบร้อย",
-          showConfirmButton: false,
-          timer: 1500,
-        }).then(() => {
-          navigate("/all-course");
-        });
+        message.success(id ? "แก้ไขรายวิชาเรียบร้อย" : "เพิ่มรายวิชาเรียบร้อย");
+        navigate("/all-course");
       }
     } catch (error: any) {
-      Swal.fire({
-        icon: "error",
-        title: "เกิดข้อผิดพลาด",
-        text: error?.response?.data?.message || "ไม่สามารถดำเนินการได้",
-      });
+      message.error(error?.response?.data?.message || "ไม่สามารถดำเนินการได้");
       console.error("Error submitting course", error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Generate number options
+  const generateNumberOptions = (max: number) => {
+    return Array.from({ length: max + 1 }, (_, i) => (
+      <Option key={i} value={i.toString()}>{i}</Option>
+    ));
+  };
+
   return (
-    <>
-      <div className="pt-16 px-6 font-sarabun">
-        <form className="w-full p-10 space-y-10 bg-white">
-          <div>
-            <label className="text-[#f26522] font-medium text-xl">
-              โครงสร้างหลักสูตร
-            </label>
-            <select
-              value={(selectedCurriculum?.ID ?? "").toString()}
-              onChange={(e) => {
-                const found = curriculums.find(
-                  (c) => c.ID === Number(e.target.value)
-                );
-                if (found) setSelectedCurriculum(found);
-              }}
+    <div style={{ 
+      fontFamily: 'Sarabun, sans-serif',
+      padding: isMobile ? '16px' : '24px',
+      backgroundColor: '#f5f5f5',
+      minHeight: '100vh'
+    }}>
+      {/* Header */}
+      <div style={{ 
+        marginBottom: '24px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px'
+      }}>
+        <div>
+          <h1 style={{ 
+            margin: 0, 
+            color: '#333',
+            fontSize: isMobile ? '20px' : '24px',
+            fontWeight: 'bold'
+          }}>
+            {id ? 'แก้ไขรายวิชา' : 'เพิ่มรายวิชาใหม่'}
+          </h1>
+          <p style={{ 
+            margin: 0, 
+            color: '#666',
+            fontSize: '14px'
+          }}>
+            {id ? 'แก้ไขข้อมูลรายวิชา' : 'กรอกข้อมูลรายวิชาใหม่ที่ต้องการเพิ่ม'}
+          </p>
+        </div>
+      </div>
+
+      {/* Main Form */}
+      <Card 
+        style={{ 
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+          borderRadius: '8px'
+        }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          style={{ fontFamily: 'Sarabun, sans-serif' }}
+        >
+          {/* Curriculum Selection */}
+          <Card 
+            size="small" 
+            title={
+              <span style={{ color: '#F26522', fontSize: '16px', fontWeight: 'bold' }}>
+                โครงสร้างหลักสูตร
+              </span>
+            }
+            style={{ marginBottom: '24px' }}
+          >
+            <Form.Item
+              label="เลือกหลักสูตร"
+              required
             >
-              <option value="">-- กรุณาเลือก --</option>
-              {curriculums.map((c) => (
-                <option key={c.ID} value={c.ID.toString()}>
-                  {c.CurriculumName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex justify-center px-4 md:px-0">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-6xl w-full">
-              <div>
-                <label className="text-[#f26522] font-medium text-xl block mb-2">
-                  หมวดวิชา
-                </label>
-                <select
-                  className="border px-3 py-2 rounded w-full"
-                  value={courseType}
-                  onChange={(e) => setCourseType(e.target.value)}
-                >
-                  <option value="">-- กรุณาเลือก --</option>
-                  {typeOfCoursesList.map((type) => (
-                    <option key={type.ID} value={type.ID}>
-                      {type.TypeName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-[#f26522] font-medium text-xl block mb-2">
-                  รหัสวิชา
-                </label>
-                <input
-                  className="border px-3 py-2 rounded w-[100%]"
-                  value={courseCode}
-                  onChange={(e) => setCourseCode(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-[#f26522] font-medium text-xl block mb-2">
-                  ชั้นปีที่สามารถเรียนได้
-                </label>
-                <select
-                  className="border px-3 py-2 rounded w-full"
-                  value={selectedAcademicYear?.ID || ""}
-                  onChange={(e) => {
-                    const found = academicYears.find(
-                      (a) => a.ID === Number(e.target.value)
-                    );
-                    if (found) setSelectedAcademicYear(found);
-                  }}
-                >
-                  <option value="">-- กรุณาเลือก --</option>
-                  {academicYears.map((a) => (
-                    <option key={a.ID} value={a.ID}>
-                      {a.Level}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div>
-              <label className="text-[#f26522] font-medium text-xl block mb-2">
-                หน่วยกิต
-              </label>
-              <select
-                className="border px-3 py-2 rounded w-full"
-                value={credit}
-                onChange={(e) => setCredit(e.target.value)}
+              <Select
+                placeholder="-- กรุณาเลือกหลักสูตร --"
+                value={selectedCurriculum?.ID?.toString() || undefined}
+                onChange={(value) => {
+                  const found = curriculums.find((c) => c.ID === Number(value));
+                  if (found) setSelectedCurriculum(found);
+                }}
+                size="large"
+                style={{ fontFamily: 'Sarabun, sans-serif' }}
               >
-                <option value="0">0</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-                <option value="9">9</option>
-                <option value="10">10</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[#f26522] font-medium text-xl block mb-2">
-                รูปแบบชั่วโมงการสอน
-              </label>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                {[
-                  { label: "บรรยาย", key: "lecture" },
-                  { label: "ปฏิบัติ", key: "practice" },
-                  { label: "เรียนรู้ด้วยตนเอง", key: "selfStudy" },
-                ].map(({ label, key }) => (
-                  <div key={key}>
-                    <div className="text-[#f26522] font-medium mb-1">
-                      {label}
-                    </div>
-                    <select
-                      className="border px-3 py-2 rounded-full w-20 mx-auto text-center"
-                      value={hours[key as keyof typeof hours]}
-                      onChange={(e) =>
-                        setHours({ ...hours, [key]: e.target.value })
-                      }
-                    >
-                      <option value="0">0</option>
-                      <option value="1">1</option>
-                      <option value="2">2</option>
-                      <option value="3">3</option>
-                      <option value="4">4</option>
-                      <option value="5">5</option>
-                      <option value="6">6</option>
-                      <option value="7">7</option>
-                      <option value="8">8</option>
-                      <option value="9">9</option>
-                      <option value="10">10</option>
-                    </select>
-                  </div>
+                {curriculums.map((c) => (
+                  <Option key={c.ID} value={c.ID.toString()}>
+                    {c.CurriculumName}
+                  </Option>
                 ))}
-              </div>
-            </div>
-          </div>
+              </Select>
+            </Form.Item>
+          </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div>
-              <label className="text-[#f26522] font-medium text-xl">
-                ชื่อวิชา-ภาษาไทย
-              </label>
-              <input
-                className="border px-3 py-2 rounded w-full"
-                value={thaiName}
-                onChange={(e) => setThaiName(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-[#f26522] font-medium text-xl">
-                ชื่อวิชา-ภาษาอังกฤษ
-              </label>
-              <input
-                className="border px-3 py-2 rounded w-full"
-                value={englishName}
-                onChange={(e) => setEnglishName(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[#f26522] font-medium text-xl block mb-2">
-              สำนักวิชา
-            </label>
-            <select
-              className="border px-3 py-2 rounded w-full"
-              value={selectedDepartmentID || ""}
-              onChange={(e) => setSelectedDepartmentID(Number(e.target.value))}
-            >
-              <option value="">-- กรุณาเลือก --</option>
-              {departments.map((d) => (
-                <option key={d.ID} value={d.ID}>
-                  {d.DepartmentName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-[#f26522] font-medium text-xl block mb-2">
-              สาขา
-            </label>
-            <select
-              className="border px-3 py-2 rounded w-full"
-              value={selectedMajorID || ""}
-              onChange={(e) => setSelectedMajorID(Number(e.target.value))}
-            >
-              <option value="">-- กรุณาเลือก --</option>
-              {filteredMajors.map((m) => (
-                <option key={m.ID} value={m.ID}>
-                  {m.MajorName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* อาจารย์ผู้สอน */}
-          <div className="space-y-4">
-            <h2 className="text-orange-500 font-semibold text-xl">
-              เพิ่มอาจารย์ผู้สอน
-            </h2>
-
-            {teachers.map((t, index) => (
-              <div key={index} className="grid grid-cols-12 gap-4 items-center">
-                <div className="w-8 h-8 bg-[#f26522] text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                  {index + 1}
-                </div>
-
-                <div className="col-span-10">
-                  <select
-                    className="border px-3 py-2 rounded w-full"
-                    value={t.ID || ""}
-                    onChange={(e) => {
-                      const selectedId = Number(e.target.value);
-                      const selected = teacherOptions.find(
-                        (opt) => opt.ID === selectedId
-                      );
-                      if (!selected) return;
-
-                      const updatedTeachers = [...teachers];
-                      updatedTeachers[index] = selected;
-                      setTeachers(updatedTeachers);
-                    }}
+          {/* Basic Course Information */}
+          <Card 
+            size="small" 
+            title={
+              <span style={{ color: '#F26522', fontSize: '16px', fontWeight: 'bold' }}>
+                ข้อมูลพื้นฐานรายวิชา
+              </span>
+            }
+            style={{ marginBottom: '24px' }}
+          >
+            <Row gutter={[16, 16]}>
+              <Col xs={24} md={8}>
+                <Form.Item
+                  label="หมวดวิชา"
+                  required
+                >
+                  <Select
+                    placeholder="-- กรุณาเลือกหมวดวิชา --"
+                    value={courseType || undefined}
+                    onChange={setCourseType}
+                    size="large"
                   >
-                    <option value="">-- เลือกอาจารย์ --</option>
-                    {teacherOptions.map((teacher) => {
-                      const titleStr =
-                        typeof teacher.Title === "string"
+                    {typeOfCoursesList.map((type) => (
+                      <Option key={type.ID} value={type.ID.toString()}>
+                        {type.TypeName}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={8}>
+                <Form.Item
+                  label="รหัสวิชา"
+                  required
+                >
+                  <Input
+                    placeholder="กรอกรหัสวิชา"
+                    value={courseCode}
+                    onChange={(e) => setCourseCode(e.target.value)}
+                    size="large"
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={8}>
+                <Form.Item
+                  label="ชั้นปีที่สามารถเรียนได้"
+                  required
+                >
+                  <Select
+                    placeholder="-- กรุณาเลือกชั้นปี --"
+                    value={selectedAcademicYear?.ID?.toString() || undefined}
+                    onChange={(value) => {
+                      const found = academicYears.find((a) => a.ID === Number(value));
+                      if (found) setSelectedAcademicYear(found);
+                    }}
+                    size="large"
+                  >
+                    {academicYears.map((a) => (
+                      <Option key={a.ID} value={a.ID.toString()}>
+                        {a.Level}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={[16, 16]}>
+              <Col xs={24} md={12}>
+                <Form.Item
+                  label="หน่วยกิต"
+                  required
+                >
+                  <Select
+                    placeholder="เลือกหน่วยกิต"
+                    value={credit || undefined}
+                    onChange={setCredit}
+                    size="large"
+                  >
+                    {generateNumberOptions(10)}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={12}>
+                <Form.Item label="รูปแบบชั่วโมงการสอน" required>
+                  <Row gutter={[8, 8]}>
+                    {[
+                      { label: "บรรยาย", key: "lecture" },
+                      { label: "ปฏิบัติ", key: "practice" },
+                      { label: "เรียนรู้ด้วยตนเอง", key: "selfStudy" },
+                    ].map(({ label, key }) => (
+                      <Col xs={8} key={key}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ 
+                            color: '#F26522', 
+                            fontWeight: 'bold', 
+                            marginBottom: '4px',
+                            fontSize: '12px'
+                          }}>
+                            {label}
+                          </div>
+                          <Select
+                            value={hours[key as keyof typeof hours] || undefined}
+                            onChange={(value) =>
+                              setHours({ ...hours, [key]: value })
+                            }
+                            size="large"
+                            style={{ width: '100%' }}
+                          >
+                            {generateNumberOptions(10)}
+                          </Select>
+                        </div>
+                      </Col>
+                    ))}
+                  </Row>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={[16, 16]}>
+              <Col xs={24} md={12}>
+                <Form.Item
+                  label="ชื่อวิชา (ภาษาไทย)"
+                  required
+                >
+                  <Input
+                    placeholder="กรอกชื่อวิชาภาษาไทย"
+                    value={thaiName}
+                    onChange={(e) => setThaiName(e.target.value)}
+                    size="large"
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={12}>
+                <Form.Item
+                  label="ชื่อวิชา (ภาษาอังกฤษ)"
+                  required
+                >
+                  <Input
+                    placeholder="กรอกชื่อวิชาภาษาอังกฤษ"
+                    value={englishName}
+                    onChange={(e) => setEnglishName(e.target.value)}
+                    size="large"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Department and Major */}
+          <Card 
+            size="small" 
+            title={
+              <span style={{ color: '#F26522', fontSize: '16px', fontWeight: 'bold' }}>
+                สังกัดหน่วยงาน
+              </span>
+            }
+            style={{ marginBottom: '24px' }}
+          >
+            <Row gutter={[16, 16]}>
+              <Col xs={24} md={12}>
+                <Form.Item
+                  label="สำนักวิชา"
+                  required
+                >
+                  <Select
+                    placeholder="-- กรุณาเลือกสำนักวิชา --"
+                    value={selectedDepartmentID || undefined}
+                    onChange={setSelectedDepartmentID}
+                    size="large"
+                  >
+                    {departments.map((d) => (
+                      <Option key={d.ID} value={d.ID}>
+                        {d.DepartmentName}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={12}>
+                <Form.Item
+                  label="สาขาวิชา"
+                  required
+                >
+                  <Select
+                    placeholder="-- กรุณาเลือกสาขาวิชา --"
+                    value={selectedMajorID || undefined}
+                    onChange={setSelectedMajorID}
+                    size="large"
+                    disabled={!selectedDepartmentID}
+                  >
+                    {filteredMajors.map((m) => (
+                      <Option key={m.ID} value={m.ID}>
+                        {m.MajorName}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Teachers */}
+          <Card 
+            size="small" 
+            title={
+              <span style={{ color: '#F26522', fontSize: '16px', fontWeight: 'bold' }}>
+                อาจารย์ผู้สอน
+              </span>
+            }
+            style={{ marginBottom: '24px' }}
+          >
+            <div style={{ marginBottom: '16px' }}>
+              {teachers.map((t, index) => (
+                <div key={index} style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '12px', 
+                  marginBottom: '12px',
+                  padding: '12px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '6px',
+                  border: '1px solid #e9ecef'
+                }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    backgroundColor: '#F26522',
+                    color: 'white',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '14px',
+                    flexShrink: 0
+                  }}>
+                    {index + 1}
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <Select
+                      placeholder="-- เลือกอาจารย์ --"
+                      value={t.ID || undefined}
+                      onChange={(value) => {
+                        const selectedId = Number(value);
+                        const selected = teacherOptions.find((opt) => opt.ID === selectedId);
+                        if (!selected) return;
+
+                        const updatedTeachers = [...teachers];
+                        updatedTeachers[index] = selected;
+                        setTeachers(updatedTeachers);
+                      }}
+                      size="large"
+                      style={{ width: '100%' }}
+                      disabled={!selectedMajorID}
+                    >
+                      {teacherOptions.map((teacher) => {
+                        const titleStr = typeof teacher.Title === "string"
                           ? teacher.Title
                           : teacher.Title?.Title || "";
 
-                      return (
-                        <option key={teacher.ID} value={teacher.ID}>
-                          {`${titleStr} ${teacher.Firstname} ${teacher.Lastname}`}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
+                        return (
+                          <Option key={teacher.ID} value={teacher.ID}>
+                            {`${titleStr} ${teacher.Firstname} ${teacher.Lastname}`}
+                          </Option>
+                        );
+                      })}
+                    </Select>
+                  </div>
 
-                <div className="col-span-1 text-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTeachers(teachers.filter((_, i) => i !== index));
-                    }}
-                    className="bg-red-500 text-white px-6 py-2 rounded hover:bg-orange-600"
+                  <Button
+                    type="primary"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => removeTeacher(index)}
+                    size="large"
                   >
                     ลบ
-                  </button>
+                  </Button>
                 </div>
+              ))}
+
+              <Button
+                type="dashed"
+                icon={<PlusOutlined />}
+                onClick={addTeacher}
+                size="large"
+                style={{ 
+                  width: '100%',
+                  height: '48px',
+                  borderColor: '#F26522',
+                  color: '#F26522'
+                }}
+                disabled={!selectedMajorID}
+              >
+                เพิ่มอาจารย์ผู้สอน
+              </Button>
+            </div>
+            
+            {!selectedMajorID && (
+              <div style={{
+                padding: '12px',
+                backgroundColor: '#fff3cd',
+                borderRadius: '6px',
+                border: '1px solid #ffeaa7',
+                color: '#856404',
+                fontSize: '13px',
+                textAlign: 'center'
+              }}>
+                💡 กรุณาเลือกสาขาวิชาก่อนเพื่อแสดงรายชื่ออาจารย์
               </div>
-            ))}
+            )}
+          </Card>
 
-            <button
-              type="button"
-              onClick={addTeacher}
-              className="bg-orange-500 text-white px-6 py-2 rounded hover:bg-orange-600"
+          {/* Action Buttons */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: '16px'
+          }}>
+            <Button
+              size="large"
+              onClick={() => navigate('/all-course')}
+              style={{ width: isMobile ? '100%' : 'auto' }}
             >
-              + เพิ่มอาจารย์ผู้สอน
-            </button>
-          </div>
+              ยกเลิก
+            </Button>
 
-          {/* ผู้ช่วยสอน */}
-          {/* <div className="space-y-4">
-            <h2 className="text-orange-500 font-semibold text-xl">
-              เพิ่มผู้ช่วยสอน
-            </h2>
-            {assistants.map((a, index) => (
-              <div key={a.id} className="grid grid-cols-12 gap-4 items-center">
-                <div className="w-8 h-8 bg-[#f26522] text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                  {index + 1}
-                </div>
-                <div className="col-span-2">
-                  <select className="border px-3 py-2 rounded w-full">
-                    <option>นาย</option>
-                    <option>นางสาว</option>
-                  </select>
-                </div>
-                <div className="col-span-3">
-                  <input
-                    className="border px-3 py-2 rounded w-full"
-                    defaultValue={a.firstName}
-                    placeholder="ชื่อ"
-                  />
-                </div>
-                <div className="col-span-4">
-                  <input
-                    className="border px-3 py-2 rounded w-full"
-                    defaultValue={a.lastName}
-                    placeholder="นามสกุล"
-                  />
-                </div>
-                <div className="col-span-2 text-center">
-                  <button
-                    type="button"
-                    onClick={() => removeAssistant(a.id)}
-                    className="bg-red-500 text-white px-6 py-2 rounded hover:bg-orange-600"
-                  >
-                    ลบ
-                  </button>
-                </div>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={addAssistant}
-              className="bg-orange-500 text-white px-6 py-2 rounded hover:bg-orange-600"
-            >
-              + เพิ่มผู้ช่วยสอน
-            </button>
-          </div> */}
-
-          {/* ปุ่มบันทึก */}
-          <div className="text-right">
-            <button
-              type="submit"
-              onClick={(e) => {
-                e.preventDefault(); // ป้องกัน form reload
-                handleSubmit();
-              }}
+            <Button
+              type="primary"
+              size="large"
+              icon={<SaveOutlined />}
+              onClick={handleSubmit}
+              loading={loading}
               disabled={!isFormValid()}
-              className={`px-6 py-2 rounded text-white ${
-                isFormValid()
-                  ? "bg-orange-500 hover:bg-orange-600"
-                  : "bg-gray-300 cursor-not-allowed"
-              }`}
+              style={{ 
+                backgroundColor: isFormValid() ? '#F26522' : undefined,
+                borderColor: isFormValid() ? '#F26522' : undefined,
+                width: isMobile ? '100%' : 'auto'
+              }}
             >
-              บันทึก
-            </button>
+              {loading ? 'กำลังบันทึก...' : (id ? 'บันทึกการแก้ไข' : 'เพิ่มรายวิชา')}
+            </Button>
           </div>
-        </form>
-      </div>
-    </>
+        </Form>
+      </Card>
+
+      {/* Help Text */}
+      <Card style={{ marginTop: '16px', backgroundColor: '#f8f9fa' }}>
+        <div style={{ fontSize: '12px', color: '#666' }}>
+          <strong>💡 คำแนะนำ:</strong>
+          <ul style={{ margin: '8px 0 0 20px', paddingLeft: 0 }}>
+            <li>กรอกข้อมูลให้ครบถ้วนก่อนบันทึก</li>
+            <li>รหัสวิชาควรใช้รูปแบบที่กำหนดโดยหลักสูตร</li>
+            <li>จำนวนชั่วโมงรวม (บรรยาย + ปฏิบัติ + เรียนรู้ด้วยตนเอง) ควรสอดคล้องกับหน่วยกิต</li>
+            <li>ต้องมีอาจารย์ผู้สอนอย่างน้อย 1 คน</li>
+          </ul>
+        </div>
+      </Card>
+    </div>
   );
 };
 
