@@ -14,26 +14,26 @@ import (
 )
 
 func GetAllCourseByID(c *gin.Context) {
-    id := c.Param("id")
+	id := c.Param("id")
 
-    var course entity.AllCourses
-    if err := config.DB().
-        Preload("Curriculum").
-        Preload("Curriculum.Major").
-        Preload("Curriculum.Major.Department").
-        Preload("AcademicYear").
-        Preload("TypeOfCourses").
-        Preload("Credit").
-        Preload("UserAllCourses").
-        Preload("UserAllCourses.User").
-        Preload("OfferedCourses").
-        Preload("TimeFixedCourses").
-        First(&course, id).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบข้อมูลวิชา"})
-        return
-    }
+	var course entity.AllCourses
+	if err := config.DB().
+		Preload("Curriculum").
+		Preload("Curriculum.Major").
+		Preload("Curriculum.Major.Department").
+		Preload("AcademicYear").
+		Preload("TypeOfCourses").
+		Preload("Credit").
+		Preload("UserAllCourses").
+		Preload("UserAllCourses.User").
+		Preload("OfferedCourses").
+		Preload("TimeFixedCourses").
+		First(&course, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบข้อมูลวิชา"})
+		return
+	}
 
-    c.JSON(http.StatusOK, course)
+	c.JSON(http.StatusOK, course)
 }
 
 func GetAllCourses(c *gin.Context) {
@@ -43,6 +43,7 @@ func GetAllCourses(c *gin.Context) {
 		Preload("AcademicYear").
 		Preload("TypeOfCourses").
 		Preload("Credit").
+		Preload("UserAllCourses.User").
 		Preload("UserAllCourses.User.Title").
 		Find(&courses).Error
 
@@ -61,12 +62,12 @@ func GetAllCourses(c *gin.Context) {
 		}
 
 		result = append(result, gin.H{
-			"ID":      course.ID,
+			"ID":         course.ID,
 			"No":         i + 1,
-			"CourseCode":      course.Code,
-			"CourseName":      course.EnglishName,
-			"Credit":      fmt.Sprintf("%d (%d-%d-%d)", course.Credit.Unit, course.Credit.Lecture, course.Credit.Lab, course.Credit.Self),
-			"CourseType":      course.TypeOfCourses.TypeName,
+			"CourseCode": course.Code,
+			"CourseName": course.EnglishName,
+			"Credit":     fmt.Sprintf("%d (%d-%d-%d)", course.Credit.Unit, course.Credit.Lecture, course.Credit.Lab, course.Credit.Self),
+			"CourseType": course.TypeOfCourses.TypeName,
 			"Instructor": strings.Join(teachers, ", "),
 		})
 	}
