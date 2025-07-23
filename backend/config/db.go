@@ -140,7 +140,7 @@ func SetupDatabase() {
 	SeedUserAllCourses()
 	SeedTeachingAssistants()
 	SeedConditions()
-	// SeedOfferedCourses()
+	SeedOfferedCourses()
 	// SeedSchedules()
 	// SeedTimeFixedCourses()
 	// SeedScheduleTeachingAssistants()
@@ -1895,75 +1895,197 @@ func SeedTeachingAssistants() {
 
 // //////////////////////////////////////////////////////////// วิชาที่จะเปิดสอนในเทอมนั้น ///////////////////////////////////////////////////////
 // ยังไม่ครบ
-// func SeedOfferedCourses() {
-// 	labID3 := uint(3)
+func SeedOfferedCourses() {
+	labID2 := uint(2)
+	labID3 := uint(3)
 
-// 	courses := []entity.OfferedCourses{
-// 		{
-// 			Year:         2566,
-// 			Term:         1,
-// 			Section:      2,
-// 			Capacity:     30,
-// 			IsFixCourses: false,
-// 			UserID:       3,
-// 			AllCoursesID: 3,
-// 			LaboratoryID: nil,
-// 		},
-// 		{
-// 			Year:         2567,
-// 			Term:         1,
-// 			Section:      1,
-// 			Capacity:     30,
-// 			IsFixCourses: false,
-// 			UserID:       2,
-// 			AllCoursesID: 10,
-// 			LaboratoryID: &labID3,
-// 		},
-// 		{
-// 			Year:         2567,
-// 			Term:         1,
-// 			Section:      1,
-// 			Capacity:     40,
-// 			IsFixCourses: false,
-// 			UserID:       3,
-// 			AllCoursesID: 3,
-// 			LaboratoryID: nil,
-// 		},
-// 		{
-// 			Year:         2567,
-// 			Term:         2,
-// 			Section:      1,
-// 			Capacity:     35,
-// 			IsFixCourses: true,
-// 			UserID:       6,
-// 			AllCoursesID: 5,
-// 			LaboratoryID: nil,
-// 		},
-// 		{
-// 			Year:         2566,
-// 			Term:         1,
-// 			Section:      1,
-// 			Capacity:     40,
-// 			IsFixCourses: true,
-// 			UserID:       6,
-// 			AllCoursesID: 6,
-// 			LaboratoryID: nil,
-// 		},
-// 	}
+	courses := []entity.OfferedCourses{
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      10,
+			Capacity:     50,
+			IsFixCourses: true,
+			UserID:       1,
+			AllCoursesID: 27,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      2,
+			Capacity:     55,
+			IsFixCourses: false,
+			UserID:       7,
+			AllCoursesID: 31,
+			LaboratoryID: &labID3,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     120,
+			IsFixCourses: false,
+			UserID:       4,
+			AllCoursesID: 43,
+			LaboratoryID: &labID2,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      2,
+			Capacity:     60,
+			IsFixCourses: false,
+			UserID:       1,
+			AllCoursesID: 47,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      48,
+			Capacity:     45,
+			IsFixCourses: true,
+			UserID:       1,
+			AllCoursesID: 7,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      48,
+			Capacity:     45,
+			IsFixCourses: true,
+			UserID:       1,
+			AllCoursesID: 8,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      48,
+			Capacity:     45,
+			IsFixCourses: true,
+			UserID:       1,
+			AllCoursesID: 9,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      48,
+			Capacity:     45,
+			IsFixCourses: true,
+			UserID:       1,
+			AllCoursesID: 10,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      48,
+			Capacity:     45,
+			IsFixCourses: true,
+			UserID:       1,
+			AllCoursesID: 11,
+			LaboratoryID: nil,
+		},
 
-// 	for _, c := range courses {
-// 		db.FirstOrCreate(&entity.OfferedCourses{}, &entity.OfferedCourses{
-// 			Year:         c.Year,
-// 			Term:         c.Term,
-// 			Section:      c.Section,
-// 			Capacity:     c.Capacity,
-// 			IsFixCourses: c.IsFixCourses,
-// 			UserID:       c.UserID,
-// 			AllCoursesID: c.AllCoursesID,
-// 			LaboratoryID: c.LaboratoryID,
-// 		})
-// 	}
-// }
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     90,
+			IsFixCourses: false,
+			UserID:       11,
+			AllCoursesID: 28,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      2,
+			Capacity:     45,
+			IsFixCourses: false,
+			UserID:       7,
+			AllCoursesID: 36,
+			LaboratoryID: &labID3,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     90,
+			IsFixCourses: false,
+			UserID:       6,
+			AllCoursesID: 39,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     1500,
+			IsFixCourses: false,
+			UserID:       1,
+			AllCoursesID: 5,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     300,
+			IsFixCourses: true,
+			UserID:       1,
+			AllCoursesID: 16,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     300,
+			IsFixCourses: true,
+			UserID:       1,
+			AllCoursesID: 17,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     300,
+			IsFixCourses: true,
+			UserID:       1,
+			AllCoursesID: 18,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     300,
+			IsFixCourses: true,
+			UserID:       1,
+			AllCoursesID: 19,
+			LaboratoryID: nil,
+		},
+	}
+	for _, c := range courses {
+		var oc entity.OfferedCourses
+		tx := db.Where("year = ? AND term = ? AND all_courses_id = ?", c.Year, c.Term, c.AllCoursesID).First(&oc)
+
+		if tx.Error == gorm.ErrRecordNotFound {
+			if err := db.Create(&c).Error; err != nil {
+				fmt.Println("Insert error:", err)
+			}
+		} else if tx.Error != nil {
+			fmt.Println("Query error:", tx.Error)
+		}
+	}
+
+}
 
 // // ยังไม่ครบ
 // func SeedTimeFixedCourses() {
