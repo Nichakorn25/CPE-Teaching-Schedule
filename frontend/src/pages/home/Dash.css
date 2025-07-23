@@ -3,33 +3,6 @@
   background: linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%);
 }
 
-.bell-icon {
-  width: 1.5rem;
-  height: 1.5rem;
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 0.25rem;
-  transition: background-color 0.2s;
-}
-
-.bell-icon:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Role-specific gradients */
-.admin-gradient {
-  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
-}
-
-.instructor-gradient {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-}
-
-.scheduler-gradient {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
-}
-
-/* Content Layout */
 .dashboard-content {
   max-width: 1280px;
   margin: 0 auto;
@@ -55,11 +28,39 @@
 }
 
 .user-profile-card {
-  background-color: #fff;
+  background-color: #ffff;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.user-profile-card:hover {
+  transform: scale(1.05);
+}
+
+.stat-card {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  border-left: 4px solid #06b100;
+  transform: scale(1);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: scale(1.05);
+}
+
+.stat-card-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.profile-icon {
+  color: #2563eb;
 }
 
 .profile-title {
@@ -101,7 +102,6 @@
   margin-bottom: 2rem;
 }
 
-/* Stat Card */
 .stat-card {
   background: white;
   border-radius: 0.75rem;
@@ -140,7 +140,7 @@
   margin: 0 0 0.5rem 0;
 }
 
-.stat-icon-container {
+.stat-icon-container {  
   padding: 1rem;
   border-radius: 50%;
   color: white;
@@ -148,23 +148,29 @@
 }
 
 .stat-icon {
+  display: flex;            
+  align-items: center;
+  justify-content: center; 
   width: 2rem;
   height: 2rem;
+  color: rgb(231, 88, 0);
 }
 
-/* Schedule Grid */
 .schedule-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 1.5rem;
 }
 
-/* Schedule Card */
 .schedule-card {
   background: white;
   border-radius: 0.75rem;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   padding: 1.5rem;
+}
+
+.schedule-card:hover {
+  transform: scale(1.05);
 }
 
 .schedule-title {
@@ -227,12 +233,15 @@
   white-space: nowrap;
 }
 
-/* Calendar Card */
 .calendar-card {
   background: white;
   border-radius: 0.75rem;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   padding: 1.5rem;
+}
+
+.calendar-card:hover {
+  transform: scale(1.05);
 }
 
 .calendar-header {
@@ -291,7 +300,6 @@
   margin: 0;
 }
 
-/* Calendar Grid */
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -347,7 +355,6 @@
   border-radius: 50%;
 }
 
-/* Responsive Design */
 @media (max-width: 1024px) {
   .dashboard-grid {
     grid-template-columns: 1fr;

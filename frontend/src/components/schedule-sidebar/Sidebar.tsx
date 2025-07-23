@@ -38,7 +38,7 @@ const Sidebar: React.FC = () => {
       id: 1,
       label: "หน้าแรก",
       icon: "📖",
-      path: "/Homepage",
+      path: "/home-dash",
       roles: ["Admin", "Scheduler", "Instructor"],
     },
     {
