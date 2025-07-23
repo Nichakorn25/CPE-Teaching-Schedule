@@ -50,7 +50,7 @@ async function deleteCourse(id: number) {
     .catch((e) => e.response);
 }
 
-async function getTypeofCourse() {   //////////////////////ย้ายไป GetService นะ
+async function getTypeofCourse() {   
   return await axios
     .get(`${apiUrl}/course-type`, requestOptions)
     .then((res) => res)
@@ -58,7 +58,7 @@ async function getTypeofCourse() {   //////////////////////ย้ายไป Ge
 }
 
 //------------------ User ------------------------------//
-async function getTeachers() {  //ดึงวิชาทั้งหมดไปเลือก
+async function getTeachers() {  
   return await axios
     .get(`${apiUrl}/all-instructor`, requestOptions)
     .then((res) => res)
