@@ -4,26 +4,11 @@ import {
   Users,
   BookOpen,
   Clock,
-  Plus,
-  Bell,
-  Settings,
   ChevronLeft,
   ChevronRight,
   User,
-  GraduationCap,
-  CalendarDays,
-  AlertCircle,
 } from "lucide-react";
 import "./Dash.css";
-
-interface Task {
-  id: number;
-  title: string;
-  time: string;
-  type: "meeting" | "class" | "other";
-  createdBy: string;
-  isGlobal: boolean;
-}
 
 interface ScheduleItem {
   day?: string;
@@ -70,10 +55,6 @@ const Dashboard: React.FC = () => {
   ///////////////////////////////// ด้านบนแก้แล้ว
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [globalTasks, setGlobalTasks] = useState<Record<string, Task[]>>({});
-  const [personalTasks, setPersonalTasks] = useState<Record<string, Task[]>>(
-    {}
-  );
 
   // Mock data for different roles
   const dashboardData: DashboardData = {
@@ -157,16 +138,6 @@ const Dashboard: React.FC = () => {
     setCurrentDate(newDate);
   };
 
-  const getTasksForDate = (date: Date): Task[] => {
-    const dateKey = date.toDateString();
-    const personalKey = `${currentRole}_${dateKey}`;
-
-    const global = globalTasks[dateKey] || [];
-    const personal = personalTasks[personalKey] || [];
-
-    return [...global, ...personal];
-  };
-
   const StatCard: React.FC<StatCardProps> = ({ title, value, icon, delay }) => (
     <div
       className={`stat-card bg-red-500 text-green`}
@@ -177,7 +148,7 @@ const Dashboard: React.FC = () => {
           <p className="stat-title">{title}</p>
           <h3 className="stat-value">{value.toLocaleString()}</h3>
         </div>
-        <div className={`stat-icon-container color-green`}>{icon}</div>
+        <div className="stat-icon-container">{icon}</div>
       </div>
     </div>
   );
@@ -245,26 +216,25 @@ const Dashboard: React.FC = () => {
     <div className="dashboard">
       <div className="dashboard-content">
         <div className="dashboard-grid">
-          {/* Left Side Content */}
           <div className="main-content">
             {currentRole === "Admin" && adminData && (
               <div className="flex flex-col md:flex-column gap-4">
                 <StatCard
                   title="จำนวน Users ทั้งหมด"
                   value={adminData.totalUsers}
-                  icon={<Users className="stat-icon" />}
+                  icon={<div className="stat-icon"><Users /></div>}
                   delay={0}
                 />
                 <StatCard
                   title="จำนวน Course ทั้งหมด"
                   value={adminData.totalCourses}
-                  icon={<BookOpen className="stat-icon" />}
+                  icon={<div className="stat-icon"><BookOpen /></div>}
                   delay={100}
                 />
                 <StatCard
                   title="วิชาเปิดสอนในเทอมนี้"
                   value={adminData.activeTermCourses}
-                  icon={<Calendar className="stat-icon" />}
+                  icon={<div className="stat-icon"><Calendar /></div>}
                   delay={200}
                 />
               </div>
@@ -300,11 +270,9 @@ const Dashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Right Side - Notifications and Calendar */}
           <div className="sidebar">
             <UserProfileCard />
 
-            {/* Calendar */}
             <div className="calendar-card">
               <div className="calendar-header">
                 <h2 className="calendar-title">
@@ -328,7 +296,6 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Calendar Grid */}
               <div className="calendar-grid">
                 {["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"].map((day) => (
                   <div key={day} className="calendar-day-header">
@@ -336,7 +303,6 @@ const Dashboard: React.FC = () => {
                   </div>
                 ))}
 
-                {/* Empty cells for days before month starts */}
                 {Array.from(
                   { length: getFirstDayOfMonth(currentDate) },
                   (_, i) => (
@@ -366,50 +332,6 @@ const Dashboard: React.FC = () => {
                   );
                 })}
               </div>
-
-              {/* Task Display */}
-              {selectedDate && getTasksForDate(selectedDate).length > 0 && (
-                <div className="task-display">
-                  <h4 className="task-display-title">
-                    Tasks - {selectedDate.getDate()}/
-                    {selectedDate.getMonth() + 1}:
-                  </h4>
-                  <div className="task-list">
-                    {getTasksForDate(selectedDate).map((task) => (
-                      <div key={task.id} className="task-item">
-                        <div className="task-header">
-                          <div className="task-title">{task.title}</div>
-                          {task.isGlobal && (
-                            <span className="global-badge">Global</span>
-                          )}
-                        </div>
-                        {task.time && (
-                          <div className="task-time">เวลา: {task.time}</div>
-                        )}
-                        <div className="task-footer">
-                          <span className={`task-type-badge ${task.type}`}>
-                            {task.type === "meeting"
-                              ? "ประชุม"
-                              : task.type === "class"
-                              ? "สอน"
-                              : "อื่นๆ"}
-                          </span>
-                          {task.createdBy && (
-                            <span className="task-creator">
-                              โดย:{" "}
-                              {task.createdBy === "Admin"
-                                ? "Admin"
-                                : task.createdBy === "Instructor"
-                                ? "อาจารย์"
-                                : "ผู้จัดตาราง"}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
