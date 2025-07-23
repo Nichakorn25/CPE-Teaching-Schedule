@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Calendar,
   Users,
@@ -8,6 +8,8 @@ import {
   ChevronRight,
   User,
 } from "lucide-react";
+import { getUserById, getAllTeachers, getAllCourses } from "../../services/https/AdminPageServices";
+import { UserProfile, CourseIn } from "../../interfaces/Dash";
 import "./Dash.css";
 
 interface ScheduleItem {
@@ -46,15 +48,77 @@ interface ScheduleCardProps {
   title: string;
 }
 
-type TaskType = "meeting" | "class" | "other";
-
 const Dashboard: React.FC = () => {
   const curRole = localStorage.getItem("role");
   const [currentRole, setCurrentRole] = useState(curRole);
 
+  const [userid, setUserid] = useState<UserProfile | null>(null);
+  async function fetchUser() {
+    const user_id = localStorage.getItem("user_id");
+    if (!user_id) return;
+
+    try {
+      const userData = await getUserById(user_id);
+      setUserid(userData.data);
+      console.log("User data:", userData.data);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  }
+
+  const [allinstructor, setallinstructor] = useState<UserProfile[]>([]);
+  const getallinstructor = async () => {
+    let res = await getAllTeachers();
+    if (res && Array.isArray(res.data)) {
+      setallinstructor(res.data);
+    } 
+  };
+
+  const [allCourses, setallCourses] = useState<CourseIn[]>([]);
+  const getallCourses = async () => {
+    let res = await getAllCourses();
+    if (res && Array.isArray(res.data)) {
+      setallCourses(res.data);
+    } 
+  };
+
+  useEffect(() => {
+    getallinstructor();
+    getallCourses();
+    fetchUser();
+  }, []);
+
+  ////////////////////////////////////////// global
+  const [academicYear, setAcademicYear] = useState(() => {
+    return localStorage.getItem("academicYear") || "";
+  });
+
+  const [term, setTerm] = useState(() => {
+    return localStorage.getItem("term") || "";
+  });
+
+  const [isEditing, setIsEditing] = useState(false);
+
+  const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAcademicYear(e.target.value);
+  };
+
+  const handleTermChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTerm(e.target.value);
+  };
+
+  const handleSave = () => {
+    localStorage.setItem("academicYear", academicYear);
+    localStorage.setItem("term", term);
+    setIsEditing(false);
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
   ///////////////////////////////// ด้านบนแก้แล้ว
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Mock data for different roles
   const dashboardData: DashboardData = {
@@ -94,27 +158,12 @@ const Dashboard: React.FC = () => {
     },
   };
 
-  const user = {
-    Username: "jdoe",
-    Firstname: "John",
-    Lastname: "Doe",
-    Email: "jdoe@example.com",
-    PhoneNumber: "0912345678",
-    Address: "123 ถนนมหาวิทยาลัย กรุงเทพฯ",
-    Image: "https://via.placeholder.com/100", // หรือ URL จริง
-    Title: { Name: "อาจารย์" },
-    Position: { Name: "อาจารย์ประจำ" },
-    Major: { Name: "วิทยาการคอมพิวเตอร์" },
-    Role: { Name: currentRole },
-  };
-
   ////////////////////////////////////////////   dash-role
 
   const data = currentRole ? dashboardData[currentRole] : null;
 
   const adminData = currentRole === "Admin" ? dashboardData.Admin : null;
-  const schedulerData =
-    currentRole === "Scheduler" ? dashboardData.Scheduler : null;
+  const schedulerData = currentRole === "Scheduler" ? dashboardData.Scheduler : null;
 
   // Calendar functions
   const getDaysInMonth = (date: Date): number => {
@@ -183,29 +232,37 @@ const Dashboard: React.FC = () => {
         ข้อมูลผู้ใช้
       </h3>
       <div className="profile-content">
-        <img src={user.Image} alt="User Profile" className="profile-image" />
+        {userid?.image ? (
+          <img
+            src={userid.image}
+            alt="User Profile"
+            className="profile-image"
+          />
+        ) : (
+          <User className="profile-image" />
+        )}
         <div className="profile-info">
           <p>
-            <strong>ชื่อ:</strong> {user.Title.Name} {user.Firstname}{" "}
-            {user.Lastname}
+            <strong>ชื่อ:</strong> {userid?.title_name} {userid?.firstname}{" "}
+            {userid?.lastname}
           </p>
           <p>
-            <strong>ตำแหน่ง:</strong> {user.Position.Name}
+            <strong>ตำแหน่ง:</strong> {userid?.position}
           </p>
           <p>
-            <strong>สาขา:</strong> {user.Major.Name}
+            <strong>สาขา:</strong> {userid?.major}
           </p>
           <p>
-            <strong>Email:</strong> {user.Email}
+            <strong>Email:</strong> {userid?.email}
           </p>
           <p>
-            <strong>เบอร์โทร:</strong> {user.PhoneNumber}
+            <strong>เบอร์โทร:</strong> {userid?.phone_number}
           </p>
           <p>
-            <strong>ที่อยู่:</strong> {user.Address}
+            <strong>ที่อยู่:</strong> {userid?.address}
           </p>
           <p>
-            <strong>บทบาท:</strong> {user.Role.Name}
+            <strong>บทบาท:</strong> {userid?.role}
           </p>
         </div>
       </div>
@@ -217,24 +274,73 @@ const Dashboard: React.FC = () => {
       <div className="dashboard-content">
         <div className="dashboard-grid">
           <div className="main-content">
+            <h2 className="dashboard-title">
+              ปีการศึกษา {academicYear || "----"} เทอม {term || "----"}
+            </h2>
+            {currentRole === "Admin" && (
+              <div className={`term-form ${!isEditing ? "disabled-form" : ""}`}>
+                <h3>ตั้งค่าปีการศึกษา / เทอม</h3>
+                <div className="form-group">
+                  <label>ปีการศึกษา:</label>
+                  <input
+                    type="text"
+                    value={academicYear}
+                    onChange={handleYearChange}
+                    placeholder="เช่น 2568"
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>เทอม:</label>
+                  <input
+                    type="text"
+                    value={term}
+                    onChange={handleTermChange}
+                    placeholder="เช่น 1"
+                    disabled={!isEditing}
+                  />
+                </div>
+
+                <div className="form-actions">
+                  {isEditing ? (
+                    <button onClick={handleSave}>ตกลง</button>
+                  ) : (
+                    <button onClick={handleEdit}>แก้ไข</button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {currentRole === "Admin" && adminData && (
               <div className="flex flex-col md:flex-column gap-4">
                 <StatCard
-                  title="จำนวน Users ทั้งหมด"
-                  value={adminData.totalUsers}
-                  icon={<div className="stat-icon"><Users /></div>}
+                  title="จำนวน Instrutor ทั้งหมด"
+                  value={allinstructor.length}
+                  icon={
+                    <div className="stat-icon">
+                      <Users />
+                    </div>
+                  }
                   delay={0}
                 />
                 <StatCard
                   title="จำนวน Course ทั้งหมด"
-                  value={adminData.totalCourses}
-                  icon={<div className="stat-icon"><BookOpen /></div>}
+                  value={allCourses.length}
+                  icon={
+                    <div className="stat-icon">
+                      <BookOpen />
+                    </div>
+                  }
                   delay={100}
                 />
                 <StatCard
                   title="วิชาเปิดสอนในเทอมนี้"
                   value={adminData.activeTermCourses}
-                  icon={<div className="stat-icon"><Calendar /></div>}
+                  icon={
+                    <div className="stat-icon">
+                      <Calendar />
+                    </div>
+                  }
                   delay={200}
                 />
               </div>

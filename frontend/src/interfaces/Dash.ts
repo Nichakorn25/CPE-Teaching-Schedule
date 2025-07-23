@@ -84,3 +84,34 @@ export interface UserInterface {
 
     OfferedCourses?: OfferedCoursesInterface[];
 }
+
+export interface UserProfile {
+  id: number;
+  username: string;
+  title_id: number;
+  title_name: string;
+  firstname: string;
+  lastname: string;
+  email: string;
+  phone_number: string;
+  address: string;
+  image: string; 
+  major: string;
+  major_id: number;
+  position: string;
+  position_id: number;
+  role: string;
+  role_id: number;
+}
+
+
+export interface CourseIn {
+  ID: number;
+  No: number;
+  CourseCode: string;
+  CourseName: string;
+  CourseType: string;
+  Credit: string;
+  CurriculumID: number;
+  Instructor: string;
+}
