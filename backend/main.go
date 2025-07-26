@@ -42,6 +42,8 @@ func main() {
 		///////////////////// openCourse /////////////////////////
 		r.GET("/open-courses", controllers.GetOpenCourses)
 		r.POST("/offered-courses", controllers.CreateOfferedCourse)
+		r.PUT("/offered-courses/:id", controllers.UpdateOfferedCourse)
+		r.DELETE("/delete-offered-courses/:id", controllers.DeleteOfferedCourse)
 
 		///////////////////// Condition /////////////////////////
 		r.POST("/condition", controllers.CreateConditions)
