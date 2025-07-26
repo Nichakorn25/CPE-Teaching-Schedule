@@ -141,8 +141,8 @@ func SetupDatabase() {
 	SeedTeachingAssistants()
 	SeedConditions()
 	SeedOfferedCourses()
-	// SeedSchedules()
-	// SeedTimeFixedCourses()
+	SeedSchedules()
+	SeedTimeFixedCourses()
 	// SeedScheduleTeachingAssistants()
 }
 
@@ -2133,6 +2133,16 @@ func SeedOfferedCourses() {
 		{
 			Year:         2567,
 			Term:         1,
+			Section:      10,
+			Capacity:     10,
+			IsFixCourses: true,
+			UserID:       1,
+			AllCoursesID: 26,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
 			Section:      1,
 			Capacity:     90,
 			IsFixCourses: false,
@@ -2238,8 +2248,8 @@ func SeedTimeFixedCourses() {
 			Year:         2567, 
 			Term:         1,
 			DayOfWeek:    "ศุกร์",
-			StartTimeStr: "11:00",
-			EndTimeStr:   "14:00",
+			StartTimeStr: "13:00",
+			EndTimeStr:   "16:00",
 			RoomFix:      "Lecture A",
 			Section:      1,
 			Capacity:     300,
@@ -2286,8 +2296,8 @@ func SeedTimeFixedCourses() {
 			Year:         2567, 
 			Term:         1,
 			DayOfWeek:    "ศุกร์",
-			StartTimeStr: "12:00",
-			EndTimeStr:   "15:00",
+			StartTimeStr: "13:00",
+			EndTimeStr:   "16:00",
 			RoomFix:      "Lecture C",
 			Section:      1,
 			Capacity:     300,
@@ -2322,8 +2332,8 @@ func SeedTimeFixedCourses() {
 			Year:         2567, 
 			Term:         1,
 			DayOfWeek:    "พุธ",
-			StartTimeStr: "12:00",
-			EndTimeStr:   "15:00",
+			StartTimeStr: "13:00",
+			EndTimeStr:   "16:00",
 			RoomFix:      "Lecture C",
 			Section:      1,
 			Capacity:     300,
@@ -2346,8 +2356,8 @@ func SeedTimeFixedCourses() {
 			Year:         2567, 
 			Term:         1,
 			DayOfWeek:    "พฤหัสบดี",
-			StartTimeStr: "09:00",
-			EndTimeStr:   "13:00",
+			StartTimeStr: "08:00",
+			EndTimeStr:   "12:00",
 			RoomFix:      "Lecture A",
 			Section:      2,
 			Capacity:     300,
@@ -2478,8 +2488,8 @@ func SeedTimeFixedCourses() {
 			Year:         2567, 
 			Term:         1,
 			DayOfWeek:    "พุธ",
-			StartTimeStr: "12:00",
-			EndTimeStr:   "13:00",
+			StartTimeStr: "17:30",
+			EndTimeStr:   "18:30",
 			RoomFix:      "Lecture A",
 			Section:      1,
 			Capacity:     300,
@@ -2496,6 +2506,18 @@ func SeedTimeFixedCourses() {
 			Section:      1,
 			Capacity:     300,
 			AllCoursesID: 24,
+			ScheduleID:   23,
+		},
+		{
+			Year:         2567, 
+			Term:         1,
+			DayOfWeek:    "พฤหัสบดี",
+			StartTimeStr: "13:00",
+			EndTimeStr:   "16:00",
+			RoomFix:      "Lecture B",
+			Section:      10,
+			Capacity:     10,
+			AllCoursesID: 26,
 			ScheduleID:   23,
 		},
 	}
@@ -2521,46 +2543,214 @@ func SeedTimeFixedCourses() {
 
 // //////////////////////////////////////////////////////////// ตารางสอน ///////////////////////////////////////////////////////
 // // ยังไม่ครบ
-// func SeedSchedules() {
-// 	layout := "15:04"
+func SeedSchedules() {
+	layout := "15:04"
 
-// 	schedules := []entity.Schedule{
-// 		{
-// 			NameTable:        "ตารางเรียนปี 2567 เทอม 1",
-// 			SectionNumber:    1,
-// 			DayOfWeek:        "จันทร์",
-// 			StartTime:        mustParseTime(layout, "09:00"),
-// 			EndTime:          mustParseTime(layout, "11:00"),
-// 			OfferedCoursesID: 1, // ต้องตรงกับ ID ของ OfferedCourses ที่มีอยู่ใน DB
-// 		},
-// 		{
-// 			NameTable:        "ตารางเรียนปี 2567 เทอม 1",
-// 			SectionNumber:    2,
-// 			DayOfWeek:        "อังคาร",
-// 			StartTime:        mustParseTime(layout, "13:00"),
-// 			EndTime:          mustParseTime(layout, "15:00"),
-// 			OfferedCoursesID: 2,
-// 		},
-// 		{
-// 			NameTable:        "ตารางเรียนปี 2567 เทอม 2",
-// 			SectionNumber:    1,
-// 			DayOfWeek:        "พฤหัสบดี",
-// 			StartTime:        mustParseTime(layout, "10:30"),
-// 			EndTime:          mustParseTime(layout, "12:30"),
-// 			OfferedCoursesID: 4,
-// 		},
-// 	}
+	schedules := []entity.Schedule{
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "อังคาร",
+				StartTime:        mustParseTime(layout, "09:00"), 
+				EndTime:          mustParseTime(layout, "11:00"),
+				OfferedCoursesID: 2,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "ศุกร์",
+				StartTime:        mustParseTime(layout, "13:00"),
+				EndTime:          mustParseTime(layout, "16:00"),
+				OfferedCoursesID: 3,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "พฤหัสบดี",
+				StartTime:        mustParseTime(layout, "14:00"),
+				EndTime:          mustParseTime(layout, "17:00"),
+				OfferedCoursesID: 4,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "พฤหัสบดี",
+				StartTime:        mustParseTime(layout, "17:00"),
+				EndTime:          mustParseTime(layout, "20:00"),
+				OfferedCoursesID: 5,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    2,
+				DayOfWeek:        "ศุกร์",
+				StartTime:        mustParseTime(layout, "09:00"),
+				EndTime:          mustParseTime(layout, "12:00"),
+				OfferedCoursesID: 6,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "ศุกร์",
+				StartTime:        mustParseTime(layout, "13:00"),
+				EndTime:          mustParseTime(layout, "16:00"),
+				OfferedCoursesID: 7,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "พุธ",
+				StartTime:        mustParseTime(layout, "15:00"),
+				EndTime:          mustParseTime(layout, "18:00"),
+				OfferedCoursesID: 8,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    2,
+				DayOfWeek:        "อังคาร",
+				StartTime:        mustParseTime(layout, "09:00"),
+				EndTime:          mustParseTime(layout, "12:00"),
+				OfferedCoursesID: 9,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "พุธ",
+				StartTime:        mustParseTime(layout, "13:00"),
+				EndTime:          mustParseTime(layout, "16:00"),
+				OfferedCoursesID: 10,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "ศุกร์",
+				StartTime:        mustParseTime(layout, "15:00"),
+				EndTime:          mustParseTime(layout, "18:00"),
+				OfferedCoursesID: 11,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    2,
+				DayOfWeek:        "พฤหัสบดี",
+				StartTime:        mustParseTime(layout, "08:00"),
+				EndTime:          mustParseTime(layout, "12:00"),
+				OfferedCoursesID: 12,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "จันทร์",
+				StartTime:        mustParseTime(layout, "13:00"),
+				EndTime:          mustParseTime(layout, "14:00"),
+				OfferedCoursesID: 13,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "อังคาร",
+				StartTime:        mustParseTime(layout, "14:00"),
+				EndTime:          mustParseTime(layout, "15:00"),
+				OfferedCoursesID: 14,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "จันทร์",
+				StartTime:        mustParseTime(layout, "15:00"),
+				EndTime:          mustParseTime(layout, "16:00"),
+				OfferedCoursesID: 15,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "ศุกร์",
+				StartTime:        mustParseTime(layout, "16:00"),
+				EndTime:          mustParseTime(layout, "17:00"),
+				OfferedCoursesID: 16,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "พุธ",
+				StartTime:        mustParseTime(layout, "17:00"),
+				EndTime:          mustParseTime(layout, "18:00"),
+				OfferedCoursesID: 17,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "จันทร์",
+				StartTime:        mustParseTime(layout, "18:00"),
+				EndTime:          mustParseTime(layout, "19:00"),
+				OfferedCoursesID: 18,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "พฤหัสบดี",
+				StartTime:        mustParseTime(layout, "19:00"),
+				EndTime:          mustParseTime(layout, "20:00"),
+				OfferedCoursesID: 19,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    2,
+				DayOfWeek:        "พฤหัสบดี",
+				StartTime:        mustParseTime(layout, "09:00"),
+				EndTime:          mustParseTime(layout, "10:00"),
+				OfferedCoursesID: 20,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "พุธ",
+				StartTime:        mustParseTime(layout, "10:00"),
+				EndTime:          mustParseTime(layout, "11:00"),
+				OfferedCoursesID: 21,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "จันทร์",
+				StartTime:        mustParseTime(layout, "11:00"),
+				EndTime:          mustParseTime(layout, "12:00"),
+				OfferedCoursesID: 22,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "พุธ",
+				StartTime:        mustParseTime(layout, "17:30"),
+				EndTime:          mustParseTime(layout, "18:30"),
+				OfferedCoursesID: 23,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    1,
+				DayOfWeek:        "ศุกร์",
+				StartTime:        mustParseTime(layout, "13:00"),
+				EndTime:          mustParseTime(layout, "14:00"),
+				OfferedCoursesID: 24,
+			},
+			{
+				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				SectionNumber:    10,
+				DayOfWeek:        "พฤหัสบดี",
+				StartTime:        mustParseTime(layout, "13:00"),
+				EndTime:          mustParseTime(layout, "16:00"),
+				OfferedCoursesID: 26,
+			},
+	}
 
-// 	for _, s := range schedules {
-// 		db.FirstOrCreate(&entity.Schedule{}, &s)
-// 	}
-// }
+	for _, s := range schedules {
+		db.FirstOrCreate(&entity.Schedule{}, &s)
+	}
+}
 
-// // ตัวช่วยแปลงเวลาหรือ panic ถ้าพลาด
-// func mustParseTime(layout, value string) time.Time {
-// 	t, err := time.Parse(layout, value)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return t
-// }
+// ตัวช่วยแปลงเวลาหรือ panic ถ้าพลาด
+func mustParseTime(layout, value string) time.Time {
+	t, err := time.Parse(layout, value)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
