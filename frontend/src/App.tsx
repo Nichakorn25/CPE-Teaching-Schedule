@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/login/Login";
+import ChangePassword from "./pages/login/forget/FirstChangePassword";
 
 import HomeTest from "./pages/home/Dash";
 
@@ -20,9 +21,9 @@ import Schedulepage from './pages/scheduler/schedulepage/Schedulepage';
 import OfferedCoursespage from "./pages/scheduler/offeredcoursepage/OfferedCoursespage";
 import AddConditionpage from './pages/scheduler/addconditionpage/AddConditionpage';
 import Conditionpage from './pages/scheduler/conditionpage/Conditionpage';
-import OpenCourse from './pages/scheduler/allcoursepage/AllCoursepage';
+// import OpenCourse from './pages/scheduler/allcoursepage/AllCoursepage';
 import AddCoursepage from './pages/scheduler/addcoursepage/AddCoursepage';
-import Instructorpage from './pages/scheduler/instructorpage/Instructorpage';
+// import Instructorpage from './pages/scheduler/instructorpage/Instructorpage';
 import Layout from "antd/es/layout/layout";
 
 import MainLayout from "./layout/MainLayout";
@@ -33,6 +34,8 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         <Route path="/" element={<LoginPage />} />
+        <Route path="/change-password" element={<ChangePassword />} />
+
         <Route path="/" element={<Layout />}/>
           <Route path="home-dash" element={<MainLayout><HomeTest /></MainLayout>} />
 
@@ -50,14 +53,14 @@ const App: React.FC = () => {
           <Route path="add-condition" element={<MainLayout><AddCondition /></MainLayout>} />
           <Route path="add-course" element={<MainLayout><AddCourse /></MainLayout>} />
 
-          <Route path="Schedulepage" element={<MainLayout><Schedulepage /></MainLayout>} />
-          <Route path="OfferedCoursespage" element={<MainLayout><OfferedCoursespage /></MainLayout>} />
-          <Route path="Conditionpage" element={<MainLayout><Conditionpage /></MainLayout>} />
-          <Route path="Instructorpage" element={<MainLayout><Instructorpage /></MainLayout>} />
-          <Route path="open-course" element={<MainLayout><OpenCourse /></MainLayout>} />
-          <Route path="AddConditionpage" element={<MainLayout><AddConditionpage /></MainLayout>} />
+          <Route path="schedule-page" element={<MainLayout><Schedulepage /></MainLayout>} />
+          <Route path="all-open-course" element={<MainLayout><OfferedCoursespage /></MainLayout>} />
+          <Route path="condition-page" element={<MainLayout><Conditionpage /></MainLayout>} />
+          {/* <Route path="Instructorpage" element={<MainLayout><Instructorpage /></MainLayout>} /> */}
+          {/* <Route path="open-course" element={<MainLayout><OpenCourse /></MainLayout>} /> */}
+          <Route path="add-condition-page" element={<MainLayout><AddConditionpage /></MainLayout>} />
           <Route path="EditConditionpage" element={<MainLayout><EditConditionpage /></MainLayout>} />
-          <Route path="AddCoursepage" element={<MainLayout><AddCoursepage /></MainLayout>} />
+          <Route path="add-open-course" element={<MainLayout><AddCoursepage /></MainLayout>} />
       </Routes>
     </Router>
   );
