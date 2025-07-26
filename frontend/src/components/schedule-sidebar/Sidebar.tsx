@@ -13,24 +13,28 @@ const Sidebar: React.FC = () => {
   const toggleSidebar = useCallback(() => {
     const newIsOpen = !isOpen;
     setIsOpen(newIsOpen);
-    
+
     // Dispatch custom event to notify Layout component
-    window.dispatchEvent(new CustomEvent('sidebarToggle', { 
-      detail: { 
-        isOpen: newIsOpen, 
-        width: newIsOpen ? 280 : 60 
-      } 
-    }));
+    window.dispatchEvent(
+      new CustomEvent("sidebarToggle", {
+        detail: {
+          isOpen: newIsOpen,
+          width: newIsOpen ? 280 : 60,
+        },
+      })
+    );
   }, [isOpen]);
 
   // Initial event dispatch
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('sidebarToggle', { 
-      detail: { 
-        isOpen: isOpen, 
-        width: isOpen ? 280 : 60 
-      } 
-    }));
+    window.dispatchEvent(
+      new CustomEvent("sidebarToggle", {
+        detail: {
+          isOpen: isOpen,
+          width: isOpen ? 280 : 60,
+        },
+      })
+    );
   }, []);
 
   const menuItems: MenuItem[] = [
@@ -45,28 +49,28 @@ const Sidebar: React.FC = () => {
       id: 2,
       label: "ตารางสอน",
       icon: "🧑‍🏫",
-      path: "/Schedulepage",
+      path: "/schedule-page",
       roles: ["Scheduler", "Instructor"],
     },
     {
       id: 3,
       label: "เงื่อนไขการจัดตารางสอน",
       icon: "🧑‍🏫",
-      path: "/Conditionpage",
+      path: "/condition-page",
       roles: ["Scheduler"],
     },
     {
       id: 4,
       label: "เพิ่มเงื่อนไข",
       icon: "🧑‍🏫",
-      path: "/AddConditionpage",
+      path: "/add-condition-page",
       roles: ["Scheduler", "Instructor"],
     },
     {
       id: 5,
       label: "เพิ่มวิชาที่ต้องการสอน",
       icon: "🧑‍🏫",
-      path: "/AddCoursepage",
+      path: "add-open-course",
       roles: ["Scheduler", "Instructor"],
     },
     {
@@ -87,7 +91,7 @@ const Sidebar: React.FC = () => {
       id: 8,
       label: "รายวิชาที่เปิดสอน",
       icon: "📋",
-      path: "/open-course",
+      path: "/all-open-course",
       roles: ["Admin", "Scheduler", "Instructor"],
     },
     {
@@ -134,8 +138,21 @@ const Sidebar: React.FC = () => {
   );
 
   const handleLogout = () => {
-    localStorage.clear();
-    navigate("/"); 
+    localStorage.removeItem("email");
+    localStorage.removeItem("first_name");
+    localStorage.removeItem("first_password");
+    localStorage.removeItem("image");
+    localStorage.removeItem("isLogin");
+    localStorage.removeItem("last_name");
+    localStorage.removeItem("major_name");
+    localStorage.removeItem("position");
+    localStorage.removeItem("role");
+    localStorage.removeItem("title");
+    localStorage.removeItem("token");
+    localStorage.removeItem("token_type");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("username");
+    navigate("/");
     window.location.reload;
   };
 
@@ -183,7 +200,7 @@ const Sidebar: React.FC = () => {
           boxShadow: "2px 0 8px rgba(0,0,0,0.1)",
           position: "relative",
           zIndex: 1001,
-          transition: "all 0.3s ease"
+          transition: "all 0.3s ease",
         }}
       >
         {/* Toggle Button */}
@@ -194,7 +211,7 @@ const Sidebar: React.FC = () => {
             padding: "8px",
             borderBottom: "1px solid #f0f0f0",
             minHeight: "56px",
-            alignItems: "center"
+            alignItems: "center",
           }}
         >
           <button
@@ -208,7 +225,7 @@ const Sidebar: React.FC = () => {
               alignItems: "center",
               justifyContent: "center",
               color: "#FF6B35",
-              width: "40px", 
+              width: "40px",
               height: "40px",
               borderRadius: "8px",
               transition: "background-color 0.2s ease",
@@ -233,7 +250,7 @@ const Sidebar: React.FC = () => {
             justifyContent: isOpen ? "flex-start" : "center",
             borderBottom: "1px solid #f0f0f0",
             minHeight: "80px",
-            alignItems: "center"
+            alignItems: "center",
           }}
         >
           <img
@@ -271,14 +288,15 @@ const Sidebar: React.FC = () => {
                 justifyContent: isOpen ? "flex-start" : "center",
                 gap: isOpen ? "12px" : "0",
                 cursor: "pointer",
-                backgroundColor: activeItem === item.id ? "#FF6B35" : "transparent",
+                backgroundColor:
+                  activeItem === item.id ? "#FF6B35" : "transparent",
                 color: activeItem === item.id ? "white" : "#333",
                 borderRadius: "6px",
                 margin: "2px 0",
                 transition: "all 0.2s ease",
                 position: "relative",
                 overflow: "hidden",
-                minHeight: "44px"
+                minHeight: "44px",
               }}
               onMouseEnter={(e) => {
                 if (activeItem !== item.id) {
@@ -292,16 +310,18 @@ const Sidebar: React.FC = () => {
               }}
               title={!isOpen ? item.label : undefined}
             >
-              <span style={{ 
-                fontSize: "18px", 
-                minWidth: "24px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}>
+              <span
+                style={{
+                  fontSize: "18px",
+                  minWidth: "24px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 {item.icon}
               </span>
-              
+
               {isOpen && (
                 <span
                   style={{
@@ -309,49 +329,56 @@ const Sidebar: React.FC = () => {
                     fontWeight: activeItem === item.id ? "500" : "400",
                     whiteSpace: "nowrap",
                     opacity: 1,
-                    transition: "opacity 0.3s ease"
+                    transition: "opacity 0.3s ease",
                   }}
                 >
                   {item.label}
                 </span>
               )}
-              
+
               {/* Active indicator */}
               {activeItem === item.id && (
-                <div style={{
-                  position: "absolute",
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: "3px",
-                  backgroundColor: "white",
-                  borderRadius: "3px 0 0 3px"
-                }} />
+                <div
+                  style={{
+                    position: "absolute",
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: "3px",
+                    backgroundColor: "white",
+                    borderRadius: "3px 0 0 3px",
+                  }}
+                />
               )}
             </div>
           ))}
         </nav>
 
         {/* User Info & Logout */}
-        <div style={{ 
-          padding: "16px",
-          borderTop: "1px solid #f0f0f0",
-          backgroundColor: "#fafafa"
-        }}>
+        <div
+          style={{
+            padding: "16px",
+            borderTop: "1px solid #f0f0f0",
+            backgroundColor: "#fafafa",
+          }}
+        >
           {isOpen && (
-            <div style={{
-              marginBottom: "12px",
-              padding: "8px",
-              fontSize: "12px",
-              color: "#666",
-              textAlign: "center",
-              borderRadius: "4px",
-              backgroundColor: "white"
-            }}>
-              {localStorage.getItem("first_name")} {localStorage.getItem("last_name")}
+            <div
+              style={{
+                marginBottom: "12px",
+                padding: "8px",
+                fontSize: "12px",
+                color: "#666",
+                textAlign: "center",
+                borderRadius: "4px",
+                backgroundColor: "white",
+              }}
+            >
+              {localStorage.getItem("first_name")}{" "}
+              {localStorage.getItem("last_name")}
             </div>
           )}
-          
+
           <button
             onClick={handleLogout}
             style={{
@@ -368,7 +395,7 @@ const Sidebar: React.FC = () => {
               alignItems: "center",
               gap: isOpen ? "8px" : "0",
               transition: "all 0.2s ease",
-              minHeight: "40px"
+              minHeight: "40px",
             }}
             onMouseEnter={(e) =>
               (e.currentTarget.style.backgroundColor = "#5a6c7d")

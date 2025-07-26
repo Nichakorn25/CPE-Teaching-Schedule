@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button, Input, Select, Card, Form, InputNumber, message } from "antd";
 import {
   getAllCurriculum,
@@ -7,16 +8,19 @@ import {
 import {
   getCoursebyid,
   getAllCourses,
+  postCreateOfferedCourse,
 } from "../../../services/https/AdminPageServices";
 import {
   CurriculumInterface,
   AllCourseinOpenCourseInterface,
   LaboratoryInterface,
 } from "../../../interfaces/Adminpage";
+import Swal from "sweetalert2";
 
 const { Option } = Select;
 
 const AddCoursepage: React.FC = () => {
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [curriculums, setCurriculums] = useState<CurriculumInterface[]>([]);
   const [courses, setCourses] = useState<AllCourseinOpenCourseInterface[]>([]);
@@ -24,6 +28,19 @@ const AddCoursepage: React.FC = () => {
   const [selectedCurriculumID, setSelectedCurriculumID] = useState<
     number | null
   >(null);
+  const [academicYear, setAcademicYear] = useState<number>(0);
+  const [term, setTerm] = useState<number>(0);
+  const [userID, setUserID] = useState<number>();
+
+  useEffect(() => {
+    const year = localStorage.getItem("academicYear");
+    const semester = localStorage.getItem("term");
+    const uid = localStorage.getItem("user_id");
+
+    if (year) setAcademicYear(parseInt(year));
+    if (semester) setTerm(parseInt(semester));
+    if (uid) setUserID(parseInt(uid));
+  }, []);
 
   useEffect(() => {
     const fetchLab = async () => {
@@ -34,7 +51,7 @@ const AddCoursepage: React.FC = () => {
       }
     };
     fetchLab();
-  },[]);
+  }, []);
 
   useEffect(() => {
     const fetchCurriculums = async () => {
@@ -67,7 +84,7 @@ const AddCoursepage: React.FC = () => {
       if (response.status === 200) {
         const course = response.data;
         form.setFieldsValue({
-          courseCode: selectedCourse.CourseCode, // ใช้จาก courses
+          courseCode: selectedCourse.ID, // ใช้จาก courses
           courseNameTh: course.ThaiName,
           courseNameEn: course.EnglishName,
           credits: course.Credit?.Unit || 0,
@@ -76,6 +93,54 @@ const AddCoursepage: React.FC = () => {
           studentsPerGroup: 0,
         });
       }
+    }
+  };
+
+  const handleSubmit = async (values: any) => {
+    console.log("ค่าทั้งหมดในฟอร์ม: ", values);
+    console.log("ค่าที่เลือก courseCode:", values.courseCode);
+
+    if (userID === undefined) {
+      Swal.fire("ไม่พบข้อมูลผู้ใช้", "กรุณาเข้าสู่ระบบใหม่", "error");
+      return;
+    }
+    const selectedCourse = courses.find((c) => c.ID === values.courseCode);
+    if (!selectedCourse) {
+      Swal.fire("ไม่พบข้อมูลรายวิชา", "กรุณาเลือกรายวิชาอีกครั้ง", "error");
+      return;
+    }
+
+    const payload = {
+      Year: academicYear,
+      Term: term,
+      Section: values.groupCount,
+      Capacity: values.studentsPerGroup,
+      UserID: userID!,
+      AllCoursesID: selectedCourse.ID,
+      LaboratoryID: values.labRoom || undefined,
+    };
+    
+    console.log("payload1 : ", payload);
+
+    const res = await postCreateOfferedCourse(payload);
+    console.log("payload : ", res);
+    if (res.status === 200 || res.status === 201) {
+      Swal.fire({
+        icon: "success",
+        title: "เพิ่มวิชาสำเร็จ",
+        html: `เพิ่มวิชา <b>${selectedCourse.CourseName}</b><br>เป็นรายวิชาที่เปิดสอนใน <b>เทอม ${term} ปีการศึกษา ${academicYear}</b> เรียบร้อยแล้ว`,
+        confirmButtonColor: "#F26522",
+      }).then(() => {
+        navigate("/open-course");
+      });
+      form.resetFields();
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาด",
+        text: "ไม่สามารถเพิ่มรายวิชาได้ กรุณาลองใหม่",
+        confirmButtonColor: "#F26522",
+      });
     }
   };
 
@@ -116,7 +181,12 @@ const AddCoursepage: React.FC = () => {
           minHeight: "calc(100vh - 200px)",
         }}
       >
-        <Form form={form} layout="vertical" style={{ width: "100%" }}>
+        <Form
+          form={form}
+          layout="vertical"
+          style={{ width: "100%" }}
+          onFinish={handleSubmit}
+        >
           <Card
             title="ข้อมูลพื้นฐานรายวิชา"
             style={{ marginBottom: "24px" }}
@@ -337,6 +407,7 @@ const AddCoursepage: React.FC = () => {
                 borderColor: "#F26522",
                 minWidth: "100px",
               }}
+              onClick={() => form.submit()}
             >
               บันทึก
             </Button>

@@ -42,6 +42,8 @@ func main() {
 		///////////////////// openCourse /////////////////////////
 		r.GET("/open-courses", controllers.GetOpenCourses)
 		r.POST("/offered-courses", controllers.CreateOfferedCourse)
+		r.PUT("/offered-courses/:id", controllers.UpdateOfferedCourse)
+		r.DELETE("/delete-offered-courses/:id", controllers.DeleteOfferedCourse)
 
 		///////////////////// Condition /////////////////////////
 		r.POST("/condition", controllers.CreateConditions)
@@ -56,6 +58,12 @@ func main() {
 		r.POST("/create-teaching-assistants", controllers.CreateTeachingAssistant)
 		r.PUT("/update-teaching-assistants/:id", controllers.UpdateTeachingAssistant)
 		r.DELETE("/delete-teaching-assistants/:id", controllers.DeleteTeachingAssistant)
+
+		///////////////////// TimeFixedCourses /////////////////////////
+		r.POST("/offered-courses/fixed", controllers.CreateFixedCourse)
+
+		///////////////////// Schedules /////////////////////////
+		r.GET("/schedules/:nameTable", controllers.GetScheduleByNameTable)
 
 		///////////////////// Get into dropdown /////////////////////////
 		r.GET("/course-type", controllers.GetTypeOfCourses)

@@ -43,6 +43,15 @@ type (
 		AllCoursesID uint `binding:"required"`
 		LaboratoryID *uint
 	}
+	UpdateOfferedCourseInput struct {
+		Year         *uint
+		Term         *uint
+		Section      *uint
+		Capacity     *uint
+		UserID       *uint
+		AllCoursesID *uint
+		LaboratoryID *uint
+	}
 )
 
 func GetOpenCourses(c *gin.Context) {
@@ -128,29 +137,90 @@ func GetOpenCourses(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": resp})
 }
 
-//////////////////////////////////// add open course //////////////////////////
+// ////////////////////////////////// add open course //////////////////////////
 func CreateOfferedCourse(c *gin.Context) {
-    var input CreateOfferedCourseInput
-    if err := c.ShouldBindJSON(&input); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-        return
-    }
+	var input CreateOfferedCourseInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-    offered := entity.OfferedCourses{
-        Year:         input.Year,
-        Term:         input.Term,
-        Section:      input.Section,
-        Capacity:     input.Capacity,
-        IsFixCourses: false, 
-        UserID:       input.UserID,
-        AllCoursesID: input.AllCoursesID,
-        LaboratoryID: input.LaboratoryID,
-    }
+	offered := entity.OfferedCourses{
+		Year:         input.Year,
+		Term:         input.Term,
+		Section:      input.Section,
+		Capacity:     input.Capacity,
+		IsFixCourses: false,
+		UserID:       input.UserID,
+		AllCoursesID: input.AllCoursesID,
+		LaboratoryID: input.LaboratoryID,
+	}
 
-    if err := config.DB().Create(&offered).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้างวิชาที่เปิดสอนได้"})
-        return
-    }
+	if err := config.DB().Create(&offered).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้างวิชาที่เปิดสอนได้"})
+		return
+	}
+	c.JSON(http.StatusCreated, offered)
+}
 
-    c.JSON(http.StatusCreated, offered)
+// ///////////////////////////////////////////////////////////////////
+func UpdateOfferedCourse(c *gin.Context) {
+	id := c.Param("id")
+
+	var offered entity.OfferedCourses
+	if err := config.DB().First(&offered, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบรายวิชาที่จะเปิดสอน"})
+		return
+	}
+
+	var input UpdateOfferedCourseInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if input.Year != nil {
+		offered.Year = *input.Year
+	}
+	if input.Term != nil {
+		offered.Term = *input.Term
+	}
+	if input.Section != nil {
+		offered.Section = *input.Section
+	}
+	if input.Capacity != nil {
+		offered.Capacity = *input.Capacity
+	}
+	if input.UserID != nil {
+		offered.UserID = *input.UserID
+	}
+	if input.AllCoursesID != nil {
+		offered.AllCoursesID = *input.AllCoursesID
+	}
+	if input.LaboratoryID != nil {
+		offered.LaboratoryID = input.LaboratoryID
+	}
+
+	if err := config.DB().Save(&offered).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถอัปเดตรายวิชาที่เปิดสอนได้"})
+		return
+	}
+	c.JSON(http.StatusOK, offered)
+}
+
+func DeleteOfferedCourse(c *gin.Context) {
+	id := c.Param("id")
+
+	var offered entity.OfferedCourses
+	if err := config.DB().First(&offered, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบรายวิชาที่จะเปิดสอน"})
+		return
+	}
+
+	if err := config.DB().Delete(&offered).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถลบรายวิชาที่จะเปิดสอนได้"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "ลบรายวิชาที่เปิดสอนสำเร็จ"})
 }

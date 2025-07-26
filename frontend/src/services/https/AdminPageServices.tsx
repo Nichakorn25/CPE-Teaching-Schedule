@@ -1,6 +1,7 @@
 import {CreateCourseInteface,CreateUserInterface,} from "../../interfaces/Adminpage";
 import {TeachingAssistantInterface,} from "../../interfaces/TeachingAssistant";
 import {OpenCourseInterface} from "../../interfaces/OpenCourse";
+import {TimeFixedCoursesIn} from "../../interfaces/TimeFix";
 import axios from "axios";
 
 const apiUrl = "http://localhost:8080";
@@ -151,6 +152,13 @@ async function deleteTeachingAssistant(id: number) {
     .catch((e) => e.response);
 }
 
+///////////////////// TimeFixedCourses /////////////////////////
+async function postCreateTimeFixedCourses(data: TimeFixedCoursesIn) {
+  return await axios
+    .post(`${apiUrl}/offered-courses/fixed`, data, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
 
 export {
   getCoursebyid, //used
@@ -177,4 +185,5 @@ export {
 
   getTypeofCourse,//used
 
+  postCreateTimeFixedCourses,
 };
