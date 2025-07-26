@@ -31,22 +31,22 @@ type CreateFixedCourseRequest struct {
 func CreateFixedCourse(c *gin.Context) {
 	var req CreateFixedCourseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลที่ส่งมาไม่ถูกต้อง: " + err.Error()})
 		return
 	}
 
 	startTime, err := time.Parse("15:04", req.StartTime)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start time"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "รูปแบบเวลาเริ่มต้นไม่ถูกต้อง"})
 		return
 	}
 	endTime, err := time.Parse("15:04", req.EndTime)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end time"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "รูปแบบเวลาเริ่มต้นไม่ถูกต้อง"})
 		return
 	}
 	if req.SectionInFixed > req.Section {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "SectionInFixed cannot be greater than total Section"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "จำนวนกลุ่มเรียนย่อย (SectionInFixed) ต้องไม่มากกว่าจำนวนกลุ่มทั้งหมด (Section)"})
 		return
 	}
 
@@ -62,7 +62,7 @@ func CreateFixedCourse(c *gin.Context) {
 		LaboratoryID: req.LaboratoryID,
 	}
 	if err := config.DB().Create(&offeredCourse).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot create offered course"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้างข้อมูลรายวิชาที่เปิดสอนได้"})
 		return
 	}
 
@@ -77,8 +77,7 @@ func CreateFixedCourse(c *gin.Context) {
 	}
 	if err := config.DB().Create(&schedule).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Cannot create schedule",
-			"details": err.Error(),
+			"error": "ไม่สามารถสร้างตารางเรียนได้",
 		})
 		return
 	}
@@ -97,13 +96,13 @@ func CreateFixedCourse(c *gin.Context) {
 		ScheduleID:   schedule.ID,
 	}
 	if err := config.DB().Create(&timeFixed).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot create time fixed course"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้างข้อมูล TimeFix ได้"})
 		return
 	}
 
 	// Step 4: ส่ง response กลับ
 	c.JSON(http.StatusOK, gin.H{
-		"message":           "Fixed course created successfully",
+		"message":           "สร้างวิชาที่มาจากศูนย์บริการเรียบร้อยแล้ว",
 		"offered_course_id": offeredCourse.ID,
 		"schedule_id":       schedule.ID,
 		"time_fixed_course": timeFixed.ID,
