@@ -49,10 +49,19 @@ async function deleteConditionsByUser(userID: string) {
     .catch((e) => e.response);
 }
 
+//------------------ Schedules ------------------------------//
+async function getSchedulesBynameTable(nameTable: string) {
+  return await axios
+    .get(`${apiUrl}/schedules/${nameTable}`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 export {
   postCreateConditions,
   putUpdateConditions,
   getAllConditions,
   getConditionsByUserId,
   deleteConditionsByUser,
+  getSchedulesBynameTable,
 };
