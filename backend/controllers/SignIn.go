@@ -31,7 +31,7 @@ func SignInUser(c *gin.Context) {
 	if err := config.DB().Preload("Title").Preload("Position").Preload("Major").Preload("Role").
 		Where("username = ?", payload.Username).
 		First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "ไม่พบ Usermane นี้"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ไม่พบ Username นี้"})
 		return
 	}
 
