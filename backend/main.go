@@ -60,6 +60,9 @@ func main() {
 		///////////////////// TimeFixedCourses /////////////////////////
 		r.POST("/offered-courses/fixed", controllers.CreateFixedCourse)
 
+		///////////////////// Schedules /////////////////////////
+		r.GET("/schedules/:nameTable", controllers.GetScheduleByNameTable)
+
 		///////////////////// Get into dropdown /////////////////////////
 		r.GET("/course-type", controllers.GetTypeOfCourses)
 		r.GET("/all-title", controllers.GetAllTitles)
