@@ -57,6 +57,9 @@ func main() {
 		r.PUT("/update-teaching-assistants/:id", controllers.UpdateTeachingAssistant)
 		r.DELETE("/delete-teaching-assistants/:id", controllers.DeleteTeachingAssistant)
 
+		///////////////////// TimeFixedCourses /////////////////////////
+		r.POST("/offered-courses/fixed", controllers.CreateFixedCourse)
+
 		///////////////////// Get into dropdown /////////////////////////
 		r.GET("/course-type", controllers.GetTypeOfCourses)
 		r.GET("/all-title", controllers.GetAllTitles)
