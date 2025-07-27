@@ -175,7 +175,7 @@ export {
   deleteUser,//used
 
   getOpenCourses, //used
-  postCreateOfferedCourse, 
+  postCreateOfferedCourse, //used
 
   getTeachingAssistantsById, //used
   getAllTeachingAssistants, //used
