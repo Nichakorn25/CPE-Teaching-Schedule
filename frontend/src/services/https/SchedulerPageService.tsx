@@ -108,7 +108,7 @@ export {
   deleteConditionsByUser,
 
   upCreateOfferedCourse,
-  deleteOfferedCourse,
+  deleteOfferedCourse, //used
 
   getSchedulesBynameTable,
   getNameTable,

@@ -7,8 +7,11 @@ import { getOpenCourses } from "../../../services/https/AdminPageServices";
 import {
   OpenCourseInterface,
   MajorInterface,
+  DepartmentInterface,
 } from "../../../interfaces/Adminpage";
 import { getMajorOfDepathment } from "../../../services/https/GetService";
+import { deleteOfferedCourse } from "../../../services/https/SchedulerPageService";
+import Swal from "sweetalert2";
 
 const { Option } = Select;
 
@@ -25,9 +28,9 @@ const OfferedCoursespage: React.FC = () => {
   const [academicYear, setAcademicYear] = useState<number>(0);
   const [term, setTerm] = useState<number>(0);
   const [majors, setMajors] = useState<MajorInterface[]>([]);
-  const [departments, setDepartments] = useState<
-    { ID: number; DepartmentName: string }[]
-  >([]);
+  const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
+
+  const userID = Number(localStorage.getItem("user_id"));
 
   useEffect(() => {
     const year = localStorage.getItem("academicYear");
@@ -58,7 +61,6 @@ const OfferedCoursespage: React.FC = () => {
         const majorsData = res.data;
         setMajors(majorsData);
 
-        // ✅ แปลงคณะโดยไม่ hardcode และเรียงชื่อคณะตามตัวอักษร
         const uniqueDepartments = Array.from(
           new Map(
             majorsData.map((m: any) => [
@@ -95,7 +97,7 @@ const OfferedCoursespage: React.FC = () => {
 
       return matchesSearch && matchesMajor;
     })
-    .sort((a, b) => a.ID - b.ID); // ✅ เรียงตาม ID
+    .sort((a, b) => a.ID - b.ID); //เรียงตาม ID
 
   const columns: ColumnsType<OpenCourseInterface> = [
     {
@@ -168,6 +170,61 @@ const OfferedCoursespage: React.FC = () => {
       title: "จำนวนนักศึกษาต่อกลุ่มเรียน",
       dataIndex: "CapacityPer",
       key: "CapacityPer",
+    },
+    {
+      title: "จัดการ",
+      key: "actions",
+      render: (_text, record) => {
+        const userID = Number(localStorage.getItem("user_id")); // หรือใช้ useEffect preload ก็ได้
+        const canEdit = userID && record.TeacherID === userID;
+
+        if (!canEdit) {
+          return null; // 🔒 ไม่แสดงอะไรเลย
+        }
+
+        return (
+          <>
+            <Button
+              type="link"
+              onClick={() => {
+                window.location.href = `/open-course?id=${record.ID}`;
+              }}
+            >
+              แก้ไข
+            </Button>
+            <Button
+              danger
+              type="link"
+              onClick={async () => {
+                const result = await Swal.fire({
+                  title: `คุณต้องการลบรายวิชา "${record.Name}" หรือไม่?`,
+                  text: "หากลบแล้วต้องการเพิ่มรายวิชาที่เปิดสอน ให้ไปที่เมนู 'เพิ่มวิชาที่ต้องการสอน'",
+                  icon: "warning",
+                  showCancelButton: true,
+                  confirmButtonColor: "#d33",
+                  cancelButtonColor: "#3085d6",
+                  confirmButtonText: "ตกลง",
+                  cancelButtonText: "ยกเลิก",
+                });
+
+                if (result.isConfirmed) {
+                  const res = await deleteOfferedCourse(record.ID);
+                  if (res.status === 200) {
+                    setCourses((prev) =>
+                      prev.filter((c) => c.ID !== record.ID)
+                    );
+                    Swal.fire("ลบสำเร็จ!", "รายวิชาถูกลบแล้ว", "success");
+                  } else {
+                    Swal.fire("ผิดพลาด", "ไม่สามารถลบรายวิชาได้", "error");
+                  }
+                }
+              }}
+            >
+              ลบ
+            </Button>
+          </>
+        );
+      },
     },
   ];
 

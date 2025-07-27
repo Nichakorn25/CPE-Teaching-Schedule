@@ -27,6 +27,7 @@ type (
 		Name         string
 		Credit       string
 		TypeName     string
+		TeacherID    uint
 		Teacher      string
 		GroupInfos   []GroupInfo // รายละเอียดกลุ่ม (เฉพาะศูนย์บริการ) // จะรวมกลุ่มเรียนทั้งหมดของวิชานั้น
 		GroupTotal   uint        // จำนวนกลุ่มทั้งหมด
@@ -125,6 +126,7 @@ func GetOpenCourses(c *gin.Context) {
 			Name:         ac.EnglishName,
 			Credit:       credit,
 			TypeName:     ac.TypeOfCourses.TypeName,
+			TeacherID:	  oc.UserID,
 			Teacher:      teacher,
 			GroupInfos:   groupInfos,
 			GroupTotal:   groupTotal,

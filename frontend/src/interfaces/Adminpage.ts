@@ -101,6 +101,7 @@ export interface OpenCourseInterface {
   Name: string;
   Credit: string;
   TypeName: string;
+  TeacherID: number;
   Teacher: string;
   GroupInfos: {
     Room: string;
