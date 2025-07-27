@@ -29,3 +29,9 @@ export interface ConditionsRequestInterface {
   UserID: number;
   Conditions: ConditionInputInterface[];
 }
+
+export interface ScheduleIn {
+  DayOfWeek: string;   
+  StartTime: string;   
+  EndTime: string;     
+}

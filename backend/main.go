@@ -64,6 +64,9 @@ func main() {
 
 		///////////////////// Schedules /////////////////////////
 		r.GET("/schedules/:nameTable", controllers.GetScheduleByNameTable)
+		r.POST("/auto-generate-schedule", controllers.AutoGenerateSchedule)
+		r.GET("/unique-nametables", controllers.GetNameTable)
+		r.PUT("/up-schedule/:id", controllers.UpdateScheduleTime)
 
 		///////////////////// Get into dropdown /////////////////////////
 		r.GET("/course-type", controllers.GetTypeOfCourses)
