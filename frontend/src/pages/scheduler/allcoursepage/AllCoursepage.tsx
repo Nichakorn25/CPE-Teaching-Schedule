@@ -4,6 +4,7 @@ import { Button, Table, Input, Select, message, Modal } from 'antd';
 import { SearchOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
+
 const { Option } = Select;
 
 interface Course {
