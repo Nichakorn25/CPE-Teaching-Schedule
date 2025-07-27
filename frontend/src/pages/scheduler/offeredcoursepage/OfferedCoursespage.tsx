@@ -12,6 +12,7 @@ import {
 import { getMajorOfDepathment } from "../../../services/https/GetService";
 import { deleteOfferedCourse } from "../../../services/https/SchedulerPageService";
 import Swal from "sweetalert2";
+import { useNavigate } from "react-router-dom";
 
 const { Option } = Select;
 
@@ -29,8 +30,7 @@ const OfferedCoursespage: React.FC = () => {
   const [term, setTerm] = useState<number>(0);
   const [majors, setMajors] = useState<MajorInterface[]>([]);
   const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
-
-  const userID = Number(localStorage.getItem("user_id"));
+  const navigate = useNavigate();
 
   useEffect(() => {
     const year = localStorage.getItem("academicYear");
@@ -179,22 +179,38 @@ const OfferedCoursespage: React.FC = () => {
         const canEdit = userID && record.TeacherID === userID;
 
         if (!canEdit) {
-          return null; // 🔒 ไม่แสดงอะไรเลย
+          return null; //ไม่แสดงอะไรเลย
         }
 
         return (
           <>
             <Button
-              type="link"
-              onClick={() => {
-                window.location.href = `/open-course?id=${record.ID}`;
+              size="small"
+              style={{
+                backgroundColor: "#F26522",
+                borderColor: "#F26522",
+                color: "white",
+                fontSize: "9px",
+                padding: "1px 4px",
+                height: "20px",
+                lineHeight: "18px"
               }}
+              onClick={() => navigate(`/open-course?id=${record.ID}`)}
+              title="แก้ไขข้อมูล"
             >
               แก้ไข
             </Button>
             <Button
-              danger
-              type="link"
+              size="small"
+              style={{
+                backgroundColor: "#ff4d4f",
+                borderColor: "#ff4d4f",
+                color: "white",
+                fontSize: "9px",
+                padding: "1px 4px",
+                height: "20px",
+                lineHeight: "18px"
+              }}
               onClick={async () => {
                 const result = await Swal.fire({
                   title: `คุณต้องการลบรายวิชา "${record.Name}" หรือไม่?`,
@@ -206,19 +222,17 @@ const OfferedCoursespage: React.FC = () => {
                   confirmButtonText: "ตกลง",
                   cancelButtonText: "ยกเลิก",
                 });
-
                 if (result.isConfirmed) {
                   const res = await deleteOfferedCourse(record.ID);
                   if (res.status === 200) {
-                    setCourses((prev) =>
-                      prev.filter((c) => c.ID !== record.ID)
-                    );
+                    setCourses((prev) => prev.filter((c) => c.ID !== record.ID));
                     Swal.fire("ลบสำเร็จ!", "รายวิชาถูกลบแล้ว", "success");
                   } else {
                     Swal.fire("ผิดพลาด", "ไม่สามารถลบรายวิชาได้", "error");
                   }
                 }
               }}
+              title="ลบข้อมูล"
             >
               ลบ
             </Button>
@@ -231,9 +245,37 @@ const OfferedCoursespage: React.FC = () => {
   return (
     <div>
       <h2>รายวิชาที่เปิดสอน</h2>
-      <div style={{ marginBottom: 16 }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "10px",
+          alignItems: "center",
+        }}
+      >
+        <span
+          style={{
+            fontSize: "12px",
+            color: "#666",
+            fontFamily: "Sarabun, sans-serif",
+          }}
+        >
+          รายการที่แสดง
+        </span>
         <Select
-          placeholder="เลือกคณะ"
+          value={pageSize.toString()}
+          style={{ width: 70, fontFamily: "Sarabun, sans-serif" }}
+          size="small"
+          onChange={(value) => setPageSize(parseInt(value))}
+        >
+          <Option value="5">5</Option>
+          <Option value="10">10</Option>
+          <Option value="20">20</Option>
+          <Option value="50">50</Option>
+        </Select>
+        <Select
+          placeholder="เลือกสำนักวิชา"
           style={{ width: 200, marginRight: 10 }}
           onChange={(value: number) => {
             setSelectedDepartmentID(value);
@@ -241,6 +283,7 @@ const OfferedCoursespage: React.FC = () => {
           }}
           value={selectedDepartmentID ?? undefined}
         >
+          <Option value="all">ทุกสำนักวิชา</Option>
           {departments.map((dep) => (
             <Option key={dep.ID} value={dep.ID}>
               {dep.DepartmentName}
@@ -248,7 +291,7 @@ const OfferedCoursespage: React.FC = () => {
           ))}
         </Select>
         <Select
-          placeholder="เลือกสาขา"
+          placeholder="เลือกสาขาวิชา"
           style={{ width: 200, marginRight: 10 }}
           onChange={(value: string) => setSelectedMajor(value)}
           value={selectedMajor}
@@ -265,7 +308,7 @@ const OfferedCoursespage: React.FC = () => {
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          style={{ width: 200 }}
+          style={{ width: 200, fontFamily: "Sarabun, sans-serif" }}
         />
       </div>
       <Table
