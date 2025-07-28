@@ -108,3 +108,4 @@ func CreateFixedCourse(c *gin.Context) {
 		"time_fixed_course": timeFixed.ID,
 	})
 }
+

@@ -16,10 +16,13 @@ import {
   LaboratoryInterface,
 } from "../../../interfaces/Adminpage";
 import Swal from "sweetalert2";
+import { upCreateOfferedCourse } from "../../../services/https/SchedulerPageService";
+import { useParams } from "react-router-dom";
 
 const { Option } = Select;
 
 const AddCoursepage: React.FC = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [curriculums, setCurriculums] = useState<CurriculumInterface[]>([]);
@@ -41,6 +44,31 @@ const AddCoursepage: React.FC = () => {
     if (semester) setTerm(parseInt(semester));
     if (uid) setUserID(parseInt(uid));
   }, []);
+
+  useEffect(() => {
+    if (id) {
+      const fetchExistingCourse = async () => {
+        const res = await getCoursebyid(Number(id));
+        if (res.status === 200) {
+          const course = res.data;
+          form.setFieldsValue({
+            curriculum: course.CurriculumID,
+            courseCode: course.ID,
+            courseNameTh: course.ThaiName,
+            courseNameEn: course.EnglishName,
+            credits: course.Credit?.Unit || 0,
+            labRoom: course.Laboratory?.ID || null,
+            groupCount: course.Section,
+            studentsPerGroup: course.Capacity,
+          });
+
+          // โหลดรายวิชาทั้งหมดในหลักสูตรเดียวกันเพื่อใช้ใน dropdown
+          await handleCurriculumChange(course.CurriculumID);
+        }
+      };
+      fetchExistingCourse();
+    }
+  }, [id]);
 
   useEffect(() => {
     const fetchLab = async () => {
@@ -97,15 +125,8 @@ const AddCoursepage: React.FC = () => {
   };
 
   const handleSubmit = async (values: any) => {
-    console.log("ค่าทั้งหมดในฟอร์ม: ", values);
-    console.log("ค่าที่เลือก courseCode:", values.courseCode);
-
-    if (userID === undefined) {
-      Swal.fire("ไม่พบข้อมูลผู้ใช้", "กรุณาเข้าสู่ระบบใหม่", "error");
-      return;
-    }
     const selectedCourse = courses.find((c) => c.ID === values.courseCode);
-    if (!selectedCourse) {
+    if (!selectedCourse || selectedCourse.ID === undefined) {
       Swal.fire("ไม่พบข้อมูลรายวิชา", "กรุณาเลือกรายวิชาอีกครั้ง", "error");
       return;
     }
@@ -116,31 +137,25 @@ const AddCoursepage: React.FC = () => {
       Section: values.groupCount,
       Capacity: values.studentsPerGroup,
       UserID: userID!,
-      AllCoursesID: selectedCourse.ID,
+      AllCoursesID: selectedCourse.ID, 
       LaboratoryID: values.labRoom || undefined,
     };
-    
-    console.log("payload1 : ", payload);
 
-    const res = await postCreateOfferedCourse(payload);
-    console.log("payload : ", res);
-    if (res.status === 200 || res.status === 201) {
-      Swal.fire({
-        icon: "success",
-        title: "เพิ่มวิชาสำเร็จ",
-        html: `เพิ่มวิชา <b>${selectedCourse.CourseName}</b><br>เป็นรายวิชาที่เปิดสอนใน <b>เทอม ${term} ปีการศึกษา ${academicYear}</b> เรียบร้อยแล้ว`,
-        confirmButtonColor: "#F26522",
-      }).then(() => {
-        navigate("/open-course");
-      });
-      form.resetFields();
+    let res;
+    if (id) {
+      res = await upCreateOfferedCourse(Number(id), payload); // PUT
     } else {
-      Swal.fire({
-        icon: "error",
-        title: "เกิดข้อผิดพลาด",
-        text: "ไม่สามารถเพิ่มรายวิชาได้ กรุณาลองใหม่",
-        confirmButtonColor: "#F26522",
-      });
+      res = await postCreateOfferedCourse(payload); // POST
+    }
+
+    if (res.status === 200 || res.status === 201) {
+      Swal.fire(
+        "สำเร็จ",
+        id ? "แก้ไขข้อมูลแล้ว" : "เพิ่มรายวิชาแล้ว",
+        "success"
+      ).then(() => navigate("/all-open-course"));
+    } else {
+      Swal.fire("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้", "error");
     }
   };
 

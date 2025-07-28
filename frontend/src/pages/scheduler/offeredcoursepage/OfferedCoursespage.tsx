@@ -195,7 +195,7 @@ const OfferedCoursespage: React.FC = () => {
                 height: "20px",
                 lineHeight: "18px"
               }}
-              onClick={() => navigate(`/open-course?id=${record.ID}`)}
+              onClick={() => navigate(`/add-open-course/${record.ID}`)}
               title="แก้ไขข้อมูล"
             >
               แก้ไข

@@ -70,7 +70,7 @@ const Sidebar: React.FC = () => {
       id: 5,
       label: "เพิ่มวิชาที่ต้องการสอน",
       icon: "🧑‍🏫",
-      path: "add-open-course",
+      path: "/add-open-course",
       roles: ["Scheduler", "Instructor"],
     },
     {

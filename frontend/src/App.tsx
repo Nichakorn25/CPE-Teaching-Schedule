@@ -61,6 +61,7 @@ const App: React.FC = () => {
           <Route path="add-condition-page" element={<MainLayout><AddConditionpage /></MainLayout>} />
           <Route path="EditConditionpage" element={<MainLayout><EditConditionpage /></MainLayout>} />
           <Route path="add-open-course" element={<MainLayout><AddCoursepage /></MainLayout>} />
+          <Route path="add-open-course/:id" element={<MainLayout><AddCoursepage /></MainLayout>} />
       </Routes>
     </Router>
   );
