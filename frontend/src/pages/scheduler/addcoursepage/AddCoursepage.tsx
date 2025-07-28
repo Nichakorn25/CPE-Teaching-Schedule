@@ -151,7 +151,7 @@ const AddCoursepage: React.FC = () => {
     if (res.status === 200 || res.status === 201) {
       Swal.fire(
         "สำเร็จ",
-        id ? "แก้ไขข้อมูลแล้ว" : "เพิ่มรายวิชาแล้ว",
+        id ? `แก้ไขข้อมูลวิชา <b>${selectedCourse.CourseName}</b>  แล้ว` : `เพิ่มวิชา <b>${selectedCourse.CourseName}</b><br>เป็นรายวิชาที่เปิดสอนใน <b>เทอม ${term} ปีการศึกษา ${academicYear}</b> เรียบร้อยแล้ว`,
         "success"
       ).then(() => navigate("/all-open-course"));
     } else {
