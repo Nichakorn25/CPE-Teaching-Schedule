@@ -137,7 +137,7 @@ const AddCoursepage: React.FC = () => {
       Section: values.groupCount,
       Capacity: values.studentsPerGroup,
       UserID: userID!,
-      AllCoursesID: selectedCourse.ID, 
+      AllCoursesID: selectedCourse.ID,
       LaboratoryID: values.labRoom || undefined,
     };
 
@@ -148,10 +148,14 @@ const AddCoursepage: React.FC = () => {
       res = await postCreateOfferedCourse(payload); // POST
     }
 
+    console.log("post: ", res);
+
     if (res.status === 200 || res.status === 201) {
       Swal.fire(
         "สำเร็จ",
-        id ? `แก้ไขข้อมูลวิชา <b>${selectedCourse.CourseName}</b>  แล้ว` : `เพิ่มวิชา <b>${selectedCourse.CourseName}</b><br>เป็นรายวิชาที่เปิดสอนใน <b>เทอม ${term} ปีการศึกษา ${academicYear}</b> เรียบร้อยแล้ว`,
+        id
+          ? `แก้ไขข้อมูลวิชา <b>${selectedCourse.CourseName}</b>  แล้ว`
+          : `เพิ่มวิชา <b>${selectedCourse.CourseName}</b><br>เป็นรายวิชาที่เปิดสอนใน <b>เทอม ${term} ปีการศึกษา ${academicYear}</b> เรียบร้อยแล้ว`,
         "success"
       ).then(() => navigate("/all-open-course"));
     } else {
@@ -422,7 +426,6 @@ const AddCoursepage: React.FC = () => {
                 borderColor: "#F26522",
                 minWidth: "100px",
               }}
-              onClick={() => form.submit()}
             >
               บันทึก
             </Button>

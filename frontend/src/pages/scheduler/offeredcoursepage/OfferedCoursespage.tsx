@@ -44,7 +44,15 @@ const OfferedCoursespage: React.FC = () => {
       setLoading(true);
       const response = await getOpenCourses();
       if (response.status === 200 && Array.isArray(response.data?.data)) {
-        setCourses(response.data.data);
+        const uniqueCourses = Array.from(
+          new Map(
+            (response.data.data as OpenCourseInterface[]).map((item) => [
+              item.ID,
+              item,
+            ])
+          ).values()
+        );
+        setCourses(uniqueCourses);
       } else {
         console.error("ไม่สามารถโหลดรายวิชา:", response);
       }
@@ -159,7 +167,9 @@ const OfferedCoursespage: React.FC = () => {
       dataIndex: "GroupInfos",
       key: "GroupInfos",
       render: (groups) =>
-        groups.map((g: any, index: number) => <div key={index}>{g.Time}</div>),
+        groups.map((g: any, index: number) => (
+          <div key={index}>{g.TimeSpan}</div>
+        )),
     },
     {
       title: "จำนวนกลุ่ม",
@@ -193,7 +203,7 @@ const OfferedCoursespage: React.FC = () => {
                 fontSize: "9px",
                 padding: "1px 4px",
                 height: "20px",
-                lineHeight: "18px"
+                lineHeight: "18px",
               }}
               onClick={() => navigate(`/add-open-course/${record.ID}`)}
               title="แก้ไขข้อมูล"
@@ -209,7 +219,7 @@ const OfferedCoursespage: React.FC = () => {
                 fontSize: "9px",
                 padding: "1px 4px",
                 height: "20px",
-                lineHeight: "18px"
+                lineHeight: "18px",
               }}
               onClick={async () => {
                 const result = await Swal.fire({
@@ -225,7 +235,9 @@ const OfferedCoursespage: React.FC = () => {
                 if (result.isConfirmed) {
                   const res = await deleteOfferedCourse(record.ID);
                   if (res.status === 200) {
-                    setCourses((prev) => prev.filter((c) => c.ID !== record.ID));
+                    setCourses((prev) =>
+                      prev.filter((c) => c.ID !== record.ID)
+                    );
                     Swal.fire("ลบสำเร็จ!", "รายวิชาถูกลบแล้ว", "success");
                   } else {
                     Swal.fire("ผิดพลาด", "ไม่สามารถลบรายวิชาได้", "error");
@@ -312,7 +324,7 @@ const OfferedCoursespage: React.FC = () => {
         />
       </div>
       <Table
-        dataSource={filteredCourses.map((c, i) => ({ key: i, ...c }))}
+        dataSource={filteredCourses.map((c) => ({ key: c.ID, ...c }))}
         columns={columns}
         loading={loading}
         pagination={{

@@ -170,19 +170,19 @@ const ManageTeacher: React.FC = () => {
 
   const validateForm = () => {
     const {
-      Username, Password, Firstname, Lastname, Image, Email, 
+      Username, Password, Firstname, Lastname, Image, Address, Email, 
       PhoneNumber, TitleID, PositionID, RoleID
     } = formData;
 
     if (id) {
       // สำหรับการแก้ไข - ไม่ต้องตรวจสอบรหัสผ่าน
-      return Username && Firstname && Lastname && Email && 
+      return Username && Firstname && Lastname && Email && Address &&
              PhoneNumber && TitleID !== 0 && PositionID !== 0 && RoleID !== 0;
     }
 
     // สำหรับการเพิ่มใหม่
     return Username && Password && Firstname && Lastname && Image && 
-           Email && PhoneNumber && TitleID !== 0 && PositionID !== 0 && RoleID !== 0;
+           Email && Address && PhoneNumber && TitleID !== 0 && PositionID !== 0 && RoleID !== 0;
   };
 
   const handleUpdate = async () => {
@@ -477,6 +477,17 @@ const ManageTeacher: React.FC = () => {
                     placeholder="กรอกเบอร์โทรศัพท์"
                     value={formData.PhoneNumber}
                     onChange={(e) => handleChange('PhoneNumber', e.target.value)}
+                    size="large"
+                  />
+                </Form.Item>
+              </Col>
+               <Col xs={24} md={12}>
+                <Form.Item label="ที่อยู่" required>
+                  <Input
+                    type="address"
+                    placeholder="อาคารบริการ 1 ชั้น 4 ห้อง CPE01"
+                    value={formData.Address}
+                    onChange={(e) => handleChange('Address', e.target.value)}
                     size="large"
                   />
                 </Form.Item>
