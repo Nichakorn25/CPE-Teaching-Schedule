@@ -118,6 +118,7 @@ export {
   deleteOfferedCourse, //used
 
   getSchedulesBynameTable,
+  getSchedulesBynameTableid,
   getNameTable,
   postAutoGenerateSchedule,
   putupdateScheduleTime,

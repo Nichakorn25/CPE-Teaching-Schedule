@@ -13,7 +13,7 @@ import {
   getAllTeachers,
   getAllCourses,
 } from "../../services/https/AdminPageServices";
-import { getSchedulesBynameTable } from "../../services/https/SchedulerPageService";
+import { getSchedulesBynameTableid } from "../../services/https/SchedulerPageService";
 import { UserProfile, CourseIn } from "../../interfaces/Dash";
 import "./Dash.css";
 
@@ -104,11 +104,11 @@ const Dashboard: React.FC = () => {
 ////////////////////////////////////////อย่าลืมว่า USERID ด้วย
   const [allSchedule, setallSchedule] = useState<any[]>([]);
   const getSchedules = async (nameTable: string) => {
-    let res = await getSchedulesBynameTable(nameTable);
-    console.log("sdfghjkl;",res)
+    const user_id = localStorage.getItem("user_id");
+    let res = await getSchedulesBynameTableid(nameTable,String(user_id));
     if (res && Array.isArray(res.data)) {
-      // console.log("sdfghjkl;",res)
       setallSchedule(res.data);
+      console.log("sdfghjkl;",res.data)
     }
   };
 

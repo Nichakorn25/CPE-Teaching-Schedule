@@ -362,22 +362,6 @@ const Sidebar: React.FC = () => {
             backgroundColor: "#fafafa",
           }}
         >
-          {isOpen && (
-            <div
-              style={{
-                marginBottom: "12px",
-                padding: "8px",
-                fontSize: "12px",
-                color: "#666",
-                textAlign: "center",
-                borderRadius: "4px",
-                backgroundColor: "white",
-              }}
-            >
-              {localStorage.getItem("first_name")}{" "}
-              {localStorage.getItem("last_name")}
-            </div>
-          )}
 
           <button
             onClick={handleLogout}
@@ -396,6 +380,7 @@ const Sidebar: React.FC = () => {
               gap: isOpen ? "8px" : "0",
               transition: "all 0.2s ease",
               minHeight: "40px",
+              marginBottom: "10px",
             }}
             onMouseEnter={(e) =>
               (e.currentTarget.style.backgroundColor = "#5a6c7d")
