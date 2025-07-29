@@ -2548,7 +2548,7 @@ func SeedSchedules() {
 
 	schedules := []entity.Schedule{
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "อังคาร",
 				StartTime:        mustParseTime(layout, "09:00"), 
@@ -2556,7 +2556,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 2,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "ศุกร์",
 				StartTime:        mustParseTime(layout, "13:00"),
@@ -2564,7 +2564,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 3,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "พฤหัสบดี",
 				StartTime:        mustParseTime(layout, "14:00"),
@@ -2572,7 +2572,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 4,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "พฤหัสบดี",
 				StartTime:        mustParseTime(layout, "17:00"),
@@ -2580,7 +2580,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 5,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    2,
 				DayOfWeek:        "ศุกร์",
 				StartTime:        mustParseTime(layout, "09:00"),
@@ -2588,7 +2588,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 6,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "ศุกร์",
 				StartTime:        mustParseTime(layout, "13:00"),
@@ -2596,7 +2596,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 7,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "พุธ",
 				StartTime:        mustParseTime(layout, "15:00"),
@@ -2604,7 +2604,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 8,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    2,
 				DayOfWeek:        "อังคาร",
 				StartTime:        mustParseTime(layout, "09:00"),
@@ -2612,7 +2612,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 9,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "พุธ",
 				StartTime:        mustParseTime(layout, "13:00"),
@@ -2620,7 +2620,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 10,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "ศุกร์",
 				StartTime:        mustParseTime(layout, "15:00"),
@@ -2628,7 +2628,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 11,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    2,
 				DayOfWeek:        "พฤหัสบดี",
 				StartTime:        mustParseTime(layout, "08:00"),
@@ -2636,7 +2636,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 12,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "จันทร์",
 				StartTime:        mustParseTime(layout, "13:00"),
@@ -2644,7 +2644,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 13,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "อังคาร",
 				StartTime:        mustParseTime(layout, "14:00"),
@@ -2652,7 +2652,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 14,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "จันทร์",
 				StartTime:        mustParseTime(layout, "15:00"),
@@ -2660,7 +2660,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 15,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "ศุกร์",
 				StartTime:        mustParseTime(layout, "16:00"),
@@ -2668,7 +2668,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 16,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "พุธ",
 				StartTime:        mustParseTime(layout, "17:00"),
@@ -2676,7 +2676,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 17,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "จันทร์",
 				StartTime:        mustParseTime(layout, "18:00"),
@@ -2684,7 +2684,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 18,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "พฤหัสบดี",
 				StartTime:        mustParseTime(layout, "19:00"),
@@ -2692,7 +2692,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 19,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    2,
 				DayOfWeek:        "พฤหัสบดี",
 				StartTime:        mustParseTime(layout, "09:00"),
@@ -2700,7 +2700,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 20,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "พุธ",
 				StartTime:        mustParseTime(layout, "10:00"),
@@ -2708,7 +2708,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 21,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "จันทร์",
 				StartTime:        mustParseTime(layout, "11:00"),
@@ -2716,7 +2716,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 22,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "พุธ",
 				StartTime:        mustParseTime(layout, "17:30"),
@@ -2724,7 +2724,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 23,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    1,
 				DayOfWeek:        "ศุกร์",
 				StartTime:        mustParseTime(layout, "13:00"),
@@ -2732,7 +2732,7 @@ func SeedSchedules() {
 				OfferedCoursesID: 24,
 			},
 			{
-				NameTable:        "ตารางเรียนปี 2567 เทอม 1",
+				NameTable:        "ปีการศึกษา 2567 เทอม 1",
 				SectionNumber:    10,
 				DayOfWeek:        "พฤหัสบดี",
 				StartTime:        mustParseTime(layout, "13:00"),
