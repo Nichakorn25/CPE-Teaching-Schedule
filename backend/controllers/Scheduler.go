@@ -93,7 +93,7 @@ func AutoGenerateSchedule(c *gin.Context) {
 					!isSlotTakenOrTeacherConflict(dayName, start, end, schedules, course.UserID) {
 
 					s := entity.Schedule{
-						NameTable:        fmt.Sprintf("year%s_term%s", year, term),
+						NameTable:        fmt.Sprintf("ปีการศึกษา %s เทอม %s", year, term),
 						SectionNumber:    course.Section,
 						DayOfWeek:        dayName,
 						StartTime:        start,
@@ -177,9 +177,9 @@ func UpdateScheduleTime(c *gin.Context) {
 	id := c.Param("id")
 
 	var input struct {
-		DayOfWeek string    
-		StartTime time.Time 
-		EndTime   time.Time 
+		DayOfWeek string
+		StartTime time.Time
+		EndTime   time.Time
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
