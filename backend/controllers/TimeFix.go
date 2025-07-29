@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -68,12 +69,12 @@ func CreateFixedCourse(c *gin.Context) {
 
 	// Step 2: สร้าง Schedule โดยผูกกับ OfferedCoursesID
 	schedule := entity.Schedule{
-		NameTable:        req.NameTable,
+		NameTable:        fmt.Sprintf("ปีการศึกษา %d เทอม %d", req.Year, req.Term),
 		SectionNumber:    req.Section,
 		DayOfWeek:        req.DayOfWeek,
 		StartTime:        startTime,
 		EndTime:          endTime,
-		OfferedCoursesID: offeredCourse.ID, // ✅ ใส่ FK ให้ตรงเลย
+		OfferedCoursesID: offeredCourse.ID,
 	}
 	if err := config.DB().Create(&schedule).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
