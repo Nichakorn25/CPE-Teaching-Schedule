@@ -69,7 +69,6 @@ func GetOpenCourses(c *gin.Context) {
 		Preload("AllCourses.Curriculum.Major").
 		Preload("AllCourses.Curriculum.Major.Department").
 		Preload("AllCourses.TypeOfCourses").
-		Preload("AllCourses.TimeFixedCourses").
 		Order("year, term, all_courses_id")
 
 	if y, err := strconv.Atoi(yearQ); err == nil && y > 0 {
@@ -95,20 +94,18 @@ func GetOpenCourses(c *gin.Context) {
 
 	for _, oc := range offered {
 		ac := oc.AllCourses
-
-		credit := fmt.Sprintf("%d(%d‑%d‑%d)",
-			ac.Credit.Unit, ac.Credit.Lecture, ac.Credit.Lab, ac.Credit.Self)
-
-		teacher := fmt.Sprintf("%s%s %s",
-			oc.User.Title.Title, oc.User.Firstname, oc.User.Lastname)
-
+		credit := fmt.Sprintf("%d(%d‑%d‑%d)", ac.Credit.Unit, ac.Credit.Lecture, ac.Credit.Lab, ac.Credit.Self)
+		teacher := fmt.Sprintf("%s%s %s", oc.User.Title.Title, oc.User.Firstname, oc.User.Lastname)
 		remark := ac.TypeOfCourses.TypeName
+
 		groupInfos := make([]GroupInfo, 0)
 		groupTotal := oc.Section
 
 		if oc.IsFixCourses {
-			for _, tf := range ac.TimeFixedCourses {
-				if tf.Year == oc.Year && tf.Term == oc.Term {
+			var tfcs []entity.TimeFixedCourses
+			if err := config.DB().Where("all_courses_id = ? AND year = ? AND term = ?", oc.AllCoursesID, oc.Year, oc.Term).
+				Find(&tfcs).Error; err == nil {
+				for _, tf := range tfcs {
 					groupInfos = append(groupInfos, GroupInfo{
 						Group: tf.Section,
 						Room:  tf.RoomFix,
@@ -116,6 +113,20 @@ func GetOpenCourses(c *gin.Context) {
 						TimeSpan: fmt.Sprintf("%s‑%s",
 							tf.StartTime.Format("15:04"),
 							tf.EndTime.Format("15:04")),
+					})
+				}
+			}
+		} else {
+			var schedules []entity.Schedule
+			if err := config.DB().Where("offered_courses_id = ?", oc.ID).Find(&schedules).Error; err == nil {
+				for _, sched := range schedules {
+					groupInfos = append(groupInfos, GroupInfo{
+						Group: sched.SectionNumber,
+						Room:  "", 
+						Day:   sched.DayOfWeek,
+						TimeSpan: fmt.Sprintf("%s‑%s",
+							sched.StartTime.Format("15:04"),
+							sched.EndTime.Format("15:04")),
 					})
 				}
 			}
