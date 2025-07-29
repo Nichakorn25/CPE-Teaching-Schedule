@@ -8,7 +8,12 @@ import {
   ChevronRight,
   User,
 } from "lucide-react";
-import { getUserById, getAllTeachers, getAllCourses } from "../../services/https/AdminPageServices";
+import {
+  getUserById,
+  getAllTeachers,
+  getAllCourses,
+} from "../../services/https/AdminPageServices";
+import { getSchedulesBynameTable } from "../../services/https/SchedulerPageService";
 import { UserProfile, CourseIn } from "../../interfaces/Dash";
 import "./Dash.css";
 
@@ -60,9 +65,9 @@ const Dashboard: React.FC = () => {
     try {
       const userData = await getUserById(user_id);
       setUserid(userData.data);
-      console.log("User data:", userData.data);
+      console.log("ข้อมูลผู้ใช้งาน:", userData.data);
     } catch (error) {
-      console.error("Error fetching user data:", error);
+      console.error("ไม่สามารถดึงข้อมูลผู้ใช้ได้:", error);
     }
   }
 
@@ -71,7 +76,7 @@ const Dashboard: React.FC = () => {
     let res = await getAllTeachers();
     if (res && Array.isArray(res.data)) {
       setallinstructor(res.data);
-    } 
+    }
   };
 
   const [allCourses, setallCourses] = useState<CourseIn[]>([]);
@@ -79,7 +84,7 @@ const Dashboard: React.FC = () => {
     let res = await getAllCourses();
     if (res && Array.isArray(res.data)) {
       setallCourses(res.data);
-    } 
+    }
   };
 
   useEffect(() => {
@@ -96,7 +101,26 @@ const Dashboard: React.FC = () => {
   const [term, setTerm] = useState(() => {
     return localStorage.getItem("term") || "";
   });
+////////////////////////////////////////อย่าลืมว่า USERID ด้วย
+  const [allSchedule, setallSchedule] = useState<any[]>([]);
+  const getSchedules = async (nameTable: string) => {
+    let res = await getSchedulesBynameTable(nameTable);
+    console.log("sdfghjkl;",res)
+    if (res && Array.isArray(res.data)) {
+      // console.log("sdfghjkl;",res)
+      setallSchedule(res.data);
+    }
+  };
 
+  useEffect(() => {
+    if (academicYear && term) {
+      const nameTable = `ปีการศึกษา ${academicYear} เทอม ${term}`;
+      console.log("fg",nameTable)
+      getSchedules(nameTable);
+    }
+  }, [academicYear, term]);
+
+  //////////////////////////////////////////////
   const [isEditing, setIsEditing] = useState(false);
 
   const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,7 +187,8 @@ const Dashboard: React.FC = () => {
   const data = currentRole ? dashboardData[currentRole] : null;
 
   const adminData = currentRole === "Admin" ? dashboardData.Admin : null;
-  const schedulerData = currentRole === "Scheduler" ? dashboardData.Scheduler : null;
+  const schedulerData =
+    currentRole === "Scheduler" ? dashboardData.Scheduler : null;
 
   // Calendar functions
   const getDaysInMonth = (date: Date): number => {
