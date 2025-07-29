@@ -53,7 +53,7 @@ func main() {
 		r.DELETE("/conditions-user/:userID", controllers.DeleteConditionsByUser)
 
 		///////////////////// TeachingAssistant /////////////////////////
-		r.GET("/teaching_assistants/:id", controllers.GetTeachingAssistantByID)
+		r.GET("/teaching-assistants/:id", controllers.GetTeachingAssistantByID)
 		r.GET("/all-teaching-assistants", controllers.GetAllTeachingAssistants)
 		r.POST("/create-teaching-assistants", controllers.CreateTeachingAssistant)
 		r.PUT("/update-teaching-assistants/:id", controllers.UpdateTeachingAssistant)
@@ -67,6 +67,10 @@ func main() {
 		r.POST("/auto-generate-schedule", controllers.AutoGenerateSchedule)
 		r.GET("/unique-nametables", controllers.GetNameTable)
 		r.PUT("/up-schedule/:id", controllers.UpdateScheduleTime)
+
+		///////////////////// SchedulesTeachingAssistant /////////////////////////
+		r.POST("/ScheduleTeachingAssistants", controllers.CreateScheduleTeachingAssistant)
+
 
 		///////////////////// Get into dropdown /////////////////////////
 		r.GET("/course-type", controllers.GetTypeOfCourses)

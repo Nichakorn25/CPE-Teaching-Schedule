@@ -119,7 +119,7 @@ async function postCreateOfferedCourse(data: OpenCourseInterface) {
 ///////////////////// TeachingAssistant /////////////////////////
 async function getTeachingAssistantsById(id: string) {
   return await axios
-    .get(`${apiUrl}/teaching_assistants/${id}`, requestOptions)
+    .get(`${apiUrl}/teaching-assistants/${id}`, requestOptions)
     .then((res) => res)
     .catch((e) => e.response);
 }
@@ -159,7 +159,12 @@ async function postCreateTimeFixedCourses(data: TimeFixedCoursesIn) {
     .then((res) => res)
     .catch((e) => e.response);
 }
-
+async function postCreateSchduleTeachingAssistant(data: TeachingAssistantInterface) {
+  return await axios
+    .post(`${apiUrl}/ScheduleTeachingAssistants`, data, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
 export {
   getCoursebyid, //used
   getAllCourses, //used
@@ -186,4 +191,6 @@ export {
   getTypeofCourse,//used
 
   postCreateTimeFixedCourses,
+
+  postCreateSchduleTeachingAssistant,
 };
