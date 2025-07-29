@@ -75,6 +75,13 @@ async function getLaboratory() {
         .then((res) => res)
         .catch((e) => e.response);
 }
+//------------------ Department ------------------------------//
+async function getAllDepartment() {
+    return await axios
+        .get(`${apiUrl}/all-department`, requestOptions)
+        .then((res) => res)
+        .catch((e) => e.response);
+}
 
 
 export {
