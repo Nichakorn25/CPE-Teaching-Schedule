@@ -26,6 +26,8 @@ type (
 		Code         string
 		Name         string
 		Credit       string
+		Major        string
+		Department   string
 		TypeName     string
 		Teacher      string
 		GroupInfos   []GroupInfo // รายละเอียดกลุ่ม (เฉพาะศูนย์บริการ) // จะรวมกลุ่มเรียนทั้งหมดของวิชานั้น
@@ -63,6 +65,8 @@ func GetOpenCourses(c *gin.Context) {
 		Model(&entity.OfferedCourses{}).
 		Preload("User.Title").
 		Preload("AllCourses.Credit").
+		Preload("AllCourses.Curriculum.Major").
+		Preload("AllCourses.Curriculum.Major.Department").
 		Preload("AllCourses.TypeOfCourses").
 		Preload("AllCourses.TimeFixedCourses").
 		Order("year, term, all_courses_id")
@@ -102,7 +106,6 @@ func GetOpenCourses(c *gin.Context) {
 		groupTotal := oc.Section
 
 		if oc.IsFixCourses {
-			remark = "วิชาจากศูนย์บริการ"
 			for _, tf := range ac.TimeFixedCourses {
 				if tf.Year == oc.Year && tf.Term == oc.Term {
 					groupInfos = append(groupInfos, GroupInfo{
@@ -124,6 +127,8 @@ func GetOpenCourses(c *gin.Context) {
 			Code:         ac.Code,
 			Name:         ac.EnglishName,
 			Credit:       credit,
+			Major:        ac.Curriculum.Major.MajorName,
+			Department:   ac.Curriculum.Major.Department.DepartmentName,
 			TypeName:     ac.TypeOfCourses.TypeName,
 			Teacher:      teacher,
 			GroupInfos:   groupInfos,
