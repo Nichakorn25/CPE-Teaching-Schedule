@@ -94,6 +94,7 @@ export interface MajorInterface {
 }
 
 export interface OpenCourseInterface {
+  Major: string;
   ID: number;
   Year: number;
   Term: number;
