@@ -71,7 +71,7 @@ func main() {
 		///////////////////// SchedulesTeachingAssistant /////////////////////////
 		r.POST("/ScheduleTeachingAssistants", controllers.CreateScheduleTeachingAssistant)
 
-
+		
 		///////////////////// Get into dropdown /////////////////////////
 		r.GET("/course-type", controllers.GetTypeOfCourses)
 		r.GET("/all-title", controllers.GetAllTitles)
@@ -81,6 +81,7 @@ func main() {
 		r.GET("/all-academic-years", controllers.GetAllAcademicYears)
 		r.GET("/all-curriculum", controllers.GetAllCurriculum)
 		r.GET("/all-laboratory", controllers.GetLaboratory)
+		r.GET("/all-department", controllers.GetAllDepartment)
 
 	}
 
