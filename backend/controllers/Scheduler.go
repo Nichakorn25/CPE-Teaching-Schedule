@@ -54,11 +54,11 @@ func AutoGenerateSchedule(c *gin.Context) {
 	config.DB().Where("year = ? AND term = ?", year, term).
 		Find(&fixedCourses)
 
-	config.DB().Where("name_table = ?", fmt.Sprintf("year%s_term%s", year, term)).Delete(&entity.Schedule{})
+	config.DB().Where("name_table = ?", fmt.Sprintf("ปีการศึกษา %s เทอม %s", year, term)).Delete(&entity.Schedule{})
 
 	for _, fixed := range fixedCourses {
 		schedule := entity.Schedule{
-			NameTable:        fmt.Sprintf("year%s_term%s", year, term),
+			NameTable:        fmt.Sprintf("ปีการศึกษา %s เทอม %s", year, term),
 			SectionNumber:    fixed.Section,
 			DayOfWeek:        fixed.DayOfWeek,
 			StartTime:        fixed.StartTime,
