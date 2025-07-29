@@ -108,8 +108,6 @@ const OfferedCoursespage: React.FC = () => {
       console.log("Match major result : ",matchesMajor)
       
       return matchesSearch && matchesMajor;
-
-   
     })
     .sort((a, b) => a.ID - b.ID);
 
@@ -314,7 +312,7 @@ const OfferedCoursespage: React.FC = () => {
           onChange={(value: string) => setSelectedMajor(value)}
           value={selectedMajor}
         >
-          <Option value="all">ทุกสาขา</Option>
+          <Option value="all">ทุกสาขาวิชา</Option>
           {filteredMajors.map((major) => (
             <Option key={major.ID} value={major.MajorName}>
               {major.MajorName}
