@@ -64,6 +64,7 @@ func main() {
 
 		///////////////////// Schedules /////////////////////////
 		r.GET("/schedules/:nameTable", controllers.GetScheduleByNameTable)
+		r.GET("/schedules/:nameTable/:userID", controllers.GetScheduleByNameTableAndUserID)
 		r.POST("/auto-generate-schedule", controllers.AutoGenerateSchedule)
 		r.GET("/unique-nametables", controllers.GetNameTable)
 		r.PUT("/up-schedule/:id", controllers.UpdateScheduleTime)
