@@ -505,3 +505,9 @@
   color: #555;
   cursor: not-allowed;
 }
+
+.schedule-past {
+  color: gray;
+  /* หรือถ้าต้องการเปลี่ยน background: */
+  /* background-color: #f0f0f0; */
+}
