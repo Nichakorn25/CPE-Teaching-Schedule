@@ -43,6 +43,8 @@ const OfferedCoursespage: React.FC = () => {
     const fetchCourses = async () => {
       setLoading(true);
       const response = await getOpenCourses();
+      console.log("getopencourse : ", response);
+
       if (response.status === 200 && Array.isArray(response.data?.data)) {
         const uniqueCourses = Array.from(
           new Map(
@@ -101,11 +103,15 @@ const OfferedCoursespage: React.FC = () => {
         course.Name?.toLowerCase().includes(searchText.toLowerCase());
 
       const matchesMajor =
-        selectedMajor === "all" || course.Code?.startsWith(selectedMajor);
+        selectedMajor === "all" || course.Major === selectedMajor;
 
+      console.log("Match major result : ",matchesMajor)
+      
       return matchesSearch && matchesMajor;
+
+   
     })
-    .sort((a, b) => a.ID - b.ID); //เรียงตาม ID
+    .sort((a, b) => a.ID - b.ID);
 
   const columns: ColumnsType<OpenCourseInterface> = [
     {
@@ -310,11 +316,12 @@ const OfferedCoursespage: React.FC = () => {
         >
           <Option value="all">ทุกสาขา</Option>
           {filteredMajors.map((major) => (
-            <Option key={major.ID} value={major.ID}>
+            <Option key={major.ID} value={major.MajorName}>
               {major.MajorName}
             </Option>
           ))}
         </Select>
+
         <Input
           placeholder="ค้นหา..."
           prefix={<SearchOutlined />}
