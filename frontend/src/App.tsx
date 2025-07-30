@@ -47,6 +47,7 @@ const App: React.FC = () => {
           <Route path="manage-course" element={<MainLayout><ManageCourse /></MainLayout>} />
           <Route path="manage-course/:id" element={<MainLayout><ManageCourse /></MainLayout>} />
           <Route path="manage-cescourse" element={<MainLayout><ManageCesCourse /></MainLayout>} />
+          <Route path="manage-cescourse/:id" element={<MainLayout><ManageCesCourse /></MainLayout>} />
           <Route path="manage-assistance" element={<MainLayout><ManageAssistance /></MainLayout>} />
           <Route path="manage-assistance/:id" element={<MainLayout><ManageAssistance /></MainLayout>} />
 

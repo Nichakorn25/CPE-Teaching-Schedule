@@ -46,18 +46,40 @@ const OfferedCoursespage: React.FC = () => {
       console.log("getopencourse : ", response);
 
       if (response.status === 200 && Array.isArray(response.data?.data)) {
-        const uniqueCourses = Array.from(
-          new Map(
-            (response.data.data as OpenCourseInterface[]).map((item) => [
-              item.ID,
-              item,
-            ])
-          ).values()
-        );
-        setCourses(uniqueCourses);
+        const allCourses = response.data.data as OpenCourseInterface[];
+
+       const grouped = allCourses.reduce((acc, course) => {
+  const key = `${course.Code}-${course.Credit}-${course.TypeName}-${course.Major}-${course.Teacher}`;
+  const existing = acc.get(key);
+
+  if (existing) {
+    const merged = [...existing.GroupInfos, ...course.GroupInfos];
+
+    // 🔁 กำจัดรายการซ้ำโดยดูจาก combination ของ Room+Group+Day+TimeSpan
+    const deduped = Array.from(
+      new Map(
+        merged.map((g) => [
+          `${g.Room}-${g.Group}-${g.Day}-${g.TimeSpan}`,
+          g,
+        ])
+      ).values()
+    );
+
+    existing.GroupInfos = deduped;
+  } else {
+    acc.set(key, { ...course, GroupInfos: [...course.GroupInfos] });
+  }
+
+  return acc;
+}, new Map<string, OpenCourseInterface>());
+
+
+        const groupedCourses = Array.from(grouped.values());
+        setCourses(groupedCourses);
       } else {
         console.error("ไม่สามารถโหลดรายวิชา:", response);
       }
+
       setLoading(false);
     };
 
@@ -105,8 +127,8 @@ const OfferedCoursespage: React.FC = () => {
       const matchesMajor =
         selectedMajor === "all" || course.Major === selectedMajor;
 
-      console.log("Match major result : ",matchesMajor)
-      
+      console.log("Match major result : ", matchesMajor);
+
       return matchesSearch && matchesMajor;
     })
     .sort((a, b) => a.ID - b.ID);
@@ -196,6 +218,8 @@ const OfferedCoursespage: React.FC = () => {
           return null; //ไม่แสดงอะไรเลย
         }
 
+        const isCesCourse = record.IsFixCourses === true;
+
         return (
           <>
             <Button
@@ -209,7 +233,12 @@ const OfferedCoursespage: React.FC = () => {
                 height: "20px",
                 lineHeight: "18px",
               }}
-              onClick={() => navigate(`/add-open-course/${record.ID}`)}
+              onClick={() => {
+                const targetPath = isCesCourse
+                  ? `/manage-cescourse/${record.ID + 1}`
+                  : `/add-open-course/${record.ID}`;
+                navigate(targetPath);
+              }}
               title="แก้ไขข้อมูล"
             >
               แก้ไข

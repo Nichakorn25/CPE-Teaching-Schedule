@@ -105,6 +105,7 @@ export interface OpenCourseInterface {
   TeacherID: number;
   Teacher: string;
   GroupInfos: {
+    TimeSpan: string;
     Room: string;
     Group: string;
     Day: string;
