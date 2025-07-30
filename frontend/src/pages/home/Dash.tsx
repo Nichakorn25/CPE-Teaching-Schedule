@@ -13,32 +13,16 @@ import {
   getAllTeachers,
   getAllCourses,
 } from "../../services/https/AdminPageServices";
+import { getOffered } from "../../services/https/GetService";
 import { getSchedulesBynameTableid } from "../../services/https/SchedulerPageService";
 import {
   UserProfile,
   CourseIn,
   ScheduleInterface,
   ScheduleCardProps,
+  StatCardProps,
 } from "../../interfaces/Dash";
 import "./Dash.css";
-
-interface DashboardData {
-  Admin: {
-    totalUsers: number;
-    totalCourses: number;
-    activeTermCourses: number;
-  };
-  Scheduler: {
-    activeTermCourses: number;
-  };
-}
-
-interface StatCardProps {
-  title: string;
-  value: number;
-  icon: React.ReactNode;
-  delay: number;
-}
 
 const Dashboard: React.FC = () => {
   const curRole = localStorage.getItem("role");
@@ -58,6 +42,16 @@ const Dashboard: React.FC = () => {
     }
   }
 
+  ////////////////////////////////////////// global
+  const [academicYear, setAcademicYear] = useState(() => {
+    return localStorage.getItem("academicYear") || "";
+  });
+
+  const [term, setTerm] = useState(() => {
+    return localStorage.getItem("term") || "";
+  });
+  //////////////////////////////////////////
+
   const [allinstructor, setallinstructor] = useState<UserProfile[]>([]);
   const getallinstructor = async () => {
     let res = await getAllTeachers();
@@ -74,20 +68,27 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const [count, setCount] = useState<number>(0);
+
+  const getgetOffered = async (data: { year: string; term: string }) => {
+    let res = await getOffered(data);
+    if (res && typeof res.data?.count === "number") {
+      setCount(res.data.count);
+    }
+  };
+  
+  useEffect(() => {
+    if (academicYear && term) {
+      getgetOffered({ year: academicYear, term });
+    }
+  }, [academicYear, term]);
+
   useEffect(() => {
     getallinstructor();
     getallCourses();
     fetchUser();
   }, []);
 
-  ////////////////////////////////////////// global
-  const [academicYear, setAcademicYear] = useState(() => {
-    return localStorage.getItem("academicYear") || "";
-  });
-
-  const [term, setTerm] = useState(() => {
-    return localStorage.getItem("term") || "";
-  });
   ////////////////////////////////////////อย่าลืมว่า USERID ด้วย
   useEffect(() => {
     if (academicYear && term) {
@@ -102,7 +103,6 @@ const Dashboard: React.FC = () => {
     let res = await getSchedulesBynameTableid(nameTable, String(user_id));
     if (res && Array.isArray(res.data)) {
       setallSchedule(res.data);
-      console.log("sdfghjkl;", res.data);
     }
   };
 
@@ -167,7 +167,6 @@ const Dashboard: React.FC = () => {
   };
 
   const displaySchedule = mapToSchedule(todaySchedule); // แสดง
-  console.log("hj", displaySchedule);
 
   ////////////////////////////////////////////// global
   const [isEditing, setIsEditing] = useState(false);
@@ -190,29 +189,9 @@ const Dashboard: React.FC = () => {
     setIsEditing(true);
   };
 
-  ///////////////////////////////// ด้านบนแก้แล้ว
+  ///////////////////////////////// ด้านบนแก้แล้ว ////////////////////////////////////////////--------
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
-  const dashboardData: DashboardData = {
-    Admin: {
-      totalUsers: 1247,
-      totalCourses: 89,
-      activeTermCourses: 34,
-    },
-    Scheduler: {
-      activeTermCourses: 28,
-    },
-  };
-
-  ////////////////////////////////////////////   dash-role
-
-  const data = currentRole ? dashboardData[currentRole] : null;
-
-  const adminData = currentRole === "Admin" ? dashboardData.Admin : null;
-  const schedulerData =
-    currentRole === "Scheduler" ? dashboardData.Scheduler : null;
-
-  // Calendar functions
   const getDaysInMonth = (date: Date): number => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
@@ -242,7 +221,7 @@ const Dashboard: React.FC = () => {
       <div className="stat-card-content">
         <div className="stat-info">
           <p className="stat-title">{title}</p>
-          <h3 className="stat-value">{value.toLocaleString()}</h3>
+          <h3 className="stat-value">{value}</h3>
         </div>
         <div className="stat-icon-container">{icon}</div>
       </div>
@@ -381,7 +360,7 @@ const Dashboard: React.FC = () => {
               </div>
             )}
 
-            {currentRole === "Admin" && adminData && (
+            {currentRole === "Admin" && (
               <div className="flex flex-col md:flex-column gap-4">
                 <StatCard
                   title="จำนวน Instrutor ทั้งหมด"
@@ -405,7 +384,7 @@ const Dashboard: React.FC = () => {
                 />
                 <StatCard
                   title="วิชาเปิดสอนในเทอมนี้"
-                  value={adminData.activeTermCourses}
+                  value={count}
                   icon={
                     <div className="stat-icon">
                       <Calendar />
@@ -416,11 +395,11 @@ const Dashboard: React.FC = () => {
               </div>
             )}
 
-            {currentRole === "Scheduler" && schedulerData && (
-              <div className="scheduler-stats">
+            {currentRole === "Scheduler" && (
+              <div>
                 <StatCard
                   title="วิชาเปิดสอนในเทอมนี้"
-                  value={schedulerData.activeTermCourses}
+                  value={count}
                   icon={<Calendar className="stat-icon" />}
                   delay={0}
                 />

@@ -128,3 +128,10 @@ export interface ScheduleCardIn {
   subject_Thai: string;
   room: string;
 }
+
+export interface StatCardProps {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  delay: number;
+}
