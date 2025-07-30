@@ -1,90 +1,91 @@
 export interface ScheduleInterface {
-    ID?: number;
-    NameTable: string;
-    SectionNumber: number;
-    DayOfWeek: string;
-    StartTime: Date;
-    EndTime: Date;
+  ID?: number;
+  NameTable: string;
+  SectionNumber?: number;
+  DayOfWeek: string;
+  StartTime: Date;
+  EndTime: Date;
 
-    OfferedCoursesID: number;
-    OfferedCourses?: OfferedCoursesInterface;
+  OfferedCoursesID: number;
+  OfferedCourses?: OfferedCoursesInterface;
 
-    TimeFixedCourses?: TimeFixedCoursesInterface[];
+  TimeFixedCourses?: TimeFixedCoursesInterface[];
 }
 
 export interface OfferedCoursesInterface {
-    ID?: number;
-    Year: number;
-    Term: number;
-    Section: number;
-    Capacity: number;
-    IsFixCourses: boolean;
+  ID?: number;
+  Year: number;
+  Term: number;
+  Section: number;
+  Capacity: number;
+  IsFixCourses: boolean;
 
-    UserID: number;
-    User?: UserInterface;
+  UserID: number;
+  User?: UserInterface;
 
-    AllCoursesID: number;
-    AllCourses?: AllCoursesInterface;
+  AllCoursesID: number;
+  AllCourses?: AllCoursesInterface;
 
-    LaboratoryID?: number;
-    Laboratory?: LaboratoryInterface;
+  LaboratoryID?: number;
+  Laboratory?: LaboratoryInterface;
 
-    Schedule?: ScheduleInterface[];
+  Schedule?: ScheduleInterface[];
 }
 
 export interface TimeFixedCoursesInterface {
-    ID?: number;
-    Year: number;
-    Term: number;
-    DayOfWeek: string;
-    StartTime: Date;
-    EndTime: Date;
-    RoomFix: string;
-    Section: number;
-    Capacity: number;
+  ID?: number;
+  Year: number;
+  Term: number;
+  DayOfWeek: string;
+  StartTime: Date;
+  EndTime: Date;
+  RoomFix: string;
+  Section: number;
+  Capacity: number;
 
-    AllCoursesID: number;
-    AllCourses?: AllCoursesInterface;
+  AllCoursesID: number;
+  AllCourses?: AllCoursesInterface;
 
-    ScheduleID: number;
-    Schedule?: ScheduleInterface;
+  ScheduleID: number;
+  Schedule?: ScheduleInterface;
 }
 
 export interface AllCoursesInterface {
-    ID?: number;
+  ID?: number;
 
-    Code: string;
-    EnglishName: string;
-    ThaiName: string;
+  Code?: string;
+  EnglishName?: string;
+  ThaiName?: string;
 
-    OfferedCourses?: OfferedCoursesInterface[];
-    TimeFixedCourses?: TimeFixedCoursesInterface[];
+  OfferedCourses?: OfferedCoursesInterface[];
+  TimeFixedCourses?: TimeFixedCoursesInterface[];
 }
 
 export interface LaboratoryInterface {
-    ID?: number;
-    Room: string;
-    Building: string;
-    Capacity: string;
+  ID?: number;
+  Room: string;
+  Building: string;
+  Capacity: string;
 
-    OfferedCourses?: OfferedCoursesInterface[];
+  OfferedCourses?: OfferedCoursesInterface[];
 }
 
 export interface UserInterface {
-    ID?: number;
-    Username: string;
-    Password: string;
-    Firstname: string;
-    Lastname: string;
-    Image: string;
-    Email: string;
-    PhoneNumber: string;
-    Address: string;
-    FirstPassword: boolean;
+  ID?: number;
+  Username: string;
+  Password: string;
+  Firstname: string;
+  Lastname: string;
+  Image: string;
+  Email: string;
+  PhoneNumber: string;
+  Address: string;
+  FirstPassword: boolean;
 
-    OfferedCourses?: OfferedCoursesInterface[];
+  OfferedCourses?: OfferedCoursesInterface[];
 }
 
+///////////////////////////////////////////////////////////////////////
 export interface UserProfile {
   id: number;
   username: string;
@@ -95,7 +96,7 @@ export interface UserProfile {
   email: string;
   phone_number: string;
   address: string;
-  image: string; 
+  image: string;
   major: string;
   major_id: number;
   position: string;
@@ -103,7 +104,6 @@ export interface UserProfile {
   role: string;
   role_id: number;
 }
-
 
 export interface CourseIn {
   ID: number;
@@ -114,4 +114,17 @@ export interface CourseIn {
   Credit: string;
   CurriculumID: number;
   Instructor: string;
+}
+
+export interface ScheduleCardProps {
+  schedules: ScheduleCardIn[];
+}
+
+export interface ScheduleCardIn {
+  time: string;
+  section: string;
+  code: string;
+  subject_Eng: string;
+  subject_Thai: string;
+  room: string;
 }

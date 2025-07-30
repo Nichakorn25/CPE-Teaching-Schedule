@@ -14,17 +14,13 @@ import {
   getAllCourses,
 } from "../../services/https/AdminPageServices";
 import { getSchedulesBynameTableid } from "../../services/https/SchedulerPageService";
-import { UserProfile, CourseIn } from "../../interfaces/Dash";
+import {
+  UserProfile,
+  CourseIn,
+  ScheduleInterface,
+  ScheduleCardProps,
+} from "../../interfaces/Dash";
 import "./Dash.css";
-
-interface ScheduleItem {
-  day?: string;
-  time: string;
-  subject?: string;
-  task?: string;
-  room?: string;
-  location?: string;
-}
 
 interface DashboardData {
   Admin: {
@@ -32,12 +28,8 @@ interface DashboardData {
     totalCourses: number;
     activeTermCourses: number;
   };
-  Instructor: {
-    todayClasses: ScheduleItem[];
-  };
   Scheduler: {
     activeTermCourses: number;
-    todayClasses: ScheduleItem[];
   };
 }
 
@@ -46,11 +38,6 @@ interface StatCardProps {
   value: number;
   icon: React.ReactNode;
   delay: number;
-}
-
-interface ScheduleCardProps {
-  schedule: ScheduleItem[];
-  title: string;
 }
 
 const Dashboard: React.FC = () => {
@@ -101,26 +88,88 @@ const Dashboard: React.FC = () => {
   const [term, setTerm] = useState(() => {
     return localStorage.getItem("term") || "";
   });
-////////////////////////////////////////อย่าลืมว่า USERID ด้วย
-  const [allSchedule, setallSchedule] = useState<any[]>([]);
-  const getSchedules = async (nameTable: string) => {
-    const user_id = localStorage.getItem("user_id");
-    let res = await getSchedulesBynameTableid(nameTable,String(user_id));
-    if (res && Array.isArray(res.data)) {
-      setallSchedule(res.data);
-      console.log("sdfghjkl;",res.data)
-    }
-  };
-
+  ////////////////////////////////////////อย่าลืมว่า USERID ด้วย
   useEffect(() => {
     if (academicYear && term) {
       const nameTable = `ปีการศึกษา ${academicYear} เทอม ${term}`;
-      console.log("fg",nameTable)
       getSchedules(nameTable);
     }
   }, [academicYear, term]);
 
-  //////////////////////////////////////////////
+  const [allSchedule, setallSchedule] = useState<ScheduleInterface[]>([]);
+  const getSchedules = async (nameTable: string) => {
+    const user_id = localStorage.getItem("user_id");
+    let res = await getSchedulesBynameTableid(nameTable, String(user_id));
+    if (res && Array.isArray(res.data)) {
+      setallSchedule(res.data);
+      console.log("sdfghjkl;", res.data);
+    }
+  };
+
+  const getThaiDayName = (): string => {
+    const daysInThai = [
+      "อาทิตย์",
+      "จันทร์",
+      "อังคาร",
+      "พุธ",
+      "พฤหัสบดี",
+      "ศุกร์",
+      "เสาร์",
+    ];
+    const today = new Date();
+    return daysInThai[today.getDay()];
+  };
+
+  const todayName = getThaiDayName();
+  const todaySchedule = allSchedule.filter(
+    (sch) => sch.DayOfWeek === todayName
+  );
+
+  const mapToSchedule = (schedule: ScheduleInterface[]) => {
+    const now = new Date();
+    const mapped = schedule.map((item) => {
+      const startDate = new Date(item.StartTime);
+      const start = startDate.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      const end = new Date(item.EndTime).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+
+      return {
+        time: `${start}-${end}`,
+        section:
+          item.SectionNumber !== undefined && item.SectionNumber !== null
+            ? String(item.SectionNumber)
+            : "ไม่ทราบกลุ่มเรียน",
+        code: item.OfferedCourses?.AllCourses?.Code || "ไม่ทราบชื่อวิชา",
+        subject_Eng:
+          item.OfferedCourses?.AllCourses?.EnglishName || "ไม่ทราบชื่อวิชา",
+        subject_Thai:
+          item.OfferedCourses?.AllCourses?.ThaiName || "ไม่ทราบชื่อวิชา",
+        room: item.OfferedCourses?.Laboratory?.Room || "ไม่ทราบห้อง",
+
+        _startDate: startDate,
+      };
+    });
+
+    // sort ใกล้เคียงกับ now มากที่สุดขึ้นก่อน
+    mapped.sort((a, b) => {
+      const diffA = Math.abs(a._startDate.getTime() - now.getTime());
+      const diffB = Math.abs(b._startDate.getTime() - now.getTime());
+      return diffA - diffB;
+    });
+    return mapped.map(({ _startDate, ...rest }) => rest);
+  };
+
+  const displaySchedule = mapToSchedule(todaySchedule); // แสดง
+  console.log("hj", displaySchedule);
+
+  ////////////////////////////////////////////// global
   const [isEditing, setIsEditing] = useState(false);
 
   const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,41 +193,14 @@ const Dashboard: React.FC = () => {
   ///////////////////////////////// ด้านบนแก้แล้ว
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
-  // Mock data for different roles
   const dashboardData: DashboardData = {
     Admin: {
       totalUsers: 1247,
       totalCourses: 89,
       activeTermCourses: 34,
     },
-    Instructor: {
-      todayClasses: [
-        {
-          time: "08:00-10:00",
-          subject: "คณิตศาสตร์ 101",
-          room: "A-201",
-        },
-        {
-          time: "13:00-15:00",
-          subject: "สถิติเบื้องต้น",
-          room: "B-105",
-        },
-      ],
-    },
     Scheduler: {
       activeTermCourses: 28,
-      todayClasses: [
-        {
-          time: "08:00-10:00",
-          subject: "คณิตศาสตร์ 101",
-          room: "A-201",
-        },
-        {
-          time: "13:00-15:00",
-          subject: "สถิติเบื้องต้น",
-          room: "B-105",
-        },
-      ],
     },
   };
 
@@ -226,30 +248,53 @@ const Dashboard: React.FC = () => {
       </div>
     </div>
   );
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  const ScheduleCard: React.FC<ScheduleCardProps> = ({ schedules }) => {
+    const now = new Date();
 
-  const ScheduleCard: React.FC<ScheduleCardProps> = ({ schedule, title }) => (
-    <div className="schedule-card">
-      <h3 className="schedule-title">
-        <Clock className="schedule-icon" />
-        {title}
-      </h3>
-      <div className="schedule-list">
-        {Array.isArray(schedule) &&
-          schedule.map((item, index) => (
-            <div key={index} className="schedule-item">
-              <div className="schedule-item-content">
-                <p className="schedule-subject">{item.subject || item.task}</p>
-                <p className="schedule-details">
-                  {item.time} | {item.room || item.location}
-                </p>
-              </div>
-              <span className="schedule-day">{item.day || "วันนี้"}</span>
-            </div>
-          ))}
+    return (
+      <div className="schedule-card">
+        <h3 className="schedule-title">
+          <Clock className="schedule-icon" />
+          ตารางสอนวันนี้
+        </h3>
+        <div className="schedule-list">
+          {Array.isArray(schedules) && schedules.length > 0 ? (
+            schedules.map((item, index) => {
+              const [startStr, endStr] = item.time.split("-");
+              const [endHour, endMinute] = endStr.split(":").map(Number);
+              const endDateTime = new Date();
+              endDateTime.setHours(endHour, endMinute, 0, 0);
+
+              const isPast = now > endDateTime;
+
+              return (
+                <div
+                  key={index}
+                  className={`schedule-item ${isPast ? "schedule-past" : ""}`}
+                >
+                  <div className="schedule-item-content">
+                    <p className="schedule-subject">
+                      {item.code} - {item.subject_Thai} ({item.subject_Eng})
+                    </p>
+                    <p className="schedule-details">
+                      เวลา: {item.time} | ห้อง: {item.room} | กลุ่ม:{" "}
+                      {item.section}
+                    </p>
+                  </div>
+                  <span className="schedule-day">วันนี้</span>
+                </div>
+              );
+            })
+          ) : (
+            <p>ไม่มีตารางเรียนสำหรับวันนี้</p>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
   const UserProfileCard: React.FC = () => (
     <div className="user-profile-card">
       <h3 className="profile-title">
@@ -384,19 +429,13 @@ const Dashboard: React.FC = () => {
 
             {currentRole === "Instructor" && (
               <div className="schedule-grid">
-                <ScheduleCard
-                  schedule={data.todayClasses}
-                  title="วิชาที่สอนวันนี้"
-                />
+                <ScheduleCard schedules={displaySchedule} />
               </div>
             )}
 
             {currentRole === "Scheduler" && (
               <div className="schedule-grid">
-                <ScheduleCard
-                  schedule={data.todayClasses}
-                  title="วิชาที่สอนวันนี้"
-                />
+                <ScheduleCard schedules={displaySchedule} />
               </div>
             )}
           </div>

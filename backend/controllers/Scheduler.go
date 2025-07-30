@@ -37,6 +37,7 @@ func GetScheduleByNameTable(c *gin.Context) {
 
 	c.JSON(http.StatusOK, schedules)
 }
+
 func GetScheduleByNameTableAndUserID(c *gin.Context) {
 	userID := c.Param("userID")
 	nameTable := c.Param("nameTable")
