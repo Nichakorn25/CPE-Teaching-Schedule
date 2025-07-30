@@ -57,6 +57,24 @@ type (
 	}
 )
 
+func GetOffered(c *gin.Context) {
+	yearQ := c.Query("year")
+	termQ := c.Query("term")
+
+	var count int64
+	var offered entity.OfferedCourses
+
+	err := config.DB().Find(&offered).
+		Where("year = ? AND term = ?", yearQ, termQ).
+		Count(&count).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "เกิดข้อผิดพลาดในการนับ"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"count": count})
+}
+
 func GetOpenCourses(c *gin.Context) {
 	yearQ := c.Query("year")
 	termQ := c.Query("term")

@@ -207,7 +207,7 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen flex flex-col relative overflow-hidden">
       <video
         className="absolute top-0 left-0 w-full h-full object-cover z-0 pointer-events-none"
-        src="/bg6.mp4"
+        src="/login.mp4"
         autoPlay
         muted
         loop
