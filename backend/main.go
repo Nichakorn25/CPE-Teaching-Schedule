@@ -40,6 +40,7 @@ func main() {
 		r.DELETE("/delete-users/:id", controllers.DeleteUser)
 
 		///////////////////// openCourse /////////////////////////
+		r.GET("/offered", controllers.GetOffered)
 		r.GET("/open-courses", controllers.GetOpenCourses)
 		r.POST("/offered-courses", controllers.CreateOfferedCourse)
 		r.PUT("/offered-courses/:id", controllers.UpdateOfferedCourse)
