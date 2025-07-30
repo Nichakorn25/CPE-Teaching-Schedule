@@ -119,7 +119,7 @@ export {
 
   getSchedulesBynameTable,
   getSchedulesBynameTableid,
-  getNameTable,
+  getNameTable, //used
   postAutoGenerateSchedule,
   putupdateScheduleTime,
 };

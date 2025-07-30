@@ -1,7 +1,9 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "./Schedulepage.css";
 import { Button, Flex, Table, Modal, Input, List, Card, message, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { ScheduleInterface } from "../../../interfaces/Dash";
+import { getSchedulesBynameTable, getNameTable } from "../../../services/https/SchedulerPageService";
 import jsPDF from 'jspdf';
 
 // Import autoTable differently for better compatibility
@@ -9,36 +11,147 @@ import 'jspdf-autotable';
 
 // Extend jsPDF type to include autoTable
 declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
+    interface jsPDF {
+        autoTable: (options: any) => jsPDF;
+    }
 }
 
 interface ScheduleData {
-  key: string;
-  day: string;
-  [key: string]: any; // สำหรับ time slots
+    key: string;
+    day: string;
+    [key: string]: any; // สำหรับ time slots
 }
 
 interface ScheduleCell {
-  day: string;
-  time: string;
-  selected: boolean;
+    day: string;
+    time: string;
+    selected: boolean;
 }
 
 interface ClassInfo {
-  subject: string;
-  teacher: string;
-  room: string;
+    subject: string;
+    teacher: string;
+    room: string;
 }
 
 interface SavedScheduleInfo {
-  scheduleData: ScheduleData[];
-  savedAt: string;
-  totalClasses: number;
+    scheduleData: ScheduleData[];
+    savedAt: string;
+    totalClasses: number;
 }
 
 const Schedulepage: React.FC = () => {
+    const [academicYear, setAcademicYear] = useState(() => {
+        return localStorage.getItem("academicYear") || "";
+    });
+
+    const [term, setTerm] = useState(() => {
+        return localStorage.getItem("term") || "";
+    });
+
+    useEffect(() => {
+        if (academicYear && term) {
+            const nameTable = `ปีการศึกษา ${academicYear} เทอม ${term}`;
+            getSchedules(nameTable);
+        }
+    }, [academicYear, term]);
+
+    const [allSchedule, setallSchedule] = useState<ScheduleInterface[]>([]);
+    const getSchedules = async (nameTable: string) => {
+        let res = await getSchedulesBynameTable(nameTable);
+        if (res && Array.isArray(res.data)) {
+            setallSchedule(res.data);
+            console.log("gggggg", res.data)
+        }
+    };
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    const [allNameTable, setallNameTable] = useState<string[]>([]);
+    const getAllNameTable = async () => {
+        let res = await getNameTable();
+        if (res && Array.isArray(res.data.name_tables)) {
+            setallNameTable(res.data.name_tables);
+        }
+    };
+
+    const [loadSchedulebyname, setloadSchedule] = useState<ScheduleInterface[]>([]);
+    const getloadSchedules = async (nameTable: string) => {
+        let res = await getSchedulesBynameTable(nameTable);
+        if (res && Array.isArray(res.data)) {
+            setloadSchedule(res.data);
+            message.success(`โหลดตาราง "${nameTable}" สำเร็จ!`);
+            setLoadModalVisible(false);
+            console.log("namesa", res.data)
+        }
+    };
+
+    useEffect(() => {
+        getAllNameTable();
+    }, []);
+
+    const loadSchedule = () => {
+        setLoadModalVisible(true);
+    };
+
+    const [scheduleData, setScheduleData] = useState<any[]>([]);
+    const handleLoadSchedule = (scheduleName: string) => {
+        getloadSchedules(scheduleName);
+        // loadSchedulebyname
+        //setScheduleData();
+    };
+
+    // ฟังก์ชันลบตารางที่บันทึกไว้ - แบบใหม่ไม่ใช้ Modal.confirm
+    const handleDeleteSchedule = (scheduleName: string) => {
+        console.log('Attempting to delete:', scheduleName); // Debug log
+
+        // ถามยืนยันด้วย window.confirm แทน Modal.confirm
+        const confirmed = window.confirm(`คุณต้องการลบตาราง "${scheduleName}" หรือไม่?`);
+
+        if (confirmed) {
+            console.log('Delete confirmed for:', scheduleName); // Debug log
+            try {
+                // อ่านข้อมูลล่าสุดจาก localStorage
+                const currentSaved = JSON.parse(localStorage.getItem('savedSchedules') || '{}');
+                console.log('Before delete:', currentSaved); // Debug log
+
+                // ตรวจสอบว่ามีตารางนี้จริงหรือไม่
+                if (!currentSaved.hasOwnProperty(scheduleName)) {
+                    console.log('Schedule not found:', scheduleName);
+                    message.error('ไม่พบตารางที่ต้องการลบ');
+                    return;
+                }
+
+                // ลบตาราง
+                delete currentSaved[scheduleName];
+                console.log('After delete:', currentSaved); // Debug log
+
+                // บันทึกกลับ localStorage
+                localStorage.setItem('savedSchedules', JSON.stringify(currentSaved));
+
+                // อัปเดต state แบบ force re-render
+                setSavedSchedules({});
+                setTimeout(() => {
+                    setSavedSchedules(currentSaved);
+                }, 100);
+
+                message.success(`ลบตาราง "${scheduleName}" สำเร็จ`);
+
+                // ปิด Modal หากไม่มีตารางเหลือ
+                if (Object.keys(currentSaved).length === 0) {
+                    setTimeout(() => {
+                        setLoadModalVisible(false);
+                        message.info('ไม่มีตารางที่บันทึกไว้แล้ว');
+                    }, 200);
+                }
+            } catch (error) {
+                console.error('Error deleting schedule:', error);
+                message.error('เกิดข้อผิดพลาดในการลบตาราง: ' + (error as Error).message);
+            }
+        } else {
+            console.log('Delete cancelled for:', scheduleName);
+        }
+    };
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     // เวลาต่างๆ
     const timeSlots = [
         '8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-12:00',
@@ -58,8 +171,8 @@ const Schedulepage: React.FC = () => {
     ];
 
     // State สำหรับเก็บข้อมูลตาราง
-    const [scheduleData, setScheduleData] = useState<ScheduleData[]>([]);
     
+
     // State สำหรับ drag & drop
     const [draggedItem, setDraggedItem] = useState<{
         sourceDay: string;
@@ -74,7 +187,7 @@ const Schedulepage: React.FC = () => {
 
     // State สำหรับ Modal โหลด
     const [loadModalVisible, setLoadModalVisible] = useState(false);
-    const [savedSchedules, setSavedSchedules] = useState<{[key: string]: SavedScheduleInfo}>({});
+    const [savedSchedules, setSavedSchedules] = useState<{ [key: string]: SavedScheduleInfo }>({});
 
     // Ref สำหรับตาราง
     const tableRef = useRef<HTMLDivElement>(null);
@@ -87,9 +200,9 @@ const Schedulepage: React.FC = () => {
     // ฟังก์ชันสำหรับสร้าง Tooltip Content
     const createTooltipContent = (cls: ClassInfo, time: string, day: string) => (
         <div style={{ fontFamily: 'Sarabun, sans-serif' }}>
-            <div style={{ 
-                fontSize: '14px', 
-                fontWeight: 'bold', 
+            <div style={{
+                fontSize: '14px',
+                fontWeight: 'bold',
                 marginBottom: '8px',
                 color: '#F26522',
                 borderBottom: '1px solid #eee',
@@ -112,8 +225,8 @@ const Schedulepage: React.FC = () => {
             <div style={{ marginBottom: '8px' }}>
                 <strong>🕐 เวลา:</strong> {time}
             </div>
-            <div style={{ 
-                fontSize: '11px', 
+            <div style={{
+                fontSize: '11px',
                 color: '#666',
                 fontStyle: 'italic',
                 borderTop: '1px solid #eee',
@@ -146,9 +259,9 @@ const Schedulepage: React.FC = () => {
     // ฟังก์ชันสำหรับ drop
     const handleDrop = (e: React.DragEvent, targetDay: string, targetTime: string) => {
         e.preventDefault();
-        
+
         if (!draggedItem) return;
-        
+
         // ถ้า drop ในตำแหน่งเดิม ไม่ต้องทำอะไร
         if (draggedItem.sourceDay === targetDay && draggedItem.sourceTime === targetTime) {
             setDraggedItem(null);
@@ -158,17 +271,17 @@ const Schedulepage: React.FC = () => {
         // อัพเดทข้อมูลตาราง
         setScheduleData(prevData => {
             const newData = [...prevData];
-            
+
             // หา index ของวันต้นทางและปลายทาง
             const sourceDayIndex = newData.findIndex(item => item.day === draggedItem.sourceDay);
             const targetDayIndex = newData.findIndex(item => item.day === targetDay);
-            
+
             if (sourceDayIndex === -1 || targetDayIndex === -1) return prevData;
-            
+
             // ลบคาบจากตำแหน่งต้นทาง
             const sourceClasses = [...(newData[sourceDayIndex][draggedItem.sourceTime]?.classes || [])];
             sourceClasses.splice(draggedItem.classIndex, 1);
-            
+
             newData[sourceDayIndex] = {
                 ...newData[sourceDayIndex],
                 [draggedItem.sourceTime]: {
@@ -176,11 +289,11 @@ const Schedulepage: React.FC = () => {
                     classes: sourceClasses
                 }
             };
-            
+
             // เพิ่มคาบไปยังตำแหน่งปลายทาง
             const targetClasses = [...(newData[targetDayIndex][targetTime]?.classes || [])];
             targetClasses.push(draggedItem.classData);
-            
+
             newData[targetDayIndex] = {
                 ...newData[targetDayIndex],
                 [targetTime]: {
@@ -189,10 +302,10 @@ const Schedulepage: React.FC = () => {
                     backgroundColor: newData[targetDayIndex][targetTime]?.backgroundColor || getRandomBackgroundColor()
                 }
             };
-            
+
             return newData;
         });
-        
+
         setDraggedItem(null);
     };
 
@@ -201,12 +314,12 @@ const Schedulepage: React.FC = () => {
         setScheduleData(prevData => {
             const newData = [...prevData];
             const dayIndex = newData.findIndex(item => item.day === day);
-            
+
             if (dayIndex === -1) return prevData;
-            
+
             const classes = [...(newData[dayIndex][time]?.classes || [])];
             classes.splice(classIndex, 1);
-            
+
             newData[dayIndex] = {
                 ...newData[dayIndex],
                 [time]: {
@@ -214,7 +327,7 @@ const Schedulepage: React.FC = () => {
                     classes: classes
                 }
             };
-            
+
             return newData;
         });
     };
@@ -230,7 +343,7 @@ const Schedulepage: React.FC = () => {
             message.warning('ไม่มีข้อมูลให้บันทึก กรุณาสร้างตารางก่อน');
             return;
         }
-        
+
         // เปิด Modal ให้ตั้งชื่อ
         setSaveModalVisible(true);
     };
@@ -254,14 +367,14 @@ const Schedulepage: React.FC = () => {
                 }, 0);
             }, 0)
         };
-        
+
         localStorage.setItem('savedSchedules', JSON.stringify(currentSaved));
         setSavedSchedules(currentSaved);
-        
+
         setSaveModalVisible(false);
         setScheduleNameToSave('');
         message.success(`บันทึกตาราง "${scheduleNameToSave}" สำเร็จ!`);
-        
+
         console.log('Schedule data saved:', scheduleData);
     };
 
@@ -271,13 +384,13 @@ const Schedulepage: React.FC = () => {
             'ENG23 2001', 'ENG23 2002', 'ENG23 2003', 'IST23 2001', 'IST23 2002',
             '523452', '523453', 'ENG23 2004', 'ENG23 2005', 'ENG23 2006', 'ENG23 2007'
         ];
-        
+
         const teachers = [
             'อ.สมชาย', 'อ.สมศรี', 'อ.นิรันดร์', 'อ.วิมลา', 'อ.ประยุทธ์',
             'อ.กุลธิดา', 'อ.สุนทร', 'อ.มนีรัตน์', 'อ.อนันต์', 'อ.สุวรรณา',
             'อ.จิรพันธ์', 'อ.วรรณา', 'อ.ธนาคาร', 'อ.สุภาพ', 'อ.นิภา'
         ];
-        
+
         const rooms = [
             'Lecture', 'F11-421,MicroP', 'F11-422,Software'
         ];
@@ -307,7 +420,7 @@ const Schedulepage: React.FC = () => {
                 }
 
                 // สุ่มจำนวนคาบที่จะมีในช่วงเวลานี้ (1-3 คาบ)
-                const numberOfClasses = Math.random() < probability ? 
+                const numberOfClasses = Math.random() < probability ?
                     Math.floor(Math.random() * 3) + 1 : 0;
 
                 if (numberOfClasses > 0) {
@@ -325,9 +438,9 @@ const Schedulepage: React.FC = () => {
                         const randomSubject = subjects[Math.floor(Math.random() * subjects.length)];
                         const randomTeacher = availableTeachers[Math.floor(Math.random() * availableTeachers.length)];
                         const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
-                        
+
                         usedTeachers.add(randomTeacher);
-                        
+
                         classes.push({
                             subject: randomSubject,
                             teacher: randomTeacher,
@@ -363,94 +476,16 @@ const Schedulepage: React.FC = () => {
             alert('ไม่มีข้อมูลให้ดาวน์โหลด กรุณาสร้างตารางก่อน');
             return;
         }
-        
+
         const dataStr = JSON.stringify(scheduleData, null, 2);
-        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-        
+        const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
         const exportFileDefaultName = 'schedule.json';
-        
+
         const linkElement = document.createElement('a');
         linkElement.setAttribute('href', dataUri);
         linkElement.setAttribute('download', exportFileDefaultName);
         linkElement.click();
-    };
-
-    // ฟังก์ชันสำหรับโหลดตารางที่บันทึกแล้ว
-    const loadSchedule = () => {
-        // โหลดรายการที่บันทึกไว้จาก localStorage
-        const saved = JSON.parse(localStorage.getItem('savedSchedules') || '{}');
-        console.log('Loaded schedules:', saved); // Debug log
-        setSavedSchedules(saved);
-        
-        if (Object.keys(saved).length === 0) {
-            message.info('ไม่มีตารางที่บันทึกไว้');
-            return;
-        }
-        
-        // เปิด Modal เลือกตาราง
-        setLoadModalVisible(true);
-    };
-
-    // ฟังก์ชันโหลดตารางที่เลือก
-    const handleLoadSchedule = (scheduleName: string) => {
-        const saved = savedSchedules[scheduleName];
-        if (saved && saved.scheduleData) { // เปลี่ยนจาก data เป็น scheduleData
-            setScheduleData(saved.scheduleData);
-            setLoadModalVisible(false);
-            message.success(`โหลดตาราง "${scheduleName}" สำเร็จ!`);
-        }
-    };
-
-    // ฟังก์ชันลบตารางที่บันทึกไว้ - แบบใหม่ไม่ใช้ Modal.confirm
-    const handleDeleteSchedule = (scheduleName: string) => {
-        console.log('Attempting to delete:', scheduleName); // Debug log
-        
-        // ถามยืนยันด้วย window.confirm แทน Modal.confirm
-        const confirmed = window.confirm(`คุณต้องการลบตาราง "${scheduleName}" หรือไม่?`);
-        
-        if (confirmed) {
-            console.log('Delete confirmed for:', scheduleName); // Debug log
-            try {
-                // อ่านข้อมูลล่าสุดจาก localStorage
-                const currentSaved = JSON.parse(localStorage.getItem('savedSchedules') || '{}');
-                console.log('Before delete:', currentSaved); // Debug log
-                
-                // ตรวจสอบว่ามีตารางนี้จริงหรือไม่
-                if (!currentSaved.hasOwnProperty(scheduleName)) {
-                    console.log('Schedule not found:', scheduleName);
-                    message.error('ไม่พบตารางที่ต้องการลบ');
-                    return;
-                }
-                
-                // ลบตาราง
-                delete currentSaved[scheduleName];
-                console.log('After delete:', currentSaved); // Debug log
-                
-                // บันทึกกลับ localStorage
-                localStorage.setItem('savedSchedules', JSON.stringify(currentSaved));
-                
-                // อัปเดต state แบบ force re-render
-                setSavedSchedules({});
-                setTimeout(() => {
-                    setSavedSchedules(currentSaved);
-                }, 100);
-                
-                message.success(`ลบตาราง "${scheduleName}" สำเร็จ`);
-                
-                // ปิด Modal หากไม่มีตารางเหลือ
-                if (Object.keys(currentSaved).length === 0) {
-                    setTimeout(() => {
-                        setLoadModalVisible(false);
-                        message.info('ไม่มีตารางที่บันทึกไว้แล้ว');
-                    }, 200);
-                }
-            } catch (error) {
-                console.error('Error deleting schedule:', error);
-                message.error('เกิดข้อผิดพลาดในการลบตาราง: ' + (error as Error).message);
-            }
-        } else {
-            console.log('Delete cancelled for:', scheduleName);
-        }
     };
 
     // ฟังก์ชันสำหรับส่งออก PDF จากการจับภาพตาราง
@@ -467,17 +502,17 @@ const Schedulepage: React.FC = () => {
 
         try {
             console.log('Starting PDF screenshot export...'); // Debug log
-            
+
             // แสดง loading
             const hide = message.loading('กำลังสร้าง PDF...', 0);
 
             // ตรวจสอบว่า html2canvas มีอยู่หรือไม่
             const html2canvas = (window as any).html2canvas;
-            
+
             if (!html2canvas) {
                 hide();
                 console.log('html2canvas not available, loading from CDN...');
-                
+
                 // โหลด html2canvas จาก CDN
                 const script = document.createElement('script');
                 script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
@@ -497,9 +532,9 @@ const Schedulepage: React.FC = () => {
 
             // รอสักครู่ให้ message แสดง
             await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             console.log('Creating canvas from table...');
-            
+
             // จับภาพตาราง
             const canvas = await html2canvas(tableRef.current, {
                 scale: 2, // ความละเอียดสูง
@@ -516,20 +551,20 @@ const Schedulepage: React.FC = () => {
 
             // สร้าง PDF
             const imgData = canvas.toDataURL('image/png');
-            
+
             // คำนวณขนาด PDF
             const imgWidth = canvas.width;
             const imgHeight = canvas.height;
-            
+
             // กำหนดขนาด PDF (A4 landscape)
             const pdfWidth = 297; // A4 landscape width in mm
             const pdfHeight = 210; // A4 landscape height in mm
-            
+
             // คำนวณ ratio เพื่อให้พอดีกับหน้า
             const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
             const scaledWidth = imgWidth * ratio;
             const scaledHeight = imgHeight * ratio;
-            
+
             // สร้าง PDF
             const pdf = new jsPDF({
                 orientation: 'landscape',
@@ -545,15 +580,15 @@ const Schedulepage: React.FC = () => {
             // บันทึกไฟล์ (ไม่มีข้อมูลสรุป)
             const fileName = `schedule_${new Date().toISOString().split('T')[0]}.pdf`;
             pdf.save(fileName);
-            
+
             hide(); // ปิด loading message
             message.success('ส่งออก PDF สำเร็จ!');
             console.log('Screenshot PDF saved successfully');
-            
+
         } catch (error) {
             message.destroy(); // ปิด loading message
             console.error('Error generating screenshot PDF:', error);
-            
+
             // ถ้าเกิด error ให้ใช้วิธี fallback
             console.log('Falling back to simple PDF method');
             exportScheduleToSimplePDF();
@@ -564,9 +599,9 @@ const Schedulepage: React.FC = () => {
     const exportScheduleToSimplePDF = () => {
         try {
             console.log('Creating simple PDF...');
-            
+
             const hide = message.loading('กำลังสร้าง PDF แบบตาราง...', 0);
-            
+
             // สร้าง jsPDF instance (landscape orientation)
             const doc = new jsPDF({
                 orientation: 'landscape',
@@ -576,23 +611,23 @@ const Schedulepage: React.FC = () => {
 
             // เตรียมข้อมูลสำหรับตาราง (ไม่มีหัวข้อ)
             const tableData: string[][] = [];
-            
+
             // สร้างหัวตาราง
             const headers = ['Day/Time', ...timeSlots];
-            
+
             // สร้างแถวข้อมูล
             scheduleData.forEach((dayData) => {
                 const row: string[] = [dayData.day];
-                
+
                 timeSlots.forEach(time => {
                     const cellData = dayData[time];
                     let content = '';
-                    
+
                     if (cellData && typeof cellData === 'object') {
                         if (cellData.isBreak) {
                             content = 'Break';
                         } else if (cellData.classes && Array.isArray(cellData.classes) && cellData.classes.length > 0) {
-                            content = cellData.classes.map((cls: ClassInfo) => 
+                            content = cellData.classes.map((cls: ClassInfo) =>
                                 `${cls.subject}\n${cls.teacher}\n${cls.room}`
                             ).join('\n---\n');
                         } else {
@@ -601,10 +636,10 @@ const Schedulepage: React.FC = () => {
                     } else {
                         content = cellData || '-';
                     }
-                    
+
                     row.push(content);
                 });
-                
+
                 tableData.push(row);
             });
 
@@ -630,10 +665,10 @@ const Schedulepage: React.FC = () => {
                         fontStyle: 'bold',
                     },
                     columnStyles: {
-                        0: { 
-                            cellWidth: 20, 
+                        0: {
+                            cellWidth: 20,
                             fillColor: [248, 249, 250],
-                            fontStyle: 'bold' 
+                            fontStyle: 'bold'
                         },
                     },
                     alternateRowStyles: {
@@ -648,38 +683,38 @@ const Schedulepage: React.FC = () => {
                 // สร้าง PDF แบบข้อความธรรมดา (ไม่มีหัวข้อ)
                 let yPosition = 20;
                 doc.setFontSize(8);
-                
+
                 scheduleData.forEach((dayData) => {
                     if (yPosition > 180) {
                         doc.addPage();
                         yPosition = 20;
                     }
-                    
+
                     doc.setFontSize(10);
                     doc.text(`${dayData.day}:`, 20, yPosition);
                     yPosition += 5;
-                    
+
                     timeSlots.forEach(time => {
                         const cellData = dayData[time];
                         let content = '';
-                        
+
                         if (cellData && typeof cellData === 'object') {
                             if (cellData.isBreak) {
                                 content = 'Break';
                             } else if (cellData.classes && Array.isArray(cellData.classes) && cellData.classes.length > 0) {
-                                content = cellData.classes.map((cls: ClassInfo) => 
+                                content = cellData.classes.map((cls: ClassInfo) =>
                                     `${cls.subject} (${cls.teacher}) [${cls.room}]`
                                 ).join(', ');
                             }
                         }
-                        
+
                         if (content) {
                             doc.setFontSize(8);
                             doc.text(`  ${time}: ${content}`, 25, yPosition);
                             yPosition += 4;
                         }
                     });
-                    
+
                     yPosition += 5;
                 });
             }
@@ -687,11 +722,11 @@ const Schedulepage: React.FC = () => {
             // บันทึกไฟล์ (ไม่มีข้อมูลสรุป)
             const fileName = `schedule_table_${new Date().toISOString().split('T')[0]}.pdf`;
             doc.save(fileName);
-            
+
             hide();
             message.success('ส่งออก PDF สำเร็จ!');
             console.log('Simple PDF saved successfully');
-            
+
         } catch (error) {
             message.destroy();
             console.error('Error generating simple PDF:', error);
@@ -719,15 +754,15 @@ const Schedulepage: React.FC = () => {
                 let classes: ClassInfo[] = [];
                 let backgroundColor = '#f9f9f9';
                 let isBreak = false;
-                
+
                 if (cellData && typeof cellData === 'object') {
                     classes = cellData.classes || [];
                     backgroundColor = cellData.backgroundColor || '#f9f9f9';
                     isBreak = cellData.isBreak || false;
                 }
-                
+
                 const isEmpty = !classes || classes.length === 0;
-                
+
                 // ถ้าเป็นช่วงพักเที่ยง
                 if (isBreak) {
                     return (
@@ -751,7 +786,7 @@ const Schedulepage: React.FC = () => {
                         </div>
                     );
                 }
-                
+
                 // ถ้าไม่มีคาบเรียน
                 if (isEmpty) {
                     return (
@@ -776,7 +811,7 @@ const Schedulepage: React.FC = () => {
                         </div>
                     );
                 }
-                
+
                 // แสดงคาบเรียนแยกเป็นก้อนๆ พร้อม Tooltip
                 return (
                     <div
@@ -801,7 +836,7 @@ const Schedulepage: React.FC = () => {
                                 key={index}
                                 title={createTooltipContent(cls, time, record.day)}
                                 placement="top"
-                                overlayStyle={{ 
+                                overlayStyle={{
                                     maxWidth: '350px',
                                     fontFamily: 'Sarabun, sans-serif'
                                 }}
@@ -897,7 +932,7 @@ const Schedulepage: React.FC = () => {
                                 </div>
                             </Tooltip>
                         ))}
-                        
+
                         {/* Drop zone indicator */}
                         {classes.length === 0 && (
                             <div
@@ -927,7 +962,7 @@ const Schedulepage: React.FC = () => {
             key: index.toString(),
             day: day
         };
-        
+
         timeSlots.forEach(time => {
             rowData[time] = {
                 content: '',
@@ -935,164 +970,158 @@ const Schedulepage: React.FC = () => {
                 classes: [] as ClassInfo[]
             };
         });
-        
+
         return rowData;
     });
 
     return (
         <>
-                    {/* Page Title */}
-                    <div style={{ 
-                        marginBottom: '20px',
-                        paddingBottom: '12px',
-                        borderBottom: '2px solid #F26522'
-                    }}>
-                        <h2 style={{ 
-                            margin: '0 0 8px 0', 
-                            color: '#333',
-                            fontSize: '20px',
-                            fontWeight: 'bold'
-                        }}>
-                            จัดตารางเรียน
-                        </h2>
-                        <p style={{ 
-                            margin: 0, 
-                            color: '#666',
-                            fontSize: '13px'
-                        }}>
-                            สร้างและจัดการตารางเรียนแบบ Drag & Drop 🎯 เลื่อนเมาส์ไปที่วิชาเพื่อดูรายละเอียด
-                        </p>
-                    </div>
+            {/* Page Title */}
+            <div style={{
+                marginBottom: '20px',
+                paddingBottom: '12px',
+                borderBottom: '2px solid #F26522'
+            }}>
+                <h2 style={{
+                    margin: '0 0 8px 0',
+                    color: '#333',
+                    fontSize: '20px',
+                    fontWeight: 'bold'
+                }}>
+                    จัดตารางเรียน
+                </h2>
+                <p style={{
+                    margin: 0,
+                    color: '#666',
+                    fontSize: '13px'
+                }}>
+                    สร้างและจัดการตารางเรียนแบบ Drag & Drop 🎯 เลื่อนเมาส์ไปที่วิชาเพื่อดูรายละเอียด
+                </p>
+            </div>
 
-                    <Flex className="schedule-button" gap="small" wrap style={{ marginBottom: '20px' }}>
-                        <Button type="primary" className="primary-button" onClick={saveScheduleData}>
-                            บันทึก
-                        </Button>
-                        <Button className="defualt-button" onClick={resetTable}>
-                            รีเซต
-                        </Button>
-                        <Button className="defualt-button" onClick={loadSchedule}>
-                            โหลด
-                        </Button>
-                        <Button type="primary" className="primary-button" onClick={generateAutoSchedule}>
-                            สร้างอัตโนมัติ
-                        </Button>
-                        <Button type="primary" className="primary-button" onClick={exportScheduleToPDF}>
-                            ส่งออก PDF
-                        </Button>
-                    </Flex>
+            <Flex className="schedule-button" gap="small" wrap style={{ marginBottom: '20px' }}>
+                <Button type="primary" className="primary-button" onClick={saveScheduleData}>
+                    บันทึก
+                </Button>
+                <Button className="defualt-button" onClick={resetTable}>
+                    รีเซต
+                </Button>
+                <Button className="defualt-button" onClick={loadSchedule}>
+                    โหลด
+                </Button>
+                <Button type="primary" className="primary-button" onClick={generateAutoSchedule}>
+                    สร้างอัตโนมัติ
+                </Button>
+                <Button type="primary" className="primary-button" onClick={exportScheduleToPDF}>
+                    ส่งออก PDF
+                </Button>
+            </Flex>
 
-                    {/* Schedule Table */}
-                    <div ref={tableRef} style={{ flex: 1, overflow: 'visible' }}>
-                        <Table
-                            columns={columns}
-                            dataSource={data}
-                            pagination={false}
-                            size="small"
-                            bordered
-                            style={{
-                                backgroundColor: 'white',
-                                borderRadius: '8px',
-                                overflow: 'visible'
-                            }}
-                        />
-                    </div>
+            {/* Schedule Table */}
+            <div ref={tableRef} style={{ flex: 1, overflow: 'visible' }}>
+                <Table
+                    columns={columns}
+                    dataSource={data}
+                    pagination={false}
+                    size="small"
+                    bordered
+                    style={{
+                        backgroundColor: 'white',
+                        borderRadius: '8px',
+                        overflow: 'visible'
+                    }}
+                />
+            </div>
 
-                    {/* Modal สำหรับบันทึก */}
-                    <Modal
-                        title="บันทึกตาราง"
-                        open={saveModalVisible}
-                        onOk={handleSaveConfirm}
-                        onCancel={() => {
-                            setSaveModalVisible(false);
-                            setScheduleNameToSave('');
-                        }}
-                        okText="บันทึก"
-                        cancelText="ยกเลิก"
-                        okButtonProps={{ className: 'primary-button' }}
-                    >
-                        <div style={{ margin: '20px 0' }}>
-                            <p>กรุณาใส่ชื่อตาราง:</p>
-                            <Input
-                                placeholder="เช่น ตารางเรียนภาคเรียนที่ 1/2567"
-                                value={scheduleNameToSave}
-                                onChange={(e) => setScheduleNameToSave(e.target.value)}
-                                onPressEnter={handleSaveConfirm}
-                                maxLength={50}
-                            />
+            {/* Modal สำหรับบันทึก */}
+            <Modal
+                title="บันทึกตาราง"
+                open={saveModalVisible}
+                onOk={handleSaveConfirm}
+                onCancel={() => {
+                    setSaveModalVisible(false);
+                    setScheduleNameToSave('');
+                }}
+                okText="บันทึก"
+                cancelText="ยกเลิก"
+                okButtonProps={{ className: 'primary-button' }}
+            >
+                <div style={{ margin: '20px 0' }}>
+                    <p>กรุณาใส่ชื่อตาราง:</p>
+                    <Input
+                        placeholder="เช่น ตารางเรียนภาคเรียนที่ 1/2567"
+                        value={scheduleNameToSave}
+                        onChange={(e) => setScheduleNameToSave(e.target.value)}
+                        onPressEnter={handleSaveConfirm}
+                        maxLength={50}
+                    />
+                </div>
+            </Modal>
+
+            {/* Modal สำหรับโหลด */}
+            <Modal
+                title="เลือกตารางที่จะโหลด"
+                open={loadModalVisible}
+                onCancel={() => setLoadModalVisible(false)}
+                footer={[
+                    <Button key="cancel" onClick={() => setLoadModalVisible(false)}>
+                        ยกเลิก
+                    </Button>
+                ]}
+                width={600}
+            >
+                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    {allNameTable.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+                            ไม่มีตารางที่บันทึกไว้
                         </div>
-                    </Modal>
-
-                    {/* Modal สำหรับโหลด */}
-                    <Modal
-                        title="เลือกตารางที่จะโหลด"
-                        open={loadModalVisible}
-                        onCancel={() => setLoadModalVisible(false)}
-                        footer={[
-                            <Button key="cancel" onClick={() => setLoadModalVisible(false)}>
-                                ยกเลิก
-                            </Button>
-                        ]}
-                        width={600}
-                    >
-                        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                            {Object.keys(savedSchedules).length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-                                    ไม่มีตารางที่บันทึกไว้
-                                </div>
-                            ) : (
-                                <List
-                                    dataSource={Object.entries(savedSchedules)}
-                                    renderItem={([name, scheduleInfo]: [string, any]) => (
-                                        <List.Item>
-                                            <Card
+                    ) : (
+                        <List
+                            dataSource={allNameTable}
+                            renderItem={(name: string) => (
+                                <List.Item>
+                                    <Card
+                                        size="small"
+                                        style={{ width: '100%', cursor: 'pointer' }}
+                                        hoverable
+                                        onClick={() => handleLoadSchedule(name)}
+                                        actions={[
+                                            <Button
+                                                key="load"
+                                                type="primary"
                                                 size="small"
-                                                style={{ width: '100%', cursor: 'pointer' }}
-                                                hoverable
-                                                onClick={() => handleLoadSchedule(name)}
-                                                actions={[
-                                                    <Button 
-                                                        key="load" 
-                                                        type="primary" 
-                                                        size="small"
-                                                        className="primary-button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleLoadSchedule(name);
-                                                        }}
-                                                    >
-                                                        โหลด
-                                                    </Button>,
-                                                    <Button 
-                                                        key="delete" 
-                                                        danger 
-                                                        size="small"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeleteSchedule(name);
-                                                        }}
-                                                    >
-                                                        ลบ
-                                                    </Button>
-                                                ]}
+                                                className="primary-button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleLoadSchedule(name);
+                                                }}
                                             >
-                                                <Card.Meta
-                                                    title={name}
-                                                    description={
-                                                        <div>
-                                                            <div>บันทึกเมื่อ: {scheduleInfo.savedAt}</div>
-                                                            <div>จำนวนคาบเรียน: {scheduleInfo.totalClasses} คาบ</div>
-                                                        </div>
-                                                    }
-                                                />
-                                            </Card>
-                                        </List.Item>
-                                    )}
-                                />
+                                                โหลด
+                                            </Button>,
+                                            <Button
+                                                key="delete"
+                                                danger
+                                                size="small"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteSchedule(name);
+                                                }}
+                                            >
+                                                ลบ
+                                            </Button>
+                                        ]}
+                                    >
+                                        <Card.Meta
+                                            title={name}
+                                        />
+                                    </Card>
+                                </List.Item>
                             )}
-                        </div>
-                    </Modal>
-                </>
+                        />
+                    )}
+                </div>
+            </Modal>
+        </>
     );
 };
 
