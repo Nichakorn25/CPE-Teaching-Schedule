@@ -86,14 +86,14 @@ const AddTeachingAssistant: React.FC = () => {
           boxShadow: "0 8px 32px rgba(0,0,0,0.05)",
         }}
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form form={form} layout="vertical">
           <Card title="ข้อมูลผู้สอน" style={{ marginBottom: "24px" }} headStyle={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}>
             <Form.Item
               label={<span style={{ color: "#F26522", fontWeight: "bold" }}>เลือกอาจารย์</span>}
               name="teacherID"
               rules={[{ required: true, message: "กรุณาเลือกอาจารย์" }]}
             >
-              <Select placeholder="เลือกอาจารย์" size="large" onChange={handleTeacherChange}>
+              <Select placeholder="เลือกอาจารย์" size="large">
                 {teachers.map((t) => (
                   <Option key={t.ID} value={t.ID}>
                     {t.Firstname} {t.Lastname}
@@ -111,7 +111,7 @@ const AddTeachingAssistant: React.FC = () => {
                 {filteredCourses.map((c) => (
                   <Option key={c.AllCoursesID} value={c.AllCoursesID}>
                     {c.AllCoursesID} - {c.AllCoursesID}{" "}
-                    {c.UserID?.map((t) => `(${t.Firstname} ${t.Lastname})`).join(", ")}
+                    {/* {c.UserID?.map((t) => `(${t.Firstname} ${t.Lastname})`).join(", ")} */}
                   </Option>
                 ))}
               </Select>
