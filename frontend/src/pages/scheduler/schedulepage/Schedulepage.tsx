@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from "react";
 import "./Schedulepage.css";
 import { Button, Flex, Table, Modal, Input, List, Card, message, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ScheduleInterface } from "../../../interfaces/Dash";
-import { getSchedulesBynameTable, getNameTable } from "../../../services/https/SchedulerPageService";
+import { OfferedCoursesInterface, ScheduleInterface } from "../../../interfaces/Dash";
+import { getSchedulesBynameTable, getNameTable, getSchedulesBynameTableid, postAutoGenerateSchedule } from "../../../services/https/SchedulerPageService";
+import { getOffered } from "../../../services/https/GetService";
 import jsPDF from 'jspdf';
 
 // Import autoTable differently for better compatibility
@@ -29,9 +30,9 @@ interface ScheduleCell {
 }
 
 interface ClassInfo {
-    subject: string;
-    teacher: string;
-    room: string;
+  subject: string;
+  teacher: string;
+  room: string;
 }
 
 interface SavedScheduleInfo {
@@ -75,15 +76,64 @@ const Schedulepage: React.FC = () => {
     };
 
     const [loadSchedulebyname, setloadSchedule] = useState<ScheduleInterface[]>([]);
-    const getloadSchedules = async (nameTable: string) => {
-        let res = await getSchedulesBynameTable(nameTable);
-        if (res && Array.isArray(res.data)) {
-            setloadSchedule(res.data);
-            message.success(`โหลดตาราง "${nameTable}" สำเร็จ!`);
-            setLoadModalVisible(false);
-            console.log("namesa", res.data)
-        }
-    };
+   const loadScheduleData = async (nameTable: string, userId: string) => {
+  try {
+    const res = await getSchedulesBynameTableid(nameTable, userId);
+    if (res.status === 200 && res.data) {
+      // res.data ควรจะเป็น array ของ schedule พร้อมข้อมูลวิชา
+      const scheduleFromAPI = res.data;
+      
+      // แปลง scheduleFromAPI ให้อยู่ในรูปแบบ ScheduleData ที่ใช้ในตารางของคุณ
+      // ตัวอย่าง:
+      const newScheduleData: ScheduleData[] = days.map((day, index) => {
+        const dayData: ScheduleData = {
+          key: index.toString(),
+          day,
+        };
+
+        timeSlots.forEach(time => {
+          // หา schedule ใน res.data ที่ตรงกับวันและช่วงเวลา
+          const matchingSchedules = scheduleFromAPI.filter((item: any) => 
+            item.DayOfWeek === day &&
+            // เช็คเวลาว่า time slot นี้อยู่ในช่วง StartTime-EndTime ของ item หรือเปล่า
+            isTimeInSlot(item.StartTime, item.EndTime, time)
+          );
+
+          if (matchingSchedules.length > 0) {
+            dayData[time] = {
+              backgroundColor: getRandomBackgroundColor(),
+              classes: matchingSchedules.map((sch: any) => ({
+                subject: sch.OfferedCourses?.AllCourses?.ThaiName || 'ไม่ทราบชื่อ',
+                teacher: sch.OfferedCourses?.User?.Firstname + ' ' + sch.OfferedCourses?.User?.Lastname,
+                room: sch.OfferedCourses?.Laboratory?.Room || 'ไม่ระบุห้อง',
+              })),
+            };
+          } else if (time === '12:00-13:00') {
+            dayData[time] = {
+              content: 'พักเที่ยง',
+              backgroundColor: '#FFF5E5',
+              isBreak: true,
+            };
+          } else {
+            dayData[time] = {
+              content: '',
+              backgroundColor: '#f9f9f9',
+              classes: [],
+            };
+          }
+        });
+
+        return dayData;
+      });
+
+      setScheduleData(newScheduleData);
+      message.success('โหลดข้อมูลตารางสำเร็จ');
+    }
+  } catch (error) {
+    console.error(error);
+    message.error('เกิดข้อผิดพลาดในการโหลดข้อมูลตาราง');
+  }
+};
 
     useEffect(() => {
         getAllNameTable();
@@ -93,12 +143,100 @@ const Schedulepage: React.FC = () => {
         setLoadModalVisible(true);
     };
 
-    const [scheduleData, setScheduleData] = useState<any[]>([]);
-    const handleLoadSchedule = (scheduleName: string) => {
-        getloadSchedules(scheduleName);
-        // loadSchedulebyname
-        //setScheduleData();
-    };
+    const [scheduleData, setScheduleData] = useState<ScheduleData[]>([]);
+
+const handleLoadSchedule = async (scheduleName: string) => {
+  try {
+    const res = await getSchedulesBynameTable(scheduleName);
+    if (res.status === 200 && res.data) {
+      const rawSchedules = res.data; // ข้อมูลจาก backend
+
+      // แปลงข้อมูล rawSchedules เป็น ScheduleData[] ที่ตารางต้องการ
+      const newScheduleData: ScheduleData[] = days.map((day, dayIndex) => {
+        const dayData: ScheduleData = {
+          key: dayIndex.toString(),
+          day: day,
+        };
+
+        timeSlots.forEach(time => {
+          // หา schedule ที่ตรงกับวันและช่วงเวลา
+          const matched = rawSchedules.filter((item: any) => {
+            // สมมติ item.DayOfWeek, item.StartTime, item.EndTime
+            // ต้องแปลงเวลาเป็น string แล้วเช็คว่าตรงกับ slot หรือไม่
+            return (
+              item.DayOfWeek === day &&
+              isTimeInSlot(item.StartTime, item.EndTime, time)
+            );
+          });
+
+          if (matched.length > 0) {
+            dayData[time] = {
+              backgroundColor: getRandomBackgroundColor(),
+              classes: matched.map((item: any) => ({
+                subject:
+                  item.OfferedCourses?.AllCourses?.ThaiName ||
+                  item.OfferedCourses?.AllCourses?.EnglishName ||
+                  'ไม่ทราบชื่อ',
+                teacher:
+                  (item.OfferedCourses?.User?.Firstname || '') +
+                  ' ' +
+                  (item.OfferedCourses?.User?.Lastname || ''),
+                room: item.OfferedCourses?.Laboratory?.Room || 'ไม่ระบุห้อง',
+              })),
+            };
+          } else if (time === '12:00-13:00') {
+            dayData[time] = {
+              content: 'พักเที่ยง',
+              backgroundColor: '#FFF5E5',
+              isBreak: true,
+            };
+          } else {
+            dayData[time] = {
+              content: '',
+              backgroundColor: '#f9f9f9',
+              classes: [],
+            };
+          }
+        });
+
+        return dayData;
+      });
+
+      setScheduleData(newScheduleData);
+      message.success('โหลดตารางเรียบร้อย');
+    } else {
+      message.error('โหลดข้อมูลตารางไม่สำเร็จ');
+    }
+  } catch (error) {
+    console.error(error);
+    message.error('เกิดข้อผิดพลาดในการโหลดตาราง');
+  }
+};
+
+// ฟังก์ชันช่วยเช็คว่าเวลานี้อยู่ในช่วง time slot หรือไม่
+function isTimeInSlot(startTime: string, endTime: string, slot: string): boolean {
+  // สมมติเวลารูปแบบ ISO string เช่น "2025-08-02T08:00:00.000Z"
+  // slot รูปแบบ '08:00-09:00'
+  const [slotStart, slotEnd] = slot.split('-');
+
+  // แปลงเวลาจาก string เป็นนาที
+  const toMinutes = (timeStr: string) => {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  const startMinutes = toMinutes(startTime.substring(11, 16));
+  const endMinutes = toMinutes(endTime.substring(11, 16));
+  const slotStartMinutes = toMinutes(slotStart);
+  const slotEndMinutes = toMinutes(slotEnd);
+
+  // ถ้าช่วงเวลา class ครอบคลุมเวลาของ slot นี้ (หรือ overlap)
+  return (
+    (startMinutes <= slotStartMinutes && endMinutes > slotStartMinutes) ||
+    (startMinutes >= slotStartMinutes && startMinutes < slotEndMinutes)
+  );
+}
+
 
     // ฟังก์ชันลบตารางที่บันทึกไว้ - แบบใหม่ไม่ใช้ Modal.confirm
     const handleDeleteSchedule = (scheduleName: string) => {
@@ -378,97 +516,27 @@ const Schedulepage: React.FC = () => {
         console.log('Schedule data saved:', scheduleData);
     };
 
-    // ฟังก์ชันสำหรับสร้างตารางอัตโนมัติ
-    const generateAutoSchedule = () => {
-        const subjects = [
-            'ENG23 2001', 'ENG23 2002', 'ENG23 2003', 'IST23 2001', 'IST23 2002',
-            '523452', '523453', 'ENG23 2004', 'ENG23 2005', 'ENG23 2006', 'ENG23 2007'
-        ];
+const generateAutoSchedule = async () => {
+  try {
+    const year = 2567;
+    const term = 1;
+    const res = await postAutoGenerateSchedule(year, term);
 
-        const teachers = [
-            'อ.สมชาย', 'อ.สมศรี', 'อ.นิรันดร์', 'อ.วิมลา', 'อ.ประยุทธ์',
-            'อ.กุลธิดา', 'อ.สุนทร', 'อ.มนีรัตน์', 'อ.อนันต์', 'อ.สุวรรณา',
-            'อ.จิรพันธ์', 'อ.วรรณา', 'อ.ธนาคาร', 'อ.สุภาพ', 'อ.นิภา'
-        ];
+    if (res.status === 200 && res.data) {
+      const scheduleFromAPI = res.data;
 
-        const rooms = [
-            'Lecture', 'F11-421,MicroP', 'F11-422,Software'
-        ];
+      // ทำเหมือนข้อ 1: แปลงข้อมูลจาก backend เป็น ScheduleData ที่ใช้ในตาราง
+      // ... โค้ดเหมือนด้านบน
 
-        const newScheduleData: ScheduleData[] = days.map((day, dayIndex) => {
-            const dayData: ScheduleData = {
-                key: dayIndex.toString(),
-                day: day
-            };
-
-            // สร้างข้อมูลสำหรับแต่ละช่วงเวลา
-            timeSlots.forEach((time, timeIndex) => {
-                // ช่วงพักเที่ยง (12:00-13:00)
-                if (time === '12:00-13:00') {
-                    dayData[time] = {
-                        content: 'พักเที่ยง',
-                        backgroundColor: '#FFF5E5',
-                        isBreak: true
-                    };
-                    return;
-                }
-
-                // กำหนดความหนาแน่นของคาบเรียนตามวัน
-                let probability = 0.6; // ความน่าจะเป็นที่จะมีคาบเรียน
-                if (day === 'เสาร์' || day === 'อาทิตย์') {
-                    probability = 0.3; // วันหยุดมีคาบน้อยกว่า
-                }
-
-                // สุ่มจำนวนคาบที่จะมีในช่วงเวลานี้ (1-3 คาบ)
-                const numberOfClasses = Math.random() < probability ?
-                    Math.floor(Math.random() * 3) + 1 : 0;
-
-                if (numberOfClasses > 0) {
-                    const classes: ClassInfo[] = [];
-                    const usedTeachers = new Set<string>(); // เก็บอาจารย์ที่ใช้แล้วเพื่อไม่ให้ซ้ำ
-
-                    for (let i = 0; i < numberOfClasses; i++) {
-                        // เลือกอาจารย์ที่ยังไม่ได้ใช้
-                        let availableTeachers = teachers.filter((t: string) => !usedTeachers.has(t));
-                        if (availableTeachers.length === 0) {
-                            // ถ้าอาจารย์หมดแล้ว ให้ใช้ได้ทั้งหมด
-                            availableTeachers = teachers;
-                        }
-
-                        const randomSubject = subjects[Math.floor(Math.random() * subjects.length)];
-                        const randomTeacher = availableTeachers[Math.floor(Math.random() * availableTeachers.length)];
-                        const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
-
-                        usedTeachers.add(randomTeacher);
-
-                        classes.push({
-                            subject: randomSubject,
-                            teacher: randomTeacher,
-                            room: randomRoom
-                        });
-                    }
-
-                    // เก็บข้อมูลคาบเรียนแยกเป็นก้อนๆ
-                    dayData[time] = {
-                        content: '', // ไม่ใช้ content แล้ว
-                        backgroundColor: getRandomBackgroundColor(),
-                        classes: classes as ClassInfo[]
-                    };
-                } else {
-                    dayData[time] = {
-                        content: '',
-                        backgroundColor: '#f9f9f9',
-                        classes: []
-                    };
-                }
-            });
-
-            return dayData;
-        });
-
-        setScheduleData(newScheduleData);
-        alert('สร้างตารางเรียนอัตโนมัติสำเร็จ!\n✨ รองรับหลายอาจารย์ในช่วงเวลาเดียวกัน\n🎨 สีพื้นหลังสุ่มแล้ว');
-    };
+      message.success('สร้างตารางอัตโนมัติสำเร็จ');
+    } else {
+      message.error('ไม่สามารถสร้างตารางได้');
+    }
+  } catch (error) {
+    console.error(error);
+    message.error('เกิดข้อผิดพลาดในการสร้างตาราง');
+  }
+};
 
     // ฟังก์ชันสำหรับดาวน์โหลด JSON
     const downloadSchedule = () => {
