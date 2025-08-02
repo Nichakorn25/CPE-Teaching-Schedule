@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -66,83 +67,134 @@ func GetScheduleByNameTableAndUserID(c *gin.Context) {
 	c.JSON(http.StatusOK, schedules)
 }
 
-
 // ////////////////////////////////////////////////////////// จัดตารางสอน
 func AutoGenerateSchedule(c *gin.Context) {
 	year := c.Query("year")
 	term := c.Query("term")
+	nameTable := fmt.Sprintf("ปีการศึกษา %s เทอม %s", year, term)
 
 	var offeredCourses []entity.OfferedCourses
 	config.DB().Where("year = ? AND term = ?", year, term).
 		Preload("User.Position").
 		Preload("AllCourses.TypeOfCourses").
 		Preload("AllCourses.Credit").
+		Preload("AllCourses.AcademicYear").
+		Preload("Laboratory").
 		Find(&offeredCourses)
 
-	var fixedCourses []entity.TimeFixedCourses
-	config.DB().Where("year = ? AND term = ?", year, term).
-		Find(&fixedCourses)
+	// ลบตารางเดิม
+	config.DB().Where("name_table = ?", nameTable).Delete(&entity.Schedule{})
 
-	config.DB().Where("name_table = ?", fmt.Sprintf("ปีการศึกษา %s เทอม %s", year, term)).Delete(&entity.Schedule{})
-
-	for _, fixed := range fixedCourses {
-		schedule := entity.Schedule{
-			NameTable:        fmt.Sprintf("ปีการศึกษา %s เทอม %s", year, term),
-			SectionNumber:    fixed.Section,
-			DayOfWeek:        fixed.DayOfWeek,
-			StartTime:        fixed.StartTime,
-			EndTime:          fixed.EndTime,
-			OfferedCoursesID: getOfferedCourseID(fixed.AllCoursesID, fixed.Section, offeredCourses),
-		}
-		config.DB().Create(&schedule)
-	}
-
-	var schedules []entity.Schedule
-
+	// 🧩 [1] FIXED COURSES: วนตาม Section จริง
 	for _, course := range offeredCourses {
-		if course.IsFixCourses || course.User.Position.Priority == nil {
+		if !course.IsFixCourses {
 			continue
 		}
+		for sec := uint(1); sec <= course.Section; sec++ {
+			var fixedCourses []entity.TimeFixedCourses
+			config.DB().Where("all_courses_id = ? AND section = ? AND year = ? AND term = ?",
+				course.AllCoursesID, sec, year, term).Find(&fixedCourses)
 
-		hours := course.AllCourses.Credit.Unit + course.AllCourses.Credit.Lecture
-		slotsNeeded := int(hours)
+			for _, fixed := range fixedCourses {
+				schedule := entity.Schedule{
+					NameTable:        nameTable,
+					SectionNumber:    fixed.Section,
+					DayOfWeek:        fixed.DayOfWeek,
+					StartTime:        fixed.StartTime,
+					EndTime:          fixed.EndTime,
+					OfferedCoursesID: course.ID,
+				}
+				config.DB().Create(&schedule)
+			}
+		}
+	}
 
-		var conditions []entity.Condition
-		config.DB().Where("user_id = ?", course.UserID).Find(&conditions)
+	// โหลดใหม่เฉพาะวิชาที่ยังไม่ถูกจัด
+	var autoCourses []entity.OfferedCourses
+	config.DB().Where("year = ? AND term = ? AND is_fix_courses = false", year, term).
+		Preload("User.Position").
+		Preload("AllCourses.TypeOfCourses").
+		Preload("AllCourses.Credit").
+		Preload("AllCourses.AcademicYear").
+		Preload("Laboratory").
+		Find(&autoCourses)
 
-		scheduled := 0
-		for day := 0; day < 7 && scheduled < slotsNeeded; day++ {
-			dayName := getDayName(day)
+	// แยกวิชาออกเป็นกลุ่มเพื่อจัดลำดับ
+	var coreCourses, electiveCourses []entity.OfferedCourses
+	for _, course := range autoCourses {
+		if course.AllCourses.TypeOfCoursesID == 1 {
+			coreCourses = append(coreCourses, course)
+		} else {
+			electiveCourses = append(electiveCourses, course)
+		}
+	}
 
-			for hour := 8; hour <= 20 && scheduled < slotsNeeded; hour++ {
-				start := time.Date(0, 1, 1, hour, 0, 0, 0, time.UTC)
-				end := start.Add(time.Hour)
+	sortCoursesByPriority := func(courses []entity.OfferedCourses) {
+		sort.SliceStable(courses, func(i, j int) bool {
+			pi := courses[i].User.Position.Priority
+			pj := courses[j].User.Position.Priority
+			if pi == nil {
+				return false
+			}
+			if pj == nil {
+				return true
+			}
+			return *pi < *pj
+		})
+	}
 
-				if !isConflictWithConditions(dayName, start, end, conditions) &&
-					!isSlotTakenOrTeacherConflict(dayName, start, end, schedules, course.UserID) {
+	sortCoursesByPriority(coreCourses)
+	sortCoursesByPriority(electiveCourses)
 
-					s := entity.Schedule{
-						NameTable:        fmt.Sprintf("ปีการศึกษา %s เทอม %s", year, term),
-						SectionNumber:    course.Section,
-						DayOfWeek:        dayName,
-						StartTime:        start,
-						EndTime:          end,
-						OfferedCoursesID: course.ID,
+	var allSchedules []entity.Schedule
+	config.DB().Where("name_table = ?", nameTable).Find(&allSchedules)
+
+	// 🧩 [2] AUTO-GENERATE: วนทีละ Section
+	for _, group := range [][]entity.OfferedCourses{coreCourses, electiveCourses} {
+		for _, course := range group {
+			credit := course.AllCourses.Credit
+			slotsNeeded := int(credit.Lecture + credit.Lab)
+
+			for sec := uint(1); sec <= course.Section; sec++ {
+				var conditions []entity.Condition
+				config.DB().Where("user_id = ?", course.UserID).Find(&conditions)
+
+				scheduled := 0
+				for day := 0; day < 5 && scheduled < slotsNeeded; day++ {
+					dayName := getDayName(day)
+					for hour := 8; hour < 21 && scheduled < slotsNeeded; hour++ {
+						if hour == 12 {
+							continue
+						}
+
+						start := time.Date(0, 1, 1, hour, 0, 0, 0, time.UTC)
+						end := start.Add(time.Hour)
+
+						if isConflictWithConditions(dayName, start, end, conditions) ||
+							isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
+							(course.LaboratoryID != nil &&
+								isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) {
+							continue
+						}
+
+						s := entity.Schedule{
+							NameTable:        nameTable,
+							SectionNumber:    sec, // ✅ ใช้เลขกลุ่มเรียนจริง
+							DayOfWeek:        dayName,
+							StartTime:        start,
+							EndTime:          end,
+							OfferedCoursesID: course.ID,
+						}
+						allSchedules = append(allSchedules, s)
+						config.DB().Create(&s)
+						scheduled++
 					}
-					schedules = append(schedules, s)
-					scheduled++
 				}
 			}
 		}
 	}
 
-	for _, s := range schedules {
-		config.DB().Create(&s)
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "สร้างตารางสอนอัตโนมัติสำเร็จ",
-	})
+	c.JSON(http.StatusOK, gin.H{"message": "สร้างตารางสอนอัตโนมัติสำเร็จ"})
 }
 
 func getDayName(index int) string {
@@ -160,30 +212,59 @@ func isConflictWithConditions(day string, start, end time.Time, conditions []ent
 	return false
 }
 
-func isSlotTakenOrTeacherConflict(day string, start, end time.Time, schedules []entity.Schedule, userID uint) bool {
-	for _, s := range schedules {
-		if s.DayOfWeek == day &&
-			(start.Before(s.EndTime) && end.After(s.StartTime)) {
+// func isSlotTakenOrTeacherConflict(day string, start, end time.Time, schedules []entity.Schedule, userID uint) bool {
+// 	for _, s := range schedules {
+// 		if s.DayOfWeek == day &&
+// 			(start.Before(s.EndTime) && end.After(s.StartTime)) {
+// 			var offered entity.OfferedCourses
+// 			if err := config.DB().First(&offered, s.OfferedCoursesID).Error; err == nil {
+// 				if offered.UserID == userID {
+// 					return true
+// 				}
+// 			}
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
-			var offered entity.OfferedCourses
-			if err := config.DB().First(&offered, s.OfferedCoursesID).Error; err == nil {
-				if offered.UserID == userID {
-					return true
-				}
+// func getOfferedCourseID(allCourseID uint, section uint, offeredCourses []entity.OfferedCourses) uint {
+// 	for _, oc := range offeredCourses {
+// 		if oc.AllCoursesID == allCourseID && oc.Section == section {
+// 			return oc.ID
+// 		}
+// 	}
+// 	return 0
+// }
+
+func isInstructorConflict(day string, start, end time.Time, schedules []entity.Schedule, userID uint) bool {
+	for _, s := range schedules {
+		if s.DayOfWeek != day || !(start.Before(s.EndTime) && end.After(s.StartTime)) {
+			continue
+		}
+		var oc entity.OfferedCourses
+		if err := config.DB().First(&oc, s.OfferedCoursesID).Error; err == nil {
+			if oc.UserID == userID {
+				return true
 			}
-			return true
 		}
 	}
 	return false
 }
 
-func getOfferedCourseID(allCourseID uint, section uint, offeredCourses []entity.OfferedCourses) uint {
-	for _, oc := range offeredCourses {
-		if oc.AllCoursesID == allCourseID && oc.Section == section {
-			return oc.ID
+func isLabConflict(day string, start, end time.Time, schedules []entity.Schedule, labID uint) bool {
+	for _, s := range schedules {
+		if s.DayOfWeek != day || !(start.Before(s.EndTime) && end.After(s.StartTime)) {
+			continue
+		}
+		var oc entity.OfferedCourses
+		if err := config.DB().First(&oc, s.OfferedCoursesID).Error; err == nil {
+			if oc.LaboratoryID != nil && *oc.LaboratoryID == labID {
+				return true
+			}
 		}
 	}
-	return 0
+	return false
 }
 
 // ///////////////////////////////////////// ดึงตารางสอนไปแสดงตาม nametable
