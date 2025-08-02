@@ -114,11 +114,11 @@ export {
   getConditionsByUserId,
   deleteConditionsByUser,
 
-  upCreateOfferedCourse,
+  upCreateOfferedCourse, //used
   deleteOfferedCourse, //used
 
   getSchedulesBynameTable,
-  getSchedulesBynameTableid,
+  getSchedulesBynameTableid, 
   getNameTable, //used
   postAutoGenerateSchedule,
   putupdateScheduleTime,

@@ -18,6 +18,7 @@ import EditConditionpage from "./pages/scheduler/addconditionpage/EditConditionp
 import AddCourse from "./pages/instructor/AddCourse/AddCourse";
 
 import Schedulepage from './pages/scheduler/schedulepage/Schedulepage';
+import AddTeacherAssistance from "./pages/scheduler/AddTeacherAssistance/AddTeacherAssistance";
 import OfferedCoursespage from "./pages/scheduler/offeredcoursepage/OfferedCoursespage";
 import AddConditionpage from './pages/scheduler/addconditionpage/AddConditionpage';
 import Conditionpage from './pages/scheduler/conditionpage/Conditionpage';
@@ -55,6 +56,7 @@ const App: React.FC = () => {
           <Route path="add-course" element={<MainLayout><AddCourse /></MainLayout>} />
 
           <Route path="schedule-page" element={<MainLayout><Schedulepage /></MainLayout>} />
+          <Route path="add-teacher-assistance" element={<MainLayout><AddTeacherAssistance /></MainLayout>} />
           <Route path="all-open-course" element={<MainLayout><OfferedCoursespage /></MainLayout>} />
           <Route path="condition-page" element={<MainLayout><Conditionpage /></MainLayout>} />
           {/* <Route path="Instructorpage" element={<MainLayout><Instructorpage /></MainLayout>} /> */}
