@@ -31,6 +31,38 @@ const OfferedCoursespage: React.FC = () => {
   const [majors, setMajors] = useState<MajorInterface[]>([]);
   const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
   const navigate = useNavigate();
+  const [expandedRowKeys, setExpandedRowKeys] = useState<number[]>([]);
+
+  const toggleExpandRow = (id: number) => {
+    setExpandedRowKeys((prev) =>
+      prev.includes(id) ? prev.filter((key) => key !== id) : [...prev, id]
+    );
+  };
+
+  const getExpandedTableData = () => {
+    const result: any[] = [];
+
+    filteredCourses.forEach((course) => {
+      result.push({ ...course, isChild: false, key: course.ID });
+
+      if (expandedRowKeys.includes(course.ID) && course.GroupInfos.length > 1) {
+        const extraGroups = course.GroupInfos.slice(1); // กลุ่มที่ 2 เป็นต้นไป
+
+        extraGroups.forEach((group, i) => {
+          const isLast = i === extraGroups.length - 1;
+          result.push({
+            ...course,
+            isChild: true,
+            isLastChild: isLast,
+            GroupInfo: group,
+            key: `${course.ID}-extra-${i}`,
+          });
+        });
+      }
+    });
+
+    return result;
+  };
 
   useEffect(() => {
     const year = localStorage.getItem("academicYear");
@@ -48,31 +80,30 @@ const OfferedCoursespage: React.FC = () => {
       if (response.status === 200 && Array.isArray(response.data?.data)) {
         const allCourses = response.data.data as OpenCourseInterface[];
 
-       const grouped = allCourses.reduce((acc, course) => {
-  const key = `${course.Code}-${course.Credit}-${course.TypeName}-${course.Major}-${course.Teacher}`;
-  const existing = acc.get(key);
+        const grouped = allCourses.reduce((acc, course) => {
+          const key = `${course.Code}-${course.Credit}-${course.TypeName}-${course.Major}-${course.Teacher}`;
+          const existing = acc.get(key);
 
-  if (existing) {
-    const merged = [...existing.GroupInfos, ...course.GroupInfos];
+          if (existing) {
+            const merged = [...existing.GroupInfos, ...course.GroupInfos];
 
-    // 🔁 กำจัดรายการซ้ำโดยดูจาก combination ของ Room+Group+Day+TimeSpan
-    const deduped = Array.from(
-      new Map(
-        merged.map((g) => [
-          `${g.Room}-${g.Group}-${g.Day}-${g.TimeSpan}`,
-          g,
-        ])
-      ).values()
-    );
+            // 🔁 กำจัดรายการซ้ำโดยดูจาก combination ของ Room+Group+Day+TimeSpan
+            const deduped = Array.from(
+              new Map(
+                merged.map((g) => [
+                  `${g.Room}-${g.Group}-${g.Day}-${g.TimeSpan}`,
+                  g,
+                ])
+              ).values()
+            );
 
-    existing.GroupInfos = deduped;
-  } else {
-    acc.set(key, { ...course, GroupInfos: [...course.GroupInfos] });
-  }
+            existing.GroupInfos = deduped;
+          } else {
+            acc.set(key, { ...course, GroupInfos: [...course.GroupInfos] });
+          }
 
-  return acc;
-}, new Map<string, OpenCourseInterface>());
-
+          return acc;
+        }, new Map<string, OpenCourseInterface>());
 
         const groupedCourses = Array.from(grouped.values());
         setCourses(groupedCourses);
@@ -133,69 +164,122 @@ const OfferedCoursespage: React.FC = () => {
     })
     .sort((a, b) => a.ID - b.ID);
 
-  const columns: ColumnsType<OpenCourseInterface> = [
+  const columns: ColumnsType<any> = [
     {
       title: "ลำดับ",
       key: "index",
-      render: (_text, _record, index) =>
-        index + 1 + (currentPage - 1) * pageSize,
+      render: (_text, record, index) => {
+        // นับเฉพาะแถวหลัก (isChild = false)
+        if (record.isChild) return null;
+
+        // หาตำแหน่งจริงใน filteredCourses แล้วคำนวณลำดับ
+        const indexInMain = filteredCourses.findIndex(
+          (c) => c.ID === record.ID
+        );
+        return indexInMain + 1 + (currentPage - 1) * pageSize;
+      },
     },
     {
       title: "รหัสวิชา",
-      dataIndex: "Code",
       key: "Code",
+      render: (_text, record) => <span>{record.Code}</span>,
     },
     {
       title: "ชื่อวิชา",
-      dataIndex: "Name",
       key: "Name",
+      render: (_text, record) => <span>{record.Name}</span>,
     },
     {
       title: "หน่วยกิต",
-      dataIndex: "Credit",
       key: "Credit",
+      render: (_text, record) => <span>{record.Credit}</span>,
     },
     {
       title: "หมวดวิชา",
-      dataIndex: "TypeName",
       key: "TypeName",
+      render: (_text, record) => <span>{record.TypeName}</span>,
     },
     {
       title: "อาจารย์ผู้สอน",
-      dataIndex: "Teacher",
       key: "Teacher",
-    },
-    {
-      title: "ห้องเรียน",
-      dataIndex: "GroupInfos",
-      key: "GroupInfos",
-      render: (groups) =>
-        groups.map((g: any, index: number) => (
-          <div key={index}>ห้อง {g.Room}</div>
-        )),
+      render: (_text, record) => <span>{record.Teacher}</span>,
     },
     {
       title: "กลุ่มเรียน",
-      dataIndex: "GroupInfos",
-      key: "GroupInfos",
-      render: (groups) =>
-        groups.map((g: any, index: number) => <div key={index}>{g.Group}</div>),
+      key: "Group",
+      render: (_text, record) => {
+        // ✅ แถวหลัก
+        if (!record.isChild) {
+          const firstGroup = record.GroupInfos?.[0];
+          const hasMore = record.GroupInfos?.length > 1;
+          return (
+            <div>
+              {firstGroup?.Group}
+              {hasMore && !expandedRowKeys.includes(record.ID) && (
+                <div>
+                  <button
+                    onClick={() => toggleExpandRow(record.ID)}
+                    style={{
+                      color: "#1677ff",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      marginLeft: "4px",
+                    }}
+                  >
+                    ดูเพิ่มเติม
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // ✅ แถวลูก
+        return (
+          <div>
+            {record.GroupInfo?.Group}
+            {record.isLastChild && (
+              <div>
+                <button
+                  onClick={() => toggleExpandRow(record.ID)}
+                  style={{
+                    color: "#1677ff",
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    marginLeft: "4px",
+                  }}
+                >
+                  ซ่อน
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      title: "ห้อง",
+      key: "Room",
+      render: (_text, record) =>
+        !record.isChild ? record.GroupInfos?.[0]?.Room : record.GroupInfo?.Room,
     },
     {
       title: "วันที่สอน",
-      dataIndex: "GroupInfos",
-      key: "GroupInfos",
-      render: (groups) =>
-        groups.map((g: any, index: number) => <div key={index}>{g.Day}</div>),
+      key: "Day",
+      render: (_text, record) =>
+        !record.isChild ? record.GroupInfos?.[0]?.Day : record.GroupInfo?.Day,
     },
     {
-      title: "เวลาที่สอน",
-      dataIndex: "GroupInfos",
-      key: "GroupInfos",
-      render: (groups) =>
-        groups.map((g: any, index: number) => (
-          <div key={index}>{g.TimeSpan}</div>
-        )),
+      title: "เวลา",
+      key: "TimeSpan",
+      render: (_text, record) =>
+        !record.isChild
+          ? record.GroupInfos?.[0]?.TimeSpan
+          : record.GroupInfo?.TimeSpan,
     },
     {
       title: "จำนวนกลุ่ม",
@@ -358,7 +442,8 @@ const OfferedCoursespage: React.FC = () => {
         />
       </div>
       <Table
-        dataSource={filteredCourses.map((c) => ({ key: c.ID, ...c }))}
+        dataSource={getExpandedTableData()}
+        rowKey={(record) => record.key}
         columns={columns}
         loading={loading}
         pagination={{
