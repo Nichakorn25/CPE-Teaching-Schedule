@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"sort"
 	"time"
@@ -82,7 +83,6 @@ func AutoGenerateSchedule(c *gin.Context) {
 		Preload("Laboratory").
 		Find(&offeredCourses)
 
-	// ลบตารางเดิม
 	config.DB().Where("name_table = ?", nameTable).Delete(&entity.Schedule{})
 
 	// 🧩 [1] FIXED COURSES: วนตาม Section จริง
@@ -104,7 +104,10 @@ func AutoGenerateSchedule(c *gin.Context) {
 					EndTime:          fixed.EndTime,
 					OfferedCoursesID: course.ID,
 				}
-				config.DB().Create(&schedule)
+				if err := config.DB().Create(&schedule).Error; err != nil {
+					continue
+				}
+				config.DB().Model(&fixed).Update("schedule_id", schedule.ID)
 			}
 		}
 	}
@@ -152,22 +155,86 @@ func AutoGenerateSchedule(c *gin.Context) {
 	// 🧩 [2] AUTO-GENERATE: วนทีละ Section
 	for _, group := range [][]entity.OfferedCourses{coreCourses, electiveCourses} {
 		for _, course := range group {
+			// สุ่มวัน (จันทร์-ศุกร์) และเวลาจัด
+			days := []int{0, 1, 2, 3, 4}
+			preferredHours := []int{8, 9, 10, 11, 13, 14, 15}
+			fallbackHours := []int{16, 17, 18, 19, 20}
+
+			// สุ่มให้ไม่เหมือนกันในแต่ละครั้งที่เรียกใช้
+			rand.Seed(time.Now().UnixNano())
+			rand.Shuffle(len(days), func(i, j int) { days[i], days[j] = days[j], days[i] })
+			rand.Shuffle(len(preferredHours), func(i, j int) { preferredHours[i], preferredHours[j] = preferredHours[j], preferredHours[i] })
+			rand.Shuffle(len(fallbackHours), func(i, j int) { fallbackHours[i], fallbackHours[j] = fallbackHours[j], fallbackHours[i] })
+
 			credit := course.AllCourses.Credit
-			slotsNeeded := int(credit.Lecture + credit.Lab)
+			labHours := int(credit.Lab)
+			lecHours := int(credit.Lecture)
 
 			for sec := uint(1); sec <= course.Section; sec++ {
 				var conditions []entity.Condition
 				config.DB().Where("user_id = ?", course.UserID).Find(&conditions)
 
-				scheduled := 0
-				for day := 0; day < 5 && scheduled < slotsNeeded; day++ {
-					dayName := getDayName(day)
-					for hour := 8; hour < 21 && scheduled < slotsNeeded; hour++ {
-						if hour == 12 {
-							continue
-						}
+				var labDayIndex = -1 // สำหรับจำวัน lab ที่ถูกจัดแล้ว
+				scheduledLecture := 0
 
-						start := time.Date(0, 1, 1, hour, 0, 0, 0, time.UTC)
+				// Step 1: จัด Lab ก่อนถ้ามี
+				if labHours > 0 {
+				LAB_LOOP:
+					for _, day := range days {
+						dayName := getDayName(day)
+						for hour := 8; hour <= (21 - labHours); hour++ {
+							conflict := false
+							var tempSlots []entity.Schedule
+							for i := 0; i < labHours; i++ {
+								start := time.Date(2006, 1, 2, hour+i, 0, 0, 0, time.FixedZone("Asia/Bangkok", 7*60*60))
+								end := start.Add(time.Hour)
+
+								if isConflictWithConditions(dayName, start, end, conditions) ||
+									isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
+									(course.LaboratoryID != nil &&
+										isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) {
+									conflict = true
+									break
+								}
+
+								tempSlots = append(tempSlots, entity.Schedule{
+									NameTable:        nameTable,
+									SectionNumber:    sec,
+									DayOfWeek:        dayName,
+									StartTime:        start,
+									EndTime:          end,
+									OfferedCoursesID: course.ID,
+								})
+							}
+
+							if !conflict {
+								for _, s := range tempSlots {
+									allSchedules = append(allSchedules, s)
+									config.DB().Create(&s)
+								}
+								labDayIndex = day
+								break LAB_LOOP
+							}
+						}
+					}
+				}
+
+				// Step 2: จัด Lecture (เลี่ยงวัน Lab, พยายามจัดวันก่อนหน้า)
+				for _, day := range days {
+					if day == labDayIndex {
+						continue
+					}
+					if labDayIndex != -1 && day > labDayIndex {
+						continue
+					}
+
+					dayName := getDayName(day)
+					slotsToday := 0
+					maxPerDay := 2
+
+					// จัด preferred slot ก่อน
+					for _, hour := range preferredHours {
+						start := time.Date(2006, 1, 2, hour, 0, 0, 0, time.FixedZone("Asia/Bangkok", 7*60*60))
 						end := start.Add(time.Hour)
 
 						if isConflictWithConditions(dayName, start, end, conditions) ||
@@ -179,7 +246,7 @@ func AutoGenerateSchedule(c *gin.Context) {
 
 						s := entity.Schedule{
 							NameTable:        nameTable,
-							SectionNumber:    sec, // ✅ ใช้เลขกลุ่มเรียนจริง
+							SectionNumber:    sec,
 							DayOfWeek:        dayName,
 							StartTime:        start,
 							EndTime:          end,
@@ -187,7 +254,42 @@ func AutoGenerateSchedule(c *gin.Context) {
 						}
 						allSchedules = append(allSchedules, s)
 						config.DB().Create(&s)
-						scheduled++
+						scheduledLecture++
+						slotsToday++
+						if scheduledLecture >= lecHours || slotsToday >= maxPerDay {
+							break
+						}
+					}
+
+					// fallback ช่วงเย็น
+					if scheduledLecture < lecHours && slotsToday < maxPerDay {
+						for _, hour := range fallbackHours {
+							start := time.Date(2006, 1, 2, hour, 0, 0, 0, time.FixedZone("Asia/Bangkok", 7*60*60))
+							end := start.Add(time.Hour)
+
+							if isConflictWithConditions(dayName, start, end, conditions) ||
+								isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
+								(course.LaboratoryID != nil &&
+									isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) {
+								continue
+							}
+
+							s := entity.Schedule{
+								NameTable:        nameTable,
+								SectionNumber:    sec,
+								DayOfWeek:        dayName,
+								StartTime:        start,
+								EndTime:          end,
+								OfferedCoursesID: course.ID,
+							}
+							allSchedules = append(allSchedules, s)
+							config.DB().Create(&s)
+							scheduledLecture++
+							slotsToday++
+							if scheduledLecture >= lecHours || slotsToday >= maxPerDay {
+								break
+							}
+						}
 					}
 				}
 			}
