@@ -142,6 +142,7 @@ func SetupDatabase() {
 	SeedConditions()
 	SeedOfferedCourses()
 	SeedSchedules()
+	SeedSchedules()
 	SeedTimeFixedCourses()
 	// SeedScheduleTeachingAssistants()
 }
@@ -2624,29 +2625,42 @@ func SeedTimeFixedCourses() {
 	// 	})
 	// }
 	//////////////////////////////////////////////////////////
-	for _, entry := range entries {
-		// startTime, _ := time.ParseInLocation(layout, entry.StartTime, loc)
-		// endTime, _ := time.ParseInLocation(layout, entry.EndTime, loc)
+	// for _, entry := range entries {
+	// 	// startTime, _ := time.ParseInLocation(layout, entry.StartTime, loc)
+	// 	// endTime, _ := time.ParseInLocation(layout, entry.EndTime, loc)
 
-		// ✅ Insert ใหม่ทุกครั้ง ไม่เช็คซ้ำ
-		db.FirstOrCreate(&entity.TimeFixedCourses{}, &entity.TimeFixedCourses{
-			Year:         entry.Year,
-			Term:         entry.Term,
-			DayOfWeek:    entry.DayOfWeek,
-			StartTime:    entry.StartTime,
-			EndTime:      entry.EndTime,
-			RoomFix:      entry.RoomFix,
-			Section:      entry.Section,
-			Capacity:     entry.Capacity,
-			AllCoursesID: entry.AllCoursesID,
-			ScheduleID:   entry.ScheduleID,
-		})
+	// 	// ✅ Insert ใหม่ทุกครั้ง ไม่เช็คซ้ำ
+	// 	db.FirstOrCreate(&entity.TimeFixedCourses{}, &entity.TimeFixedCourses{
+	// 		Year:         entry.Year,
+	// 		Term:         entry.Term,
+	// 		DayOfWeek:    entry.DayOfWeek,
+	// 		StartTime:    entry.StartTime,
+	// 		EndTime:      entry.EndTime,
+	// 		RoomFix:      entry.RoomFix,
+	// 		Section:      entry.Section,
+	// 		Capacity:     entry.Capacity,
+	// 		AllCoursesID: entry.AllCoursesID,
+	// 		ScheduleID:   entry.ScheduleID,
+	// 	})
+	// }
+	for _, s := range entries {
+	err := db.FirstOrCreate(&entity.TimeFixedCourses{}, &s).Error
+	if err != nil {
+		fmt.Println("Insert error:", err)
+	} else {
+		fmt.Println("Inserted or found:", s)
 	}
+}
+
 
 }
 
 // //////////////////////////////////////////////////////////// ตารางสอน ///////////////////////////////////////////////////////
 // // ยังไม่ครบ
+func SeedSchedules() {
+	layout := "15:04"
+	loc, err := time.LoadLocation("Asia/Bangkok")
+	if err != nil { panic(err) }
 func SeedSchedules() {
 	layout := "15:04"
 	loc, err := time.LoadLocation("Asia/Bangkok")
@@ -3079,6 +3093,20 @@ func SeedSchedules() {
 			},
 	}
 
+	// for _, s := range schedules {
+	// 	db.FirstOrCreate(&entity.Schedule{}, &entity.Schedule{
+	// 		NameTable:        s.NameTable,
+	// 		SectionNumber:    s.SectionNumber,
+	// 		DayOfWeek:        s.DayOfWeek,
+	// 		StartTime:        s.StartTime,
+	// 		EndTime:          s.EndTime,
+	// 		OfferedCoursesID: s.OfferedCoursesID,
+	// 	})
+	// }
+	  for _, s := range schedules {
+        db.FirstOrCreate(&entity.Schedule{}, &s)
+    }
+}
 	// for _, s := range schedules {
 	// 	db.FirstOrCreate(&entity.Schedule{}, &entity.Schedule{
 	// 		NameTable:        s.NameTable,
