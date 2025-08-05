@@ -2661,10 +2661,6 @@ func SeedSchedules() {
 	layout := "15:04"
 	loc, err := time.LoadLocation("Asia/Bangkok")
 	if err != nil { panic(err) }
-func SeedSchedules() {
-	layout := "15:04"
-	loc, err := time.LoadLocation("Asia/Bangkok")
-	if err != nil { panic(err) }
 
 	schedules := []entity.Schedule{
 			{
@@ -3093,20 +3089,6 @@ func SeedSchedules() {
 			},
 	}
 
-	// for _, s := range schedules {
-	// 	db.FirstOrCreate(&entity.Schedule{}, &entity.Schedule{
-	// 		NameTable:        s.NameTable,
-	// 		SectionNumber:    s.SectionNumber,
-	// 		DayOfWeek:        s.DayOfWeek,
-	// 		StartTime:        s.StartTime,
-	// 		EndTime:          s.EndTime,
-	// 		OfferedCoursesID: s.OfferedCoursesID,
-	// 	})
-	// }
-	  for _, s := range schedules {
-        db.FirstOrCreate(&entity.Schedule{}, &s)
-    }
-}
 	// for _, s := range schedules {
 	// 	db.FirstOrCreate(&entity.Schedule{}, &entity.Schedule{
 	// 		NameTable:        s.NameTable,
