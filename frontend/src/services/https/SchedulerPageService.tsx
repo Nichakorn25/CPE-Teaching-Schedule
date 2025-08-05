@@ -92,6 +92,13 @@ async function putupdateScheduleTime(id: number, payload: ScheduleIn) {
     .then((res) => res)
     .catch((e) => e.response);
 }
+
+async function deleteSchedulebyNametable(nameTable: String) {
+  return await axios
+    .delete(`${apiUrl}/delete-schedule/${nameTable}`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
 //------------------ OpenCourses ------------------------------//
 async function upCreateOfferedCourse(id: number, data: OpenCourseInterface) {
   return await axios
@@ -122,4 +129,5 @@ export {
   getNameTable, //used
   postAutoGenerateSchedule,
   putupdateScheduleTime,
+  deleteSchedulebyNametable,
 };

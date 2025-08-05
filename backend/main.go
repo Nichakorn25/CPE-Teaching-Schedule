@@ -69,6 +69,7 @@ func main() {
 		r.POST("/auto-generate-schedule", controllers.AutoGenerateSchedule)
 		r.GET("/unique-nametables", controllers.GetNameTable)
 		r.PUT("/up-schedule/:id", controllers.UpdateScheduleTime)
+		r.DELETE("/delete-schedule/:nameTable", controllers.DeleteScheduleByNameTable)
 
 		///////////////////// SchedulesTeachingAssistant /////////////////////////
 		r.POST("/ScheduleTeachingAssistants", controllers.CreateScheduleTeachingAssistant)
