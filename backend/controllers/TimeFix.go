@@ -36,18 +36,23 @@ func CreateFixedCourse(c *gin.Context) {
 		return
 	}
 
-	startTime, err := time.Parse("15:04", req.StartTime)
+	location, _ := time.LoadLocation("Asia/Bangkok") // Thailand timezone
+
+	today := time.Now().In(location).Format("2006-01-02") // ใช้วันที่ปัจจุบัน หรือกำหนดเองก็ได้ เช่น "2025-08-05"
+
+	// สร้าง datetime string แบบเต็ม
+	startDateTimeStr := fmt.Sprintf("%s %s", today, req.StartTime)
+	endDateTimeStr := fmt.Sprintf("%s %s", today, req.EndTime)
+
+	startTime, err := time.ParseInLocation("2006-01-02 15:04", startDateTimeStr, location)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "รูปแบบเวลาเริ่มต้นไม่ถูกต้อง"})
 		return
 	}
-	endTime, err := time.Parse("15:04", req.EndTime)
+
+	endTime, err := time.ParseInLocation("2006-01-02 15:04", endDateTimeStr, location)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "รูปแบบเวลาเริ่มต้นไม่ถูกต้อง"})
-		return
-	}
-	if req.SectionInFixed > req.Section {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "จำนวนกลุ่มเรียนย่อย (SectionInFixed) ต้องไม่มากกว่าจำนวนกลุ่มทั้งหมด (Section)"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "รูปแบบเวลาสิ้นสุดไม่ถูกต้อง"})
 		return
 	}
 
@@ -109,4 +114,3 @@ func CreateFixedCourse(c *gin.Context) {
 		"time_fixed_course": timeFixed.ID,
 	})
 }
-

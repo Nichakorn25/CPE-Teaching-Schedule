@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"sort"
 	"time"
@@ -154,6 +155,17 @@ func AutoGenerateSchedule(c *gin.Context) {
 	// 🧩 [2] AUTO-GENERATE: วนทีละ Section
 	for _, group := range [][]entity.OfferedCourses{coreCourses, electiveCourses} {
 		for _, course := range group {
+			// สุ่มวัน (จันทร์-ศุกร์) และเวลาจัด
+			days := []int{0, 1, 2, 3, 4}
+			preferredHours := []int{8, 9, 10, 11, 13, 14, 15}
+			fallbackHours := []int{16, 17, 18, 19, 20}
+
+			// สุ่มให้ไม่เหมือนกันในแต่ละครั้งที่เรียกใช้
+			rand.Seed(time.Now().UnixNano())
+			rand.Shuffle(len(days), func(i, j int) { days[i], days[j] = days[j], days[i] })
+			rand.Shuffle(len(preferredHours), func(i, j int) { preferredHours[i], preferredHours[j] = preferredHours[j], preferredHours[i] })
+			rand.Shuffle(len(fallbackHours), func(i, j int) { fallbackHours[i], fallbackHours[j] = fallbackHours[j], fallbackHours[i] })
+
 			credit := course.AllCourses.Credit
 			labHours := int(credit.Lab)
 			lecHours := int(credit.Lecture)
@@ -168,7 +180,7 @@ func AutoGenerateSchedule(c *gin.Context) {
 				// Step 1: จัด Lab ก่อนถ้ามี
 				if labHours > 0 {
 				LAB_LOOP:
-					for day := 0; day < 5; day++ {
+					for _, day := range days {
 						dayName := getDayName(day)
 						for hour := 8; hour <= (21 - labHours); hour++ {
 							conflict := false
@@ -208,11 +220,10 @@ func AutoGenerateSchedule(c *gin.Context) {
 				}
 
 				// Step 2: จัด Lecture (เลี่ยงวัน Lab, พยายามจัดวันก่อนหน้า)
-				for day := 0; day < 5 && scheduledLecture < lecHours; day++ {
+				for _, day := range days {
 					if day == labDayIndex {
-						continue // หลีกเลี่ยงวันเดียวกับ Lab
+						continue
 					}
-					// ถ้า day มากกว่า labDayIndex แล้ว → ข้ามไป เพราะอยากจัดก่อนวัน Lab
 					if labDayIndex != -1 && day > labDayIndex {
 						continue
 					}
@@ -220,9 +231,6 @@ func AutoGenerateSchedule(c *gin.Context) {
 					dayName := getDayName(day)
 					slotsToday := 0
 					maxPerDay := 2
-
-					preferredHours := []int{8, 9, 10, 11, 13, 14, 15}
-					fallbackHours := []int{16, 17, 18, 19, 20}
 
 					// จัด preferred slot ก่อน
 					for _, hour := range preferredHours {
