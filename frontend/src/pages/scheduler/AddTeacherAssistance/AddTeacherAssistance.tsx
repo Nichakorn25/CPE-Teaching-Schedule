@@ -1,35 +1,31 @@
 import React, { useEffect, useState } from "react";
 import { Button, Select, Form, Card, message, Space } from "antd";
-import { MinusCircleOutlined } from "@ant-design/icons";
 import {
   getAllTeachers,
   getOpenCourses,
   getAllTeachingAssistants,
-  //postAssignTeachingAssistants, // API สำหรับบันทึก
+  // postAssignTeachingAssistants,
 } from "../../../services/https/AdminPageServices";
-import { AllTeacher } from "../../../interfaces/Adminpage";
 import { TeachingAssistantInterface } from "../../../interfaces/TeachingAssistant";
-import { OpenCourseInterface } from "../../../interfaces/OpenCourse";
+import { OpenCourseInterface } from "../../../interfaces/Adminpage";
+import { MinusCircleOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
 const AddTeachingAssistant: React.FC = () => {
   const [form] = Form.useForm();
-  const [teachers, setTeachers] = useState<AllTeacher[]>([]);
   const [courses, setCourses] = useState<OpenCourseInterface[]>([]);
-  const [assistants, setAssistants] = useState<TeachingAssistantInterface[]>([]);
-  const [filteredCourses, setFilteredCourses] = useState<OpenCourseInterface[]>([]);
+  const [assistants, setAssistants] = useState<TeachingAssistantInterface[]>(
+    []
+  );
+  const [selectedCourse, setSelectedCourse] =
+    useState<OpenCourseInterface | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      const teacherRes = await getAllTeachers();
-      if (teacherRes.status === 200 && Array.isArray(teacherRes.data)) {
-        setTeachers(teacherRes.data);
-      }
-
       const courseRes = await getOpenCourses();
       if (courseRes.status === 200 && Array.isArray(courseRes.data?.data)) {
-        setCourses(courseRes.data.data); // ต้องมี Teachers: AllTeacher[]
+        setCourses(courseRes.data.data);
       }
 
       const assistantRes = await getAllTeachingAssistants();
@@ -41,38 +37,53 @@ const AddTeachingAssistant: React.FC = () => {
     fetchData();
   }, []);
 
-  // const handleTeacherChange = (teacherId: number) => {
-  //   const filtered = courses.filter(course =>
-  //     course.Teachers?.some((t: AllTeacher) => t.ID === teacherId)
-  //   );
-  //   setFilteredCourses(filtered);
-  //   form.setFieldValue("courseID", undefined);
-  // };
+  const handleCourseChange = (courseID: number) => {
+    const course = courses.find((c) => c.ID === courseID) || null;
+    console.log("📚 เลือกวิชา:", course);
+    setSelectedCourse(course);
+    form.setFieldValue("assistantsPerGroup", []);
+  };
 
-  // const handleSubmit = async (values: any) => {
-  //   const payload = {
-  //     courseID: values.courseID,
-  //     assistants: values.assistants, // array of assistant IDs
-  //   };
+  const handleSubmit = async (values: any) => {
+    const payload = values.assistantsPerGroup.map((group: any) => ({
+      courseID: values.courseID,
+      group: group.group,
+      assistantIDs: group.assistantIDs,
+    }));
 
-  //   const res = await postAssignTeachingAssistants(payload);
+    console.log("📤 Payload ที่จะส่ง:", payload);
 
-  //   if (res.status === 200 || res.status === 201) {
-  //     message.success("บันทึกข้อมูลสำเร็จ");
-  //     form.resetFields();
-  //   } else {
-  //     message.error("เกิดข้อผิดพลาดในการบันทึก");
-  //   }
-  // };
+    // const res = await postAssignTeachingAssistants(payload);
+    // if (res.status === 200 || res.status === 201) {
+    //   message.success("บันทึกข้อมูลสำเร็จ");
+    //   form.resetFields();
+    //   setSelectedCourse(null);
+    // } else {
+    //   message.error("เกิดข้อผิดพลาดในการบันทึก");
+    // }
+  };
 
   return (
     <>
-      <div style={{ marginBottom: "24px", paddingBottom: "16px", borderBottom: "2px solid #F26522" }}>
-        <h2 style={{ margin: 0, color: "#333", fontSize: "24px", fontWeight: "bold" }}>
+      <div
+        style={{
+          marginBottom: "24px",
+          paddingBottom: "16px",
+          borderBottom: "2px solid #F26522",
+        }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            color: "#333",
+            fontSize: "24px",
+            fontWeight: "bold",
+          }}
+        >
           เพิ่มผู้ช่วยสอน
         </h2>
         <p style={{ margin: "8px 0 0 0", color: "#666", fontSize: "14px" }}>
-          เลือกอาจารย์ รายวิชา และผู้ช่วยสอน
+          เลือกรายวิชา แล้วเพิ่มผู้ช่วยสอนแยกตามกลุ่มเรียน
         </p>
       </div>
 
@@ -86,83 +97,164 @@ const AddTeachingAssistant: React.FC = () => {
           boxShadow: "0 8px 32px rgba(0,0,0,0.05)",
         }}
       >
-        <Form form={form} layout="vertical">
-          <Card title="ข้อมูลผู้สอน" style={{ marginBottom: "24px" }} headStyle={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Card
+            title="เลือกรายวิชา"
+            style={{ marginBottom: "24px" }}
+            headStyle={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}
+          >
             <Form.Item
-              label={<span style={{ color: "#F26522", fontWeight: "bold" }}>เลือกอาจารย์</span>}
-              name="teacherID"
-              rules={[{ required: true, message: "กรุณาเลือกอาจารย์" }]}
-            >
-              <Select placeholder="เลือกอาจารย์" size="large">
-                {teachers.map((t) => (
-                  <Option key={t.ID} value={t.ID}>
-                    {t.Firstname} {t.Lastname}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              label={<span style={{ color: "#F26522", fontWeight: "bold" }}>เลือกรายวิชา</span>}
+              label={
+                <span style={{ color: "#F26522", fontWeight: "bold" }}>
+                  รายวิชา
+                </span>
+              }
               name="courseID"
               rules={[{ required: true, message: "กรุณาเลือกรายวิชา" }]}
             >
-              <Select placeholder="เลือกรายวิชา" size="large">
-                {filteredCourses.map((c) => (
-                  <Option key={c.AllCoursesID} value={c.AllCoursesID}>
-                    {c.AllCoursesID} - {c.AllCoursesID}{" "}
-                    {/* {c.UserID?.map((t) => `(${t.Firstname} ${t.Lastname})`).join(", ")} */}
+              <Select
+                placeholder="เลือกรายวิชา"
+                size="large"
+                onChange={handleCourseChange}
+              >
+                {courses.map((c) => (
+                  <Option key={c.ID} value={c.ID}>
+                    {c.Code} - {c.Name}
                   </Option>
                 ))}
               </Select>
             </Form.Item>
           </Card>
 
-          <Card title="ข้อมูลผู้ช่วยสอน" headStyle={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}>
-            <Form.List name="assistants" initialValue={[undefined]}>
-              {(fields, { add, remove }) => (
-                <>
-                  {fields.map(({ key, name, ...restField }) => (
-                    <Form.Item
-                      key={key}
-                      label={
-                        <span style={{ color: "#F26522", fontWeight: "bold" }}>
-                          ผู้ช่วยสอนคนที่ {name + 1}
-                        </span>
-                      }
-                      required
-                    >
-                      <Space align="baseline">
-                        <Form.Item
-                          {...restField}
-                          name={name}
-                          rules={[{ required: true, message: "กรุณาเลือกผู้ช่วยสอน" }]}
-                          noStyle
+          {selectedCourse && (
+            <>
+              <Card
+                title="อาจารย์ผู้สอน"
+                style={{ marginBottom: "24px" }}
+                headStyle={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}
+              >
+                {selectedCourse.Teachers &&
+                selectedCourse.Teachers.length > 0 ? (
+                  <ul>
+                    {selectedCourse?.Teachers.map((t) => (
+                      <li key={t.ID}>
+                        {t.Firstname} {t.Lastname}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p style={{ color: "#999" }}>ไม่มีข้อมูลอาจารย์ผู้สอน</p>
+                )}
+              </Card>
+
+              <Card
+                title="ข้อมูลผู้ช่วยสอนแยกตามกลุ่มเรียน"
+                headStyle={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}
+              >
+                <Form.List name="assistantsPerGroup">
+                  {(fields, { add, remove }) => (
+                    <>
+                      {selectedCourse.GroupInfos.map((group, groupIdx) => (
+                        <div
+                          key={groupIdx}
+                          style={{
+                            marginBottom: 24,
+                            borderBottom: "1px solid #eee",
+                            paddingBottom: 16,
+                          }}
                         >
-                          <Select placeholder="เลือกผู้ช่วยสอน" style={{ width: 300 }}>
-                            {assistants.map((a) => (
-                              <Option key={a.ID} value={a.ID}>
-                                {a.Firstname} {a.Lastname}
-                              </Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
-                        {fields.length > 1 && (
-                          <MinusCircleOutlined
-                            onClick={() => remove(name)}
-                            style={{ color: "red" }}
-                          />
-                        )}
-                      </Space>
-                    </Form.Item>
-                  ))}
-                  <Button type="dashed" onClick={() => add()} block>
-                    + เพิ่มผู้ช่วยสอน
-                  </Button>
-                </>
-              )}
-            </Form.List>
-          </Card>
+                          <p style={{ fontWeight: "bold", color: "#F26522" }}>
+                            กลุ่ม {group.Group} - {group.Day} {group.TimeSpan}{" "}
+                            ห้อง {group.Room}
+                          </p>
+
+                          {/* ซ่อนข้อมูลกลุ่ม */}
+                          <Form.Item
+                            name={[groupIdx, "group"]}
+                            initialValue={group.Group}
+                            hidden
+                          >
+                            <input />
+                          </Form.Item>
+
+                          <Form.List name={[groupIdx, "assistantIDs"]}>
+                            {(
+                              assistantFields,
+                              { add: addAssistant, remove: removeAssistant }
+                            ) => (
+                              <>
+                                {assistantFields.map((field, idx) => (
+                                  <div
+                                    key={field.key}
+                                    style={{
+                                      display: "flex",
+                                      marginBottom: 8,
+                                      gap: 8,
+                                    }}
+                                  >
+                                    <Form.Item
+                                      {...field}
+                                      name={[field.name]}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message: "กรุณาเลือกผู้ช่วยสอน",
+                                        },
+                                      ]}
+                                      style={{ flex: 1, marginBottom: 0 }} // ✅ ทำให้เต็ม
+                                    >
+                                      <Select
+                                        placeholder="เลือกผู้ช่วยสอน"
+                                        style={{ width: "100%" }} // ✅ เต็มแนวกว้าง
+                                        showSearch
+                                        optionFilterProp="children"
+                                        filterOption={(input, option) =>
+                                          String(option?.children)
+                                            .toLowerCase()
+                                            .includes(input.toLowerCase())
+                                        }
+                                      >
+                                        {assistants.map((a) => (
+                                          <Option key={a.ID} value={a.ID}>
+                                            {a.Title?.Title} {a.Firstname}{" "}
+                                            {a.Lastname}
+                                          </Option>
+                                        ))}
+                                      </Select>
+                                    </Form.Item>
+
+                                    <Button
+                                      icon={<MinusCircleOutlined />}
+                                      onClick={() =>
+                                        removeAssistant(field.name)
+                                      }
+                                      danger
+                                      type="text"
+                                    />
+                                  </div>
+                                ))}
+
+                                <Form.Item style={{ marginTop: 8 }}>
+                                  <Button
+                                    type="dashed"
+                                    onClick={() => addAssistant()}
+                                    block
+                                    icon="＋"
+                                  >
+                                    เพิ่มผู้ช่วยสอนสำหรับกลุ่มนี้
+                                  </Button>
+                                </Form.Item>
+                              </>
+                            )}
+                          </Form.List>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </Form.List>
+              </Card>
+            </>
+          )}
 
           <div style={{ textAlign: "right", marginTop: "24px" }}>
             <Button

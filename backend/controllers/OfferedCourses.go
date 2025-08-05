@@ -13,6 +13,12 @@ import (
 )
 
 type (
+	TeacherResp struct {
+		ID        uint   `json:"ID"`
+		Firstname string `json:"Firstname"`
+		Lastname  string `json:"Lastname"`
+	}
+
 	GroupInfo struct { //วิชาจากศูนย์บริการ
 		Group    uint
 		Room     string
@@ -30,7 +36,7 @@ type (
 		Department   string
 		TypeName     string
 		TeacherID    uint
-		Teacher      string
+		Teachers     []TeacherResp
 		GroupInfos   []GroupInfo // รายละเอียดกลุ่ม (เฉพาะศูนย์บริการ) // จะรวมกลุ่มเรียนทั้งหมดของวิชานั้น
 		GroupTotal   uint        // จำนวนกลุ่มทั้งหมด
 		CapacityPer  uint
@@ -113,8 +119,17 @@ func GetOpenCourses(c *gin.Context) {
 	for _, oc := range offered {
 		ac := oc.AllCourses
 		credit := fmt.Sprintf("%d(%d‑%d‑%d)", ac.Credit.Unit, ac.Credit.Lecture, ac.Credit.Lab, ac.Credit.Self)
-		teacher := fmt.Sprintf("%s%s %s", oc.User.Title.Title, oc.User.Firstname, oc.User.Lastname)
+		// teacher := fmt.Sprintf("%s%s %s", oc.User.Title.Title, oc.User.Firstname, oc.User.Lastname)
 		remark := ac.TypeOfCourses.TypeName
+
+		teachers := []TeacherResp{}
+		if oc.User.ID != 0 {
+			teachers = append(teachers, TeacherResp{
+				ID:        oc.User.ID,
+				Firstname: oc.User.Firstname,
+				Lastname:  oc.User.Lastname,
+			})
+		}
 
 		groupInfos := make([]GroupInfo, 0)
 		groupTotal := oc.Section
@@ -140,7 +155,7 @@ func GetOpenCourses(c *gin.Context) {
 				for _, sched := range schedules {
 					groupInfos = append(groupInfos, GroupInfo{
 						Group: sched.SectionNumber,
-						Room:  "", 
+						Room:  "",
 						Day:   sched.DayOfWeek,
 						TimeSpan: fmt.Sprintf("%s‑%s",
 							sched.StartTime.Format("15:04"),
@@ -160,8 +175,8 @@ func GetOpenCourses(c *gin.Context) {
 			Major:        ac.Curriculum.Major.MajorName,
 			Department:   ac.Curriculum.Major.Department.DepartmentName,
 			TypeName:     ac.TypeOfCourses.TypeName,
-			TeacherID:	  oc.UserID,
-			Teacher:      teacher,
+			TeacherID:    oc.UserID,
+			Teachers:     teachers,
 			GroupInfos:   groupInfos,
 			GroupTotal:   groupTotal,
 			CapacityPer:  oc.Capacity,

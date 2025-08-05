@@ -103,7 +103,11 @@ export interface OpenCourseInterface {
   Credit: string;
   TypeName: string;
   TeacherID: number;
-  Teacher: string;
+  Teachers: {
+    ID: number;
+    Firstname: string;
+    Lastname: string;
+  }[];
   GroupInfos: {
     TimeSpan: string;
     Room: string;
