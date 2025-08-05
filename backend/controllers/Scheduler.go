@@ -166,7 +166,7 @@ func AutoGenerateSchedule(c *gin.Context) {
 							continue
 						}
 
-						start := time.Date(0, 1, 1, hour, 0, 0, 0, time.UTC)
+						start := time.Date(2006, 1, 2, hour, 0, 0, 0, time.FixedZone("Asia/Bangkok", 7*60*60))
 						end := start.Add(time.Hour)
 
 						if isConflictWithConditions(dayName, start, end, conditions) ||
@@ -178,7 +178,7 @@ func AutoGenerateSchedule(c *gin.Context) {
 
 						s := entity.Schedule{
 							NameTable:        nameTable,
-							SectionNumber:    sec, // ✅ ใช้เลขกลุ่มเรียนจริง
+							SectionNumber:    sec,
 							DayOfWeek:        dayName,
 							StartTime:        start,
 							EndTime:          end,
