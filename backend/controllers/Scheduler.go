@@ -82,7 +82,6 @@ func AutoGenerateSchedule(c *gin.Context) {
 		Preload("Laboratory").
 		Find(&offeredCourses)
 
-	// ลบตารางเดิม
 	config.DB().Where("name_table = ?", nameTable).Delete(&entity.Schedule{})
 
 	// 🧩 [1] FIXED COURSES: วนตาม Section จริง
