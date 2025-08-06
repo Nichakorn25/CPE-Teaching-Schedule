@@ -6,9 +6,9 @@ import (
 
 type AllCourses struct {
 	gorm.Model
-	Code        string `gorm:"unique"`
-	EnglishName string
-	ThaiName    string
+	Code string `gorm:"unique" valid:"required~Code is required."`
+	EnglishName string `valid:"required~English name is required.,alpha~English name must contain only letters."`
+	ThaiName    string	`valid:"required~ThaiName is required."`
 
 	CurriculumID    uint
 	Curriculum      Curriculum `gorm:"foreignKey:CurriculumID"`
