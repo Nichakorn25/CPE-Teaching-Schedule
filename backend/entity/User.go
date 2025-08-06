@@ -14,7 +14,7 @@ type User struct {
 	Email          string `gorm:"unique" valid:"required~Email is required.,email~Invalid email format."`
 	PhoneNumber    string `valid:"required~Phone number is required.,matches(^[0-9]{10}$)~Phone number must be 10 digits."`
 	Address        string `valid:"required~Address is required."`
-	FirstPassword bool
+	FirstPassword 	bool
 
 	TitleID uint
 	Title   Title `gorm:"foreignKey:TitleID"`
