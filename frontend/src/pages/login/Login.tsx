@@ -1,13 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  FaLock,
-  FaCheckCircle,
-  FaTimesCircle,
-  FaExclamationTriangle,
-} from "react-icons/fa";
-// import { ToastContainer, toast } from "react-toastify";
-// import "react-toastify/dist/ReactToastify.css";
 import { SignIn, ChangePassword } from "../../services/https/LoginServices";
 import {
   SignInInterface,
@@ -18,14 +10,10 @@ import Swal from "sweetalert2";
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [showReset, setShowReset] = useState(false);
-  // const [message, setMessage] = useState<string | null>(null);
-  // const [messageType, setMessageType] = useState<"success" | "error" | null>(
-  //   null
-  // );
   const [loading, setLoading] = useState<boolean>(false);
 
-  // const loginFormRef = useRef<HTMLFormElement>(null);
-  // const resetFormRef = useRef<HTMLFormElement>(null);
+  const loginFormRef = useRef<HTMLFormElement>(null);
+  const resetFormRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     document.body.classList.add("bg-gray-100");
@@ -34,92 +22,26 @@ const LoginPage: React.FC = () => {
     };
   }, []);
 
-  ///////////////////////////// Notification-Password /////////////////////////////////
-  // const InvalidForPassword = (e: React.FormEvent<HTMLInputElement>) => {
-  //   const target = e.target as HTMLInputElement;
-
-  //   switch (target.name) {
-  //     case "Email":
-  //       if (target.value.trim() === "") {
-  //         target.setCustomValidity("กรุณากรอกอีเมล");
-  //       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(target.value)) {
-  //         target.setCustomValidity("รูปแบบอีเมลไม่ถูกต้อง");
-  //       } else {
-  //         target.setCustomValidity("");
-  //       }
-  //       break;
-
-  //     case "NewPassword":
-  //       if (target.value.trim() === "") {
-  //         target.setCustomValidity("กรุณากรอกรหัสผ่านใหม่");
-  //       } else if (target.value.length < 8) {
-  //         target.setCustomValidity("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร");
-  //       } else {
-  //         target.setCustomValidity("");
-  //       }
-  //       break;
-
-  //     case "ConfirmPassword":
-  //       const newPassword = document.querySelector<HTMLInputElement>(
-  //         'input[name="NewPassword"]'
-  //       );
-  //       if (target.value.trim() === "") {
-  //         target.setCustomValidity("กรุณากรอกยืนยันรหัสผ่าน");
-  //       } else if (newPassword && target.value !== newPassword.value) {
-  //         target.setCustomValidity("รหัสผ่านไม่ตรงกัน");
-  //       } else {
-  //         target.setCustomValidity("");
-  //       }
-  //       break;
-
-  //     default:
-  //       target.setCustomValidity("");
-  //       break;
-  //   }
-  // };
-
-  // ///////////////////////////// Notification-Login /////////////////////////////////
-
-  // const handleInvalid = (e: React.FormEvent<HTMLInputElement>) => {
-  //   const target = e.target as HTMLInputElement;
-
-  //   if (location.pathname === "/") return null;
-
-  //   if (target.name === "Username" && target.value === "") {
-  //     target.setCustomValidity("กรุณากรอกรหัสพนักงาน");
-  //   } else if (target.name === "Password" && target.value === "") {
-  //     target.setCustomValidity("กรุณากรอกรหัสผ่าน");
-  //   } else if (target.name === "Email") {
-  //     if (target.value === "") {
-  //       target.setCustomValidity("กรุณากรอกอีเมล");
-  //     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(target.value)) {
-  //       target.setCustomValidity("รูปแบบอีเมลไม่ถูกต้อง");
-  //     } else {
-  //       target.setCustomValidity("");
-  //     }
-  //   } else if (target.name === "NewPassword" && target.value === "") {
-  //     target.setCustomValidity("กรุณากรอกรหัสผ่านใหม่");
-  //   } else if (target.name === "ConfirmPassword") {
-  //     const newPassword = document.querySelector<HTMLInputElement>(
-  //       'input[name="NewPassword"]'
-  //     );
-  //     if (target.value === "") {
-  //       target.setCustomValidity("กรุณากรอกยืนยันรหัสผ่าน");
-  //     } else if (newPassword && target.value !== newPassword.value) {
-  //       target.setCustomValidity("รหัสผ่านไม่ตรงกัน");
-  //     } else {
-  //       target.setCustomValidity("");
-  //     }
-  //   } else {
-  //     target.setCustomValidity("");
-  //   }
-  // };
-
   ///////////////////////////// Login /////////////////////////////////
   const onFinish = async (values: SignInInterface) => {
+    if (!values.Username) {
+      Swal.fire({
+        icon: "warning",
+        title: "กรุณากรอกรหัสพนักงาน",
+        confirmButtonColor: "#F26522",
+      });
+      return;
+    }
+    if (!values.Password) {
+      Swal.fire({
+        icon: "warning",
+        title: "กรุณากรอกรหัสผ่าน",
+        confirmButtonColor: "#F26522",
+      });
+      return;
+    }
+
     setLoading(true);
-    // setMessage(null);
-    // setMessageType(null);
 
     try {
       const res = await SignIn(values);
@@ -188,6 +110,8 @@ const LoginPage: React.FC = () => {
               title: "เข้าสู่ระบบไม่สำเร็จ",
               text: "รหัสผ่านไม่ถูกต้อง",
               confirmButtonColor: "#F26522",
+            }).then(() => {
+              loginFormRef.current?.reset();
             });
           } else if (res.data.error.toLowerCase() === "invalid user id") {
             Swal.fire({
@@ -195,6 +119,8 @@ const LoginPage: React.FC = () => {
               title: "เข้าสู่ระบบไม่สำเร็จ",
               text: "ไม่พบรหัสพนักงาน",
               confirmButtonColor: "#F26522",
+            }).then(() => {
+              loginFormRef.current?.reset();
             });
           } else {
             Swal.fire({
@@ -202,6 +128,8 @@ const LoginPage: React.FC = () => {
               title: "เข้าสู่ระบบไม่สำเร็จ",
               text: "เข้าสู่ระบบล้มเหลว",
               confirmButtonColor: "#F26522",
+            }).then(() => {
+              loginFormRef.current?.reset();
             });
           }
         } else {
@@ -210,6 +138,8 @@ const LoginPage: React.FC = () => {
             title: "เข้าสู่ระบบไม่สำเร็จ",
             text: "เกิดข้อผิดพลาดบางประการ",
             confirmButtonColor: "#F26522",
+          }).then(() => {
+            loginFormRef.current?.reset();
           });
         }
       }
@@ -219,6 +149,8 @@ const LoginPage: React.FC = () => {
         title: "เข้าสู่ระบบไม่สำเร็จ",
         text: "เกิดข้อผิดพลาดในการเชื่อมต่อ",
         confirmButtonColor: "#F26522",
+      }).then(() => {
+        loginFormRef.current?.reset();
       });
     } finally {
       setLoading(false);
@@ -229,23 +161,56 @@ const LoginPage: React.FC = () => {
   const handleReset = async (values: ChangePasswordInterface) => {
     setLoading(true);
 
-    // ตรวจรหัสผ่านก่อนเรียก API
-    if (values.NewPassword.length < 8) {
+    if (!values.Email) {
       Swal.fire({
         icon: "warning",
-        title: "รหัสผ่านสั้นเกินไป",
-        text: "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร",
+        title: "กรุณากรอกอีเมล",
+        text: "โปรดใส่อีเมลก่อนดำเนินการ",
         confirmButtonColor: "#F26522",
       });
       setLoading(false);
       return;
     }
 
-    if (values.ConfirmPassword.length < 8) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(values.Email)) {
       Swal.fire({
         icon: "warning",
-        title: "ยืนยันรหัสผ่านสั้นเกินไป",
-        text: "ยืนยันรหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร",
+        title: "อีเมลไม่ถูกต้อง",
+        text: "กรุณากรอกอีเมลในรูปแบบที่ถูกต้อง",
+        confirmButtonColor: "#F26522",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (!values.NewPassword) {
+      Swal.fire({
+        icon: "warning",
+        title: "กรุณากรอกรหัสผ่านใหม่",
+        text: "โปรดใส่รหัสผ่านใหม่ก่อนดำเนินการ",
+        confirmButtonColor: "#F26522",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (!values.ConfirmPassword) {
+      Swal.fire({
+        icon: "warning",
+        title: "กรุณากรอกยืนยันรหัสผ่าน",
+        text: "โปรดยืนยันรหัสผ่านก่อนดำเนินการ",
+        confirmButtonColor: "#F26522",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (values.NewPassword.length < 8) {
+      Swal.fire({
+        icon: "warning",
+        title: "รหัสผ่านสั้นเกินไป",
+        text: "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร",
         confirmButtonColor: "#F26522",
       });
       setLoading(false);
@@ -263,41 +228,55 @@ const LoginPage: React.FC = () => {
       return;
     }
 
+    if (values.ConfirmPassword.length < 8) {
+      Swal.fire({
+        icon: "warning",
+        title: "ยืนยันรหัสผ่านสั้นเกินไป",
+        text: "ยืนยันรหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร",
+        confirmButtonColor: "#F26522",
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await ChangePassword(values);
+
       if (res?.status === 200) {
-        Swal.fire({
+        await Swal.fire({
           icon: "success",
           title: "สำเร็จ",
           text: "รีเซ็ตรหัสผ่านสำเร็จ",
           confirmButtonColor: "#F26522",
-        }).then(() => {
-          // resetFormRef.current?.reset();
-          setShowReset(false);
-          // loginFormRef.current?.reset();
         });
+        resetFormRef.current?.reset();
+        setShowReset(false);
+        loginFormRef.current?.reset();
       } else if (res?.status === 404) {
-        Swal.fire({
+        await Swal.fire({
           icon: "error",
           title: "ไม่พบผู้ใช้งาน",
           text: "ไม่พบผู้ใช้งานด้วยอีเมลนี้",
           confirmButtonColor: "#F26522",
         });
+        resetFormRef.current?.reset();
       } else {
-        Swal.fire({
+        await Swal.fire({
           icon: "error",
           title: "ผิดพลาด",
           text: res?.data?.error || "เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน",
           confirmButtonColor: "#F26522",
         });
+        resetFormRef.current?.reset();
       }
     } catch (error) {
-      Swal.fire({
+      await Swal.fire({
         icon: "error",
         title: "เชื่อมต่อไม่สำเร็จ",
         text: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์",
         confirmButtonColor: "#F26522",
       });
+      resetFormRef.current?.reset();
     } finally {
       setLoading(false);
     }
@@ -324,8 +303,8 @@ const LoginPage: React.FC = () => {
           </div>
           {!showReset ? (
             <form
-            noValidate
-              // ref={loginFormRef}
+              noValidate
+              ref={loginFormRef}
               onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target as HTMLFormElement);
@@ -348,9 +327,7 @@ const LoginPage: React.FC = () => {
                   type="text"
                   id="Username"
                   name="Username"
-                  // onInvalid={handleInvalid}
                   placeholder="🧑 username"
-                  // required
                   className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm 
                  bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
                 />
@@ -367,9 +344,7 @@ const LoginPage: React.FC = () => {
                   type="password"
                   id="Password"
                   name="Password"
-                  // onInvalid={handleInvalid}
                   placeholder="🔑 password"
-                  // required
                   className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
                 />
               </div>
@@ -389,7 +364,7 @@ const LoginPage: React.FC = () => {
                     className="text-sm text-white font-semibold hover:underline"
                     onClick={() => {
                       setShowReset(true);
-                      // loginFormRef.current?.reset();
+                      loginFormRef.current?.reset();
                     }}
                   >
                     ลืมรหัสผ่าน?
@@ -399,7 +374,8 @@ const LoginPage: React.FC = () => {
             </form>
           ) : (
             <form
-              // ref={resetFormRef}
+              ref={resetFormRef}
+              noValidate
               onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target as HTMLFormElement);
@@ -434,11 +410,6 @@ const LoginPage: React.FC = () => {
                   type="email"
                   id="Email"
                   name="Email"
-                  // required
-                  // onInvalid={InvalidForPassword}
-                  // onInput={(e) =>
-                  //   (e.currentTarget as HTMLInputElement).setCustomValidity("")
-                  // }
                   placeholder="📧 example@g.sut.ac.th"
                   className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
                 />
@@ -455,11 +426,6 @@ const LoginPage: React.FC = () => {
                   type="password"
                   id="NewPassword"
                   name="NewPassword"
-                  // required
-                  // onInvalid={InvalidForPassword}
-                  // onInput={(e) =>
-                  //   (e.currentTarget as HTMLInputElement).setCustomValidity("")
-                  // }
                   placeholder="🔐 รหัสผ่านใหม่"
                   className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
                 />
@@ -476,11 +442,6 @@ const LoginPage: React.FC = () => {
                   type="password"
                   id="ConfirmPassword"
                   name="ConfirmPassword"
-                  // required
-                  // onInvalid={InvalidForPassword}
-                  // onInput={(e) =>
-                  //   (e.currentTarget as HTMLInputElement).setCustomValidity("")
-                  // }
                   placeholder="🔐 ยืนยันรหัสผ่าน"
                   className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
                 />
@@ -501,41 +462,15 @@ const LoginPage: React.FC = () => {
                     className="text-sm text-white font-semibold hover:underline"
                     onClick={() => {
                       setShowReset(false);
-                      // resetFormRef.current?.reset();
+                      resetFormRef.current?.reset();
                     }}
                   >
                     กลับสู่หน้าเข้าสู่ระบบ
                   </button>
                 </div>
               </div>
-              {/* <ToastContainer
-                position="top-center"
-                autoClose={1000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick={false}
-                closeButton={false}
-                rtl={false}
-                pauseOnFocusLoss={false}
-                draggable={false}
-                pauseOnHover={false}
-                theme="colored"
-                toastClassName="custom-toast"
-              /> */}
             </form>
           )}
-
-          {/* {message && (
-            <div
-              className={`mt-4 p-3 text-center text-sm font-semibold rounded-md ${
-                messageType === "success"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {message}
-            </div>
-          )} */}
         </div>
       </div>
     </div>
