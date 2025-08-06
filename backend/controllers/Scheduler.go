@@ -183,6 +183,9 @@ func AutoGenerateSchedule(c *gin.Context) {
 					for _, day := range days {
 						dayName := getDayName(day)
 						for hour := 8; hour <= (21 - labHours); hour++ {
+							if hour == 12 || (hour < 12 && hour+labHours > 12) {
+								continue
+							}
 							conflict := false
 							var tempSlots []entity.Schedule
 							for i := 0; i < labHours; i++ {
@@ -314,31 +317,6 @@ func isConflictWithConditions(day string, start, end time.Time, conditions []ent
 	return false
 }
 
-// func isSlotTakenOrTeacherConflict(day string, start, end time.Time, schedules []entity.Schedule, userID uint) bool {
-// 	for _, s := range schedules {
-// 		if s.DayOfWeek == day &&
-// 			(start.Before(s.EndTime) && end.After(s.StartTime)) {
-// 			var offered entity.OfferedCourses
-// 			if err := config.DB().First(&offered, s.OfferedCoursesID).Error; err == nil {
-// 				if offered.UserID == userID {
-// 					return true
-// 				}
-// 			}
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
-// func getOfferedCourseID(allCourseID uint, section uint, offeredCourses []entity.OfferedCourses) uint {
-// 	for _, oc := range offeredCourses {
-// 		if oc.AllCoursesID == allCourseID && oc.Section == section {
-// 			return oc.ID
-// 		}
-// 	}
-// 	return 0
-// }
-
 func isInstructorConflict(day string, start, end time.Time, schedules []entity.Schedule, userID uint) bool {
 	for _, s := range schedules {
 		if s.DayOfWeek != day || !(start.Before(s.EndTime) && end.After(s.StartTime)) {
@@ -415,4 +393,51 @@ func UpdateScheduleTime(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, schedule)
+}
+
+// ///////////////////////////////////////// Delete ตารางตามชื่อ NameTable
+func DeleteScheduleByNameTable(c *gin.Context) {
+	nameTable := c.Param("nameTable")
+
+	if nameTable == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":     "nameTable is required",
+			"nameTable": nameTable,
+		})
+		return
+	}
+
+	var count int64
+	if err := config.DB().Model(&entity.Schedule{}).
+		Where("name_table = ?", nameTable).
+		Count(&count).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":     err.Error(),
+			"nameTable": nameTable,
+		})
+		return
+	}
+
+	if count == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":     "ไม่พบข้อมูลตารางตามชื่อตาราง",
+			"nameTable": nameTable,
+		})
+		return
+	}
+
+	if err := config.DB().Where("name_table = ?", nameTable).
+		Delete(&entity.Schedule{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":     err.Error(),
+			"nameTable": nameTable,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "ลบตารางสอนสำเร็จ",
+		"nameTable": nameTable,
+		"count":     count,
+	})
 }
