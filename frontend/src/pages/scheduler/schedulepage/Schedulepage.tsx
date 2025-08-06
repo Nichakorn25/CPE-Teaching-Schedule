@@ -917,151 +917,285 @@ const Schedulepage: React.FC = () => {
     }
   };
 
-  // สร้าง columns สำหรับ Ant Design Table
-  const columns: ColumnsType<ScheduleData> = [
-    {
-      title: "Day/Time",
-      dataIndex: "day",
-      key: "day",
-      fixed: "left",
-      width: 85,
-      render: (text: string) => (
-        <strong style={{ color: "#333" }}>{text}</strong>
-      ),
+// ฟังก์ชันสำหรับสร้าง horizontal spanning blocks (ขยายบล็อกแนวนอน)
+const createHorizontalSpanningBlocks = (scheduleData: ScheduleData[]) => {
+  return scheduleData.map((dayData) => {
+    const spannedDayData = { ...dayData };
+    
+    // สร้าง map เพื่อเก็บข้อมูลคาบที่ถูกประมวลผลแล้ว
+    const processedSlots = new Set<string>();
+    
+    timeSlots.forEach((currentTime, index) => {
+      if (processedSlots.has(currentTime)) return;
+      
+      const currentCellData = dayData[currentTime];
+      if (!currentCellData || !currentCellData.classes || currentCellData.classes.length === 0) {
+        return;
+      }
+      
+      // หาคาบที่ต่อเนื่องกัน
+      const consecutiveSlots = [currentTime];
+      let nextIndex = index + 1;
+      
+      while (nextIndex < timeSlots.length) {
+        const nextTime = timeSlots[nextIndex];
+        const nextCellData = dayData[nextTime];
+        
+        // เช็คว่าคาบถัดไปมีวิชาเดียวกันหรือไม่
+        if (nextCellData && nextCellData.classes && nextCellData.classes.length > 0) {
+          const currentClass = currentCellData.classes[0];
+          const nextClass = nextCellData.classes[0];
+          
+          if (currentClass.subject === nextClass.subject && 
+              currentClass.teacher === nextClass.teacher &&
+              currentClass.room === nextClass.room) {
+            consecutiveSlots.push(nextTime);
+            nextIndex++;
+          } else {
+            break;
+          }
+        } else {
+          break;
+        }
+      }
+      
+      // ถ้ามีการ span แนวนอน (มากกว่า 1 ช่วงเวลา)
+      if (consecutiveSlots.length > 1) {
+        // สร้าง spanning block สำหรับคาบแรก
+        spannedDayData[currentTime] = {
+          ...currentCellData,
+          isHorizontalSpanning: true,
+          colSpan: consecutiveSlots.length,
+          spannedSlots: consecutiveSlots,
+          startTime: currentTime.split('-')[0],
+          endTime: consecutiveSlots[consecutiveSlots.length - 1].split('-')[1]
+        };
+        
+        // ทำเครื่องหมายคาบที่เหลือว่าถูก span แล้ว
+        consecutiveSlots.slice(1).forEach(slot => {
+          spannedDayData[slot] = {
+            ...dayData[slot],
+            isHorizontalSpanned: true,
+            spanParent: currentTime
+          };
+          processedSlots.add(slot);
+        });
+      }
+      
+      processedSlots.add(currentTime);
+    });
+    
+    return spannedDayData;
+  });
+};
+
+const columns: ColumnsType<ScheduleData> = [
+  {
+    title: "Day/Time",
+    dataIndex: "day",
+    key: "day",
+    fixed: "left",
+    width: 85,
+    render: (text: string) => (
+      <strong style={{ color: "#333" }}>{text}</strong>
+    ),
+  },
+  ...timeSlots.map((time) => ({
+    title: time,
+    dataIndex: time,
+    key: time,
+    width: 85,
+    onCell: (record: ScheduleData) => {
+      const cellData = record[time];
+
+      if (cellData && typeof cellData === "object") {
+        if (cellData.isHorizontalSpanning) {
+          return {
+            colSpan: cellData.colSpan || 1,
+          };
+        }
+        if (cellData.isHorizontalSpanned) {
+          return {
+            colSpan: 0,
+          };
+        }
+      }
+
+      return {};
     },
-    ...timeSlots.map((time) => ({
-      title: time,
-      dataIndex: time,
-      key: time,
-      width: 85,
-      render: (text: string, record: ScheduleData) => {
-        const cellData = record[time];
-        let classes: ClassInfo[] = [];
-        let backgroundColor = "#f9f9f9";
-        let isBreak = false;
+    render: (text: string, record: ScheduleData) => {
+      const cellData = record[time];
+      let classes: ClassInfo[] = [];
+      let backgroundColor = "#f9f9f9";
+      let isBreak = false;
+      let isHorizontalSpanning = false;
+      let isHorizontalSpanned = false;
+      let colSpan = 1;
+      let startTime = "";
+      let endTime = "";
 
-        if (cellData && typeof cellData === "object") {
-          classes = cellData.classes || [];
-          backgroundColor = cellData.backgroundColor || "#f9f9f9";
-          isBreak = cellData.isBreak || false;
-        }
+      if (cellData && typeof cellData === "object") {
+        classes = cellData.classes || [];
+        backgroundColor = cellData.backgroundColor || "#f9f9f9";
+        isBreak = cellData.isBreak || false;
+        isHorizontalSpanning = cellData.isHorizontalSpanning || false;
+        isHorizontalSpanned = cellData.isHorizontalSpanned || false;
+        colSpan = cellData.colSpan || 1;
+        startTime = cellData.startTime || time.split("-")[0];
+        endTime = cellData.endTime || time.split("-")[1];
+      }
 
-        const isEmpty = !classes || classes.length === 0;
+      if (isHorizontalSpanned) {
+        return null;
+      }
 
-        // ถ้าเป็นช่วงพักเที่ยง
-        if (isBreak) {
-          return (
-            <div
-              style={{
-                width: "100%",
-                minHeight: "90px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: backgroundColor,
-                color: "#666",
-                borderRadius: "4px",
-                padding: "8px 4px",
-                fontSize: "7px",
-                fontWeight: "bold",
-                border: "1px solid #e0e0e0",
-              }}
-            >
-              พักเที่ยง
-            </div>
-          );
-        }
+      const isEmpty = !classes || classes.length === 0;
 
-        // ถ้าไม่มีคาบเรียน
-        if (isEmpty) {
-          return (
-            <div
-              style={{
-                width: "100%",
-                minHeight: "90px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "transparent",
-                borderRadius: "4px",
-                padding: "4px",
-                border: "1px dashed #ddd",
-              }}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, record.day, time)}
-            >
-              <div
-                style={{ color: "#999", fontSize: "7px", textAlign: "center" }}
-              >
-                วางคาบเรียนที่นี่
-              </div>
-            </div>
-          );
-        }
-
-        // แสดงคาบเรียนแยกเป็นก้อนๆ พร้อม Tooltip
+      if (isBreak) {
         return (
           <div
             style={{
               width: "100%",
               minHeight: "90px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: backgroundColor,
+              color: "#666",
+              borderRadius: "4px",
+              padding: "8px 4px",
+              fontSize: "7px",
+              fontWeight: "bold",
+              border: "1px solid #e0e0e0",
+            }}
+          >
+            พักเที่ยง
+          </div>
+        );
+      }
+
+      if (isEmpty) {
+        return (
+          <div
+            style={{
+              width: "100%",
+              minHeight: "90px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               backgroundColor: "transparent",
               borderRadius: "4px",
               padding: "4px",
-              border: "none",
-              boxShadow: "none",
-              display: "flex",
-              flexDirection: "column",
-              gap: "2px",
-              overflow: "hidden",
+              border: "1px dashed #ddd",
             }}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, record.day, time)}
           >
-            {classes.map((cls: ClassInfo, index: number) => (
+            <div style={{ color: "#999", fontSize: "7px", textAlign: "center" }}>
+              วางคาบเรียนที่นี่
+            </div>
+          </div>
+        );
+      }
+
+      const timeRange = isHorizontalSpanning
+        ? `${startTime}-${endTime}`
+        : `${time.split("-")[0]}-${time.split("-")[1]}`;
+
+      return (
+        <div
+          style={{
+            width: "100%",
+            minHeight: "90px",
+            backgroundColor: "transparent",
+            borderRadius: "4px",
+            padding: "4px",
+            border: "none",
+            boxShadow: "none",
+            display: "flex",
+            flexDirection: "column",
+            gap: "2px",
+            overflow: "hidden",
+          }}
+          onDragOver={handleDragOver}
+          onDrop={(e) => handleDrop(e, record.day, time)}
+        >
+          {classes.map((cls: ClassInfo, index: number) => {
+            let displayTimeRange = time;
+            let displayColSpan = 1;
+
+            if (isHorizontalSpanning && cellData.spannedSlots?.length > 0) {
+              const firstSlot = cellData.spannedSlots[0];
+              const lastSlot = cellData.spannedSlots[cellData.spannedSlots.length - 1];
+              displayTimeRange = `${firstSlot.split("-")[0]}-${lastSlot.split("-")[1]}`;
+              displayColSpan = cellData.spannedSlots.length;
+            }
+
+            return (
               <Tooltip
                 key={index}
-                title={createTooltipContent(cls, time, record.day)}
-                placement="top"
-                overlayStyle={{
-                  maxWidth: "350px",
-                  fontFamily: "Sarabun, sans-serif",
-                }}
-                color="#ffffff"
-                styles={{
-                  body: {
-                    color: "#333",
-                    border: "1px solid #F26522",
-                    borderRadius: "8px",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                  },
-                }}
+                title={
+                  <div style={{ fontFamily: "Sarabun, sans-serif" }}>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        marginBottom: "8px",
+                        color: "#F26522",
+                        borderBottom: "1px solid #eee",
+                        paddingBottom: "4px",
+                      }}
+                    >
+                      📚 รายละเอียดวิชา
+                    </div>
+                    <div><strong>🏷️ รหัสวิชา:</strong> {cls.subject}</div>
+                    <div><strong>👩‍🏫 อาจารย์:</strong> {cls.teacher}</div>
+                    <div><strong>🏢 ห้องเรียน:</strong> {cls.room}</div>
+                    <div><strong>📅 วัน:</strong> {record.day}</div>
+                    <div><strong>🕐 เวลา:</strong> {displayTimeRange}</div>
+                    {isHorizontalSpanning && (
+                      <div><strong>⏱️ จำนวนคาบ:</strong> {displayColSpan} คาบ</div>
+                    )}
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "#666",
+                        fontStyle: "italic",
+                        borderTop: "1px solid #eee",
+                        paddingTop: "4px",
+                        marginTop: "6px",
+                      }}
+                    >
+                      💡 เคล็ดลับ: ลากเพื่อย้าย | ดับเบิลคลิกเพื่อลบ
+                    </div>
+                  </div>
+                }
+                overlayStyle={{ maxWidth: "350px" }}
               >
                 <div
-                  draggable={true}
+                  draggable
                   style={{
                     backgroundColor: getRandomBackgroundColor(),
                     borderRadius: "2px",
-                    padding: "2px 4px",
+                    padding: "3px 1px",
                     fontSize: "7px",
-                    lineHeight: "1.1",
+                    lineHeight: "1.2",
                     textAlign: "center",
                     border: "1px solid rgba(0,0,0,0.1)",
                     color: "#333",
-                    minHeight: "14px",
+                    minHeight: "20px",
+                    maxHeight: "25px",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "center",
                     cursor: "grab",
-                    transition: "all 0.2s ease",
                     position: "relative",
                     overflow: "hidden",
-                    maxWidth: "100%",
+                    width: "100%",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "scale(1.01)";
-                    e.currentTarget.style.boxShadow =
-                      "0 1px 4px rgba(0,0,0,0.15)";
+                    e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.15)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "scale(1)";
@@ -1069,51 +1203,27 @@ const Schedulepage: React.FC = () => {
                   }}
                   onDragStart={(e) => {
                     handleDragStart(e, record.day, time, index, cls);
-                    e.currentTarget.style.cursor = "grabbing";
                     e.currentTarget.style.opacity = "0.5";
                   }}
                   onDragEnd={(e) => {
-                    e.currentTarget.style.cursor = "grab";
                     e.currentTarget.style.opacity = "1";
                   }}
                   onDoubleClick={() => removeClass(record.day, time, index)}
-                  title=""
                 >
                   <div
                     style={{
                       fontWeight: "bold",
-                      marginBottom: "1px",
                       fontSize: "7px",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
+                      width: "calc(100% - 12px)",
                     }}
                   >
                     {cls.subject}
                   </div>
-                  <div
-                    style={{
-                      fontSize: "6px",
-                      color: "#666",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {cls.teacher}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "6px",
-                      color: "#888",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {cls.room}
-                  </div>
-                  {/* ไอคอนลบมุมขวาบน */}
+                  <div style={{ fontSize: "5px", color: "#666" }}>{cls.teacher}</div>
+                  <div style={{ fontSize: "5px", color: "#888" }}>{cls.room}</div>
                   <div
                     style={{
                       position: "absolute",
@@ -1126,7 +1236,7 @@ const Schedulepage: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "10px",
+                      fontSize: "8px",
                       color: "white",
                       cursor: "pointer",
                       opacity: "0.7",
@@ -1135,62 +1245,41 @@ const Schedulepage: React.FC = () => {
                       e.stopPropagation();
                       removeClass(record.day, time, index);
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.opacity = "1";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.opacity = "0.7";
-                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
                   >
                     ×
                   </div>
                 </div>
               </Tooltip>
-            ))}
+            );
+          })}
+        </div>
+      );
+    },
+  })),
+];
 
-            {/* Drop zone indicator */}
-            {classes.length === 0 && (
-              <div
-                style={{
-                  minHeight: "18px",
-                  border: "1px dashed #ccc",
-                  borderRadius: "2px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#999",
-                  fontSize: "6px",
-                }}
-              >
-                วางคาบเรียนที่นี่
-              </div>
-            )}
-          </div>
-        );
-      },
-    })),
-  ];
+// อัปเดตส่วนการใช้งานข้อมูล
+const data: ScheduleData[] =
+  scheduleData.length > 0
+    ? createHorizontalSpanningBlocks(scheduleData) // ใช้ฟังก์ชันสร้าง horizontal spanning blocks
+    : days.map((day, index) => {
+        const rowData: ScheduleData = {
+          key: index.toString(),
+          day: day,
+        };
 
-  // ใช้ข้อมูลจาก state แทนการสร้างใหม่
-  const data: ScheduleData[] =
-    scheduleData.length > 0
-      ? scheduleData
-      : days.map((day, index) => {
-          const rowData: ScheduleData = {
-            key: index.toString(),
-            day: day,
+        timeSlots.forEach((time) => {
+          rowData[time] = {
+            content: "",
+            backgroundColor: "#f9f9f9",
+            classes: [] as ClassInfo[],
           };
-
-          timeSlots.forEach((time) => {
-            rowData[time] = {
-              content: "",
-              backgroundColor: "#f9f9f9",
-              classes: [] as ClassInfo[],
-            };
-          });
-
-          return rowData;
         });
+
+        return rowData;
+      });
 
   return (
     <>
