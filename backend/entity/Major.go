@@ -6,9 +6,9 @@ import (
 
 type Major struct {
 	gorm.Model
-	MajorName string
+	MajorName string `valid:"required~MajorName is required."`
 
-	DepartmentID uint
+	DepartmentID uint       `valid:"required~DepartmentID is required."`
 	Department   Department `gorm:"foreignKey:DepartmentID"`
 
 	Users      []User       `gorm:"foreignKey:MajorID"`

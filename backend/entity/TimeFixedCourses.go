@@ -8,17 +8,18 @@ import (
 
 type TimeFixedCourses struct {
 	gorm.Model
-	Year      uint
-	Term      uint
-	DayOfWeek string
-	StartTime time.Time
-	EndTime   time.Time
-	RoomFix   string
-	Section   uint
-	Capacity  uint
 
-	AllCoursesID uint
-	AllCourses   AllCourses `gorm:"foreignKey:AllCoursesID"`
-	ScheduleID   uint
-	Schedule     Schedule `gorm:"foreignKey:ScheduleID"`
+	Year      uint      `valid:"required~Year is required."`
+	Term      uint      `valid:"required~Term is required."`
+	DayOfWeek string    `valid:"required~DayOfWeek is required."`
+	StartTime time.Time `valid:"required~StartTime is required."`
+	EndTime   time.Time `valid:"required~EndTime is required."`
+	RoomFix   string    `valid:"required~RoomFix is required."`
+	Section   uint      `valid:"required~Section is required."`
+	Capacity  uint      `valid:"required~Capacity is required."`
+
+	AllCoursesID uint       `valid:"required~AllCoursesID is required."`
+	AllCourses AllCourses `gorm:"foreignKey:AllCoursesID" valid:"-"`
+	ScheduleID uint     `valid:"required~ScheduleID is required."`
+	Schedule   Schedule   `gorm:"foreignKey:ScheduleID" valid:"-"`
 }

@@ -6,18 +6,21 @@ import (
 
 type OfferedCourses struct {
 	gorm.Model
-	Year         uint
-	Term         uint
-	Section      uint
-	Capacity     uint
+
+	Year         uint `valid:"required~Year is required."`
+	Term         uint `valid:"required~Term is required."`
+	Section      uint `valid:"required~Section is required."`
+	Capacity     uint `valid:"required~Capacity is required."`
 	IsFixCourses bool
 
-	UserID       uint
-	User         User `gorm:"foreignKey:UserID"`
-	AllCoursesID uint
-	AllCourses   AllCourses `gorm:"foreignKey:AllCoursesID"`
+	UserID       uint `valid:"required~UserID is required."`
+	User         User `gorm:"foreignKey:UserID" valid:"-"`
+
+	AllCoursesID uint       `valid:"required~AllCoursesID is required."`
+	AllCourses   AllCourses `gorm:"foreignKey:AllCoursesID" valid:"-"`
+
 	LaboratoryID *uint
-	Laboratory   Laboratory `gorm:"foreignKey:LaboratoryID"`
+	Laboratory   Laboratory `gorm:"foreignKey:LaboratoryID" valid:"-"`
 
 	Schedule []Schedule `gorm:"foreignKey:OfferedCoursesID"`
 }
