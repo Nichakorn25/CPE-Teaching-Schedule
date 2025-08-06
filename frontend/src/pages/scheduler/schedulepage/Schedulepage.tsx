@@ -989,7 +989,6 @@ const createHorizontalSpanningBlocks = (scheduleData: ScheduleData[]) => {
   });
 };
 
-// สร้าง columns สำหรับ Ant Design Table พร้อม horizontal spanning
 const columns: ColumnsType<ScheduleData> = [
   {
     title: "Day/Time",
@@ -1008,22 +1007,20 @@ const columns: ColumnsType<ScheduleData> = [
     width: 85,
     onCell: (record: ScheduleData) => {
       const cellData = record[time];
-      
+
       if (cellData && typeof cellData === "object") {
-        // ถ้าเป็น horizontal spanning block
         if (cellData.isHorizontalSpanning) {
           return {
             colSpan: cellData.colSpan || 1,
           };
         }
-        // ถ้าถูก span แล้ว ให้ซ่อน
         if (cellData.isHorizontalSpanned) {
           return {
-            colSpan: 0, // ใช้ colSpan: 0 เพื่อซ่อนช่อง
+            colSpan: 0,
           };
         }
       }
-      
+
       return {};
     },
     render: (text: string, record: ScheduleData) => {
@@ -1044,32 +1041,30 @@ const columns: ColumnsType<ScheduleData> = [
         isHorizontalSpanning = cellData.isHorizontalSpanning || false;
         isHorizontalSpanned = cellData.isHorizontalSpanned || false;
         colSpan = cellData.colSpan || 1;
-        startTime = cellData.startTime || time.split('-')[0];
-        endTime = cellData.endTime || time.split('-')[1];
+        startTime = cellData.startTime || time.split("-")[0];
+        endTime = cellData.endTime || time.split("-")[1];
       }
 
-      // ถ้าถูก span แล้ว ไม่แสดงอะไร
       if (isHorizontalSpanned) {
         return null;
       }
 
       const isEmpty = !classes || classes.length === 0;
 
-      // ถ้าเป็นช่วงพักเที่ยง
       if (isBreak) {
         return (
           <div
             style={{
               width: "100%",
-              minHeight: "90px", // กลับมาเป็นขนาดเดิม
+              minHeight: "90px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               backgroundColor: backgroundColor,
               color: "#666",
               borderRadius: "4px",
-              padding: "8px 4px", // เพิ่ม padding แนวตั้ง
-              fontSize: "7px", // กลับมาขนาดเดิม
+              padding: "8px 4px",
+              fontSize: "7px",
               fontWeight: "bold",
               border: "1px solid #e0e0e0",
             }}
@@ -1079,255 +1074,186 @@ const columns: ColumnsType<ScheduleData> = [
         );
       }
 
-      // ถ้าไม่มีคาบเรียน
       if (isEmpty) {
         return (
           <div
             style={{
               width: "100%",
-              minHeight: "90px", // กลับมาเป็นขนาดเดิม
+              minHeight: "90px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               backgroundColor: "transparent",
               borderRadius: "4px",
-              padding: "4px", // กลับมาขนาดเดิม
+              padding: "4px",
               border: "1px dashed #ddd",
             }}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, record.day, time)}
           >
-            <div
-              style={{ color: "#999", fontSize: "7px", textAlign: "center" }} // กลับมาขนาดเดิม
-            >
+            <div style={{ color: "#999", fontSize: "7px", textAlign: "center" }}>
               วางคาบเรียนที่นี่
             </div>
           </div>
         );
       }
 
-      // แสดงคาบเรียน (รวมทั้ง horizontal spanning blocks)
-      const timeRange = `${startTime}-${endTime}`;
-      
+      const timeRange = isHorizontalSpanning
+        ? `${startTime}-${endTime}`
+        : `${time.split("-")[0]}-${time.split("-")[1]}`;
+
       return (
         <div
           style={{
             width: "100%",
-            minHeight: "90px", // กลับมาเป็นขนาดเดิม
+            minHeight: "90px",
             backgroundColor: "transparent",
             borderRadius: "4px",
-            padding: "4px", // กลับมาขนาดเดิม
+            padding: "4px",
             border: "none",
             boxShadow: "none",
             display: "flex",
             flexDirection: "column",
-            gap: "2px", // กลับมาขนาดเดิม
+            gap: "2px",
             overflow: "hidden",
           }}
           onDragOver={handleDragOver}
           onDrop={(e) => handleDrop(e, record.day, time)}
         >
-          {classes.map((cls: ClassInfo, index: number) => (
-            <Tooltip
-              key={index}
-              title={
-                <div style={{ fontFamily: "Sarabun, sans-serif" }}>
-                  <div
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: "bold",
-                      marginBottom: "8px",
-                      color: "#F26522",
-                      borderBottom: "1px solid #eee",
-                      paddingBottom: "4px",
-                    }}
-                  >
-                    📚 รายละเอียดวิชา
-                  </div>
-                  <div style={{ marginBottom: "6px" }}>
-                    <strong>🏷️ รหัสวิชา:</strong> {cls.subject}
-                  </div>
-                  <div style={{ marginBottom: "6px" }}>
-                    <strong>👩‍🏫 อาจารย์:</strong> {cls.teacher}
-                  </div>
-                  <div style={{ marginBottom: "6px" }}>
-                    <strong>🏢 ห้องเรียน:</strong> {cls.room}
-                  </div>
-                  <div style={{ marginBottom: "6px" }}>
-                    <strong>📅 วัน:</strong> {record.day}
-                  </div>
-                  <div style={{ marginBottom: "8px" }}>
-                    <strong>🕐 เวลา:</strong> {timeRange}
-                  </div>
-                  {isHorizontalSpanning && (
-                    <div style={{ marginBottom: "8px" }}>
-                      <strong>⏱️ จำนวนคาบ:</strong> {colSpan} คาบ
+          {classes.map((cls: ClassInfo, index: number) => {
+            let displayTimeRange = time;
+            let displayColSpan = 1;
+
+            if (isHorizontalSpanning && cellData.spannedSlots?.length > 0) {
+              const firstSlot = cellData.spannedSlots[0];
+              const lastSlot = cellData.spannedSlots[cellData.spannedSlots.length - 1];
+              displayTimeRange = `${firstSlot.split("-")[0]}-${lastSlot.split("-")[1]}`;
+              displayColSpan = cellData.spannedSlots.length;
+            }
+
+            return (
+              <Tooltip
+                key={index}
+                title={
+                  <div style={{ fontFamily: "Sarabun, sans-serif" }}>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        marginBottom: "8px",
+                        color: "#F26522",
+                        borderBottom: "1px solid #eee",
+                        paddingBottom: "4px",
+                      }}
+                    >
+                      📚 รายละเอียดวิชา
                     </div>
-                  )}
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      color: "#666",
-                      fontStyle: "italic",
-                      borderTop: "1px solid #eee",
-                      paddingTop: "4px",
-                    }}
-                  >
-                    💡 เคล็ดลับ: ลากเพื่อย้าย | ดับเบิลคลิกเพื่อลบ
+                    <div><strong>🏷️ รหัสวิชา:</strong> {cls.subject}</div>
+                    <div><strong>👩‍🏫 อาจารย์:</strong> {cls.teacher}</div>
+                    <div><strong>🏢 ห้องเรียน:</strong> {cls.room}</div>
+                    <div><strong>📅 วัน:</strong> {record.day}</div>
+                    <div><strong>🕐 เวลา:</strong> {displayTimeRange}</div>
+                    {isHorizontalSpanning && (
+                      <div><strong>⏱️ จำนวนคาบ:</strong> {displayColSpan} คาบ</div>
+                    )}
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "#666",
+                        fontStyle: "italic",
+                        borderTop: "1px solid #eee",
+                        paddingTop: "4px",
+                        marginTop: "6px",
+                      }}
+                    >
+                      💡 เคล็ดลับ: ลากเพื่อย้าย | ดับเบิลคลิกเพื่อลบ
+                    </div>
                   </div>
-                </div>
-              }
-              placement="top"
-              overlayStyle={{
-                maxWidth: "350px",
-                fontFamily: "Sarabun, sans-serif",
-              }}
-              color="#ffffff"
-              styles={{
-                body: {
-                  color: "#333",
-                  border: "1px solid #F26522",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                },
-              }}
-            >
-              <div
-                draggable={true}
-                style={{
-                  backgroundColor: getRandomBackgroundColor(),
-                  borderRadius: "2px",
-                  padding: "3px 1px", // เพิ่ม padding แนวตั้ง
-                  fontSize: "7px", // เพิ่มขนาดตัวอักษร
-                  lineHeight: "1.2", // เพิ่ม line height
-                  textAlign: "center",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                  color: "#333",
-                  minHeight: "20px", // เพิ่มความสูง
-                  maxHeight: "25px", // เพิ่มความสูงสูงสุด
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  cursor: "grab",
-                  transition: "all 0.2s ease",
-                  position: "relative",
-                  overflow: "hidden",
-                  // ลบ maxWidth เพื่อให้ขยายได้
-                  width: "100%", // ให้ขยายเต็มความกว้างที่มี
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "scale(1.01)";
-                  e.currentTarget.style.boxShadow =
-                    "0 1px 4px rgba(0,0,0,0.15)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "scale(1)";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
-                onDragStart={(e) => {
-                  handleDragStart(e, record.day, time, index, cls);
-                  e.currentTarget.style.cursor = "grabbing";
-                  e.currentTarget.style.opacity = "0.5";
-                }}
-                onDragEnd={(e) => {
-                  e.currentTarget.style.cursor = "grab";
-                  e.currentTarget.style.opacity = "1";
-                }}
-                onDoubleClick={() => removeClass(record.day, time, index)}
-                title=""
+                }
+                overlayStyle={{ maxWidth: "350px" }}
               >
                 <div
+                  draggable
                   style={{
-                    fontWeight: "bold",
-                    marginBottom: "1px",
-                    fontSize: "7px", // เพิ่มขนาดตัวอักษร
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    width: "calc(100% - 12px)", // เว้นที่ไว้สำหรับปุ่มลบ
-                    // ลบ maxWidth เพื่อให้ขยายได้
-                  }}
-                >
-                  {cls.subject}
-                </div>
-                <div
-                  style={{
-                    fontSize: "5px", // เพิ่มขนาดตัวอักษร
-                    color: "#666",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    width: "calc(100% - 12px)", // เว้นที่ไว้สำหรับปุ่มลบ
-                    // ลบ maxWidth เพื่อให้ขยายได้
-                  }}
-                >
-                  {cls.teacher}
-                </div>
-                <div
-                  style={{
-                    fontSize: "5px", // เพิ่มขนาดตัวอักษร
-                    color: "#888",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    width: "calc(100% - 12px)", // เว้นที่ไว้สำหรับปุ่มลบ
-                    // ลบ maxWidth เพื่อให้ขยายได้
-                  }}
-                >
-                  {cls.room}
-                </div>
-                {/* ไอคอนลบมุมขวาบน */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "1px",
-                    right: "1px",
-                    width: "10px", // เพิ่มขนาดปุ่มลบ
-                    height: "10px",
-                    backgroundColor: "rgba(255,0,0,0.7)",
-                    borderRadius: "50%",
+                    backgroundColor: getRandomBackgroundColor(),
+                    borderRadius: "2px",
+                    padding: "3px 1px",
+                    fontSize: "7px",
+                    lineHeight: "1.2",
+                    textAlign: "center",
+                    border: "1px solid rgba(0,0,0,0.1)",
+                    color: "#333",
+                    minHeight: "20px",
+                    maxHeight: "25px",
                     display: "flex",
-                    alignItems: "center",
+                    flexDirection: "column",
                     justifyContent: "center",
-                    fontSize: "8px", // เพิ่มขนาดตัวอักษรในปุ่ม
-                    color: "white",
-                    cursor: "pointer",
-                    opacity: "0.7",
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeClass(record.day, time, index);
+                    cursor: "grab",
+                    position: "relative",
+                    overflow: "hidden",
+                    width: "100%",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = "1";
+                    e.currentTarget.style.transform = "scale(1.01)";
+                    e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.15)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = "0.7";
+                    e.currentTarget.style.transform = "scale(1)";
+                    e.currentTarget.style.boxShadow = "none";
                   }}
+                  onDragStart={(e) => {
+                    handleDragStart(e, record.day, time, index, cls);
+                    e.currentTarget.style.opacity = "0.5";
+                  }}
+                  onDragEnd={(e) => {
+                    e.currentTarget.style.opacity = "1";
+                  }}
+                  onDoubleClick={() => removeClass(record.day, time, index)}
                 >
-                  ×
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "7px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      width: "calc(100% - 12px)",
+                    }}
+                  >
+                    {cls.subject}
+                  </div>
+                  <div style={{ fontSize: "5px", color: "#666" }}>{cls.teacher}</div>
+                  <div style={{ fontSize: "5px", color: "#888" }}>{cls.room}</div>
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "1px",
+                      right: "1px",
+                      width: "10px",
+                      height: "10px",
+                      backgroundColor: "rgba(255,0,0,0.7)",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "8px",
+                      color: "white",
+                      cursor: "pointer",
+                      opacity: "0.7",
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeClass(record.day, time, index);
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
+                  >
+                    ×
+                  </div>
                 </div>
-              </div>
-            </Tooltip>
-          ))}
-
-          {/* Drop zone indicator */}
-          {classes.length === 0 && (
-            <div
-              style={{
-                minHeight: "18px", // กลับมาขนาดเดิม
-                border: "1px dashed #ccc",
-                borderRadius: "2px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#999",
-                fontSize: "6px", // กลับมาขนาดเดิม
-              }}
-            >
-              วางคาบเรียนที่นี่
-            </div>
-          )}
+              </Tooltip>
+            );
+          })}
         </div>
       );
     },
