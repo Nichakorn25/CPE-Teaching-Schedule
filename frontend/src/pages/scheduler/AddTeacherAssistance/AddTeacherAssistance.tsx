@@ -37,9 +37,10 @@ const AddTeachingAssistant: React.FC = () => {
     fetchData();
   }, []);
 
+
   const handleCourseChange = (courseID: number) => {
     const course = courses.find((c) => c.ID === courseID) || null;
-    console.log("📚 เลือกวิชา:", course);
+    console.log("เลือกวิชา:", course);
     setSelectedCourse(course);
     form.setFieldValue("assistantsPerGroup", []);
   };
@@ -51,7 +52,7 @@ const AddTeachingAssistant: React.FC = () => {
       assistantIDs: group.assistantIDs,
     }));
 
-    console.log("📤 Payload ที่จะส่ง:", payload);
+    console.log("Payload ที่จะส่ง:", payload);
 
     // const res = await postAssignTeachingAssistants(payload);
     // if (res.status === 200 || res.status === 201) {
@@ -138,7 +139,7 @@ const AddTeachingAssistant: React.FC = () => {
                   <ul>
                     {selectedCourse?.Teachers.map((t) => (
                       <li key={t.ID}>
-                        {t.Firstname} {t.Lastname}
+                        {t.Title} {t.Firstname} {t.Lastname}
                       </li>
                     ))}
                   </ul>

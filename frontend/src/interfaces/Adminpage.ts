@@ -105,6 +105,7 @@ export interface OpenCourseInterface {
   TeacherID: number;
   Teachers: {
     ID: number;
+    Title: string;
     Firstname: string;
     Lastname: string;
   }[];
