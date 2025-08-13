@@ -73,7 +73,7 @@ func main() {
 
 		///////////////////// SchedulesTeachingAssistant /////////////////////////
 		r.POST("/ScheduleTeachingAssistants", controllers.CreateScheduleTeachingAssistant)
-
+		r.POST("/assign-ta-to-schedule", controllers.AssignTAToSchedule)
 		
 		///////////////////// Get into dropdown /////////////////////////
 		r.GET("/course-type", controllers.GetTypeOfCourses)

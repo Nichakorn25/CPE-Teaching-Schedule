@@ -4,6 +4,7 @@ import {
   ScheduleIn,
 } from "../../interfaces/SchedulerIn";
 import { OpenCourseInterface } from "../../interfaces/OpenCourse";
+import {TARequestInterface} from "../../interfaces/TAIn";
 
 const apiUrl = "http://localhost:8080";
 const Authorization = localStorage.getItem("token");
@@ -114,6 +115,13 @@ async function deleteOfferedCourse(id: number) {
     .catch((e) => e.response);
 }
 
+async function postCreateTA(data: TARequestInterface) { 
+  return await axios
+    .post(`${apiUrl}/assign-ta-to-schedule`, data, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 export {
   postCreateConditions,
   putUpdateConditions,
@@ -130,4 +138,6 @@ export {
   postAutoGenerateSchedule,
   putupdateScheduleTime,
   deleteSchedulebyNametable,
+
+  postCreateTA
 };
