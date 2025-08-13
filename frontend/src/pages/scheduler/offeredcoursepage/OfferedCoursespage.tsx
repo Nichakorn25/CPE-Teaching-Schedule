@@ -81,7 +81,7 @@ const OfferedCoursespage: React.FC = () => {
         const allCourses = response.data.data as OpenCourseInterface[];
 
         const grouped = allCourses.reduce((acc, course) => {
-          const key = `${course.Code}-${course.Credit}-${course.TypeName}-${course.Major}-${course.Teacher}`;
+          const key = `${course.Code}-${course.Credit}-${course.TypeName}-${course.Major}-${course.Teachers}`;
           const existing = acc.get(key);
 
           if (existing) {

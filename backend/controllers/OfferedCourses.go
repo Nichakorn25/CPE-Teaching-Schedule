@@ -15,6 +15,7 @@ import (
 type (
 	TeacherResp struct {
 		ID        uint   `json:"ID"`
+		Title     string `json:"Title"`
 		Firstname string `json:"Firstname"`
 		Lastname  string `json:"Lastname"`
 	}
@@ -122,10 +123,16 @@ func GetOpenCourses(c *gin.Context) {
 		// teacher := fmt.Sprintf("%s%s %s", oc.User.Title.Title, oc.User.Firstname, oc.User.Lastname)
 		remark := ac.TypeOfCourses.TypeName
 
+		var titleText string
+		if oc.User.Title.Title != "" {
+			titleText = oc.User.Title.Title
+		}
+
 		teachers := []TeacherResp{}
 		if oc.User.ID != 0 {
 			teachers = append(teachers, TeacherResp{
 				ID:        oc.User.ID,
+				Title:     titleText, // <-- ต้องเป็น string
 				Firstname: oc.User.Firstname,
 				Lastname:  oc.User.Lastname,
 			})
