@@ -55,9 +55,11 @@ const ManageTeacher: React.FC = () => {
     (m) => m.DepartmentID === selectedDepartmentID
   );
 
+  const isEdit = Boolean(id);
+
   const [formData, setFormData] = useState<CreateUserInterface>({
     Username: "",
-    Password: "",
+    Password: isEdit ? "" : "123456",
     Firstname: "",
     Lastname: "",
     Image: "",
