@@ -1,14 +1,18 @@
-import React, { useEffect, useState } from "react";
-import { Button, Select, Form, Card, message, Space } from "antd";
+// pages/Admin/AddTeacherAssistance.tsx
+import React, { useEffect, useMemo, useState } from "react";
+import { Button, Select, Form, Card } from "antd";
+import Swal from "sweetalert2";
+import { MinusCircleOutlined } from "@ant-design/icons";
+
 import {
   getAllTeachers,
   getOpenCourses,
   getAllTeachingAssistants,
-  // postAssignTeachingAssistants,
 } from "../../../services/https/AdminPageServices";
+
+import { postCreateTA } from "../../../services/https/SchedulerPageService";
 import { TeachingAssistantInterface } from "../../../interfaces/TeachingAssistant";
 import { OpenCourseInterface } from "../../../interfaces/Adminpage";
-import { MinusCircleOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
@@ -21,6 +25,30 @@ const AddTeachingAssistant: React.FC = () => {
   const [selectedCourse, setSelectedCourse] =
     useState<OpenCourseInterface | null>(null);
 
+  // อ่านปี/เทอมจาก localStorage เพื่อสร้าง name_table อัตโนมัติ
+  const [academicYear, setAcademicYear] = useState<string>(
+    () => localStorage.getItem("academicYear") || ""
+  );
+  const [term, setTerm] = useState<string>(
+    () => localStorage.getItem("term") || ""
+  );
+
+  // ถ้ามีการเปลี่ยนค่าใน localStorage (เช่นหน้าอื่นอัปเดต) จะ sync ให้ด้วย
+  useEffect(() => {
+    const onStorage = () => {
+      setAcademicYear(localStorage.getItem("academicYear") || "");
+      setTerm(localStorage.getItem("term") || "");
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  // สร้างชื่อตารางจากปี/เทอม
+  const nameTable = useMemo(() => {
+    if (!academicYear || !term) return "";
+    return `ปีการศึกษา ${academicYear} เทอม ${term}`;
+  }, [academicYear, term]);
+
   useEffect(() => {
     const fetchData = async () => {
       const courseRes = await getOpenCourses();
@@ -32,77 +60,146 @@ const AddTeachingAssistant: React.FC = () => {
       if (assistantRes.status === 200 && Array.isArray(assistantRes.data)) {
         setAssistants(assistantRes.data);
       }
+
+      // ไม่จำเป็นในหน้านี้ แต่มีในระบบอยู่แล้ว
+      await getAllTeachers().catch(() => {});
     };
 
     fetchData();
   }, []);
 
-
   const handleCourseChange = (courseID: number) => {
     const course = courses.find((c) => c.ID === courseID) || null;
-    console.log("เลือกวิชา:", course);
     setSelectedCourse(course);
-    form.setFieldValue("assistantsPerGroup", []);
+
+    // เตรียมค่าเริ่มต้นให้ครบทุกกลุ่ม (กัน undefined ตอน submit)
+    if (course) {
+      const init = (course.GroupInfos || []).map((g: any) => ({
+        group: g.Group,
+        assistantIDs: [],
+      }));
+      form.setFieldsValue({ assistantsPerGroup: init });
+    } else {
+      form.setFieldsValue({ assistantsPerGroup: [] });
+    }
   };
 
   const handleSubmit = async (values: any) => {
-    const payload = values.assistantsPerGroup.map((group: any) => ({
-      courseID: values.courseID,
-      group: group.group,
-      assistantIDs: group.assistantIDs,
-    }));
+    if (!selectedCourse) {
+      Swal.fire({
+        icon: "warning",
+        title: "กรุณาเลือกรายวิชา",
+        confirmButtonText: "ตกลง",
+      });
+      return;
+    }
 
-    console.log("Payload ที่จะส่ง:", payload);
+    if (!nameTable) {
+      Swal.fire({
+        icon: "warning",
+        title: "ยังไม่มีปี/เทอม",
+        text: "กรุณาตั้งค่า academicYear และ term ในระบบก่อน",
+        confirmButtonText: "ตกลง",
+      });
+      return;
+    }
 
-    // const res = await postAssignTeachingAssistants(payload);
-    // if (res.status === 200 || res.status === 201) {
-    //   message.success("บันทึกข้อมูลสำเร็จ");
-    //   form.resetFields();
-    //   setSelectedCourse(null);
-    // } else {
-    //   message.error("เกิดข้อผิดพลาดในการบันทึก");
-    // }
+    const list = Array.isArray(values.assistantsPerGroup)
+      ? values.assistantsPerGroup
+      : [];
+
+    // รวม TA จากทุกกลุ่มให้เหลือชุดเดียว (unique) และแปลงเป็น number
+    const teachingAssistantIDs: number[] = Array.from(
+      new Set(
+        list.flatMap((g: any) =>
+          Array.isArray(g?.assistantIDs) ? g.assistantIDs : []
+        )
+      )
+    ).map((id: any) => Number(id));
+
+    if (teachingAssistantIDs.length === 0) {
+      Swal.fire({
+        icon: "info",
+        title: "ยังไม่ได้เลือกผู้ช่วยสอน",
+        text: "กรุณาเพิ่มผู้ช่วยอย่างน้อย 1 คน",
+        confirmButtonText: "ตกลง",
+      });
+      return;
+    }
+
+    const payload = {
+      offered_courses_id: Number(selectedCourse.ID),
+      name_table: nameTable,
+      teaching_assistant_ids: teachingAssistantIDs,
+    };
+
+    console.log("Assign TA payload >>", payload);
+
+    const res = await postCreateTA(payload);
+    if (res?.status === 200 || res?.status === 201) {
+      Swal.fire({
+        icon: "success",
+        title: "บันทึกข้อมูลสำเร็จ",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+      form.resetFields();
+      setSelectedCourse(null);
+    } else {
+      const detail =
+        (res?.data &&
+          (res.data.details || res.data.error || res.data.message)) ||
+        (res ? JSON.stringify(res.data) : "ไม่ทราบสาเหตุ");
+      console.error("postCreateTA error:", res?.status, res?.data);
+      Swal.fire({
+        icon: "error",
+        title: `บันทึกล้มเหลว${res?.status ? ` (${res.status})` : ""}`,
+        confirmButtonText: "ตกลง",
+      });
+    }
   };
 
   return (
     <>
       <div
         style={{
-          marginBottom: "24px",
-          paddingBottom: "16px",
+          marginBottom: 24,
+          paddingBottom: 16,
           borderBottom: "2px solid #F26522",
         }}
       >
         <h2
-          style={{
-            margin: 0,
-            color: "#333",
-            fontSize: "24px",
-            fontWeight: "bold",
-          }}
+          style={{ margin: 0, color: "#333", fontSize: 24, fontWeight: "bold" }}
         >
           เพิ่มผู้ช่วยสอน
         </h2>
-        <p style={{ margin: "8px 0 0 0", color: "#666", fontSize: "14px" }}>
-          เลือกรายวิชา แล้วเพิ่มผู้ช่วยสอนแยกตามกลุ่มเรียน
+        <p style={{ margin: "8px 0 0 0", color: "#666", fontSize: 14 }}>
+          เลือกรายวิชา ระบบจะใช้ชื่อตารางตามปี/เทอมปัจจุบันให้อัตโนมัติ
         </p>
+        {nameTable && (
+          <div style={{ marginTop: 8, fontWeight: 600, color: "#16a34a" }}>
+            ชื่อตารางปัจจุบัน: {nameTable}
+          </div>
+        )}
       </div>
 
       <div
         style={{
-          maxWidth: "1000px",
+          maxWidth: 1000,
           margin: "0 auto",
-          padding: "24px",
+          padding: 24,
           backgroundColor: "#fff",
-          borderRadius: "8px",
+          borderRadius: 8,
           boxShadow: "0 8px 32px rgba(0,0,0,0.05)",
         }}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Card
             title="เลือกรายวิชา"
-            style={{ marginBottom: "24px" }}
-            headStyle={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}
+            style={{ marginBottom: 24 }}
+            styles={{
+              header: { backgroundColor: "#f8f9fa", fontWeight: "bold" },
+            }} // แทน headStyle
           >
             <Form.Item
               label={
@@ -131,13 +228,14 @@ const AddTeachingAssistant: React.FC = () => {
             <>
               <Card
                 title="อาจารย์ผู้สอน"
-                style={{ marginBottom: "24px" }}
-                headStyle={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}
+                style={{ marginBottom: 24 }}
+                styles={{
+                  header: { backgroundColor: "#f8f9fa", fontWeight: "bold" },
+                }}
               >
-                {selectedCourse.Teachers &&
-                selectedCourse.Teachers.length > 0 ? (
-                  <ul>
-                    {selectedCourse?.Teachers.map((t) => (
+                {selectedCourse.Teachers?.length ? (
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {selectedCourse.Teachers.map((t) => (
                       <li key={t.ID}>
                         {t.Title} {t.Firstname} {t.Lastname}
                       </li>
@@ -150,114 +248,106 @@ const AddTeachingAssistant: React.FC = () => {
 
               <Card
                 title="ข้อมูลผู้ช่วยสอนแยกตามกลุ่มเรียน"
-                headStyle={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}
+                styles={{
+                  header: { backgroundColor: "#f8f9fa", fontWeight: "bold" },
+                }}
               >
-                <Form.List name="assistantsPerGroup">
-                  {(fields, { add, remove }) => (
-                    <>
-                      {selectedCourse.GroupInfos.map((group, groupIdx) => (
-                        <div
-                          key={groupIdx}
-                          style={{
-                            marginBottom: 24,
-                            borderBottom: "1px solid #eee",
-                            paddingBottom: 16,
-                          }}
-                        >
-                          <p style={{ fontWeight: "bold", color: "#F26522" }}>
-                            กลุ่ม {group.Group} - {group.Day} {group.TimeSpan}{" "}
-                            ห้อง {group.Room}
-                          </p>
+                {(selectedCourse.GroupInfos || []).map((group, groupIdx) => (
+                  <div
+                    key={groupIdx}
+                    style={{
+                      marginBottom: 24,
+                      borderBottom: "1px solid #eee",
+                      paddingBottom: 16,
+                    }}
+                  >
+                    <p
+                      style={{
+                        fontWeight: "bold",
+                        color: "#F26522",
+                        marginBottom: 12,
+                      }}
+                    >
+                      กลุ่ม {group.Group} - {group.Day} {group.TimeSpan} ห้อง{" "}
+                      {group.Room}
+                    </p>
 
-                          {/* ซ่อนข้อมูลกลุ่ม */}
-                          <Form.Item
-                            name={[groupIdx, "group"]}
-                            initialValue={group.Group}
-                            hidden
-                          >
-                            <input />
+                    {/* เก็บหมายเลขกลุ่มแบบ hidden */}
+                    <Form.Item
+                      name={["assistantsPerGroup", groupIdx, "group"]}
+                      hidden
+                    >
+                      <input />
+                    </Form.Item>
+
+                    <Form.List
+                      name={["assistantsPerGroup", groupIdx, "assistantIDs"]}
+                    >
+                      {(assistantFields, { add, remove }) => (
+                        <>
+                          {assistantFields.map((field) => (
+                            <div
+                              key={field.key}
+                              style={{
+                                display: "flex",
+                                marginBottom: 8,
+                                gap: 8,
+                              }}
+                            >
+                              <Form.Item
+                                name={[field.name]}
+                                rules={[
+                                  {
+                                    required: true,
+                                    message: "กรุณาเลือกผู้ช่วยสอน",
+                                  },
+                                ]}
+                                style={{ flex: 1, marginBottom: 0 }}
+                              >
+                                <Select
+                                  placeholder="เลือกผู้ช่วยสอน"
+                                  style={{ width: "100%" }}
+                                  showSearch
+                                  optionFilterProp="children"
+                                  filterOption={(input, option) =>
+                                    String(option?.children)
+                                      .toLowerCase()
+                                      .includes(input.toLowerCase())
+                                  }
+                                >
+                                  {assistants.map((a) => (
+                                    <Option key={a.ID} value={a.ID}>
+                                      {a.Title?.Title} {a.Firstname}{" "}
+                                      {a.Lastname}
+                                    </Option>
+                                  ))}
+                                </Select>
+                              </Form.Item>
+
+                              <Button
+                                icon={<MinusCircleOutlined />}
+                                onClick={() => remove(field.name)}
+                                danger
+                                type="text"
+                              />
+                            </div>
+                          ))}
+
+                          <Form.Item style={{ marginTop: 8 }}>
+                            <Button type="dashed" onClick={() => add()} block>
+                              เพิ่มผู้ช่วยสอนสำหรับกลุ่มนี้
+                            </Button>
                           </Form.Item>
-
-                          <Form.List name={[groupIdx, "assistantIDs"]}>
-                            {(
-                              assistantFields,
-                              { add: addAssistant, remove: removeAssistant }
-                            ) => (
-                              <>
-                                {assistantFields.map((field, idx) => (
-                                  <div
-                                    key={field.key}
-                                    style={{
-                                      display: "flex",
-                                      marginBottom: 8,
-                                      gap: 8,
-                                    }}
-                                  >
-                                    <Form.Item
-                                      {...field}
-                                      name={[field.name]}
-                                      rules={[
-                                        {
-                                          required: true,
-                                          message: "กรุณาเลือกผู้ช่วยสอน",
-                                        },
-                                      ]}
-                                      style={{ flex: 1, marginBottom: 0 }} // ✅ ทำให้เต็ม
-                                    >
-                                      <Select
-                                        placeholder="เลือกผู้ช่วยสอน"
-                                        style={{ width: "100%" }} // ✅ เต็มแนวกว้าง
-                                        showSearch
-                                        optionFilterProp="children"
-                                        filterOption={(input, option) =>
-                                          String(option?.children)
-                                            .toLowerCase()
-                                            .includes(input.toLowerCase())
-                                        }
-                                      >
-                                        {assistants.map((a) => (
-                                          <Option key={a.ID} value={a.ID}>
-                                            {a.Title?.Title} {a.Firstname}{" "}
-                                            {a.Lastname}
-                                          </Option>
-                                        ))}
-                                      </Select>
-                                    </Form.Item>
-
-                                    <Button
-                                      icon={<MinusCircleOutlined />}
-                                      onClick={() =>
-                                        removeAssistant(field.name)
-                                      }
-                                      danger
-                                      type="text"
-                                    />
-                                  </div>
-                                ))}
-
-                                <Form.Item style={{ marginTop: 8 }}>
-                                  <Button
-                                    type="dashed"
-                                    onClick={() => addAssistant()}
-                                    block
-                                    icon="＋"
-                                  >
-                                    เพิ่มผู้ช่วยสอนสำหรับกลุ่มนี้
-                                  </Button>
-                                </Form.Item>
-                              </>
-                            )}
-                          </Form.List>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </Form.List>
+                        </>
+                      )}
+                    </Form.List>
+                  </div>
+                ))}
               </Card>
             </>
           )}
 
-          <div style={{ textAlign: "right", marginTop: "24px" }}>
+          <div style={{ textAlign: "right", marginTop: 24 }}>
             <Button
               type="primary"
               htmlType="submit"
