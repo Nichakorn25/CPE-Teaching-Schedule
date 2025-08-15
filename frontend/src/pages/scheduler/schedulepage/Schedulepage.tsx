@@ -60,6 +60,10 @@ interface ScheduleData {
 
 interface ExtendedScheduleData extends ScheduleData {
   subCells?: SubCell[];
+  dayIndex?: number;
+  rowIndex?: number;
+  isFirstRowOfDay?: boolean;
+  totalRowsInDay?: number;
 }
 
 interface DragPreview {
@@ -90,12 +94,13 @@ const BACKGROUND_COLORS = [
   "#CCCCFF", "#F5F5CC",
 ];
 
+// =================== CELL CONFIG ===================
 const CELL_CONFIG = {
   BASE_WIDTH: 85,
-  LAYER_HEIGHT: 80,
-  LAYER_SPACING: 5,
-  MIN_HEIGHT: 90,
+  FIXED_HEIGHT: 85,
+  MIN_HEIGHT: 100,
   GAP: 2,
+  PADDING: 6,
 };
 
 // =================== UTILITY FUNCTIONS ===================
@@ -106,7 +111,11 @@ const getRandomBackgroundColor = (): string => {
 const timeToSlotIndex = (time: string): number => {
   const cleanTime = time.includes('-') ? time.split('-')[0] : time;
   const formatted = cleanTime.padStart(5, '0');
-  return PURE_TIME_SLOTS.findIndex(slot => slot === formatted);
+  const index = PURE_TIME_SLOTS.findIndex(slot => slot === formatted);
+  
+  console.log(`🕐 timeToSlotIndex: ${time} -> ${cleanTime} -> ${formatted} -> index: ${index}`);
+  
+  return index !== -1 ? index : 0;
 };
 
 const slotIndexToTime = (index: number): string => {
@@ -124,8 +133,17 @@ const isTimeInSlot = (startTime: string, endTime: string, slot: string): boolean
     return h * 60 + m;
   };
 
-  const startMinutes = toMinutes(startTime.substring(11, 16));
-  const endMinutes = toMinutes(endTime.substring(11, 16));
+  const getTimeString = (time: string | any): string => {
+    if (typeof time === 'string') {
+      return time.length > 5 ? time.substring(11, 16) : time;
+    } else if (time instanceof Date) {
+      return time.toTimeString().substring(0, 5);
+    }
+    return "00:00";
+  };
+
+  const startMinutes = toMinutes(getTimeString(startTime));
+  const endMinutes = toMinutes(getTimeString(endTime));
   const slotStartMinutes = toMinutes(slotStart);
   const slotEndMinutes = toMinutes(slotEnd);
 
@@ -163,7 +181,18 @@ const Schedulepage: React.FC = () => {
     endTime: string
   ): SubCell => {
     const cleanStartTime = startTime.includes('-') ? startTime.split('-')[0] : startTime;
-    const cleanEndTime = endTime.includes('-') ? endTime.split('-')[1] : endTime;
+    const cleanEndTime = endTime.includes('-') ? endTime.split('-')[1] || endTime : endTime;
+    
+    const startSlot = timeToSlotIndex(cleanStartTime);
+    const endSlot = timeToSlotIndex(cleanEndTime);
+    
+    console.log(`📚 createSubCell: ${classData.subject}`, {
+      startTime: cleanStartTime,
+      endTime: cleanEndTime,
+      startSlot,
+      endSlot,
+      duration: endSlot - startSlot
+    });
     
     return {
       id: `${day}-${Date.now()}-${Math.random()}`,
@@ -175,8 +204,8 @@ const Schedulepage: React.FC = () => {
       endTime: cleanEndTime,
       day,
       position: {
-        startSlot: timeToSlotIndex(cleanStartTime),
-        endSlot: timeToSlotIndex(cleanEndTime)
+        startSlot,
+        endSlot
       },
       zIndex: 1
     };
@@ -184,30 +213,70 @@ const Schedulepage: React.FC = () => {
 
   const addSubCellToDay = (day: string, subCell: SubCell) => {
     setScheduleData(prevData => {
-      const newData = [...prevData];
-      const dayIndex = newData.findIndex(d => d.day === day);
+      // หาแถวของวันที่เหมาะสม (ไม่มีการซ้อนทับเวลา)
+      const dayRows = prevData.filter(row => row.day === day);
       
-      if (dayIndex === -1) {
-        const newDayData: ExtendedScheduleData = {
-          key: newData.length.toString(),
-          day,
+      let targetRowIndex = -1;
+      for (let i = 0; i < dayRows.length; i++) {
+        const row = dayRows[i];
+        const hasConflict = (row.subCells || []).some(existingSubCell => 
+          doSubCellsOverlap(subCell, existingSubCell)
+        );
+        
+        if (!hasConflict) {
+          targetRowIndex = prevData.findIndex(r => r.key === row.key);
+          break;
+        }
+      }
+      
+      const newData = [...prevData];
+      
+      if (targetRowIndex !== -1) {
+        // เพิ่มลงในแถวที่มีอยู่
+        newData[targetRowIndex] = {
+          ...newData[targetRowIndex],
+          subCells: [...(newData[targetRowIndex].subCells || []), subCell]
+        };
+      } else {
+        // สร้างแถวใหม่
+        const dayIndex = DAYS.findIndex(d => d === day);
+        const newRowIndex = dayRows.length;
+        
+        const newRowData: ExtendedScheduleData = {
+          key: `day-${dayIndex}-row-${newRowIndex}`,
+          day: day,
+          dayIndex: dayIndex,
+          rowIndex: newRowIndex,
+          isFirstRowOfDay: newRowIndex === 0,
+          totalRowsInDay: newRowIndex + 1,
           subCells: [subCell]
         };
         
+        // เพิ่ม time slots
         TIME_SLOTS.forEach((time) => {
-          newDayData[time] = {
-            content: "",
-            backgroundColor: "#f9f9f9",
-            classes: [],
-          };
+          if (time === "12:00-13:00") {
+            newRowData[time] = {
+              content: "พักเที่ยง",
+              backgroundColor: "#FFF5E5",
+              isBreak: true,
+            };
+          } else {
+            newRowData[time] = {
+              content: "",
+              backgroundColor: "#f9f9f9",
+              classes: [],
+            };
+          }
         });
         
-        newData.push(newDayData);
-      } else {
-        newData[dayIndex] = {
-          ...newData[dayIndex],
-          subCells: [...(newData[dayIndex].subCells || []), subCell]
-        };
+        newData.push(newRowData);
+        
+        // อัปเดต totalRowsInDay ของแถวอื่นในวันเดียวกัน
+        newData.forEach(row => {
+          if (row.day === day) {
+            row.totalRowsInDay = (row.totalRowsInDay || 1) + 1;
+          }
+        });
       }
       
       return newData;
@@ -223,12 +292,12 @@ const Schedulepage: React.FC = () => {
     });
   };
 
-  const moveSubCell = (subCellId: string, newDay: string, newStartSlot: number) => {
+  const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, newStartSlot: number) => {
     setScheduleData(prevData => {
       const newData = [...prevData];
       let subCellToMove: SubCell | null = null;
       
-      // Find and remove the sub-cell
+      // ค้นหาและลบ sub-cell
       for (const dayData of newData) {
         const cellIndex = (dayData.subCells || []).findIndex(cell => cell.id === subCellId);
         if (cellIndex !== -1) {
@@ -240,28 +309,20 @@ const Schedulepage: React.FC = () => {
       
       if (!subCellToMove) return prevData;
       
-      // Calculate new position
+      // คำนวณตำแหน่งใหม่
       const duration = subCellToMove.position.endSlot - subCellToMove.position.startSlot;
       const newEndSlot = newStartSlot + duration;
       
-      // Check bounds
+      // ตรวจสอบขอบเขต
       if (newEndSlot > PURE_TIME_SLOTS.length) {
         message.warning("ไม่สามารถวางที่ตำแหน่งนี้ได้ เนื่องจากเกินเวลาสิ้นสุด");
-        // Put back in original position
-        const originalDayIndex = newData.findIndex(d => d.day === subCellToMove.day);
-        if (originalDayIndex !== -1) {
-          if (!newData[originalDayIndex].subCells) {
-            newData[originalDayIndex].subCells = [];
-          }
-          newData[originalDayIndex].subCells!.push(subCellToMove);
-        }
-        return newData;
+        return prevData;
       }
       
-      // Create moved sub-cell
+      // สร้าง sub-cell ที่ถูกย้าย
       const movedSubCell: SubCell = {
         ...subCellToMove,
-        day: newDay,
+        day: targetRow.day,
         startTime: slotIndexToTime(newStartSlot),
         endTime: slotIndexToTime(newEndSlot),
         position: {
@@ -270,29 +331,13 @@ const Schedulepage: React.FC = () => {
         }
       };
       
-      // Add to new day
-      const targetDayIndex = newData.findIndex(d => d.day === newDay);
-      if (targetDayIndex === -1) {
-        const newDayData: ExtendedScheduleData = {
-          key: newData.length.toString(),
-          day: newDay,
-          subCells: [movedSubCell]
-        };
-        
-        TIME_SLOTS.forEach((time) => {
-          newDayData[time] = {
-            content: "",
-            backgroundColor: "#f9f9f9",
-            classes: [],
-          };
-        });
-        
-        newData.push(newDayData);
-      } else {
-        if (!newData[targetDayIndex].subCells) {
-          newData[targetDayIndex].subCells = [];
+      // เพิ่มลงในแถวเป้าหมาย
+      const targetRowIndex = newData.findIndex(r => r.key === targetRow.key);
+      if (targetRowIndex !== -1) {
+        if (!newData[targetRowIndex].subCells) {
+          newData[targetRowIndex].subCells = [];
         }
-        newData[targetDayIndex].subCells!.push(movedSubCell);
+        newData[targetRowIndex].subCells!.push(movedSubCell);
       }
       
       return newData;
@@ -318,7 +363,7 @@ const Schedulepage: React.FC = () => {
     }
   };
 
-  const handleCellDragOver = (e: React.DragEvent, day: string, timeSlot: string) => {
+  const handleCellDragOver = (e: React.DragEvent, targetRow: ExtendedScheduleData, timeSlot: string) => {
     e.preventDefault();
     
     if (!draggedSubCell) return;
@@ -327,7 +372,7 @@ const Schedulepage: React.FC = () => {
     const duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
     
     setDragPreview({
-      day,
+      day: targetRow.day,
       startSlot: slotIndex,
       endSlot: slotIndex + duration,
       show: true
@@ -338,88 +383,447 @@ const Schedulepage: React.FC = () => {
     setDragPreview(prev => prev ? { ...prev, show: false } : null);
   };
 
-  const handleCellDrop = (e: React.DragEvent, day: string, timeSlot: string) => {
+  const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, timeSlot: string) => {
     e.preventDefault();
     
     if (!draggedSubCell) return;
     
     const slotIndex = timeToSlotIndex(timeSlot.split('-')[0]);
-    moveSubCell(draggedSubCell.id, day, slotIndex);
+    
+    // ตรวจสอบการทับซ้อนในแถวเป้าหมาย
+    const duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
+    const tempSubCell = {
+      ...draggedSubCell,
+      position: { startSlot: slotIndex, endSlot: slotIndex + duration }
+    };
+    
+    const hasConflict = (targetRow.subCells || []).some(existingSubCell => 
+      existingSubCell.id !== draggedSubCell.id && doSubCellsOverlap(tempSubCell, existingSubCell)
+    );
+    
+    if (hasConflict) {
+      message.warning("ไม่สามารถวางที่ตำแหน่งนี้ได้ เนื่องจากมีการซ้อนทับเวลา");
+      return;
+    }
+    
+    moveSubCellToRow(draggedSubCell.id, targetRow, slotIndex);
     setDraggedSubCell(null);
     setDragPreview(null);
   };
 
-  // =================== DATA TRANSFORMATION ===================
-  const transformScheduleData = (rawSchedules: any[]): ExtendedScheduleData[] => {
-    return DAYS.map((day, dayIndex) => {
-      const dayData: ExtendedScheduleData = {
-        key: dayIndex.toString(),
-        day: day,
-        subCells: []
-      };
+  // =================== RENDER SUB-CELL FUNCTION ===================
+  const renderSubCell = (subCell: SubCell) => {
+    const duration = subCell.position.endSlot - subCell.position.startSlot;
+    const shouldSpan = duration > 1;
 
-      // Transform old data to sub-cells
+    return (
+      <div
+        key={subCell.id}
+        draggable
+        onDragStart={(e) => handleSubCellDragStart(e, subCell)}
+        onDragEnd={handleSubCellDragEnd}
+        style={{
+          backgroundColor: subCell.classData.color,
+          border: shouldSpan ? "3px solid #F26522" : "2px solid rgba(0,0,0,0.2)",
+          borderRadius: "6px",
+          padding: "6px 8px",
+          cursor: "grab",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          overflow: "hidden",
+          transition: "all 0.2s ease",
+          fontSize: duration > 2 ? "11px" : shouldSpan ? "10px" : "9px",
+          lineHeight: "1.2",
+          textAlign: "center",
+          color: "#333",
+          height: `${CELL_CONFIG.FIXED_HEIGHT}px`,
+          position: "absolute",
+          width: "calc(100% - 4px)",
+          left: "2px",
+          top: "0px",
+          zIndex: shouldSpan ? 10 : 5,
+          fontWeight: shouldSpan ? "bold" : "normal",
+          boxShadow: shouldSpan ? 
+            "0 4px 12px rgba(242, 101, 34, 0.4)" : 
+            "0 3px 6px rgba(0,0,0,0.15)",
+        }}
+      >
+        <Tooltip
+          title={
+            <div style={{ fontFamily: "Sarabun, sans-serif" }}>
+              <div style={{
+                fontSize: "14px",
+                fontWeight: "bold",
+                marginBottom: "8px",
+                color: "#F26522",
+                borderBottom: "1px solid #eee",
+                paddingBottom: "4px",
+              }}>
+                📚 รายละเอียดวิชา
+              </div>
+              <div style={{ marginBottom: "6px" }}>
+                <strong>🏷️ รหัสวิชา:</strong> {subCell.classData.subject}
+              </div>
+              <div style={{ marginBottom: "6px" }}>
+                <strong>👩‍🏫 อาจารย์:</strong> {subCell.classData.teacher}
+              </div>
+              <div style={{ marginBottom: "6px" }}>
+                <strong>🏢 ห้องเรียน:</strong> {subCell.classData.room}
+              </div>
+              <div style={{ marginBottom: "6px" }}>
+                <strong>📅 วัน:</strong> {subCell.day}
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>🕐 เวลา:</strong> {subCell.startTime} - {subCell.endTime}
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>⏱️ ระยะเวลา:</strong> {duration} ชั่วโมง
+              </div>
+              <div style={{ marginBottom: "8px" }}>
+                <strong>📏 ขยายครอบคลุม:</strong> {duration} ช่อง
+              </div>
+              {shouldSpan && (
+                <div style={{ marginBottom: "8px" }}>
+                  <strong>🔗 คาบต่อเนื่อง:</strong> {duration} คาบ
+                </div>
+              )}
+              <div style={{
+                fontSize: "11px",
+                color: "#666",
+                fontStyle: "italic",
+                borderTop: "1px solid #eee",
+                paddingTop: "4px",
+              }}>
+                💡 เคล็ดลับ: ลากเพื่อย้าย | คลิก × เพื่อลบ
+              </div>
+            </div>
+          }
+          placement="top"
+          overlayStyle={{
+            maxWidth: "350px",
+            fontFamily: "Sarabun, sans-serif",
+          }}
+          color="#ffffff"
+        >
+          <div style={{ 
+            flex: 1, 
+            display: "flex", 
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            width: "100%",
+            textAlign: "center",
+            minHeight: "auto"
+          }}>
+            <div style={{
+              fontWeight: shouldSpan ? "bold" : "600",
+              marginBottom: duration > 1 ? "4px" : "2px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: duration > 2 ? "normal" : shouldSpan ? "normal" : "nowrap",
+              fontSize: duration > 2 ? "12px" : shouldSpan ? "11px" : "10px",
+              maxWidth: "100%",
+              lineHeight: duration > 2 ? "1.2" : shouldSpan ? "1.1" : "1.2"
+            }}>
+              {subCell.classData.subject}
+            </div>
+            
+            <div style={{
+              fontSize: duration > 2 ? "10px" : shouldSpan ? "9px" : "8px",
+              color: "#666",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: duration > 1 ? "normal" : "nowrap",
+              maxWidth: "100%",
+              marginBottom: duration > 1 ? "2px" : "1px"
+            }}>
+              {subCell.classData.teacher}
+            </div>
+            
+            <div style={{
+              fontSize: duration > 2 ? "10px" : shouldSpan ? "9px" : "8px",
+              color: "#888",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: duration > 1 ? "normal" : "nowrap",
+              maxWidth: "100%"
+            }}>
+              {subCell.classData.room}
+            </div>
+            
+            {shouldSpan && (
+              <div style={{
+                fontSize: duration > 2 ? "10px" : "9px",
+                color: "#F26522",
+                fontWeight: "bold",
+                marginTop: duration > 2 ? "6px" : "4px",
+                borderTop: "1px solid rgba(242, 101, 34, 0.3)",
+                paddingTop: "2px",
+                whiteSpace: "nowrap"
+              }}>
+                {subCell.startTime}-{subCell.endTime}
+              </div>
+            )}
+          </div>
+        </Tooltip>
+        
+        {/* Delete Button */}
+        <div
+          style={{
+            position: "absolute",
+            top: "4px",
+            right: "4px",
+            width: duration > 2 ? "20px" : shouldSpan ? "18px" : "16px",
+            height: duration > 2 ? "20px" : shouldSpan ? "18px" : "16px",
+            backgroundColor: "rgba(255,0,0,0.8)",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: duration > 2 ? "13px" : shouldSpan ? "12px" : "11px",
+            color: "white",
+            cursor: "pointer",
+            opacity: 0.7,
+            fontWeight: "bold"
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            removeSubCell(subCell.id);
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = "1";
+            e.currentTarget.style.backgroundColor = "rgba(255,0,0,1)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = "0.7";
+            e.currentTarget.style.backgroundColor = "rgba(255,0,0,0.8)";
+          }}
+        >
+          ×
+        </div>
+
+        {/* Duration Indicator */}
+        <div style={{
+          position: "absolute",
+          bottom: "4px",
+          left: "4px",
+          fontSize: duration > 2 ? "10px" : "9px",
+          color: "#F26522",
+          fontWeight: "bold",
+          backgroundColor: "rgba(255,255,255,0.95)",
+          borderRadius: "4px",
+          padding: duration > 1 ? "2px 6px" : "1px 4px",
+          border: "1px solid rgba(242, 101, 34, 0.4)"
+        }}>
+          {duration}คาบ
+        </div>
+
+        {/* Proportional Height Indicator */}
+        <div style={{
+          position: "absolute",
+          left: "0",
+          bottom: "0",
+          right: "0",
+          height: duration > 2 ? "6px" : shouldSpan ? "5px" : "4px",
+          backgroundColor: `rgba(242, 101, 34, ${0.3 + (duration * 0.1)})`,
+          borderRadius: "0 0 6px 6px"
+        }} />
+        
+        {/* Visual Scale Indicator */}
+        {duration > 1 && (
+          <div style={{
+            position: "absolute",
+            right: "4px",
+            bottom: "4px",
+            fontSize: "8px",
+            color: "#F26522",
+            fontWeight: "bold",
+            backgroundColor: "rgba(255,255,255,0.9)",
+            borderRadius: "3px",
+            padding: "1px 4px",
+            border: "1px solid rgba(242, 101, 34, 0.3)"
+          }}>
+            {duration}ช่อง
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // =================== DATA TRANSFORMATION WITH ROW SEPARATION ===================
+  const transformScheduleDataWithRowSeparation = (rawSchedules: any[]): ExtendedScheduleData[] => {
+    const result: ExtendedScheduleData[] = [];
+    
+    DAYS.forEach((day, dayIndex) => {
       const daySchedules = rawSchedules.filter(item => item.DayOfWeek === day);
       
-      daySchedules.forEach((item: any) => {
-        const classInfo: ClassInfo = {
-          subject: item.OfferedCourses?.AllCourses?.ThaiName ||
-                  item.OfferedCourses?.AllCourses?.EnglishName ||
-                  "ไม่ทราบชื่อ",
-          teacher: (item.OfferedCourses?.User?.Firstname || "") +
-                  " " +
-                  (item.OfferedCourses?.User?.Lastname || ""),
-          room: item.OfferedCourses?.Laboratory?.Room || "ไม่ระบุห้อง",
+      if (daySchedules.length === 0) {
+        // ไม่มีวิชา -> สร้าง 1 แถวว่าง
+        const emptyDayData: ExtendedScheduleData = {
+          key: `day-${dayIndex}-row-0`,
+          day: day,
+          dayIndex: dayIndex,
+          rowIndex: 0,
+          isFirstRowOfDay: true,
+          totalRowsInDay: 1,
+          subCells: []
         };
-
-        const startTime = item.StartTime.substring(11, 16);
-        const endTime = item.EndTime.substring(11, 16);
         
-        const subCell = createSubCell(classInfo, day, startTime, endTime);
-        dayData.subCells!.push(subCell);
-      });
+        TIME_SLOTS.forEach((time) => {
+          if (time === "12:00-13:00") {
+            emptyDayData[time] = {
+              content: "พักเที่ยง",
+              backgroundColor: "#FFF5E5",
+              isBreak: true,
+            };
+          } else {
+            emptyDayData[time] = {
+              content: "",
+              backgroundColor: "#f9f9f9",
+              classes: [],
+            };
+          }
+        });
+        
+        result.push(emptyDayData);
+      } else {
+        // แปลงข้อมูลเป็น SubCells
+        const subCells: SubCell[] = daySchedules.map((item: any) => {
+          const classInfo: ClassInfo = {
+            subject: item.OfferedCourses?.AllCourses?.ThaiName ||
+                    item.OfferedCourses?.AllCourses?.EnglishName ||
+                    "ไม่ทราบชื่อ",
+            teacher: (item.OfferedCourses?.User?.Firstname || "") +
+                    " " +
+                    (item.OfferedCourses?.User?.Lastname || ""),
+            room: item.OfferedCourses?.Laboratory?.Room || "ไม่ระบุห้อง",
+          };
 
-      // Fill time slots for backward compatibility
-      TIME_SLOTS.forEach((time) => {
-        const matched = rawSchedules.filter((item: any) => {
-          return (
-            item.DayOfWeek === day &&
-            isTimeInSlot(item.StartTime, item.EndTime, time)
-          );
+          const getTimeString = (time: string | Date): string => {
+            if (typeof time === 'string') {
+              return time.substring(11, 16);
+            } else if (time instanceof Date) {
+              return time.toTimeString().substring(0, 5);
+            }
+            return "00:00";
+          };
+
+          const startTime = getTimeString(item.StartTime);
+          const endTime = getTimeString(item.EndTime);
+          
+          return createSubCell(classInfo, day, startTime, endTime);
         });
 
-        if (matched.length > 0) {
-          dayData[time] = {
-            backgroundColor: getRandomBackgroundColor(),
-            classes: matched.map((item: any) => ({
-              subject:
-                item.OfferedCourses?.AllCourses?.ThaiName ||
-                item.OfferedCourses?.AllCourses?.EnglishName ||
-                "ไม่ทราบชื่อ",
-              teacher:
-                (item.OfferedCourses?.User?.Firstname || "") +
-                " " +
-                (item.OfferedCourses?.User?.Lastname || ""),
-              room: item.OfferedCourses?.Laboratory?.Room || "ไม่ระบุห้อง",
-            })),
+        // แยกวิชาที่ซ้อนกันออกเป็นแถวต่าง ๆ
+        const rowGroups = separateOverlappingSubCells(subCells);
+        
+        rowGroups.forEach((rowSubCells, rowIndex) => {
+          const dayData: ExtendedScheduleData = {
+            key: `day-${dayIndex}-row-${rowIndex}`,
+            day: day,
+            dayIndex: dayIndex,
+            rowIndex: rowIndex,
+            isFirstRowOfDay: rowIndex === 0,
+            totalRowsInDay: rowGroups.length,
+            subCells: rowSubCells
           };
-        } else if (time === "12:00-13:00") {
-          dayData[time] = {
-            content: "พักเที่ยง",
-            backgroundColor: "#FFF5E5",
-            isBreak: true,
-          };
-        } else {
-          dayData[time] = {
-            content: "",
-            backgroundColor: "#f9f9f9",
-            classes: [],
-          };
-        }
-      });
 
-      return dayData;
+          // Fill time slots
+          TIME_SLOTS.forEach((time) => {
+            const matched = rowSubCells.filter(subCell => 
+              isTimeInSlot(subCell.startTime, subCell.endTime, time)
+            );
+
+            if (matched.length > 0) {
+              dayData[time] = {
+                backgroundColor: getRandomBackgroundColor(),
+                classes: matched.map(subCell => ({
+                  subject: subCell.classData.subject,
+                  teacher: subCell.classData.teacher,
+                  room: subCell.classData.room,
+                })),
+              };
+            } else if (time === "12:00-13:00") {
+              dayData[time] = {
+                content: "พักเที่ยง",
+                backgroundColor: "#FFF5E5",
+                isBreak: true,
+              };
+            } else {
+              dayData[time] = {
+                content: "",
+                backgroundColor: "#f9f9f9",
+                classes: [],
+              };
+            }
+          });
+
+          result.push(dayData);
+        });
+      }
     });
+
+    return result;
+  };
+
+  // =================== FUNCTION TO SEPARATE OVERLAPPING SUB-CELLS ===================
+  const separateOverlappingSubCells = (subCells: SubCell[]): SubCell[][] => {
+    if (subCells.length === 0) return [[]];
+    
+    const rows: SubCell[][] = [];
+    const sortedSubCells = [...subCells].sort((a, b) => a.position.startSlot - b.position.startSlot);
+    
+    console.log(`📊 separateOverlappingSubCells: Processing ${sortedSubCells.length} sub-cells`);
+    
+    for (const subCell of sortedSubCells) {
+      let placed = false;
+      
+      // ลองใส่ในแถวที่มีอยู่
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const hasOverlap = row.some(existingSubCell => 
+          doSubCellsOverlap(subCell, existingSubCell)
+        );
+        
+        if (!hasOverlap) {
+          row.push(subCell);
+          placed = true;
+          console.log(`✅ Placed ${subCell.classData.subject} in row ${i}`);
+          break;
+        }
+      }
+      
+      // ถ้าใส่ในแถวที่มีไม่ได้ ให้สร้างแถวใหม่
+      if (!placed) {
+        rows.push([subCell]);
+        console.log(`🆕 Created new row ${rows.length - 1} for ${subCell.classData.subject}`);
+      }
+    }
+    
+    console.log(`📋 Total rows created: ${rows.length}`);
+    return rows;
+  };
+
+  // =================== FUNCTION TO CHECK SUB-CELL OVERLAP ===================
+  const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
+    const start1 = subCell1.position.startSlot;
+    const end1 = subCell1.position.endSlot;
+    const start2 = subCell2.position.startSlot;
+    const end2 = subCell2.position.endSlot;
+    
+    // ตรวจสอบการทับซ้อนของเวลา
+    const overlap = !(end1 <= start2 || end2 <= start1);
+    
+    if (overlap) {
+      console.log(`⚠️ Overlap detected:`, {
+        subCell1: `${subCell1.classData.subject} (${start1}-${end1})`,
+        subCell2: `${subCell2.classData.subject} (${start2}-${end2})`
+      });
+    }
+    
+    return overlap;
   };
 
   // =================== API FUNCTIONS ===================
@@ -427,7 +831,7 @@ const Schedulepage: React.FC = () => {
     try {
       const res = await getSchedulesBynameTable(nameTable);
       if (res && Array.isArray(res.data)) {
-        const newScheduleData = transformScheduleData(res.data);
+        const newScheduleData = transformScheduleDataWithRowSeparation(res.data);
         setScheduleData(newScheduleData);
       }
     } catch (error) {
@@ -461,7 +865,7 @@ const Schedulepage: React.FC = () => {
       if (res.status === 200 && res.data) {
         const tableRes = await getSchedulesBynameTable(nameTable);
         if (tableRes.status === 200 && tableRes.data) {
-          const newScheduleData = transformScheduleData(tableRes.data);
+          const newScheduleData = transformScheduleDataWithRowSeparation(tableRes.data);
           setScheduleData(newScheduleData);
           message.success("สร้างตารางอัตโนมัติสำเร็จ และโหลดตารางแล้ว");
         } else {
@@ -481,7 +885,7 @@ const Schedulepage: React.FC = () => {
     try {
       const res = await getSchedulesBynameTable(scheduleName);
       if (res.status === 200 && res.data) {
-        const newScheduleData = transformScheduleData(res.data);
+        const newScheduleData = transformScheduleDataWithRowSeparation(res.data);
         setScheduleData(newScheduleData);
         message.success("โหลดตารางเรียบร้อย");
         setLoadModalVisible(false);
@@ -553,7 +957,7 @@ const Schedulepage: React.FC = () => {
       const headers = ["Day/Time", ...TIME_SLOTS];
 
       scheduleData.forEach((dayData) => {
-        const row: string[] = [dayData.day];
+        const row: string[] = [dayData.day || ""];
         TIME_SLOTS.forEach((time) => {
           const subCells = dayData.subCells || [];
           const timeSlotIndex = timeSlotToSlotIndex(time);
@@ -614,225 +1018,7 @@ const Schedulepage: React.FC = () => {
     }
   };
 
-  // =================== RENDER SUB-CELL ===================
-  const renderSubCell = (subCell: SubCell, layerIndex: number = 0) => {
-    const duration = subCell.position.endSlot - subCell.position.startSlot;
-    const shouldSpan = duration > 1;
-
-    return (
-      <div
-        key={subCell.id}
-        draggable
-        onDragStart={(e) => handleSubCellDragStart(e, subCell)}
-        onDragEnd={handleSubCellDragEnd}
-        style={{
-          backgroundColor: subCell.classData.color,
-          border: shouldSpan ? "2px solid #F26522" : "1px solid rgba(0,0,0,0.2)",
-          borderRadius: "4px",
-          padding: "4px 6px",
-          cursor: "grab",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          overflow: "hidden",
-          transition: "all 0.2s ease",
-          fontSize: shouldSpan ? "8px" : "7px",
-          lineHeight: "1.2",
-          textAlign: "center",
-          color: "#333",
-          height: "70px",
-          position: "absolute",
-          width: "100%",
-          left: "0",
-          top: `${layerIndex * (CELL_CONFIG.LAYER_HEIGHT + CELL_CONFIG.LAYER_SPACING)}px`,
-          zIndex: shouldSpan ? 10 + layerIndex : 5 + layerIndex,
-          fontWeight: shouldSpan ? "bold" : "normal",
-          boxShadow: shouldSpan ? 
-            "0 3px 8px rgba(242, 101, 34, 0.4)" : 
-            "0 2px 4px rgba(0,0,0,0.15)",
-        }}
-      >
-        <Tooltip
-          title={
-            <div style={{ fontFamily: "Sarabun, sans-serif" }}>
-              <div style={{
-                fontSize: "14px",
-                fontWeight: "bold",
-                marginBottom: "8px",
-                color: "#F26522",
-                borderBottom: "1px solid #eee",
-                paddingBottom: "4px",
-              }}>
-                📚 รายละเอียดวิชา
-              </div>
-              <div style={{ marginBottom: "6px" }}>
-                <strong>🏷️ รหัสวิชา:</strong> {subCell.classData.subject}
-              </div>
-              <div style={{ marginBottom: "6px" }}>
-                <strong>👩‍🏫 อาจารย์:</strong> {subCell.classData.teacher}
-              </div>
-              <div style={{ marginBottom: "6px" }}>
-                <strong>🏢 ห้องเรียน:</strong> {subCell.classData.room}
-              </div>
-              <div style={{ marginBottom: "6px" }}>
-                <strong>📅 วัน:</strong> {subCell.day}
-              </div>
-              <div style={{ marginBottom: "8px" }}>
-                <strong>🕐 เวลา:</strong> {subCell.startTime} - {subCell.endTime}
-              </div>
-              <div style={{ marginBottom: "8px" }}>
-                <strong>⏱️ ระยะเวลา:</strong> {duration} ชั่วโมง
-              </div>
-              {shouldSpan && (
-                <div style={{ marginBottom: "8px" }}>
-                  <strong>🔗 คาบต่อเนื่อง:</strong> {duration} คาบ
-                </div>
-              )}
-              <div style={{
-                fontSize: "11px",
-                color: "#666",
-                fontStyle: "italic",
-                borderTop: "1px solid #eee",
-                paddingTop: "4px",
-              }}>
-                💡 เคล็ดลับ: ลากเพื่อย้าย | คลิก × เพื่อลบ
-              </div>
-            </div>
-          }
-          placement="top"
-          overlayStyle={{
-            maxWidth: "350px",
-            fontFamily: "Sarabun, sans-serif",
-          }}
-          color="#ffffff"
-        >
-          <div style={{ 
-            flex: 1, 
-            display: "flex", 
-            flexDirection: "column",
-            justifyContent: "center",
-            alignItems: "center",
-            width: "100%",
-            textAlign: "center"
-          }}>
-            <div style={{
-              fontWeight: shouldSpan ? "bold" : "600",
-              marginBottom: "2px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: shouldSpan ? "normal" : "nowrap",
-              fontSize: duration > 2 ? "10px" : shouldSpan ? "9px" : "8px",
-              maxWidth: "100%",
-              lineHeight: shouldSpan ? "1.1" : "1.2"
-            }}>
-              {subCell.classData.subject}
-            </div>
-            
-            <div style={{
-              fontSize: duration > 2 ? "8px" : shouldSpan ? "7px" : "6px",
-              color: "#666",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: "100%"
-            }}>
-              {subCell.classData.teacher}
-            </div>
-            
-            <div style={{
-              fontSize: duration > 2 ? "8px" : shouldSpan ? "7px" : "6px",
-              color: "#888",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: "100%"
-            }}>
-              {subCell.classData.room}
-            </div>
-            
-            {shouldSpan && (
-              <div style={{
-                fontSize: duration > 2 ? "8px" : "7px",
-                color: "#F26522",
-                fontWeight: "bold",
-                marginTop: "4px",
-                borderTop: "1px solid rgba(242, 101, 34, 0.3)",
-                paddingTop: "2px",
-                whiteSpace: "nowrap"
-              }}>
-                {subCell.startTime}-{subCell.endTime}
-              </div>
-            )}
-          </div>
-        </Tooltip>
-        
-        {/* Delete Button */}
-        <div
-          style={{
-            position: "absolute",
-            top: "2px",
-            right: "2px",
-            width: duration > 2 ? "16px" : shouldSpan ? "14px" : "12px",
-            height: duration > 2 ? "16px" : shouldSpan ? "14px" : "12px",
-            backgroundColor: "rgba(255,0,0,0.8)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: duration > 2 ? "11px" : shouldSpan ? "10px" : "9px",
-            color: "white",
-            cursor: "pointer",
-            opacity: 0.7,
-            fontWeight: "bold"
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            removeSubCell(subCell.id);
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = "1";
-            e.currentTarget.style.backgroundColor = "rgba(255,0,0,1)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = "0.7";
-            e.currentTarget.style.backgroundColor = "rgba(255,0,0,0.8)";
-          }}
-        >
-          ×
-        </div>
-
-        {/* Duration Indicator */}
-        <div style={{
-          position: "absolute",
-          bottom: "2px",
-          left: "2px",
-          fontSize: duration > 2 ? "8px" : "7px",
-          color: "#F26522",
-          fontWeight: "bold",
-          backgroundColor: "rgba(255,255,255,0.95)",
-          borderRadius: "3px",
-          padding: "1px 4px",
-          border: "1px solid rgba(242, 101, 34, 0.4)"
-        }}>
-          {duration}คาบ
-        </div>
-
-        {/* Width Indicator */}
-        <div style={{
-          position: "absolute",
-          left: "0",
-          bottom: "0",
-          right: "0",
-          height: duration > 2 ? "4px" : shouldSpan ? "3px" : "2px",
-          backgroundColor: "rgba(242, 101, 34, 0.6)",
-          borderRadius: "0 0 4px 4px"
-        }} />
-      </div>
-    );
-  };
-
-  // =================== TABLE COLUMNS ===================
+  // =================== TABLE COLUMNS WITH FIXED ROW GROUPING ===================
   const columns: ColumnsType<ExtendedScheduleData> = [
     {
       title: "Day/Time",
@@ -840,7 +1026,24 @@ const Schedulepage: React.FC = () => {
       key: "day",
       fixed: "left",
       width: 85,
-      render: (text: string) => <strong style={{ color: "#333" }}>{text}</strong>,
+      onCell: (record: ExtendedScheduleData) => {
+        if (record.isFirstRowOfDay) {
+          return { 
+            rowSpan: record.totalRowsInDay || 1,
+            style: { 
+              verticalAlign: 'top' as const,
+              backgroundColor: '#f8f9fa',
+              fontWeight: 'bold' as const
+            }
+          };
+        } else {
+          return { rowSpan: 0 };
+        }
+      },
+      render: (text: string, record: ExtendedScheduleData) => {
+        return record.isFirstRowOfDay ? 
+          <strong style={{ color: "#333" }}>{text}</strong> : null;
+      },
     },
     ...TIME_SLOTS.map((time) => ({
       title: time,
@@ -848,40 +1051,46 @@ const Schedulepage: React.FC = () => {
       key: time,
       width: 120,
       onCell: (record: ExtendedScheduleData) => {
-        const dayData = record;
         const timeSlotIndex = timeSlotToSlotIndex(time);
         
-        // Calculate cell height based on number of sub-cells
-        const startingSubCells = (dayData.subCells || []).filter(subCell => 
-          Math.floor(subCell.position.startSlot) === timeSlotIndex
-        );
-        
-        const calculatedHeight = startingSubCells.length * (CELL_CONFIG.LAYER_HEIGHT + CELL_CONFIG.LAYER_SPACING);
-        const minHeight = Math.max(calculatedHeight, CELL_CONFIG.MIN_HEIGHT);
-        
-        // Check for spanning sub-cells
-        const spanningSubCell = (dayData.subCells || []).find(subCell => {
+        // หาวิชาที่เริ่มในช่องนี้และยาวกว่า 1 ช่อง
+        const spanningSubCell = (record.subCells || []).find(subCell => {
           const subCellStartSlotIndex = Math.floor(subCell.position.startSlot);
           const subCellEndSlotIndex = Math.floor(subCell.position.endSlot);
-          return subCellStartSlotIndex === timeSlotIndex && subCellEndSlotIndex > subCellStartSlotIndex + 1;
+          
+          const shouldSpan = subCellStartSlotIndex === timeSlotIndex && 
+                            subCellEndSlotIndex > subCellStartSlotIndex + 1;
+          
+          if (shouldSpan) {
+            console.log(`🔗 ColSpan detected: ${subCell.classData.subject}`, {
+              startSlot: subCellStartSlotIndex,
+              endSlot: subCellEndSlotIndex,
+              timeSlotIndex,
+              spanLength: subCellEndSlotIndex - subCellStartSlotIndex
+            });
+          }
+          
+          return shouldSpan;
         });
         
         if (spanningSubCell) {
-          const spanLength = Math.floor(spanningSubCell.position.endSlot) - Math.floor(spanningSubCell.position.startSlot);
+          const spanLength = Math.floor(spanningSubCell.position.endSlot) - 
+                            Math.floor(spanningSubCell.position.startSlot);
+          
           return { 
             colSpan: spanLength,
-            style: {
-              height: `${minHeight}px`,
-              verticalAlign: 'top',
-              padding: '4px',
-              overflow: 'visible',
-              position: 'relative'
+            style: { 
+              height: `${CELL_CONFIG.MIN_HEIGHT}px`,
+              verticalAlign: 'top' as const,
+              padding: '6px',
+              overflow: 'visible' as const,
+              position: 'relative' as const
             }
           };
         }
         
-        // Check if spanned by another cell
-        const spannedByOther = (dayData.subCells || []).some(subCell => {
+        // ตรวจสอบว่าถูกครอบคลุมโดยช่องอื่นหรือไม่
+        const spannedByOther = (record.subCells || []).some(subCell => {
           const subCellStartSlotIndex = Math.floor(subCell.position.startSlot);
           const subCellEndSlotIndex = Math.floor(subCell.position.endSlot);
           return subCellStartSlotIndex < timeSlotIndex && subCellEndSlotIndex > timeSlotIndex;
@@ -892,59 +1101,58 @@ const Schedulepage: React.FC = () => {
         }
         
         return {
-          style: {
-            height: `${minHeight}px`,
-            verticalAlign: 'top',
-            padding: '4px',
-            overflow: 'visible',
-            position: 'relative'
+          style: { 
+            height: `${CELL_CONFIG.MIN_HEIGHT}px`,
+            verticalAlign: 'top' as const,
+            padding: '6px',
+            overflow: 'visible' as const,
+            position: 'relative' as const
           }
         };
       },
       render: (text: string, record: ExtendedScheduleData) => {
-        const dayData = record;
         const timeSlotIndex = timeSlotToSlotIndex(time);
         
-        // Show sub-cells first
-        const relevantSubCells = (dayData.subCells || []).filter(subCell => {
-          const subCellStartSlotIndex = Math.floor(subCell.position.startSlot);
-          const subCellEndSlotIndex = Math.floor(subCell.position.endSlot);
-          return subCellStartSlotIndex <= timeSlotIndex && subCellEndSlotIndex > timeSlotIndex;
-        });
+        // หาวิชาที่เริ่มในช่องนี้
+        const startingSubCells = (record.subCells || []).filter(subCell => 
+          Math.floor(subCell.position.startSlot) === timeSlotIndex
+        );
         
-        if (relevantSubCells.length > 0) {
-          const startingSubCells = relevantSubCells.filter(subCell => 
-            Math.floor(subCell.position.startSlot) === timeSlotIndex
-          );
+        if (startingSubCells.length > 0) {
+          // ในระบบแยกแถว ควรมีวิชาเดียวต่อช่องต่อแถว
+          const subCell = startingSubCells[0];
           
-          if (startingSubCells.length > 0) {
-            return (
+          return (
+            <div
+              style={{
+                width: "100%",
+                height: `${CELL_CONFIG.MIN_HEIGHT}px`,
+                backgroundColor: "transparent",
+                borderRadius: "6px",
+                padding: "6px",
+                border: "none",
+                boxShadow: "none",
+                display: "block",
+                position: "relative",
+                overflow: "visible"
+              }}
+              onDragOver={(e) => handleCellDragOver(e, record, time)}
+              onDragLeave={handleCellDragLeave}
+              onDrop={(e) => handleCellDrop(e, record, time)}
+            >
               <div
                 style={{
+                  position: "absolute",
+                  top: "0px",
+                  left: "0",
                   width: "100%",
-                  minHeight: "90px",
-                  backgroundColor: "transparent",
-                  borderRadius: "4px",
-                  padding: "4px",
-                  border: "none",
-                  boxShadow: "none",
-                  display: "block",
-                  position: "relative",
-                  overflow: "visible",
-                  height: `${startingSubCells.length * (CELL_CONFIG.LAYER_HEIGHT + CELL_CONFIG.LAYER_SPACING)}px`
+                  height: `${CELL_CONFIG.FIXED_HEIGHT}px`
                 }}
-                onDragOver={(e) => handleCellDragOver(e, record.day, time)}
-                onDragLeave={handleCellDragLeave}
-                onDrop={(e) => handleCellDrop(e, record.day, time)}
               >
-                {startingSubCells.map((subCell, layerIndex) => 
-                  renderSubCell(subCell, layerIndex)
-                )}
+                {renderSubCell(subCell)}
               </div>
-            );
-          } else {
-            return null;
-          }
+            </div>
+          );
         }
 
         // Legacy rendering for empty cells or break time
@@ -956,15 +1164,15 @@ const Schedulepage: React.FC = () => {
             <div
               style={{
                 width: "100%",
-                minHeight: "90px",
+                height: `${CELL_CONFIG.MIN_HEIGHT}px`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: cellData.backgroundColor,
                 color: "#666",
-                borderRadius: "4px",
+                borderRadius: "6px",
                 padding: "8px 4px",
-                fontSize: "7px",
+                fontSize: "8px",
                 fontWeight: "bold",
                 border: "1px solid #e0e0e0",
               }}
@@ -979,20 +1187,33 @@ const Schedulepage: React.FC = () => {
           <div
             style={{
               width: "100%",
-              minHeight: "90px",
+              height: `${CELL_CONFIG.MIN_HEIGHT}px`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               backgroundColor: "transparent",
-              borderRadius: "4px",
-              padding: "4px",
-              border: "1px dashed #ddd",
+              borderRadius: "6px",
+              padding: "8px",
+              border: "2px dashed #ddd",
+              transition: "all 0.2s ease"
             }}
-            onDragOver={(e) => handleCellDragOver(e, record.day, time)}
-            onDragLeave={handleCellDragLeave}
-            onDrop={(e) => handleCellDrop(e, record.day, time)}
+            onDragOver={(e) => {
+              e.currentTarget.style.backgroundColor = "#f0f8ff";
+              e.currentTarget.style.borderColor = "#F26522";
+              handleCellDragOver(e, record, time);
+            }}
+            onDragLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.borderColor = "#ddd";
+              handleCellDragLeave();
+            }}
+            onDrop={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.borderColor = "#ddd";
+              handleCellDrop(e, record, time);
+            }}
           >
-            <div style={{ color: "#999", fontSize: "7px", textAlign: "center" }}>
+            <div style={{ color: "#999", fontSize: "8px", textAlign: "center" }}>
               วางคาบเรียนที่นี่
             </div>
           </div>
@@ -1025,13 +1246,29 @@ const Schedulepage: React.FC = () => {
         teacher: "อ.ทดสอบยาว",
         room: "ห้องใหญ่"
       },
-      "อังคาร",
-      "13:00",
-      "16:00"
+      "จันทร์",
+      "09:00",
+      "12:00"
     );
     
-    addSubCellToDay("อังคาร", testSubCell);
+    addSubCellToDay("จันทร์", testSubCell);
     message.success("เพิ่มวิชาทดสอบ (3 ชั่วโมง) สำเร็จ!");
+  };
+
+  const addTestSubCell1Hour = () => {
+    const testSubCell = createSubCell(
+      {
+        subject: "วิชาสั้น 1 ชม.",
+        teacher: "อ.สั้น",
+        room: "ห้องเล็ก"
+      },
+      "พุธ",
+      "14:00",
+      "15:00"
+    );
+    
+    addSubCellToDay("พุธ", testSubCell);
+    message.success("เพิ่มวิชาทดสอบ (1 ชั่วโมง) สำเร็จ!");
   };
 
   // =================== EFFECTS ===================
@@ -1051,12 +1288,24 @@ const Schedulepage: React.FC = () => {
     ? scheduleData
     : DAYS.map((day, index) => {
         const rowData: ExtendedScheduleData = { 
-          key: index.toString(), 
+          key: `day-${index}-row-0`,
           day: day,
+          dayIndex: index,
+          rowIndex: 0,
+          isFirstRowOfDay: true,
+          totalRowsInDay: 1,
           subCells: []
         };
         TIME_SLOTS.forEach((time) => {
-          rowData[time] = { content: "", backgroundColor: "#f9f9f9", classes: [] };
+          if (time === "12:00-13:00") {
+            rowData[time] = {
+              content: "พักเที่ยง",
+              backgroundColor: "#FFF5E5",
+              isBreak: true,
+            };
+          } else {
+            rowData[time] = { content: "", backgroundColor: "#f9f9f9", classes: [] };
+          }
         });
         return rowData;
       });
@@ -1080,7 +1329,7 @@ const Schedulepage: React.FC = () => {
             fontWeight: "bold",
           }}
         >
-          จัดตารางเรียน (Sub-Cell System) 🎯
+          จัดตารางเรียน (Fixed Excel-like Row Separation) 🎯
         </h2>
         <p
           style={{
@@ -1090,9 +1339,9 @@ const Schedulepage: React.FC = () => {
           }}
         >
           สร้างและจัดการตารางเรียนแบบ Drag & Drop | 
-          วิชาแต่ละรายการจะคงขนาดเดิมเมื่อย้าย | 
-          เลื่อนเมาส์ไปที่วิชาเพื่อดูรายละเอียด | 
-          วิชาที่ยาวหลายคาบจะมีเส้นขอบสีส้ม
+          วิชาที่มีเวลาซ้อนทับกันจะแยกเป็นแถวต่างหาก | 
+          แต่ละวิชาจะขยายครอบคลุมช่องตามจำนวนคาบจริง | 
+          ตรวจสอบ Console เพื่อ Debug การทำงาน
         </p>
       </div>
 
@@ -1135,17 +1384,24 @@ const Schedulepage: React.FC = () => {
         </Button>
         <Button
           type="dashed"
-          onClick={addTestSubCell}
+          onClick={addTestSubCell1Hour}
           style={{ borderColor: "#52c41a", color: "#52c41a" }}
+        >
+          + ทดสอบ 1 ชม.
+        </Button>
+        <Button
+          type="dashed"
+          onClick={addTestSubCell}
+          style={{ borderColor: "#1890ff", color: "#1890ff" }}
         >
           + ทดสอบ 2 ชม.
         </Button>
         <Button
           type="dashed"
           onClick={addTestSubCell3Hours}
-          style={{ borderColor: "#1890ff", color: "#1890ff" }}
+          style={{ borderColor: "#fa8c16", color: "#fa8c16" }}
         >
-          + ทดสอบ 3 ชม.
+          + ทดสอบ 3 ชม. (ซ้อน)
         </Button>
       </Flex>
 
