@@ -1,55 +1,5 @@
 package config
 
-////////////////////////////////////// ของไดม่อนอย่าลบ //////////////////////////////////////////////////////////
-// import (
-// 	// "database/sql"
-// 	"errors"
-// 	"fmt"
-// 	"log"
-// 	"os"
-// 	"time"
-
-// 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
-// 	_ "github.com/lib/pq"
-
-// 	// "gorm.io/driver/postgres"
-// 	"gorm.io/driver/sqlite"
-// 	"gorm.io/gorm"
-// )
-
-// var db *gorm.DB
-
-// func DB() *gorm.DB {
-// 	return db
-// }
-
-// func CreateDatabase() {
-// 	dbName := "cpe_schedule.db"
-
-// 	// เช็คว่าไฟล์ฐานข้อมูลมีอยู่แล้วหรือยัง
-// 	if _, err := os.Stat(dbName); os.IsNotExist(err) {
-// 		file, err := os.Create(dbName)
-// 		if err != nil {
-// 			log.Fatal("Failed to create SQLite database file:", err)
-// 		}
-// 		file.Close()
-// 		fmt.Println("Database file created successfully")
-// 	} else {
-// 		fmt.Println("Database file already exists")
-// 	}
-// }
-
-// func ConnectionDB() {
-// 	database, err := gorm.Open(sqlite.Open("CPE_Schdule.db?cache=shared"), &gorm.Config{})
-// 	if err != nil {
-// 		panic("failed to connect database")
-// 	}
-// 	fmt.Println("connected database")
-// 	db = database
-// }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 import (
 	"database/sql"
 	"errors"
@@ -61,6 +11,7 @@ import (
 	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var db *gorm.DB
@@ -2719,15 +2670,22 @@ func SeedTimeFixedCourses() {
 	// 		ScheduleID:   entry.ScheduleID,
 	// 	})
 	// }
-	for _, s := range entries {
-		err := db.FirstOrCreate(&entity.TimeFixedCourses{}, &s).Error
-		if err != nil {
-			fmt.Println("Insert error:", err)
-		} else {
-			fmt.Println("Inserted or found:", s)
-		}
-	}
+	// for _, s := range entries {
+	// 	err := db.FirstOrCreate(&entity.TimeFixedCourses{}, &s).Error
+	// 	if err != nil {
+	// 		fmt.Println("Insert error:", err)
+	// 	} else {
+	// 		fmt.Println("Inserted or found:", s)
+	// 	}
+	// }
+		seedDB := db.Session(&gorm.Session{
+		Logger: logger.Default.LogMode(logger.Silent), // เงียบ SQL/record not found
+	})
 
+	for i := range entries {
+		e := entries[i] // กันปัญหา pointer กับ range variable
+		_ = seedDB.Create(&e).Error // ใส่อย่างเดียว ไม่พิมพ์อะไรออก
+	}
 }
 
 // //////////////////////////////////////////////////////////// ตารางสอน ///////////////////////////////////////////////////////
@@ -2740,6 +2698,14 @@ func SeedSchedules() {
 	}
 
 	schedules := []entity.Schedule{
+		{
+			NameTable:        "ปีการศึกษา 2567 เทอม 1",
+			SectionNumber:    1,
+			DayOfWeek:        "จันทร์",
+			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "11:00", loc),
+			OfferedCoursesID: 1,
+		},
 		{
 			NameTable:        "ปีการศึกษา 2567 เทอม 1",
 			SectionNumber:    1,
