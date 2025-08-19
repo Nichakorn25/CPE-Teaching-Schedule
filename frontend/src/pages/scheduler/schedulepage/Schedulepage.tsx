@@ -1803,6 +1803,9 @@ const Schedulepage: React.FC = () => {
         >
           โหลด
         </Button>
+        <Button onClick={handleReset}>
+          รีเซต
+        </Button>
         <Button
           type="primary"
           style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
