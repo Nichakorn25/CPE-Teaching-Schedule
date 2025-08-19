@@ -1779,6 +1779,7 @@ const Schedulepage: React.FC = () => {
       <Flex gap="small" wrap style={{ marginBottom: "20px" }}>
         <Button
           type="primary"
+          style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
           onClick={() => {
             if (scheduleData.length === 0) {
               message.warning("ไม่มีข้อมูลให้บันทึก กรุณาสร้างตารางก่อน");
@@ -1794,31 +1795,6 @@ const Schedulepage: React.FC = () => {
         >
           อัปเดตตาราง
         </Button>
-        
-        {/* เพิ่มปุ่มรีเฟรช */}
-        {isTableFromAPI && currentTableName && (
-          <Button
-            type="default"
-            onClick={async () => {
-              const hide = message.loading("กำลังรีเฟรชข้อมูล...", 0);
-              try {
-                await getSchedules(currentTableName);
-                hide();
-                message.success("รีเฟรชข้อมูลสำเร็จ");
-              } catch (error) {
-                hide();
-                message.error("เกิดข้อผิดพลาดในการรีเฟรช");
-              }
-            }}
-            style={{ borderColor: "#52c41a", color: "#52c41a" }}
-          >
-            🔄 รีเฟรช
-          </Button>
-        )}
-        
-        <Button onClick={handleReset}>
-          รีเซต
-        </Button>
         <Button 
           onClick={() => {
             setLoadModalVisible(true);
@@ -1829,36 +1805,17 @@ const Schedulepage: React.FC = () => {
         </Button>
         <Button
           type="primary"
+          style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
           onClick={generateAutoSchedule}
         >
           สร้างอัตโนมัติ
         </Button>
         <Button
           type="primary"
+          style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
           onClick={exportScheduleToPDF}
         >
           ส่งออก PDF
-        </Button>
-        <Button
-          type="dashed"
-          onClick={addTestSubCell1Hour}
-          style={{ borderColor: "#52c41a", color: "#52c41a" }}
-        >
-          + ทดสอบ 1 ชม.
-        </Button>
-        <Button
-          type="dashed"
-          onClick={addTestSubCell}
-          style={{ borderColor: "#1890ff", color: "#1890ff" }}
-        >
-          + ทดสอบ 2 ชม.
-        </Button>
-        <Button
-          type="dashed"
-          onClick={addTestSubCell3Hours}
-          style={{ borderColor: "#fa8c16", color: "#fa8c16" }}
-        >
-          + ทดสอบ 3 ชม. (ซ้อน)
         </Button>
       </Flex>
 
