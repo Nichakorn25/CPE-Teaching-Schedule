@@ -364,35 +364,36 @@ func GetNameTable(c *gin.Context) {
 
 // ///////////////////////////////////////// update ตาราง
 func UpdateScheduleTime(c *gin.Context) {
-	id := c.Param("id")
-
-	var input struct {
+	var inputs []struct {
+		ID        uint
 		DayOfWeek string
 		StartTime time.Time
 		EndTime   time.Time
 	}
 
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ข้อมูลไม่ถูกต้อง"})
+	if err := c.ShouldBindJSON(&inputs); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "รูปแบบข้อมูลไม่ถูกต้อง"})
 		return
 	}
 
-	var schedule entity.Schedule
-	if err := config.DB().First(&schedule, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบตาราง"})
-		return
+	for _, input := range inputs {
+		var schedule entity.Schedule
+		if err := config.DB().First(&schedule, input.ID).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("ไม่พบตาราง id: %d", input.ID)})
+			return
+		}
+
+		schedule.DayOfWeek = input.DayOfWeek
+		schedule.StartTime = input.StartTime
+		schedule.EndTime = input.EndTime
+
+		if err := config.DB().Save(&schedule).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("บันทึก id %d ไม่สำเร็จ", input.ID)})
+			return
+		}
 	}
 
-	schedule.DayOfWeek = input.DayOfWeek
-	schedule.StartTime = input.StartTime
-	schedule.EndTime = input.EndTime
-
-	if err := config.DB().Save(&schedule).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถบันทึกตารางใหม่ได้"})
-		return
-	}
-
-	c.JSON(http.StatusOK, schedule)
+	c.JSON(http.StatusOK, gin.H{"message": "อัปเดตตารางเรียบร้อยแล้ว"})
 }
 
 // ///////////////////////////////////////// Delete ตารางตามชื่อ NameTable
