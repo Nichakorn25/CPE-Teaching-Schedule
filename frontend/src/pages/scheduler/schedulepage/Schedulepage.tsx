@@ -485,196 +485,80 @@ const Schedulepage: React.FC = () => {
             "0 3px 6px rgba(0,0,0,0.15)",
         }}
       >
-        <Tooltip
-          title={
-            <div style={{ fontFamily: "Sarabun, sans-serif", minWidth: "350px" }}>
-              <div style={{
-                fontSize: "16px",
-                fontWeight: "bold",
-                marginBottom: "12px",
-                color: "#F26522",
-                borderBottom: "2px solid #F26522",
-                paddingBottom: "8px",
-                textAlign: "center",
-              }}>
-                📚 รายละเอียดวิชา
-              </div>
-              
-              {subCell.classData.courseCode && (
-                <div style={{ marginBottom: "8px", fontSize: "14px" }}>
-                  <strong style={{ color: "#1890ff" }}>🏷️ รหัสวิชา:</strong> 
-                  <span style={{ marginLeft: "8px", fontWeight: "500" }}>
-                    {subCell.classData.courseCode}
-                  </span>
-                </div>
-              )}
-              
-              <div style={{ marginBottom: "8px", fontSize: "14px" }}>
-                <strong style={{ color: "#52c41a" }}>📖 ชื่อวิชา:</strong> 
-                <span style={{ marginLeft: "8px", fontWeight: "500" }}>
-                  {subCell.classData.subject || "ไม่ระบุ"}
-                </span>
-              </div>
-              
-              {subCell.classData.section && (
-                <div style={{ marginBottom: "8px", fontSize: "14px" }}>
-                  <strong style={{ color: "#722ed1" }}>📝 หมู่เรียน:</strong> 
-                  <span style={{ marginLeft: "8px", fontWeight: "500" }}>
-                    {subCell.classData.section}
-                  </span>
-                </div>
-              )}
-              
-              <div style={{ marginBottom: "8px", fontSize: "14px" }}>
-                <strong style={{ color: "#13c2c2" }}>👩‍🏫 อาจารย์:</strong> 
-                <span style={{ marginLeft: "8px", fontWeight: "500" }}>
-                  {subCell.classData.teacher || "ไม่ระบุอาจารย์"}
-                </span>
-              </div>
-              
-              <div style={{ marginBottom: "8px", fontSize: "14px" }}>
-                <strong style={{ color: "#fa8c16" }}>🏢 ห้องเรียน:</strong> 
-                <span style={{ marginLeft: "8px", fontWeight: "500" }}>
-                  {subCell.classData.room || "ไม่ระบุห้อง"}
-                </span>
-              </div>
-              
-              <div style={{ marginBottom: "8px", fontSize: "14px" }}>
-                <strong style={{ color: "#722ed1" }}>📅 วัน:</strong> 
-                <span style={{ marginLeft: "8px", fontWeight: "500" }}>
-                  {subCell.day}
-                </span>
-              </div>
-              
-              <div style={{ marginBottom: "8px", fontSize: "14px" }}>
-                <strong style={{ color: "#eb2f96" }}>🕐 เวลา:</strong> 
-                <span style={{ marginLeft: "8px", fontWeight: "500" }}>
-                  {subCell.startTime} - {subCell.endTime}
-                </span>
-              </div>
-              
-              <div style={{ marginBottom: "8px", fontSize: "14px" }}>
-                <strong style={{ color: "#13c2c2" }}>⏱️ ระยะเวลา:</strong> 
-                <span style={{ marginLeft: "8px", fontWeight: "500" }}>
-                  {duration} ชั่วโมง
-                </span>
-              </div>
-              
-              {subCell.scheduleId && (
-                <div style={{ marginBottom: "12px", fontSize: "12px" }}>
-                  <strong style={{ color: "#8c8c8c" }}>🆔 Schedule ID:</strong> 
-                  <span style={{ marginLeft: "8px" }}>
-                    {subCell.scheduleId}
-                  </span>
-                </div>
-              )}
-              
-              {/* Debug Information */}
-              <div style={{
-                fontSize: "11px",
-                color: "#999",
-                fontStyle: "italic",
-                borderTop: "1px solid #f0f0f0",
-                paddingTop: "8px",
-                marginTop: "12px",
-                backgroundColor: "#f8f9fa",
-                borderRadius: "4px",
-                padding: "8px"
-              }}>
-                🔧 <strong>Debug Info:</strong><br/>
-                StartSlot: {subCell.position.startSlot}<br/>
-                EndSlot: {subCell.position.endSlot}<br/>
-                Duration: {duration} slots
-              </div>
-              
-              <div style={{
-                fontSize: "12px",
-                color: "#666",
-                fontStyle: "italic",
-                borderTop: "1px solid #f0f0f0",
-                paddingTop: "8px",
-                textAlign: "center",
-                backgroundColor: "#fafafa",
-                borderRadius: "4px",
-                padding: "8px",
-                marginTop: "8px"
-              }}>
-                💡 <strong>เคล็ดลับ:</strong> ลากเพื่อย้าย | คลิก × เพื่อลบ
-              </div>
-            </div>
-          }
-          placement="top"
-          overlayStyle={{
-            maxWidth: "450px",
-            fontFamily: "Sarabun, sans-serif",
-          }}
-          overlayClassName="schedule-tooltip"
-          color="#ffffff"
-          trigger="hover"
-          mouseEnterDelay={0.3}
-          mouseLeaveDelay={0.1}
-        >
-          <div style={{ 
-            flex: 1, 
-            display: "flex", 
-            flexDirection: "column",
-            justifyContent: "center",
-            alignItems: "center",
-            width: "100%",
-            textAlign: "center",
-            minHeight: "auto"
-          }}>
-            <div style={{
-              fontWeight: shouldSpan ? "bold" : "600",
-              marginBottom: duration > 1 ? "4px" : "2px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: duration > 2 ? "normal" : shouldSpan ? "normal" : "nowrap",
-              fontSize: duration > 2 ? "12px" : shouldSpan ? "11px" : "10px",
-              maxWidth: "100%",
-              lineHeight: duration > 2 ? "1.2" : shouldSpan ? "1.1" : "1.2"
-            }}>
-              {subCell.classData.subject}
-            </div>
-            
-            <div style={{
-              fontSize: duration > 2 ? "10px" : shouldSpan ? "9px" : "8px",
-              color: "#666",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: duration > 1 ? "normal" : "nowrap",
-              maxWidth: "100%",
-              marginBottom: duration > 1 ? "2px" : "1px"
-            }}>
-              {subCell.classData.teacher}
-            </div>
-            
-            <div style={{
-              fontSize: duration > 2 ? "10px" : shouldSpan ? "9px" : "8px",
-              color: "#888",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: duration > 1 ? "normal" : "nowrap",
-              maxWidth: "100%"
-            }}>
-              {subCell.classData.room}
-            </div>
-            
-            {shouldSpan && (
-              <div style={{
-                fontSize: duration > 2 ? "10px" : "9px",
-                color: "#F26522",
-                fontWeight: "bold",
-                marginTop: duration > 2 ? "6px" : "4px",
-                borderTop: "1px solid rgba(242, 101, 34, 0.3)",
-                paddingTop: "2px",
-                whiteSpace: "nowrap"
-              }}>
-                {subCell.startTime}-{subCell.endTime}
-              </div>
-            )}
-          </div>
-        </Tooltip>
+<Tooltip
+  title={
+    <div
+      style={{
+        fontFamily: "Sarabun, sans-serif",
+        minWidth: "300px",
+        backgroundColor: "white",
+        color: "black",
+        padding: "10px",
+        borderRadius: "6px",
+      }}
+    >
+      <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "6px", color: "#F26522" }}>
+        📚 รายละเอียดวิชา
+      </div>
+
+      {/* ✅ Tooltip โชว์เต็ม ไม่ใช้ ellipsis */}
+      <p><b>🏷️ รหัสวิชา:</b> {subCell.classData.courseCode || "ไม่ระบุ"}</p>
+      <p><b>📖 ชื่อวิชา:</b> {subCell.classData.subject || "ไม่ระบุ"}</p>
+      <p><b>📝 หมู่เรียน:</b> {subCell.classData.section || "ไม่ระบุ"}</p>
+      <p><b>👩‍🏫 อาจารย์:</b> {subCell.classData.teacher || "ไม่ระบุ"}</p>
+      <p><b>🏢 ห้องเรียน:</b> {subCell.classData.room || "ไม่ระบุ"}</p>
+      <p><b>📅 วัน:</b> {subCell.day}</p>
+      <p><b>🕐 เวลา:</b> {subCell.startTime} - {subCell.endTime}</p>
+    </div>
+  }
+  placement="top"
+  overlayStyle={{ maxWidth: "400px", backgroundColor: "white", color: "black" }}
+  trigger="hover"
+>
+  {/* ✅ Block ในตาราง ใช้ ellipsis */}
+  <div style={{
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+    textAlign: "center"
+  }}>
+    <div style={{
+      fontWeight: "bold",
+      fontSize: "12px",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      maxWidth: "100%",
+    }}>
+      {subCell.classData.subject}
+    </div>
+    <div style={{
+      fontSize: "10px",
+      color: "#666",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      maxWidth: "100%",
+    }}>
+      {subCell.classData.teacher}
+    </div>
+    <div style={{
+      fontSize: "10px",
+      color: "#888",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      maxWidth: "100%",
+    }}>
+      {subCell.classData.room}
+    </div>
+  </div>
+</Tooltip>
+
+
         
         {/* Delete Button */}
         <div
