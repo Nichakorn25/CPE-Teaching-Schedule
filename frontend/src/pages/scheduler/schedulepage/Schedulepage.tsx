@@ -21,6 +21,7 @@ import {
   getNameTable,
   postAutoGenerateSchedule,
   deleteSchedulebyNametable,
+  putupdateScheduleTime,
 } from "../../../services/https/SchedulerPageService";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -37,6 +38,8 @@ interface ClassInfo {
   teacher: string;
   room: string;
   color?: string;
+  section?: string;      // เพิ่ม
+  courseCode?: string;   // เพิ่ม
 }
 
 interface SubCell {
@@ -50,6 +53,7 @@ interface SubCell {
     endSlot: number;
   };
   zIndex: number;
+  scheduleId?: number; // เพิ่ม scheduleId สำหรับ track API record
 }
 
 interface ScheduleData {
@@ -71,6 +75,29 @@ interface DragPreview {
   startSlot: number;
   endSlot: number;
   show: boolean;
+}
+
+// ✅ เพิ่ม interface สำหรับ Schedule Change
+interface ScheduleChange {
+  id: number;
+  originalData: {
+    dayOfWeek: string;
+    startTime: string;
+    endTime: string;
+  };
+  newData: {
+    dayOfWeek: string;
+    startTime: string;
+    endTime: string;
+  };
+}
+
+// ✅ เพิ่ม interface สำหรับ Batch Update Payload (PascalCase ตาม Backend)
+interface ScheduleBatchUpdate {
+  ID: number;
+  DayOfWeek: string;
+  StartTime: string;
+  EndTime: string;
 }
 
 // =================== CONSTANTS ===================
@@ -171,6 +198,11 @@ const Schedulepage: React.FC = () => {
   const [draggedSubCell, setDraggedSubCell] = useState<SubCell | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
 
+  // =================== NEW STATES FOR API TRACKING ===================
+  const [currentTableName, setCurrentTableName] = useState("");
+  const [isTableFromAPI, setIsTableFromAPI] = useState(false);
+  const [originalScheduleData, setOriginalScheduleData] = useState<any[]>([]);
+
   const tableRef = useRef<HTMLDivElement>(null);
 
   // =================== SUB-CELL FUNCTIONS ===================
@@ -178,7 +210,8 @@ const Schedulepage: React.FC = () => {
     classData: ClassInfo, 
     day: string, 
     startTime: string, 
-    endTime: string
+    endTime: string,
+    scheduleId?: number
   ): SubCell => {
     const cleanStartTime = startTime.includes('-') ? startTime.split('-')[0] : startTime;
     const cleanEndTime = endTime.includes('-') ? endTime.split('-')[1] || endTime : endTime;
@@ -191,7 +224,8 @@ const Schedulepage: React.FC = () => {
       endTime: cleanEndTime,
       startSlot,
       endSlot,
-      duration: endSlot - startSlot
+      duration: endSlot - startSlot,
+      scheduleId
     });
     
     return {
@@ -207,7 +241,8 @@ const Schedulepage: React.FC = () => {
         startSlot,
         endSlot
       },
-      zIndex: 1
+      zIndex: 1,
+      scheduleId: scheduleId
     };
   };
 
@@ -452,60 +487,132 @@ const Schedulepage: React.FC = () => {
       >
         <Tooltip
           title={
-            <div style={{ fontFamily: "Sarabun, sans-serif" }}>
+            <div style={{ fontFamily: "Sarabun, sans-serif", minWidth: "350px" }}>
               <div style={{
-                fontSize: "14px",
+                fontSize: "16px",
                 fontWeight: "bold",
-                marginBottom: "8px",
+                marginBottom: "12px",
                 color: "#F26522",
-                borderBottom: "1px solid #eee",
-                paddingBottom: "4px",
+                borderBottom: "2px solid #F26522",
+                paddingBottom: "8px",
+                textAlign: "center",
               }}>
                 📚 รายละเอียดวิชา
               </div>
-              <div style={{ marginBottom: "6px" }}>
-                <strong>🏷️ รหัสวิชา:</strong> {subCell.classData.subject}
-              </div>
-              <div style={{ marginBottom: "6px" }}>
-                <strong>👩‍🏫 อาจารย์:</strong> {subCell.classData.teacher}
-              </div>
-              <div style={{ marginBottom: "6px" }}>
-                <strong>🏢 ห้องเรียน:</strong> {subCell.classData.room}
-              </div>
-              <div style={{ marginBottom: "6px" }}>
-                <strong>📅 วัน:</strong> {subCell.day}
-              </div>
-              <div style={{ marginBottom: "8px" }}>
-                <strong>🕐 เวลา:</strong> {subCell.startTime} - {subCell.endTime}
-              </div>
-              <div style={{ marginBottom: "8px" }}>
-                <strong>⏱️ ระยะเวลา:</strong> {duration} ชั่วโมง
-              </div>
-              <div style={{ marginBottom: "8px" }}>
-                <strong>📏 ขยายครอบคลุม:</strong> {duration} ช่อง
-              </div>
-              {shouldSpan && (
-                <div style={{ marginBottom: "8px" }}>
-                  <strong>🔗 คาบต่อเนื่อง:</strong> {duration} คาบ
+              
+              {subCell.classData.courseCode && (
+                <div style={{ marginBottom: "8px", fontSize: "14px" }}>
+                  <strong style={{ color: "#1890ff" }}>🏷️ รหัสวิชา:</strong> 
+                  <span style={{ marginLeft: "8px", fontWeight: "500" }}>
+                    {subCell.classData.courseCode}
+                  </span>
                 </div>
               )}
+              
+              <div style={{ marginBottom: "8px", fontSize: "14px" }}>
+                <strong style={{ color: "#52c41a" }}>📖 ชื่อวิชา:</strong> 
+                <span style={{ marginLeft: "8px", fontWeight: "500" }}>
+                  {subCell.classData.subject || "ไม่ระบุ"}
+                </span>
+              </div>
+              
+              {subCell.classData.section && (
+                <div style={{ marginBottom: "8px", fontSize: "14px" }}>
+                  <strong style={{ color: "#722ed1" }}>📝 หมู่เรียน:</strong> 
+                  <span style={{ marginLeft: "8px", fontWeight: "500" }}>
+                    {subCell.classData.section}
+                  </span>
+                </div>
+              )}
+              
+              <div style={{ marginBottom: "8px", fontSize: "14px" }}>
+                <strong style={{ color: "#13c2c2" }}>👩‍🏫 อาจารย์:</strong> 
+                <span style={{ marginLeft: "8px", fontWeight: "500" }}>
+                  {subCell.classData.teacher || "ไม่ระบุอาจารย์"}
+                </span>
+              </div>
+              
+              <div style={{ marginBottom: "8px", fontSize: "14px" }}>
+                <strong style={{ color: "#fa8c16" }}>🏢 ห้องเรียน:</strong> 
+                <span style={{ marginLeft: "8px", fontWeight: "500" }}>
+                  {subCell.classData.room || "ไม่ระบุห้อง"}
+                </span>
+              </div>
+              
+              <div style={{ marginBottom: "8px", fontSize: "14px" }}>
+                <strong style={{ color: "#722ed1" }}>📅 วัน:</strong> 
+                <span style={{ marginLeft: "8px", fontWeight: "500" }}>
+                  {subCell.day}
+                </span>
+              </div>
+              
+              <div style={{ marginBottom: "8px", fontSize: "14px" }}>
+                <strong style={{ color: "#eb2f96" }}>🕐 เวลา:</strong> 
+                <span style={{ marginLeft: "8px", fontWeight: "500" }}>
+                  {subCell.startTime} - {subCell.endTime}
+                </span>
+              </div>
+              
+              <div style={{ marginBottom: "8px", fontSize: "14px" }}>
+                <strong style={{ color: "#13c2c2" }}>⏱️ ระยะเวลา:</strong> 
+                <span style={{ marginLeft: "8px", fontWeight: "500" }}>
+                  {duration} ชั่วโมง
+                </span>
+              </div>
+              
+              {subCell.scheduleId && (
+                <div style={{ marginBottom: "12px", fontSize: "12px" }}>
+                  <strong style={{ color: "#8c8c8c" }}>🆔 Schedule ID:</strong> 
+                  <span style={{ marginLeft: "8px" }}>
+                    {subCell.scheduleId}
+                  </span>
+                </div>
+              )}
+              
+              {/* Debug Information */}
               <div style={{
                 fontSize: "11px",
+                color: "#999",
+                fontStyle: "italic",
+                borderTop: "1px solid #f0f0f0",
+                paddingTop: "8px",
+                marginTop: "12px",
+                backgroundColor: "#f8f9fa",
+                borderRadius: "4px",
+                padding: "8px"
+              }}>
+                🔧 <strong>Debug Info:</strong><br/>
+                StartSlot: {subCell.position.startSlot}<br/>
+                EndSlot: {subCell.position.endSlot}<br/>
+                Duration: {duration} slots
+              </div>
+              
+              <div style={{
+                fontSize: "12px",
                 color: "#666",
                 fontStyle: "italic",
-                borderTop: "1px solid #eee",
-                paddingTop: "4px",
+                borderTop: "1px solid #f0f0f0",
+                paddingTop: "8px",
+                textAlign: "center",
+                backgroundColor: "#fafafa",
+                borderRadius: "4px",
+                padding: "8px",
+                marginTop: "8px"
               }}>
-                💡 เคล็ดลับ: ลากเพื่อย้าย | คลิก × เพื่อลบ
+                💡 <strong>เคล็ดลับ:</strong> ลากเพื่อย้าย | คลิก × เพื่อลบ
               </div>
             </div>
           }
           placement="top"
           overlayStyle={{
-            maxWidth: "350px",
+            maxWidth: "450px",
             fontFamily: "Sarabun, sans-serif",
           }}
+          overlayClassName="schedule-tooltip"
           color="#ffffff"
+          trigger="hover"
+          mouseEnterDelay={0.3}
+          mouseLeaveDelay={0.1}
         >
           <div style={{ 
             flex: 1, 
@@ -653,11 +760,14 @@ const Schedulepage: React.FC = () => {
   };
 
   // =================== DATA TRANSFORMATION WITH ROW SEPARATION ===================
-  const transformScheduleDataWithRowSeparation = (rawSchedules: any[]): ExtendedScheduleData[] => {
+  const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[]): ExtendedScheduleData[] => {
+    console.log('🔍 Raw schedules received:', rawSchedules.length, rawSchedules);
+    
     const result: ExtendedScheduleData[] = [];
     
     DAYS.forEach((day, dayIndex) => {
       const daySchedules = rawSchedules.filter(item => item.DayOfWeek === day);
+      console.log(`📅 Day ${day}: Found ${daySchedules.length} schedules`);
       
       if (daySchedules.length === 0) {
         // ไม่มีวิชา -> สร้าง 1 แถวว่าง
@@ -689,21 +799,128 @@ const Schedulepage: React.FC = () => {
         
         result.push(emptyDayData);
       } else {
-        // แปลงข้อมูลเป็น SubCells
-        const subCells: SubCell[] = daySchedules.map((item: any) => {
+        // แปลงข้อมูลเป็น SubCells โดยใช้ interface ที่ถูกต้อง
+        const subCells: SubCell[] = daySchedules.map((item: ScheduleInterface, index: number) => {
+          console.log(`\n🔍 Processing schedule ${index + 1}/${daySchedules.length} for ${day}:`, {
+            id: item.ID,
+            nameTable: item.NameTable,
+            section: item.SectionNumber,
+            dayOfWeek: item.DayOfWeek,
+            startTime: item.StartTime,
+            endTime: item.EndTime,
+            offeredCoursesId: item.OfferedCoursesID,
+            offeredCourses: item.OfferedCourses ? {
+              id: item.OfferedCourses.ID,
+              year: item.OfferedCourses.Year,
+              term: item.OfferedCourses.Term,
+              section: item.OfferedCourses.Section,
+              allCourses: item.OfferedCourses.AllCourses ? {
+                id: item.OfferedCourses.AllCourses.ID,
+                code: item.OfferedCourses.AllCourses.Code,
+                thaiName: item.OfferedCourses.AllCourses.ThaiName,
+                englishName: item.OfferedCourses.AllCourses.EnglishName
+              } : null,
+              user: item.OfferedCourses.User ? {
+                id: item.OfferedCourses.User.ID,
+                firstname: item.OfferedCourses.User.Firstname,
+                lastname: item.OfferedCourses.User.Lastname
+              } : null,
+              laboratory: item.OfferedCourses.Laboratory ? {
+                id: item.OfferedCourses.Laboratory.ID,
+                room: item.OfferedCourses.Laboratory.Room,
+                building: item.OfferedCourses.Laboratory.Building
+              } : null
+            } : null,
+            timeFixedCourses: item.TimeFixedCourses ? item.TimeFixedCourses.map(tc => ({
+              id: tc.ID,
+              section: tc.Section,
+              roomFix: tc.RoomFix,
+              dayOfWeek: tc.DayOfWeek,
+              scheduleId: tc.ScheduleID
+            })) : []
+          });
+
+          // ดึงข้อมูลห้องจาก TimeFixedCourses หรือ Laboratory
+          const getRoomInfo = (schedule: ScheduleInterface): string => {
+            console.log('🏠 Getting room info for:', {
+              scheduleId: schedule.ID,
+              section: schedule.SectionNumber,
+              offeredCourses: schedule.OfferedCourses,
+              timeFixedCourses: schedule.TimeFixedCourses,
+              laboratory: schedule.OfferedCourses?.Laboratory
+            });
+
+            // 1. ลำดับความสำคัญ: TimeFixedCourses.RoomFix (สำหรับวิชาที่กำหนดเวลาแล้ว)
+            if (schedule.TimeFixedCourses && schedule.TimeFixedCourses.length > 0) {
+              console.log('🔍 Checking TimeFixedCourses:', schedule.TimeFixedCourses);
+              
+              // หาห้องจาก TimeFixedCourses ที่ตรงกับ section และ schedule นี้
+              const matchingFixedCourse = schedule.TimeFixedCourses.find(
+                tc => tc.Section === schedule.SectionNumber && 
+                     tc.ScheduleID === schedule.ID &&
+                     tc.RoomFix && tc.RoomFix.trim() !== ""
+              );
+              
+              if (matchingFixedCourse?.RoomFix) {
+                console.log('✅ Found room from matching TimeFixedCourse:', matchingFixedCourse.RoomFix);
+                return matchingFixedCourse.RoomFix;
+              }
+              
+              // ถ้าไม่มีที่ตรงทั้ง section และ scheduleId ให้หาแค่ section
+              const sectionMatch = schedule.TimeFixedCourses.find(
+                tc => tc.Section === schedule.SectionNumber && 
+                     tc.RoomFix && tc.RoomFix.trim() !== ""
+              );
+              
+              if (sectionMatch?.RoomFix) {
+                console.log('✅ Found room from section match:', sectionMatch.RoomFix);
+                return sectionMatch.RoomFix;
+              }
+              
+              // สุดท้าย เอาอันแรกที่มีห้อง
+              const firstAvailable = schedule.TimeFixedCourses.find(
+                tc => tc.RoomFix && tc.RoomFix.trim() !== ""
+              );
+              
+              if (firstAvailable?.RoomFix) {
+                console.log('✅ Found room from first available TimeFixedCourse:', firstAvailable.RoomFix);
+                return firstAvailable.RoomFix;
+              }
+            }
+            
+            // 2. ดูจาก OfferedCourses.Laboratory (สำหรับวิชาปฏิบัติการ)
+            if (schedule.OfferedCourses?.Laboratory?.Room && 
+                schedule.OfferedCourses.Laboratory.Room.trim() !== "") {
+              console.log('✅ Found room from Laboratory:', schedule.OfferedCourses.Laboratory.Room);
+              return schedule.OfferedCourses.Laboratory.Room;
+            }
+            
+            // 3. ถ้าไม่มีทั้งสองแหล่ง ให้ใช้ค่าเริ่มต้น
+            console.log('❌ No room found, using default');
+            return "TBA"; // หรือ "ไม่ระบุห้อง"
+          };
+
           const classInfo: ClassInfo = {
             subject: item.OfferedCourses?.AllCourses?.ThaiName ||
                     item.OfferedCourses?.AllCourses?.EnglishName ||
+                    item.OfferedCourses?.AllCourses?.Code ||
                     "ไม่ทราบชื่อ",
-            teacher: (item.OfferedCourses?.User?.Firstname || "") +
-                    " " +
-                    (item.OfferedCourses?.User?.Lastname || ""),
-            room: item.OfferedCourses?.Laboratory?.Room || "ไม่ระบุห้อง",
+            teacher: item.OfferedCourses?.User ? 
+                    `${item.OfferedCourses.User.Firstname || ""} ${item.OfferedCourses.User.Lastname || ""}`.trim() ||
+                    "ไม่ระบุอาจารย์" :
+                    "ไม่ระบุอาจารย์",
+            room: getRoomInfo(item),
+            section: item.SectionNumber?.toString() || "",
+            courseCode: item.OfferedCourses?.AllCourses?.Code || "",
           };
 
           const getTimeString = (time: string | Date): string => {
             if (typeof time === 'string') {
-              return time.substring(11, 16);
+              // ถ้าเป็น string แล้วมี T ให้เอาเฉพาะส่วนเวลา
+              if (time.includes('T')) {
+                return time.substring(11, 16);
+              }
+              return time.length > 5 ? time.substring(0, 5) : time;
             } else if (time instanceof Date) {
               return time.toTimeString().substring(0, 5);
             }
@@ -713,11 +930,25 @@ const Schedulepage: React.FC = () => {
           const startTime = getTimeString(item.StartTime);
           const endTime = getTimeString(item.EndTime);
           
-          return createSubCell(classInfo, day, startTime, endTime);
+          console.log(`✅ Final classInfo for schedule ${item.ID}:`, {
+            subject: classInfo.subject,
+            teacher: classInfo.teacher,
+            room: classInfo.room,
+            section: classInfo.section,
+            courseCode: classInfo.courseCode,
+            day: item.DayOfWeek,
+            startTime,
+            endTime
+          });
+          
+          return createSubCell(classInfo, day, startTime, endTime, item.ID);
         });
+
+        console.log(`📊 Created ${subCells.length} SubCells for ${day}`);
 
         // แยกวิชาที่ซ้อนกันออกเป็นแถวต่าง ๆ
         const rowGroups = separateOverlappingSubCells(subCells);
+        console.log(`🗂️ Separated into ${rowGroups.length} row groups for ${day}`);
         
         rowGroups.forEach((rowSubCells, rowIndex) => {
           const dayData: ExtendedScheduleData = {
@@ -765,6 +996,7 @@ const Schedulepage: React.FC = () => {
       }
     });
 
+    console.log(`📋 Final result: ${result.length} rows total`);
     return result;
   };
 
@@ -831,8 +1063,20 @@ const Schedulepage: React.FC = () => {
     try {
       const res = await getSchedulesBynameTable(nameTable);
       if (res && Array.isArray(res.data)) {
-        const newScheduleData = transformScheduleDataWithRowSeparation(res.data);
+        console.log('📊 Raw schedule data from API:', res.data);
+        
+        // Type cast เพื่อใช้ interface ที่ถูกต้อง
+        const typedSchedules = res.data as ScheduleInterface[];
+        
+        const newScheduleData = transformScheduleDataWithRowSeparation(typedSchedules);
         setScheduleData(newScheduleData);
+        
+        // เก็บข้อมูลต้นฉบับและเซ็ต state
+        setOriginalScheduleData(res.data);
+        setCurrentTableName(nameTable);
+        setIsTableFromAPI(true);
+        
+        console.log('✅ Transformed schedule data:', newScheduleData);
       }
     } catch (error) {
       console.error("Error loading schedules:", error);
@@ -865,8 +1109,19 @@ const Schedulepage: React.FC = () => {
       if (res.status === 200 && res.data) {
         const tableRes = await getSchedulesBynameTable(nameTable);
         if (tableRes.status === 200 && tableRes.data) {
-          const newScheduleData = transformScheduleDataWithRowSeparation(tableRes.data);
+          console.log('📊 Auto-generated schedule data:', tableRes.data);
+          
+          // Type cast เพื่อใช้ interface ที่ถูกต้อง
+          const typedSchedules = tableRes.data as ScheduleInterface[];
+          
+          const newScheduleData = transformScheduleDataWithRowSeparation(typedSchedules);
           setScheduleData(newScheduleData);
+          
+          // เก็บข้อมูลต้นฉบับและเซ็ต state
+          setOriginalScheduleData(tableRes.data);
+          setCurrentTableName(nameTable);
+          setIsTableFromAPI(true);
+          
           message.success("สร้างตารางอัตโนมัติสำเร็จ และโหลดตารางแล้ว");
         } else {
           message.warning("สร้างตารางสำเร็จ แต่โหลดข้อมูลตารางไม่สำเร็จ");
@@ -880,13 +1135,114 @@ const Schedulepage: React.FC = () => {
     }
   };
 
+  // =================== FIND SCHEDULE CHANGES ===================
+  const findScheduleChanges = (): ScheduleChange[] => {
+    const changes: ScheduleChange[] = [];
+    
+    console.log('🔍 Finding changes...', {
+      scheduleDataLength: scheduleData.length,
+      originalDataLength: originalScheduleData.length
+    });
+    
+    // สร้าง Map ของข้อมูลปัจจุบันจาก subCells
+    const currentMap = new Map<number, {
+      day: string;
+      startTime: string;
+      endTime: string;
+      subject: string;
+      teacher: string;
+      room: string;
+    }>();
+    
+    scheduleData.forEach(dayData => {
+      if (dayData.subCells && dayData.subCells.length > 0) {
+        dayData.subCells.forEach(subCell => {
+          if (subCell.scheduleId) {
+            currentMap.set(subCell.scheduleId, {
+              day: subCell.day,
+              startTime: subCell.startTime,
+              endTime: subCell.endTime,
+              subject: subCell.classData.subject,
+              teacher: subCell.classData.teacher,
+              room: subCell.classData.room
+            });
+            console.log(`📍 Current mapping: ID ${subCell.scheduleId} -> ${subCell.day} ${subCell.startTime}-${subCell.endTime}`);
+          }
+        });
+      }
+    });
+
+    // เปรียบเทียบกับข้อมูลต้นฉบับ
+    originalScheduleData.forEach(original => {
+      const getTimeString = (time: string | Date): string => {
+        if (typeof time === 'string') {
+          return time.substring(11, 16);
+        } else if (time instanceof Date) {
+          return time.toTimeString().substring(0, 5);
+        }
+        return "00:00";
+      };
+
+      const current = currentMap.get(original.ID);
+      
+      if (current) {
+        const originalStartTime = getTimeString(original.StartTime);
+        const originalEndTime = getTimeString(original.EndTime);
+        
+        console.log(`🔎 Comparing ID ${original.ID}:`, {
+          original: `${original.DayOfWeek} ${originalStartTime}-${originalEndTime}`,
+          current: `${current.day} ${current.startTime}-${current.endTime}`
+        });
+        
+        // ตรวจสอบการเปลี่ยนแปลง
+        if (current.day !== original.DayOfWeek ||
+            current.startTime !== originalStartTime ||
+            current.endTime !== originalEndTime) {
+          
+          const scheduleChange: ScheduleChange = {
+            id: original.ID,
+            originalData: {
+              dayOfWeek: original.DayOfWeek,
+              startTime: originalStartTime,
+              endTime: originalEndTime
+            },
+            newData: {
+              dayOfWeek: current.day,
+              startTime: current.startTime,
+              endTime: current.endTime
+            }
+          };
+          
+          changes.push(scheduleChange);
+          console.log(`✏️ Change detected for ID ${original.ID}`);
+        }
+      } else {
+        console.log(`⚠️ Missing current data for ID ${original.ID}`);
+      }
+    });
+
+    console.log(`📋 Total changes found: ${changes.length}`);
+    return changes;
+  };
+
   // =================== MODAL HANDLERS ===================
   const handleLoadSchedule = async (scheduleName: string) => {
     try {
       const res = await getSchedulesBynameTable(scheduleName);
       if (res.status === 200 && res.data) {
-        const newScheduleData = transformScheduleDataWithRowSeparation(res.data);
+        console.log('📊 Loaded schedule data:', res.data);
+        
+        // Type cast เพื่อใช้ interface ที่ถูกต้อง
+        const typedSchedules = res.data as ScheduleInterface[];
+        
+        const newScheduleData = transformScheduleDataWithRowSeparation(typedSchedules);
         setScheduleData(newScheduleData);
+        
+        // เก็บข้อมูลต้นฉบับและเซ็ต state
+        setOriginalScheduleData(res.data);
+        setCurrentTableName(scheduleName);
+        setIsTableFromAPI(true);
+        
         message.success("โหลดตารางเรียบร้อย");
         setLoadModalVisible(false);
       } else {
@@ -907,6 +1263,9 @@ const Schedulepage: React.FC = () => {
       const apiRes = await deleteSchedulebyNametable(scheduleName);
       if (apiRes?.status === 200 || apiRes?.status === 204) {
         setScheduleData([]);
+        setCurrentTableName("");
+        setIsTableFromAPI(false);
+        setOriginalScheduleData([]);
         await getAllNameTable();
         message.success(`ลบตาราง "${scheduleName}" สำเร็จ`);
         setLoadModalVisible(false);
@@ -921,25 +1280,202 @@ const Schedulepage: React.FC = () => {
     }
   };
 
-  const handleSaveConfirm = () => {
+  // =================== NEW SAVE FUNCTION USING API ===================
+  const handleSaveConfirm = async () => {
+    console.log('🔍 Debug Save:', {
+      name: scheduleNameToSave,
+      dataLength: scheduleData.length,
+      currentTableName: currentTableName,
+      isFromAPI: isTableFromAPI,
+      originalDataLength: originalScheduleData.length
+    });
+
     if (!scheduleNameToSave.trim()) {
       message.error("กรุณาใส่ชื่อตาราง");
       return;
     }
 
-    const currentSaved = JSON.parse(localStorage.getItem("savedSchedules") || "{}");
-    currentSaved[scheduleNameToSave] = {
-      scheduleData: scheduleData,
-      savedAt: new Date().toLocaleString("th-TH"),
-      totalClasses: scheduleData.reduce((total, dayData) => {
-        return total + (dayData.subCells?.length || 0);
-      }, 0),
-    };
+    if (scheduleData.length === 0) {
+      message.error("ไม่มีข้อมูลตารางให้บันทึก");
+      return;
+    }
 
-    localStorage.setItem("savedSchedules", JSON.stringify(currentSaved));
-    setSaveModalVisible(false);
-    setScheduleNameToSave("");
-    message.success(`บันทึกตาราง "${scheduleNameToSave}" สำเร็จ!`);
+    // ตรวจสอบว่าต้องเป็นตารางจาก API เท่านั้น
+    if (!isTableFromAPI || !currentTableName) {
+      message.warning("สามารถบันทึกได้เฉพาะตารางที่มาจาก 'สร้างอัตโนมัติ' หรือ 'โหลด' เท่านั้น");
+      return;
+    }
+
+    // ตรวจสอบว่าชื่อตรงกับตารางปัจจุบันหรือไม่
+    if (scheduleNameToSave !== currentTableName) {
+      message.error(`กรุณาใช้ชื่อตาราง "${currentTableName}" ไม่สามารถเปลี่ยนชื่อได้`);
+      return;
+    }
+
+    try {
+      await updateExistingSchedule();
+    } catch (error) {
+      console.error('Save error:', error);
+      message.error(`เกิดข้อผิดพลาด: ${error.message}`);
+    }
+  };
+
+  // =================== UPDATE EXISTING SCHEDULE ===================
+  const updateExistingSchedule = async () => {
+    const hide = message.loading("กำลังอัปเดตตาราง...", 0);
+    
+    try {
+      // หาการเปลี่ยนแปลง
+      const changes = findScheduleChanges();
+      console.log('📝 Changes detected:', changes);
+
+      if (changes.length === 0) {
+        hide();
+        message.info("ไม่มีการเปลี่ยนแปลงในตาราง");
+        setSaveModalVisible(false);
+        setScheduleNameToSave("");
+        return;
+      }
+
+      // ✅ สร้าง payload เป็น array ตาม Backend API format (PascalCase)
+      const payloadArray: ScheduleBatchUpdate[] = changes.map(change => ({
+        ID: change.id,
+        DayOfWeek: change.newData.dayOfWeek,
+        StartTime: `2006-01-02T${change.newData.startTime}:00+07:00`,
+        EndTime: `2006-01-02T${change.newData.endTime}:00+07:00`
+      }));
+
+      console.log(`🔄 Updating ${payloadArray.length} schedules:`, payloadArray);
+
+      // ✅ สร้าง API call โดยตรงแทนการใช้ putupdateScheduleTime
+      try {
+        const apiUrl = "http://localhost:8080";
+        const Authorization = localStorage.getItem("token");
+        const Bearer = localStorage.getItem("token_type");
+
+        const response = await fetch(`${apiUrl}/update-schedules-batch`, {
+          method: 'PUT',
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `${Bearer} ${Authorization}`,
+          },
+          body: JSON.stringify(payloadArray)
+        });
+
+        const result = await response.json();
+        
+        hide();
+
+        if (response.ok) {
+          message.success(`อัปเดตตารางสำเร็จ ${changes.length} รายการ`);
+          console.log(`✅ Updated all schedules successfully`);
+          
+          setSaveModalVisible(false);
+          setScheduleNameToSave("");
+          
+          // แสดงข้อความแนะนำ
+          message.info("หากต้องการดูข้อมูลล่าสุดจาก API กรุณาใช้ '🔄 รีเฟรช'", 3);
+        } else {
+          throw new Error(`ไม่สามารถอัปเดตตารางได้: ${result.error || 'Unknown error'}`);
+        }
+      } catch (fetchError) {
+        hide();
+        console.error('💥 Error with direct API call:', fetchError);
+        
+        // ✅ ถ้า batch API ไม่มี ให้ fallback เป็นการอัปเดตทีละรายการ
+        console.log('🔄 Falling back to individual updates...');
+        await updateSchedulesIndividually(changes);
+        
+        hide();
+        message.success(`อัปเดตตารางสำเร็จ ${changes.length} รายการ (ทีละรายการ)`);
+        setSaveModalVisible(false);
+        setScheduleNameToSave("");
+        message.info("หากต้องการดูข้อมูลล่าสุดจาก API กรุณาใช้ '🔄 รีเฟรช'", 3);
+      }
+
+    } catch (error) {
+      hide();
+      console.error('💥 Error updating schedules:', error);
+      throw error;
+    }
+  };
+
+  // ✅ ฟังก์ชัน fallback สำหรับอัปเดตทีละรายการ
+  const updateSchedulesIndividually = async (changes: ScheduleChange[]) => {
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const change of changes) {
+      try {
+        // สร้าง payload แบบ object เดียวตาม ScheduleIn interface (PascalCase + วันที่ถูกต้อง)
+        const payload = {
+          DayOfWeek: change.newData.dayOfWeek,
+          StartTime: `2006-01-02T${change.newData.startTime}:00+07:00`,
+          EndTime: `2006-01-02T${change.newData.endTime}:00+07:00`
+        };
+
+        console.log(`🔄 Updating schedule ID: ${change.id}`, payload);
+
+        const result = await putupdateScheduleTime(change.id, payload);
+        
+        if (result.status === 200) {
+          successCount++;
+          console.log(`✅ Updated schedule ID: ${change.id}`);
+        } else {
+          errorCount++;
+          console.error(`❌ Failed to update schedule ID: ${change.id}`, result);
+        }
+      } catch (error) {
+        errorCount++;
+        console.error(`💥 Error updating schedule ID: ${change.id}`, error);
+      }
+    }
+
+    console.log(`📊 Individual update results: ${successCount} success, ${errorCount} errors`);
+  };
+
+  // =================== RESET FUNCTION ===================
+  const handleReset = () => {
+    setScheduleData([]);
+    setCurrentTableName("");
+    setIsTableFromAPI(false);
+    setOriginalScheduleData([]);
+    message.success("รีเซตตารางสำเร็จ");
+  };
+
+  // =================== RENDER TABLE STATUS ===================
+  const renderTableStatus = () => {
+    if (!isTableFromAPI || !currentTableName) {
+      return (
+        <div style={{ 
+          padding: "8px 12px", 
+          backgroundColor: "#f6f6f6", 
+          borderRadius: "4px", 
+          fontSize: "12px", 
+          color: "#666",
+          marginBottom: "10px"
+        }}>
+          💡 ตารางใหม่ - กรุณาใช้ 'สร้างอัตโนมัติ' หรือ 'โหลด' เพื่อเริ่มแก้ไขตาราง
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ 
+        padding: "8px 12px", 
+        backgroundColor: "#e6f7ff", 
+        borderRadius: "4px", 
+        fontSize: "12px", 
+        color: "#1890ff",
+        marginBottom: "10px",
+        border: "1px solid #91d5ff"
+      }}>
+        🔗 กำลังแก้ไขตาราง: <strong>{currentTableName}</strong>
+        <span style={{ color: "#666", marginLeft: "10px" }}>
+          (การบันทึกจะอัปเดตข้อมูลใน API)
+        </span>
+      </div>
+    );
   };
 
   // =================== PDF EXPORT ===================
@@ -1283,6 +1819,13 @@ const Schedulepage: React.FC = () => {
     getAllNameTable();
   }, []);
 
+  useEffect(() => {
+    // เซ็ตชื่อตารางใน modal ให้ตรงกับตารางปัจจุบัน
+    if (isTableFromAPI && currentTableName) {
+      setScheduleNameToSave(currentTableName);
+    }
+  }, [isTableFromAPI, currentTableName]);
+
   // =================== DATA PROCESSING ===================
   const data: ExtendedScheduleData[] = scheduleData.length > 0
     ? scheduleData
@@ -1329,7 +1872,7 @@ const Schedulepage: React.FC = () => {
             fontWeight: "bold",
           }}
         >
-          จัดตารางเรียน (Fixed Excel-like Row Separation) 🎯
+          จัดตารางเรียน (API Save Integration) 🎯
         </h2>
         <p
           style={{
@@ -1340,10 +1883,13 @@ const Schedulepage: React.FC = () => {
         >
           สร้างและจัดการตารางเรียนแบบ Drag & Drop | 
           วิชาที่มีเวลาซ้อนทับกันจะแยกเป็นแถวต่างหาก | 
-          แต่ละวิชาจะขยายครอบคลุมช่องตามจำนวนคาบจริง | 
+          การบันทึกจะอัปเดตข้อมูลใน API ผ่าน putupdateScheduleTime | 
           ตรวจสอบ Console เพื่อ Debug การทำงาน
         </p>
       </div>
+
+      {/* Table Status */}
+      {renderTableStatus()}
 
       {/* Action Buttons */}
       <Flex gap="small" wrap style={{ marginBottom: "20px" }}>
@@ -1354,12 +1900,39 @@ const Schedulepage: React.FC = () => {
               message.warning("ไม่มีข้อมูลให้บันทึก กรุณาสร้างตารางก่อน");
               return;
             }
+            if (!isTableFromAPI) {
+              message.warning("สามารถบันทึกได้เฉพาะตารางที่มาจาก API เท่านั้น");
+              return;
+            }
             setSaveModalVisible(true);
           }}
+          disabled={!isTableFromAPI}
         >
-          บันทึก
+          อัปเดตตาราง
         </Button>
-        <Button onClick={() => setScheduleData([])}>
+        
+        {/* เพิ่มปุ่มรีเฟรช */}
+        {isTableFromAPI && currentTableName && (
+          <Button
+            type="default"
+            onClick={async () => {
+              const hide = message.loading("กำลังรีเฟรชข้อมูล...", 0);
+              try {
+                await getSchedules(currentTableName);
+                hide();
+                message.success("รีเฟรชข้อมูลสำเร็จ");
+              } catch (error) {
+                hide();
+                message.error("เกิดข้อผิดพลาดในการรีเฟรช");
+              }
+            }}
+            style={{ borderColor: "#52c41a", color: "#52c41a" }}
+          >
+            🔄 รีเฟรช
+          </Button>
+        )}
+        
+        <Button onClick={handleReset}>
           รีเซต
         </Button>
         <Button 
@@ -1423,25 +1996,68 @@ const Schedulepage: React.FC = () => {
 
       {/* Save Modal */}
       <Modal
-        title="บันทึกตาราง"
+        title="อัปเดตตาราง"
         open={saveModalVisible}
         onOk={handleSaveConfirm}
         onCancel={() => {
           setSaveModalVisible(false);
           setScheduleNameToSave("");
         }}
-        okText="บันทึก"
+        okText="อัปเดต"
         cancelText="ยกเลิก"
       >
         <div style={{ margin: "20px 0" }}>
-          <p>กรุณาใส่ชื่อตาราง:</p>
-          <Input
-            placeholder="เช่น ตารางเรียนภาคเรียนที่ 1/2567"
-            value={scheduleNameToSave}
-            onChange={(e) => setScheduleNameToSave(e.target.value)}
-            onPressEnter={handleSaveConfirm}
-            maxLength={50}
-          />
+          {isTableFromAPI && currentTableName ? (
+            <>
+              <p>ชื่อตารางปัจจุบัน:</p>
+              <Input
+                value={currentTableName}
+                disabled
+                style={{ 
+                  backgroundColor: "#f5f5f5",
+                  marginBottom: "10px"
+                }}
+              />
+              <p style={{ 
+                fontSize: "12px", 
+                color: "#666",
+                marginBottom: "15px",
+                padding: "8px",
+                backgroundColor: "#f0f8ff",
+                borderRadius: "4px",
+                border: "1px solid #d1ecf1"
+              }}>
+                💡 ระบบจะอัปเดตเฉพาะรายการที่มีการเปลี่ยนแปลงเวลาหรือวันใน API
+              </p>
+              
+              {/* Hidden input for form consistency */}
+              <Input
+                type="hidden"
+                value={currentTableName}
+                onChange={(e) => setScheduleNameToSave(e.target.value)}
+              />
+            </>
+          ) : (
+            <>
+              <p>กรุณาใส่ชื่อตาราง:</p>
+              <Input
+                placeholder="เช่น ตารางเรียนภาคเรียนที่ 1/2567"
+                value={scheduleNameToSave}
+                onChange={(e) => setScheduleNameToSave(e.target.value)}
+                onPressEnter={handleSaveConfirm}
+                maxLength={50}
+                disabled
+              />
+              <p style={{ 
+                fontSize: "12px", 
+                color: "#999", 
+                marginTop: "8px",
+                fontStyle: "italic"
+              }}>
+                ⚠️ สามารถบันทึกได้เฉพาะตารางที่มาจาก 'สร้างอัตโนมัติ' หรือ 'โหลด' เท่านั้น
+              </p>
+            </>
+          )}
         </div>
       </Modal>
 
@@ -1469,7 +2085,11 @@ const Schedulepage: React.FC = () => {
                 <List.Item>
                   <Card
                     size="small"
-                    style={{ width: "100%", cursor: "pointer" }}
+                    style={{ 
+                      width: "100%", 
+                      cursor: "pointer",
+                      border: currentTableName === name ? "2px solid #1890ff" : "1px solid #d9d9d9"
+                    }}
                     hoverable
                     actions={[
                       <Button
@@ -1497,7 +2117,25 @@ const Schedulepage: React.FC = () => {
                       </Button>,
                     ]}
                   >
-                    <Card.Meta title={name} />
+                    <Card.Meta 
+                      title={
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          {name}
+                          {currentTableName === name && (
+                            <span style={{ 
+                              fontSize: "10px", 
+                              color: "#1890ff", 
+                              backgroundColor: "#e6f7ff",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              border: "1px solid #91d5ff"
+                            }}>
+                              กำลังแก้ไข
+                            </span>
+                          )}
+                        </div>
+                      } 
+                    />
                   </Card>
                 </List.Item>
               )}
