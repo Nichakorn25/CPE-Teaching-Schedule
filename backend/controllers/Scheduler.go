@@ -52,6 +52,7 @@ func GetScheduleByNameTableAndUserID(c *gin.Context) {
 		Preload("OfferedCourses.Laboratory").
 		Preload("OfferedCourses.AllCourses.Curriculum").
 		Preload("OfferedCourses.AllCourses.AcademicYear").
+		Preload("OfferedCourses.AllCourses.Curriculum.Major").
 		Preload("OfferedCourses.AllCourses.TypeOfCourses").
 		Preload("OfferedCourses.AllCourses.Credit").
 		Preload("TimeFixedCourses").
