@@ -21,6 +21,7 @@ func GetScheduleByNameTable(c *gin.Context) {
 		Preload("OfferedCourses.User").
 		Preload("OfferedCourses.Laboratory").
 		Preload("OfferedCourses.AllCourses.Curriculum").
+		Preload("OfferedCourses.AllCourses.Curriculum.Major").
 		Preload("OfferedCourses.AllCourses.AcademicYear").
 		Preload("OfferedCourses.AllCourses.TypeOfCourses").
 		Preload("OfferedCourses.AllCourses.Credit").

@@ -3,20 +3,15 @@ import "./OfferedCoursespage.css";
 import { Button, Table, Input, Select } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
+import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 import {
   getSchedulesBynameTable,
   deleteOfferedCourse,
 } from "../../../services/https/SchedulerPageService";
-import { getMajorOfDepathment } from "../../../services/https/GetService";
-import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
 
-import {
-  OpenCourseInterface,
-  MajorInterface,
-  DepartmentInterface,
-} from "../../../interfaces/Adminpage";
+import { OpenCourseInterface } from "../../../interfaces/Adminpage";
 
 const { Option } = Select;
 
@@ -37,24 +32,24 @@ type TimeFixedCourse = {
   ID: number;
   Year: number;
   Term: number;
-  DayOfWeek: string; // เช่น "อังคาร"
-  StartTime: string; // ISO
-  EndTime: string; // ISO
-  RoomFix: string; // ห้องจากตาราง fix
-  Section: number; // กลุ่ม
+  DayOfWeek: string;
+  StartTime: string;
+  EndTime: string;
+  RoomFix: string;
+  Section: number;
 };
 
 interface Schedule {
   ID: number;
   NameTable: string;
   SectionNumber: number;
-  DayOfWeek: string; // "จันทร์"
-  StartTime: string; // ISO
-  EndTime: string; // ISO
+  DayOfWeek: string;
+  StartTime: string;
+  EndTime: string;
   OfferedCoursesID: number;
   OfferedCourses: {
     ID: number;
-    Year: number; // พ.ศ.
+    Year: number;
     Term: number;
     Section: number;
     Capacity: number;
@@ -68,7 +63,7 @@ interface Schedule {
     };
     Laboratory?: {
       ID: number;
-      Room?: string; // ✅ ใช้ Room (ตาม payload จริง)
+      Room?: string;
       Building?: string;
       Capacity?: string;
     } | null;
@@ -86,7 +81,6 @@ interface Schedule {
       Credit: CreditInAllCourses;
     };
   };
-  // ✅ ตารางเวลาที่ fix เพิ่มเติม (มีห้องเรียนใน RoomFix)
   TimeFixedCourses?: TimeFixedCourse[];
 }
 
@@ -113,11 +107,10 @@ function formatCredit(credit?: CreditInAllCourses | null): string {
   const lec = Number.isFinite(credit.Lecture) ? credit.Lecture : 0;
   const lab = Number.isFinite(credit.Lab) ? credit.Lab : 0;
   const self = Number.isFinite(credit.Self) ? credit.Self : 0;
-  // หน่วยกิต(บรรยาย-ปฏิบัติ-ศึกษาด้วยตนเอง)
   return `${u}(${lec}-${lab}-${self})`;
 }
 
-/** ใช้ห้องจาก Laboratory ก่อน ถ้าไม่มี ค่อยลองจับคู่ RoomFix ที่ "วันเดียวกัน+กลุ่มเดียวกัน" */
+/** ห้องเรียน: ใช้ Laboratory ก่อน ถ้าไม่มีลองจับคู่ RoomFix */
 function getRoomForSchedule(r: Schedule): string {
   const labRoom = r.OfferedCourses?.Laboratory?.Room?.trim();
   if (labRoom) return labRoom;
@@ -130,18 +123,13 @@ function getRoomForSchedule(r: Schedule): string {
   );
   if (tfSameDaySameSec) return tfSameDaySameSec.RoomFix.trim();
 
-  // fallback: ถ้าไม่เจอแบบจับคู่ ให้หยิบ RoomFix อันแรกที่ไม่ว่าง (กันเคสกรอกห้องไว้ต่างวัน)
   const tfAnyWithRoom = (r.TimeFixedCourses ?? []).find(
     (tf) => String(tf.RoomFix ?? "").trim() !== ""
   );
   return tfAnyWithRoom?.RoomFix?.trim() ?? "";
 }
 
-/** ---------------- mapper: Schedule[] → OpenCourseInterface[] ----------------
- * - 1 แถว/OfferedCourse
- * - 1 กลุ่ม/Section (ไม่แตกจากหลายคาบ)
- * - ใช้ TimeFixedCourses เฉพาะเพื่อเติม "ห้อง" ให้คาบเดียวกัน
- */
+/** ---------------- mapper: Schedule[] → OpenCourseInterface[] ---------------- */
 function mapSchedulesToOpenCourses(rows: Schedule[]): OpenCourseInterface[] {
   type GroupInfoAgg = {
     Group: string;
@@ -156,7 +144,7 @@ function mapSchedulesToOpenCourses(rows: Schedule[]): OpenCourseInterface[] {
     {
       oc: Schedule["OfferedCourses"];
       ac: Schedule["OfferedCourses"]["AllCourses"];
-      groups: Map<string, GroupInfoAgg>; // key = section string
+      groups: Map<string, GroupInfoAgg>;
     }
   >();
 
@@ -171,17 +159,15 @@ function mapSchedulesToOpenCourses(rows: Schedule[]): OpenCourseInterface[] {
     const entry = courseMap.get(courseId)!;
 
     const secKey = String(r.SectionNumber);
-    // ทำ Group ต่อ Section
     const room = getRoomForSchedule(r);
     const groupInfo: GroupInfoAgg = {
       Group: secKey,
       Room: room,
-      Day: r.DayOfWeek, // ✅ ใช้เฉพาะวันจาก Schedule
+      Day: r.DayOfWeek,
       TimeSpan: toTimeSpan(r.StartTime, r.EndTime),
       Time: toStartHHMM(r.StartTime),
     };
 
-    // ถ้าเคยมี group นี้แล้ว ให้คงค่าเดิม (กันซ้ำ) แต่ถ้าห้องว่างและรอบนี้มีห้อง ให้เติมห้อง
     const exist = entry.groups.get(secKey);
     if (!exist) {
       entry.groups.set(secKey, groupInfo);
@@ -190,7 +176,6 @@ function mapSchedulesToOpenCourses(rows: Schedule[]): OpenCourseInterface[] {
     }
   }
 
-  // แปลงเป็น OpenCourseInterface
   const result: OpenCourseInterface[] = [];
   for (const { oc, ac, groups } of courseMap.values()) {
     const major = ac.Curriculum.Major?.MajorName ?? "";
@@ -209,7 +194,7 @@ function mapSchedulesToOpenCourses(rows: Schedule[]): OpenCourseInterface[] {
       Code: ac.Code,
       Name: name,
       Credit: creditStr,
-      TypeName: ac.TypeOfCourses.TypeName,
+      TypeName: ac.TypeOfCourses.TypeName, // ใช้ฟิลด์นี้ตัดสิน “ศูนย์บริการ”
       TeacherID: oc.UserID,
       Teachers: [
         {
@@ -220,7 +205,7 @@ function mapSchedulesToOpenCourses(rows: Schedule[]): OpenCourseInterface[] {
         },
       ],
       GroupInfos: groupInfos,
-      GroupTotal: groupInfos.length, // ✅ จำนวนกลุ่มจริง (Section)
+      GroupTotal: groupInfos.length,
       CapacityPer: oc.Capacity,
       Remark: "",
       IsFixCourses: oc.IsFixCourses,
@@ -230,19 +215,37 @@ function mapSchedulesToOpenCourses(rows: Schedule[]): OpenCourseInterface[] {
   return result.sort((a, b) => a.ID - b.ID);
 }
 
+/** ---------- helpers: ฟิลเตอร์ตามสาขาผู้ใช้ + ศูนย์บริการ(TypeName) ---------- */
+function normalize(str: string) {
+  return (str ?? "").toString().trim().toLowerCase();
+}
+function sameMajor(a?: string, b?: string | null) {
+  return normalize(a || "") === normalize(b || "");
+}
+function isServiceCenterType(typeName?: string) {
+  const s = normalize(typeName ?? "");
+  if (!s) return true; // typeofcourse = "" → นับเป็นศูนย์บริการ
+  const keywords = [
+    "ศูนย์บริการ",
+    "หมวดวิชาจากศูนย์บริการ",
+    "ศึกษาทั่วไป",
+    "การศึกษาทั่วไป",
+    "general education",
+    "ge",
+  ];
+  return keywords.some((k) => s.includes(normalize(k)));
+}
+
 const OfferedCoursespage: React.FC = () => {
   const [searchText, setSearchText] = useState("");
-  const [selectedDepartmentID, setSelectedDepartmentID] = useState<number | null>(null);
-  const [selectedMajor, setSelectedMajor] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [courses, setCourses] = useState<OpenCourseInterface[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [academicYear, setAcademicYear] = useState<number>(0);
   const [term, setTerm] = useState<number>(0);
-  const [majors, setMajors] = useState<MajorInterface[]>([]);
-  const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
   const [expandedRowKeys, setExpandedRowKeys] = useState<(number | string)[]>([]);
+  const [userMajor, setUserMajor] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const toggleExpandRow = (id: number) => {
@@ -259,72 +262,95 @@ const OfferedCoursespage: React.FC = () => {
     if (t) setTerm(Number(t));
   }, []);
 
-  // ดึงตารางด้วย nameTable จาก year/term
+  // อ่านสาขาของผู้ใช้จาก localStorage
   useEffect(() => {
-    const fetchSchedules = async () => {
-      setLoading(true);
-      const nameTable = `ปีการศึกษา ${academicYear} เทอม ${term}`;
-
-      try {
-        const response = await getSchedulesBynameTable(nameTable);
-        const schedules: Schedule[] = Array.isArray(response?.data)
-          ? response.data
-          : response?.data?.data ?? [];
-        const ocList = mapSchedulesToOpenCourses(schedules ?? []);
-        setCourses(ocList);
-      } catch (err) {
-        console.error("ไม่สามารถโหลดตาราง:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (academicYear && term) fetchSchedules();
-  }, [academicYear, term]);
-
-  // ดึง majors/ภาควิชา
-  useEffect(() => {
-    const fetchMajors = async () => {
-      const res = await getMajorOfDepathment();
-      if (res.status === 200 && Array.isArray(res.data)) {
-        const majorsData = res.data as any[];
-        setMajors(majorsData as MajorInterface[]);
-
-        const uniqueDepartments = Array.from(
-          new Map(
-            majorsData.map((m: any) => [m.Department.ID, m.Department.DepartmentName])
-          )
-        )
-          .map(([id, name]) => ({
-            ID: id as number,
-            DepartmentName: name as string,
-          }))
-          .sort((a, b) => a.DepartmentName.localeCompare(b.DepartmentName));
-
-        setDepartments(uniqueDepartments);
-      }
-    };
-
-    fetchMajors();
+    const m = localStorage.getItem("major_name") || "";
+    setUserMajor(m || null);
+    if (!m) {
+      Swal.fire(
+        "ไม่ทราบสาขาผู้ใช้",
+        "ไม่พบ major_name ในระบบ จะโชว์เฉพาะวิชาจากศูนย์บริการ",
+        "info"
+      );
+    }
   }, []);
 
-  const filteredMajors = selectedDepartmentID
-    ? majors.filter((m) => m.DepartmentID === selectedDepartmentID)
-    : majors;
+  useEffect(() => {
+  const fetchSchedules = async () => {
+    setLoading(true);
+    const nameTable = `ปีการศึกษา ${academicYear} เทอม ${term}`;
+    try {
+      const response = await getSchedulesBynameTable(nameTable);
+      const schedules: Schedule[] = Array.isArray(response?.data)
+        ? response.data
+        : response?.data?.data ?? [];
 
+      // [DEBUG] ดูสาขา/หมวดจาก payload โดยตรง (เอา 30 แถวแรกพอ)
+      console.groupCollapsed("[DEBUG] raw schedules (first 30)");
+      console.table(
+        (schedules ?? []).slice(0, 30).map((s) => ({
+          scheduleId: s.ID,
+          code: s?.OfferedCourses?.AllCourses?.Code,
+          name:
+            s?.OfferedCourses?.AllCourses?.ThaiName ??
+            s?.OfferedCourses?.AllCourses?.EnglishName,
+          majorFromPayload:
+            s?.OfferedCourses?.AllCourses?.Curriculum?.Major?.MajorName ?? "",
+          typeName: s?.OfferedCourses?.AllCourses?.TypeOfCourses?.TypeName ?? "",
+        }))
+      );
+      console.groupEnd();
+
+      const ocList = mapSchedulesToOpenCourses(schedules ?? []);
+      setCourses(ocList);
+
+      // [DEBUG] สรุปสาขา/หมวดที่ได้หลัง map แล้ว
+      console.groupCollapsed("[DEBUG] mapped courses (first 30)");
+      console.table(
+        ocList.slice(0, 30).map((c) => ({
+          id: c.ID,
+          code: c.Code,
+          name: c.Name,
+          major: c.Major,
+          typeName: c.TypeName,
+        }))
+      );
+      console.groupEnd();
+
+      console.log(
+        "[DEBUG] unique majors:",
+        Array.from(new Set(ocList.map((c) => c.Major || "(empty)")))
+      );
+    } catch (err) {
+      console.error("ไม่สามารถโหลดตาราง:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  if (academicYear && term) fetchSchedules();
+}, [academicYear, term]);
+
+
+  // ฟิลเตอร์: ศูนย์บริการ(TypeName) หรือ สาขาผู้ใช้ + ค้นหา
   const filteredCourses = useMemo(() => {
     const q = searchText.trim().toLowerCase();
+
+    const allow = (c: OpenCourseInterface) => {
+      if (isServiceCenterType(c.TypeName)) return true; // ศูนย์บริการเห็นได้เสมอ
+      if (!userMajor) return false; // ไม่รู้สาขา → ไม่อนุญาต (ยกเว้นศูนย์บริการ)
+      return sameMajor(c.Major, userMajor);
+    };
+
     return courses
       .filter((course) => {
+        if (!allow(course)) return false;
         const matchesSearch =
-          course.Code?.toLowerCase().includes(q) ||
-          course.Name?.toLowerCase().includes(q);
-        const matchesMajor =
-          selectedMajor === "all" || course.Major === selectedMajor;
-        return matchesSearch && matchesMajor;
+          (course.Code ?? "").toLowerCase().includes(q) ||
+          (course.Name ?? "").toLowerCase().includes(q);
+        return matchesSearch;
       })
       .sort((a, b) => a.ID - b.ID);
-  }, [courses, searchText, selectedMajor]);
+  }, [courses, searchText, userMajor]);
 
   /** ทำ flat rows สำหรับแสดง/ซ่อนกลุ่มเพิ่มเติม */
   const getExpandedTableData = () => {
@@ -349,10 +375,10 @@ const OfferedCoursespage: React.FC = () => {
     return result;
   };
 
-  // Reset หน้าเมื่อ filter/search เปลี่ยน
+  // Reset หน้าเมื่อ search/major เปลี่ยน
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchText, selectedMajor, selectedDepartmentID]);
+  }, [searchText, userMajor]);
 
   // เลือกกลุ่มแรกที่มีห้อง (ถ้ากลุ่มแรกไม่มีห้อง)
   const pickFirstGroupWithRoom = (record: any) => {
@@ -447,7 +473,7 @@ const OfferedCoursespage: React.FC = () => {
       key: "CapacityPer",
       width: 220,
     },
-     {
+    {
       title: "อาจารย์ผู้สอน",
       key: "Teacher",
       render: (_t, r) => (
@@ -541,8 +567,12 @@ const OfferedCoursespage: React.FC = () => {
 
   return (
     <div>
-      <h2>รายวิชาที่เปิดสอน</h2>
+      <h2>
+        รายวิชาที่เปิดสอน
+        {filteredCourses.length ? ` (${filteredCourses.length})` : ""}
+      </h2>
 
+      {/* ✅ เหลือแค่ จำนวนต่อหน้า + ค้นหา (ตัดดรอปดาวสำนักวิชา/สาขาออก) */}
       <div
         style={{
           marginBottom: 16,
@@ -574,48 +604,12 @@ const OfferedCoursespage: React.FC = () => {
           <Option value="50">50</Option>
         </Select>
 
-        <Select
-          placeholder="เลือกสำนักวิชา"
-          style={{ width: 200, marginRight: 10 }}
-          onChange={(value: string | number) => {
-            if (value === "all") {
-              setSelectedDepartmentID(null);
-              setSelectedMajor("all");
-            } else {
-              setSelectedDepartmentID(Number(value));
-              setSelectedMajor("all");
-            }
-          }}
-          value={selectedDepartmentID ?? "all"}
-        >
-          <Option value="all">ทุกสำนักวิชา</Option>
-          {departments.map((dep) => (
-            <Option key={dep.ID} value={dep.ID}>
-              {dep.DepartmentName}
-            </Option>
-          ))}
-        </Select>
-
-        <Select
-          placeholder="เลือกสาขาวิชา"
-          style={{ width: 200, marginRight: 10 }}
-          onChange={(value: string) => setSelectedMajor(value)}
-          value={selectedMajor}
-        >
-          <Option value="all">ทุกสาขาวิชา</Option>
-          {filteredMajors.map((major) => (
-            <Option key={major.ID} value={major.MajorName}>
-              {major.MajorName}
-            </Option>
-          ))}
-        </Select>
-
         <Input
           placeholder="ค้นหา..."
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          style={{ width: 200, fontFamily: "Sarabun, sans-serif" }}
+          style={{ width: 220, fontFamily: "Sarabun, sans-serif" }}
         />
       </div>
 
