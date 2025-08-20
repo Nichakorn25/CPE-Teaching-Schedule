@@ -459,7 +459,7 @@ const Schedulepage: React.FC = () => {
         onDragEnd={handleSubCellDragEnd}
         style={{
           backgroundColor: subCell.classData.color,
-          border: shouldSpan ? "3px solid #F26522" : "2px solid rgba(0,0,0,0.2)",
+          border: "2px solid rgba(0,0,0,0.2)",
           borderRadius: "6px",
           padding: "6px 8px",
           cursor: "grab",
@@ -1802,6 +1802,9 @@ const Schedulepage: React.FC = () => {
           }}
         >
           โหลด
+        </Button>
+        <Button onClick={handleReset}>
+          รีเซต
         </Button>
         <Button
           type="primary"
