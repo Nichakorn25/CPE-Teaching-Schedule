@@ -215,25 +215,12 @@ function mapSchedulesToOpenCourses(rows: Schedule[]): OpenCourseInterface[] {
   return result.sort((a, b) => a.ID - b.ID);
 }
 
-/** ---------- helpers: ฟิลเตอร์ตามสาขาผู้ใช้ + ศูนย์บริการ(TypeName) ---------- */
+/** ---------- helpers ---------- */
 function normalize(str: string) {
   return (str ?? "").toString().trim().toLowerCase();
 }
 function sameMajor(a?: string, b?: string | null) {
   return normalize(a || "") === normalize(b || "");
-}
-function isServiceCenterType(typeName?: string) {
-  const s = normalize(typeName ?? "");
-  if (!s) return true; // typeofcourse = "" → นับเป็นศูนย์บริการ
-  const keywords = [
-    "ศูนย์บริการ",
-    "หมวดวิชาจากศูนย์บริการ",
-    "ศึกษาทั่วไป",
-    "การศึกษาทั่วไป",
-    "general education",
-    "ge",
-  ];
-  return keywords.some((k) => s.includes(normalize(k)));
 }
 
 const OfferedCoursespage: React.FC = () => {
@@ -332,25 +319,29 @@ const OfferedCoursespage: React.FC = () => {
 
 
   // ฟิลเตอร์: ศูนย์บริการ(TypeName) หรือ สาขาผู้ใช้ + ค้นหา
-  const filteredCourses = useMemo(() => {
-    const q = searchText.trim().toLowerCase();
+  // 🔁 แทนที่ useMemo ของ filteredCourses เดิมทั้งหมดด้วยบล็อคนี้
+const filteredCourses = useMemo(() => {
+  const q = searchText.trim().toLowerCase();
 
-    const allow = (c: OpenCourseInterface) => {
-      if (isServiceCenterType(c.TypeName)) return true; // ศูนย์บริการเห็นได้เสมอ
-      if (!userMajor) return false; // ไม่รู้สาขา → ไม่อนุญาต (ยกเว้นศูนย์บริการ)
-      return sameMajor(c.Major, userMajor);
-    };
+  // อนุญาตให้แสดง ถ้า (1) เป็นคอร์ส time-fixed (IsFixCourses === true)
+  // หรือ (2) สาขาตรงกับผู้ใช้
+  const allow = (c: OpenCourseInterface) => {
+    const isTimeFixed = c.IsFixCourses === true;       // ✅ ใช้ธงจาก backend
+    const sameAsUser = userMajor ? sameMajor(c.Major, userMajor) : false;
+    return isTimeFixed || sameAsUser;
+  };
 
-    return courses
-      .filter((course) => {
-        if (!allow(course)) return false;
-        const matchesSearch =
-          (course.Code ?? "").toLowerCase().includes(q) ||
-          (course.Name ?? "").toLowerCase().includes(q);
-        return matchesSearch;
-      })
-      .sort((a, b) => a.ID - b.ID);
-  }, [courses, searchText, userMajor]);
+  return courses
+    .filter((course) => {
+      if (!allow(course)) return false;
+      const matchesSearch =
+        (course.Code ?? "").toLowerCase().includes(q) ||
+        (course.Name ?? "").toLowerCase().includes(q);
+      return matchesSearch;
+    })
+    .sort((a, b) => a.ID - b.ID);
+}, [courses, searchText, userMajor]);
+
 
   /** ทำ flat rows สำหรับแสดง/ซ่อนกลุ่มเพิ่มเติม */
   const getExpandedTableData = () => {
