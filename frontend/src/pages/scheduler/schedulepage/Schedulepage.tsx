@@ -10,8 +10,19 @@ import {
   Card,
   message,
   Tooltip,
+  Select,
+  Tag,
+  Space,
+  Divider,
+  AutoComplete,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import {
+  CloseOutlined,
+  SearchOutlined,
+  FilterOutlined,
+  ClearOutlined,
+} from "@ant-design/icons";
 import {
   OfferedCoursesInterface,
   ScheduleInterface,
@@ -38,8 +49,9 @@ interface ClassInfo {
   teacher: string;
   room: string;
   color?: string;
-  section?: string;      // เพิ่ม
-  courseCode?: string;   // เพิ่ม
+  section?: string;
+  courseCode?: string;
+  studentYear?: string; // เพิ่มข้อมูลชั้นปี
 }
 
 interface SubCell {
@@ -53,7 +65,7 @@ interface SubCell {
     endSlot: number;
   };
   zIndex: number;
-  scheduleId?: number; // เพิ่ม scheduleId สำหรับ track API record
+  scheduleId?: number;
 }
 
 interface ScheduleData {
@@ -77,7 +89,6 @@ interface DragPreview {
   show: boolean;
 }
 
-// ✅ เพิ่ม interface สำหรับ Schedule Change
 interface ScheduleChange {
   id: number;
   originalData: {
@@ -92,12 +103,25 @@ interface ScheduleChange {
   };
 }
 
-// ✅ เพิ่ม interface สำหรับ Batch Update Payload (PascalCase ตาม Backend)
 interface ScheduleBatchUpdate {
   ID: number;
   DayOfWeek: string;
   StartTime: string;
   EndTime: string;
+}
+
+// =================== FILTER TYPES ===================
+interface FilterTag {
+  id: string;
+  type: 'teacher' | 'studentYear';
+  value: string;
+  label: string;
+  color: string;
+}
+
+interface FilterOptions {
+  teachers: string[];
+  studentYears: string[];
 }
 
 // =================== CONSTANTS ===================
@@ -120,6 +144,12 @@ const BACKGROUND_COLORS = [
   "#E5CCFF", "#FFCCF5", "#CCF5FF", "#F5CCFF", "#CCFFF5", "#FFCCCC",
   "#CCCCFF", "#F5F5CC",
 ];
+
+// =================== FILTER TAG COLORS ===================
+const FILTER_TAG_COLORS = {
+  teacher: '#52c41a',
+  studentYear: '#1890ff'
+};
 
 // =================== CELL CONFIG ===================
 const CELL_CONFIG = {
@@ -190,6 +220,7 @@ const Schedulepage: React.FC = () => {
     localStorage.getItem("term") || ""
   );
   const [scheduleData, setScheduleData] = useState<ExtendedScheduleData[]>([]);
+  const [filteredScheduleData, setFilteredScheduleData] = useState<ExtendedScheduleData[]>([]);
   const [allNameTable, setAllNameTable] = useState<string[]>([]);
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [loadModalVisible, setLoadModalVisible] = useState(false);
@@ -203,7 +234,186 @@ const Schedulepage: React.FC = () => {
   const [isTableFromAPI, setIsTableFromAPI] = useState(false);
   const [originalScheduleData, setOriginalScheduleData] = useState<any[]>([]);
 
+  // =================== FILTER STATES ===================
+  const [filterTags, setFilterTags] = useState<FilterTag[]>([]);
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({
+    teachers: [],
+    studentYears: []
+  });
+  const [searchValue, setSearchValue] = useState("");
+  const [filterVisible, setFilterVisible] = useState(false);
+
   const tableRef = useRef<HTMLDivElement>(null);
+
+  // =================== FILTER FUNCTIONS ===================
+  const extractFilterOptions = (data: ExtendedScheduleData[]) => {
+    const teachers = new Set<string>();
+    const studentYears = new Set<string>();
+
+    data.forEach(dayData => {
+      dayData.subCells?.forEach(subCell => {
+        if (subCell.classData.teacher) teachers.add(subCell.classData.teacher);
+        // เพิ่มการดึงชั้นปีจาก subCell ด้วย
+        if (subCell.classData.studentYear) {
+          studentYears.add(subCell.classData.studentYear);
+        }
+      });
+    });
+
+    // Extract student years from original API data เท่านั้น (ไม่ hardcode)
+    if (originalScheduleData && originalScheduleData.length > 0) {
+      originalScheduleData.forEach((schedule: any) => {
+        // ใช้ any เพื่อหลีกเลี่ยง TypeScript error
+        if (schedule.OfferedCourses?.AllCourses?.AcademicYear?.AcademicYearID) {
+          const academicYearId = schedule.OfferedCourses.AllCourses.AcademicYear.AcademicYearID;
+          // เก็บเป็นตัวเลขแทน "ปีที่ X"
+          studentYears.add(academicYearId.toString());
+        }
+        
+        // Alternative: ถ้ามี field อื่นที่บอกชั้นปี
+        if (schedule.OfferedCourses?.AllCourses?.AcademicYear?.Level) {
+          const level = schedule.OfferedCourses.AllCourses.AcademicYear.Level;
+          if (level && level !== 'เรียนได้ทุกชั้นปี') {
+            // ถ้า Level เป็น "ปีที่ X" ให้แปลงเป็นตัวเลข
+            const yearMatch = level.match(/ปีที่\s*(\d+)/);
+            if (yearMatch) {
+              studentYears.add(yearMatch[1]);
+            } else if (!level.includes('ปีที่')) {
+              // ถ้าเป็นตัวเลขอยู่แล้ว
+              studentYears.add(level);
+            }
+          }
+        }
+      });
+    }
+    
+    // ✅ ลบ hardcode ออกทั้งหมด - ใช้เฉพาะข้อมูลจาก API
+
+    // กรองเฉพาะตัวเลข 1-9 (เผื่อมีปีอื่นๆ ในอนาคต)
+    const validYears = Array.from(studentYears).filter(year => {
+      const num = parseInt(year);
+      return !isNaN(num) && num >= 1 && num <= 9;
+    });
+
+    setFilterOptions({
+      teachers: Array.from(teachers).filter(Boolean).sort(),
+      studentYears: validYears.sort((a, b) => parseInt(a) - parseInt(b))
+    });
+
+    console.log('🎓 Extracted Student Years from API only:', validYears);
+    console.log('🧑‍🏫 Extracted Teachers:', Array.from(teachers).filter(Boolean).sort());
+  };
+
+  const addFilterTag = (type: FilterTag['type'], value: string) => {
+    if (!value || filterTags.some(tag => tag.type === type && tag.value === value)) {
+      return;
+    }
+
+    const newTag: FilterTag = {
+      id: `${type}-${value}-${Date.now()}`,
+      type,
+      value,
+      label: `${getFilterTypeLabel(type)}: ${value}`,
+      color: FILTER_TAG_COLORS[type]
+    };
+
+    setFilterTags(prev => [...prev, newTag]);
+  };
+
+  const removeFilterTag = (tagId: string) => {
+    setFilterTags(prev => prev.filter(tag => tag.id !== tagId));
+  };
+
+  const clearAllFilters = () => {
+    setFilterTags([]);
+    setSearchValue("");
+  };
+
+  const getFilterTypeLabel = (type: FilterTag['type']): string => {
+    switch (type) {
+      case 'teacher': return 'อาจารย์';
+      case 'studentYear': return 'ชั้นปี';
+      default: return type;
+    }
+  };
+
+const applyFilters = () => {
+  if (filterTags.length === 0 && !searchValue) {
+    setFilteredScheduleData(scheduleData);
+    return;
+  }
+
+  const filtered = scheduleData.map(dayData => {
+    const filteredSubCells = dayData.subCells?.filter(subCell => {
+      // Apply tag filters
+      const tagMatch = filterTags.length === 0 || filterTags.every(tag => {
+        switch (tag.type) {
+          case 'teacher':
+            return subCell.classData.teacher
+              .toLowerCase()
+              .includes(tag.value.toLowerCase());
+          case 'studentYear':
+            const scheduleFromOriginal = originalScheduleData.find(
+              (original: any) => original.ID === subCell.scheduleId
+            );
+
+            if (scheduleFromOriginal) {
+              const academicYearId =
+                (scheduleFromOriginal.OfferedCourses?.AllCourses as any)
+                  ?.AcademicYear?.AcademicYearID;
+
+              if (academicYearId) {
+                return academicYearId.toString() === tag.value;
+              }
+
+              const level =
+                (scheduleFromOriginal.OfferedCourses?.AllCourses as any)
+                  ?.AcademicYear?.Level;
+              if (level && level !== 'เรียนได้ทุกชั้นปี') {
+                const yearMatch = level.match(/ปีที่\s*(\d+)/);
+                if (yearMatch) {
+                  return yearMatch[1] === tag.value;
+                }
+                return level === tag.value;
+              }
+            }
+
+            return subCell.classData.studentYear === tag.value;
+
+          default:
+            return true;
+        }
+      });
+
+      // Apply search filter (search in teacher name only)
+      const searchMatch =
+        !searchValue ||
+        subCell.classData.teacher
+          .toLowerCase()
+          .includes(searchValue.toLowerCase());
+
+      return tagMatch && searchMatch;
+    }) || [];
+
+    return {
+      ...dayData,
+      subCells: filteredSubCells,
+    };
+  });
+
+  // ❌ ไม่ต้อง filter วันทิ้ง
+  setFilteredScheduleData(filtered);
+};
+
+  // Apply filters whenever filterTags or searchValue changes
+  useEffect(() => {
+    applyFilters();
+  }, [filterTags, searchValue, scheduleData]);
+
+  // Extract filter options whenever scheduleData changes
+  useEffect(() => {
+    extractFilterOptions(scheduleData);
+  }, [scheduleData]);
 
   // =================== SUB-CELL FUNCTIONS ===================
   const createSubCell = (
@@ -485,81 +695,78 @@ const Schedulepage: React.FC = () => {
             "0 3px 6px rgba(0,0,0,0.15)",
         }}
       >
-<Tooltip
-  title={
-    <div
-      style={{
-        fontFamily: "Sarabun, sans-serif",
-        minWidth: "300px",
-        backgroundColor: "white",
-        color: "black",
-        padding: "10px",
-        borderRadius: "6px",
-      }}
-    >
-      <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "6px", color: "#F26522" }}>
-        📚 รายละเอียดวิชา
-      </div>
+        <Tooltip
+          title={
+            <div
+              style={{
+                fontFamily: "Sarabun, sans-serif",
+                minWidth: "300px",
+                backgroundColor: "white",
+                color: "black",
+                padding: "10px",
+                borderRadius: "6px",
+              }}
+            >
+              <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "6px", color: "#F26522" }}>
+                📚 รายละเอียดวิชา
+              </div>
 
-      {/* ✅ Tooltip โชว์เต็ม ไม่ใช้ ellipsis */}
-      <p><b>🏷️ รหัสวิชา:</b> {subCell.classData.courseCode || "ไม่ระบุ"}</p>
-      <p><b>📖 ชื่อวิชา:</b> {subCell.classData.subject || "ไม่ระบุ"}</p>
-      <p><b>📝 หมู่เรียน:</b> {subCell.classData.section || "ไม่ระบุ"}</p>
-      <p><b>👩‍🏫 อาจารย์:</b> {subCell.classData.teacher || "ไม่ระบุ"}</p>
-      <p><b>🏢 ห้องเรียน:</b> {subCell.classData.room || "ไม่ระบุ"}</p>
-      <p><b>📅 วัน:</b> {subCell.day}</p>
-      <p><b>🕐 เวลา:</b> {subCell.startTime} - {subCell.endTime}</p>
-    </div>
-  }
-  placement="top"
-  overlayStyle={{ maxWidth: "400px", backgroundColor: "white", color: "black" }}
-  trigger="hover"
->
-  {/* ✅ Block ในตาราง ใช้ ellipsis */}
-  <div style={{
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-    textAlign: "center"
-  }}>
-    <div style={{
-      fontWeight: "bold",
-      fontSize: "12px",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      maxWidth: "100%",
-    }}>
-      {subCell.classData.subject}
-    </div>
-    <div style={{
-      fontSize: "10px",
-      color: "#666",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      maxWidth: "100%",
-    }}>
-      {subCell.classData.teacher}
-    </div>
-    <div style={{
-      fontSize: "10px",
-      color: "#888",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      maxWidth: "100%",
-    }}>
-      {subCell.classData.room}
-    </div>
-  </div>
-</Tooltip>
+              <p><b>🏷️ รหัสวิชา:</b> {subCell.classData.courseCode || "ไม่ระบุ"}</p>
+              <p><b>📖 ชื่อวิชา:</b> {subCell.classData.subject || "ไม่ระบุ"}</p>
+              <p><b>🎓 ชั้นปี:</b> {subCell.classData.studentYear ? `ปีที่ ${subCell.classData.studentYear}` : "ไม่ระบุ"}</p>
+              <p><b>📝 หมู่เรียน:</b> {subCell.classData.section || "ไม่ระบุ"}</p>
+              <p><b>👩‍🏫 อาจารย์:</b> {subCell.classData.teacher || "ไม่ระบุ"}</p>
+              <p><b>🏢 ห้องเรียน:</b> {subCell.classData.room || "ไม่ระบุ"}</p>
+              <p><b>📅 วัน:</b> {subCell.day}</p>
+              <p><b>🕐 เวลา:</b> {subCell.startTime} - {subCell.endTime}</p>
+            </div>
+          }
+          placement="top"
+          overlayStyle={{ maxWidth: "400px", backgroundColor: "white", color: "black" }}
+          trigger="hover"
+        >
+          <div style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            width: "100%",
+            textAlign: "center"
+          }}>
+            <div style={{
+              fontWeight: "bold",
+              fontSize: "12px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: "100%",
+            }}>
+              {subCell.classData.subject}
+            </div>
+            <div style={{
+              fontSize: "10px",
+              color: "#666",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: "100%",
+            }}>
+              {subCell.classData.teacher}
+            </div>
+            <div style={{
+              fontSize: "10px",
+              color: "#888",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: "100%",
+            }}>
+              {subCell.classData.room}
+            </div>
+          </div>
+        </Tooltip>
 
-
-        
         {/* Delete Button */}
         <div
           style={{
@@ -784,6 +991,42 @@ const Schedulepage: React.FC = () => {
             return "TBA"; // หรือ "ไม่ระบุห้อง"
           };
 
+          // ดึงข้อมูลชั้นปีจาก AcademicYearID (ส่งคืนเป็นตัวเลขเท่านั้น)
+          const getStudentYear = (schedule: ScheduleInterface): string => {
+            // ใช้ any เพื่อหลีกเลี่ยง TypeScript error แต่ API มีข้อมูลจริง
+            const academicYearId = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.AcademicYearID;
+            
+            if (academicYearId && academicYearId >= 1) {
+              // ส่งคืนเป็นตัวเลขเพื่อให้ตรงกับ filter
+              console.log(`📚 Found AcademicYearID: ${academicYearId} for schedule ${schedule.ID}`);
+              return academicYearId.toString();
+            }
+            
+            // Alternative: check Level field
+            const level = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.Level;
+            if (level && level !== 'เรียนได้ทุกชั้นปี') {
+              // ถ้า Level เป็น "ปีที่ X" ให้แปลงเป็นตัวเลข
+              const yearMatch = level.match(/ปีที่\s*(\d+)/);
+              if (yearMatch) {
+                const year = parseInt(yearMatch[1]);
+                if (year >= 1) {
+                  console.log(`📚 Found Level: ${level} -> ${year} for schedule ${schedule.ID}`);
+                  return year.toString();
+                }
+              }
+              
+              // ถ้าเป็นตัวเลขอยู่แล้ว
+              const numLevel = parseInt(level);
+              if (!isNaN(numLevel) && numLevel >= 1) {
+                console.log(`📚 Found numeric Level: ${level} for schedule ${schedule.ID}`);
+                return numLevel.toString();
+              }
+            }
+            
+            console.log(`⚠️ No valid student year found for schedule ${schedule.ID}, using default: 1`);
+            return "1"; // ค่าเริ่มต้นเป็นปี 1
+          };
+
           const classInfo: ClassInfo = {
             subject: item.OfferedCourses?.AllCourses?.ThaiName ||
                     item.OfferedCourses?.AllCourses?.EnglishName ||
@@ -796,6 +1039,7 @@ const Schedulepage: React.FC = () => {
             room: getRoomInfo(item),
             section: item.SectionNumber?.toString() || "",
             courseCode: item.OfferedCourses?.AllCourses?.Code || "",
+            studentYear: getStudentYear(item), // เก็บเป็นตัวเลข
           };
 
           const getTimeString = (time: string | Date): string => {
@@ -820,6 +1064,7 @@ const Schedulepage: React.FC = () => {
             room: classInfo.room,
             section: classInfo.section,
             courseCode: classInfo.courseCode,
+            studentYear: classInfo.studentYear,
             day: item.DayOfWeek,
             startTime,
             endTime
@@ -834,6 +1079,9 @@ const Schedulepage: React.FC = () => {
         const rowGroups = separateOverlappingSubCells(subCells);
         console.log(`🗂️ Separated into ${rowGroups.length} row groups for ${day}`);
         
+        // ✅ แก้ไข: กำหนด totalRowsInDay ให้ถูกต้องก่อนสร้าง dayData
+        const totalRowsForThisDay = rowGroups.length;
+        
         rowGroups.forEach((rowSubCells, rowIndex) => {
           const dayData: ExtendedScheduleData = {
             key: `day-${dayIndex}-row-${rowIndex}`,
@@ -841,7 +1089,7 @@ const Schedulepage: React.FC = () => {
             dayIndex: dayIndex,
             rowIndex: rowIndex,
             isFirstRowOfDay: rowIndex === 0,
-            totalRowsInDay: rowGroups.length,
+            totalRowsInDay: totalRowsForThisDay,  // ✅ ใช้ค่าที่คำนวณแล้ว
             subCells: rowSubCells
           };
 
@@ -881,6 +1129,12 @@ const Schedulepage: React.FC = () => {
     });
 
     console.log(`📋 Final result: ${result.length} rows total`);
+    
+    // ✅ เพิ่ม debug สำหรับตรวจสอบ rowSpan
+    result.forEach((row, index) => {
+      console.log(`Row ${index}: ${row.day} (${row.rowIndex}) - isFirst: ${row.isFirstRowOfDay}, totalRows: ${row.totalRowsInDay}`);
+    });
+    
     return result;
   };
 
@@ -1324,6 +1578,7 @@ const Schedulepage: React.FC = () => {
     setCurrentTableName("");
     setIsTableFromAPI(false);
     setOriginalScheduleData([]);
+    clearAllFilters();
     message.success("รีเซตตารางสำเร็จ");
   };
 
@@ -1362,6 +1617,140 @@ const Schedulepage: React.FC = () => {
     );
   };
 
+  // =================== RENDER FILTER SECTION ===================
+  const renderFilterSection = () => {
+    return (
+      <div style={{ 
+        backgroundColor: "#fafafa", 
+        padding: "16px", 
+        borderRadius: "8px", 
+        border: "1px solid #d9d9d9",
+        marginBottom: "16px" 
+      }}>
+        {/* Filter Header */}
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          marginBottom: "12px" 
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <FilterOutlined style={{ color: "#1890ff" }} />
+            <span style={{ fontWeight: "bold", color: "#333" }}>
+              กรองข้อมูล ({filteredScheduleData.length} แถว)
+            </span>
+            {filterTags.length > 0 && (
+              <Tag color="blue">{filterTags.length} ตัวกรอง</Tag>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Button
+              size="small"
+              icon={<SearchOutlined />}
+              type={filterVisible ? "primary" : "default"}
+              onClick={() => setFilterVisible(!filterVisible)}
+            >
+              {filterVisible ? "ซ่อนการกรอง" : "แสดงการกรอง"}
+            </Button>
+            {(filterTags.length > 0 || searchValue) && (
+              <Button
+                size="small"
+                icon={<ClearOutlined />}
+                onClick={clearAllFilters}
+                danger
+              >
+                ล้างทั้งหมด
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div style={{ marginBottom: "12px" }}>
+          <Input
+            placeholder="ค้นหาอาจารย์..."
+            prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            allowClear
+            style={{ width: "100%" }}
+          />
+        </div>
+
+        {/* Filter Tags Display */}
+        {filterTags.length > 0 && (
+          <div style={{ marginBottom: "12px" }}>
+            <div style={{ fontSize: "12px", color: "#666", marginBottom: "6px" }}>
+              ตัวกรองที่เลือก:
+            </div>
+            <Space wrap>
+              {filterTags.map(tag => (
+                <Tag
+                  key={tag.id}
+                  color={tag.color}
+                  closable
+                  onClose={() => removeFilterTag(tag.id)}
+                  style={{ marginBottom: "4px" }}
+                >
+                  {tag.label}
+                </Tag>
+              ))}
+            </Space>
+          </div>
+        )}
+
+        {/* Filter Controls */}
+        {filterVisible && (
+          <div style={{ 
+            display: "grid", 
+            gridTemplateColumns: "1fr 1fr", 
+            gap: "16px",
+            borderTop: "1px solid #e8e8e8",
+            paddingTop: "12px"
+          }}>
+            {/* Teacher Filter */}
+            <div>
+              <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
+                🧑‍🏫 อาจารย์:
+              </label>
+              <AutoComplete
+                placeholder="เลือกอาจารย์"
+                options={filterOptions.teachers.map(teacher => ({ value: teacher }))}
+                onSelect={(value) => addFilterTag('teacher', value)}
+                style={{ width: "100%" }}
+                size="small"
+                filterOption={(inputValue, option) =>
+                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                }
+              />
+            </div>
+
+            {/* Student Year Filter */}
+            <div>
+              <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
+                🎓 ชั้นปี:
+              </label>
+              <Select
+                placeholder="เลือกชั้นปี"
+                onSelect={(value) => addFilterTag('studentYear', value)}
+                style={{ width: "100%" }}
+                size="small"
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+                options={filterOptions.studentYears.map(year => ({ 
+                  label: `ปีที่ ${year}`, 
+                  value: year 
+                }))}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // =================== PDF EXPORT ===================
   const exportScheduleToPDF = async () => {
     if (scheduleData.length === 0) {
@@ -1373,10 +1762,13 @@ const Schedulepage: React.FC = () => {
       const hide = message.loading("กำลังสร้าง PDF...", 0);
       const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
       
+      // Use filtered data for PDF export
+      const dataToExport = filteredScheduleData.length > 0 ? filteredScheduleData : scheduleData;
+      
       const tableData: string[][] = [];
       const headers = ["Day/Time", ...TIME_SLOTS];
 
-      scheduleData.forEach((dayData) => {
+      dataToExport.forEach((dayData) => {
         const row: string[] = [dayData.day || ""];
         TIME_SLOTS.forEach((time) => {
           const subCells = dayData.subCells || [];
@@ -1416,6 +1808,12 @@ const Schedulepage: React.FC = () => {
       });
 
       if (typeof doc.autoTable === "function") {
+        // Add filter info to PDF title
+        let title = "ตารางเรียน";
+        if (filterTags.length > 0 || searchValue) {
+          title += " (กรองข้อมูล)";
+        }
+        
         doc.autoTable({
           head: [headers],
           body: tableData,
@@ -1427,7 +1825,7 @@ const Schedulepage: React.FC = () => {
         });
       }
 
-      const fileName = `schedule_table_${new Date().toISOString().split("T")[0]}.pdf`;
+      const fileName = `schedule_table_${filterTags.length > 0 ? 'filtered_' : ''}${new Date().toISOString().split("T")[0]}.pdf`;
       doc.save(fileName);
       hide();
       message.success("ส่งออก PDF สำเร็จ!");
@@ -1444,8 +1842,7 @@ const Schedulepage: React.FC = () => {
       title: "Day/Time",
       dataIndex: "day",
       key: "day",
-      fixed: "left",
-      width: 85,
+      width: 100,
       onCell: (record: ExtendedScheduleData) => {
         if (record.isFirstRowOfDay) {
           return { 
@@ -1469,7 +1866,7 @@ const Schedulepage: React.FC = () => {
       title: time,
       dataIndex: time,
       key: time,
-      width: 120,
+      width: 140,
       onCell: (record: ExtendedScheduleData) => {
         const timeSlotIndex = timeSlotToSlotIndex(time);
         
@@ -1648,7 +2045,8 @@ const Schedulepage: React.FC = () => {
       {
         subject: "วิชาทดสอบ Sub-Cell",
         teacher: "อ.ทดสอบ",
-        room: "ห้องทดสอบ"
+        room: "ห้องทดสอบ",
+        studentYear: "1"
       },
       "จันทร์",
       "09:00",
@@ -1664,7 +2062,8 @@ const Schedulepage: React.FC = () => {
       {
         subject: "วิชาทดสอบ 3 ชั่วโมง",
         teacher: "อ.ทดสอบยาว",
-        room: "ห้องใหญ่"
+        room: "ห้องใหญ่",
+        studentYear: "2"
       },
       "จันทร์",
       "09:00",
@@ -1680,7 +2079,8 @@ const Schedulepage: React.FC = () => {
       {
         subject: "วิชาสั้น 1 ชม.",
         teacher: "อ.สั้น",
-        room: "ห้องเล็ก"
+        room: "ห้องเล็ก",
+        studentYear: "3"
       },
       "พุธ",
       "14:00",
@@ -1711,7 +2111,9 @@ const Schedulepage: React.FC = () => {
   }, [isTableFromAPI, currentTableName]);
 
   // =================== DATA PROCESSING ===================
-  const data: ExtendedScheduleData[] = scheduleData.length > 0
+  const data: ExtendedScheduleData[] = filteredScheduleData.length > 0
+    ? filteredScheduleData
+    : scheduleData.length > 0
     ? scheduleData
     : DAYS.map((day, index) => {
         const rowData: ExtendedScheduleData = { 
@@ -1737,9 +2139,16 @@ const Schedulepage: React.FC = () => {
         return rowData;
       });
 
+  console.log('📊 Final data for rendering:', {
+    filteredDataLength: filteredScheduleData.length,
+    scheduleDataLength: scheduleData.length,
+    finalDataLength: data.length,
+    days: data.map(d => d.day)
+  });
+
   // =================== RENDER ===================
   return (
-    <>
+    <div style={{ width: "100%", padding: "20px" }}>
       {/* Page Title */}
       <div
         style={{
@@ -1756,7 +2165,7 @@ const Schedulepage: React.FC = () => {
             fontWeight: "bold",
           }}
         >
-          จัดตารางเรียน (API Save Integration) 🎯
+          จัดตารางเรียน (กรองอาจารย์ & ชั้นปี) 🎯
         </h2>
         <p
           style={{
@@ -1766,14 +2175,17 @@ const Schedulepage: React.FC = () => {
           }}
         >
           สร้างและจัดการตารางเรียนแบบ Drag & Drop | 
+          กรองข้อมูลตามอาจารย์และชั้นปี (ปีที่ 1, 2, 3, 4) | 
           วิชาที่มีเวลาซ้อนทับกันจะแยกเป็นแถวต่างหาก | 
-          การบันทึกจะอัปเดตข้อมูลใน API ผ่าน putupdateScheduleTime | 
-          ตรวจสอบ Console เพื่อ Debug การทำงาน
+          การบันทึกจะอัปเดตข้อมูลใน API ผ่าน putupdateScheduleTime
         </p>
       </div>
 
       {/* Table Status */}
       {renderTableStatus()}
+
+      {/* Filter Section */}
+      {renderFilterSection()}
 
       {/* Action Buttons */}
       <Flex gap="small" wrap style={{ marginBottom: "20px" }}>
@@ -1819,11 +2231,15 @@ const Schedulepage: React.FC = () => {
           onClick={exportScheduleToPDF}
         >
           ส่งออก PDF
+          {(filterTags.length > 0 || searchValue) && " (กรอง)"}
         </Button>
       </Flex>
 
       {/* Schedule Table */}
-      <div ref={tableRef} style={{ flex: 1, overflow: "visible" }}>
+      <div ref={tableRef} style={{ 
+        flex: 1, 
+        width: "100%"
+      }}>
         <Table
           columns={columns}
           dataSource={data}
@@ -1833,7 +2249,6 @@ const Schedulepage: React.FC = () => {
           style={{
             backgroundColor: "white",
             borderRadius: "8px",
-            overflow: "visible",
           }}
         />
       </div>
@@ -1987,7 +2402,7 @@ const Schedulepage: React.FC = () => {
           )}
         </div>
       </Modal>
-    </>
+    </div>
   );
 };
 
