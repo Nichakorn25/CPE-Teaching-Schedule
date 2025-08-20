@@ -27,6 +27,8 @@ interface TeacherTableData extends AllTeacher {
   order: number;
 }
 
+const normalize = (s?: string | null) => (s ?? "").trim().toLowerCase();
+
 const TeacherList: React.FC = () => {
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState("");
@@ -38,32 +40,43 @@ const TeacherList: React.FC = () => {
   const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
   const [majors, setMajors] = useState<MajorInterface[]>([]);
   const [filteredMajors, setFilteredMajors] = useState<MajorInterface[]>([]);
-  const [selectedDepartmentID, setSelectedDepartmentID] = useState<
-    number | "all"
-  >("all");
+  const [selectedDepartmentID, setSelectedDepartmentID] = useState<number | "all">("all");
   const [selectedMajorID, setSelectedMajorID] = useState<number | "all">("all");
 
-  // Monitor container width for responsive behavior
-  useEffect(() => {
-    const handleResize = () => {
-      setContainerWidth(window.innerWidth);
-    };
+  // ── NEW: role & userMajor ───────────────────────────────────────────────
+  const [role, setRole] = useState<string>("");
+  const [userMajor, setUserMajor] = useState<string>("");
 
+  const isSmallScreen = containerWidth < 1400;
+  const isMobile = containerWidth < 768;
+
+  const isAdmin = role === "admin" || role === "administrator" || role === "superadmin";
+  const isScheduler = role === "scheduler" || role === "schedule" || role === "coordinator";
+
+  useEffect(() => {
+    const handleResize = () => setContainerWidth(window.innerWidth);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Determine responsive breakpoints
-  const isSmallScreen = containerWidth < 1400;
-  const isMobile = containerWidth < 768;
+  // ── Load role & major from localStorage ─────────────────────────────────
+  useEffect(() => {
+    const r =
+      (localStorage.getItem("role") ||
+        localStorage.getItem("user_role") ||
+        localStorage.getItem("role_name") ||
+        "").toLowerCase();
+    const m = localStorage.getItem("major_name") || "";
+    setRole(r);
+    setUserMajor(m);
+    if (r) console.log("[DEBUG] current role:", r);
+    if (m) console.log("[DEBUG] current userMajor:", m);
+  }, []);
 
   const fetchAllTeachers = async () => {
     try {
       setLoading(true);
       const response = await getAllTeachers();
-
-      console.log("Teacher data: ", response);
-
       if (response.status === 200 && Array.isArray(response.data)) {
         const mappedData: AllTeacher[] = response.data
           .filter((item: any) => item.Firstname && item.Lastname)
@@ -81,7 +94,16 @@ const TeacherList: React.FC = () => {
             Status: item.Status,
             Role: item.Role,
           }));
-        setTeacherData(mappedData);
+
+        // ⛳ ถ้าเป็น scheduler → เห็นเฉพาะอาจารย์ในสาขาตัวเอง
+        const data =
+          isScheduler && userMajor
+            ? mappedData.filter(
+                (t) => normalize(t.Major) === normalize(userMajor)
+              )
+            : mappedData;
+
+        setTeacherData(data);
       } else {
         console.error("โหลดข้อมูลรายชื่ออาจารย์ไม่สำเร็จ", response);
         message.error("ไม่สามารถโหลดข้อมูลอาจารย์ได้");
@@ -95,9 +117,14 @@ const TeacherList: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchAllTeachers();
-  }, []);
+    // โหลดใหม่เมื่อรู้ role/major แล้ว เพื่อให้กรองตามเงื่อนไขได้
+    if (role !== "") {
+      fetchAllTeachers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, userMajor]);
 
+  // ── Load departments & majors (ใช้กับฝั่ง admin เท่านั้น) ─────────────
   useEffect(() => {
     const fetchDepartmentsAndMajors = async () => {
       const res = await getMajorOfDepathment();
@@ -127,46 +154,38 @@ const TeacherList: React.FC = () => {
     }
   }, [selectedDepartmentID, majors]);
 
-  // Filter data based on search text and department
+  // ── Filter (search + major dropdown) ────────────────────────────────────
   const filteredTeachers = teacherData.filter((teacher) => {
+    const q = searchText.toLowerCase();
     const matchesSearch =
-      teacher.Firstname?.toLowerCase().includes(searchText.toLowerCase()) ||
-      teacher.Lastname?.toLowerCase().includes(searchText.toLowerCase()) ||
-      teacher.Email?.toLowerCase().includes(searchText.toLowerCase()) ||
-      teacher.EmpId?.toLowerCase().includes(searchText.toLowerCase());
+      teacher.Firstname?.toLowerCase().includes(q) ||
+      teacher.Lastname?.toLowerCase().includes(q) ||
+      teacher.Email?.toLowerCase().includes(q) ||
+      teacher.EmpId?.toLowerCase().includes(q);
 
-    const selectedMajorName = majors.find(
-      (m) => m.ID === selectedMajorID
-    )?.MajorName;
+    // admin เท่านั้นที่ใช้ฟิลเตอร์สาขา/สำนักวิชา; scheduler ไม่ต้อง (ถูกจำกัดตั้งแต่ fetch)
+    if (!isAdmin) return matchesSearch;
 
-    const matchesMajor =
-      selectedMajorID === "all" || teacher.Major === selectedMajorName;
+    const selectedMajorName = majors.find((m) => m.ID === selectedMajorID)?.MajorName;
+    const matchesMajor = selectedMajorID === "all" || teacher.Major === selectedMajorName;
 
     return matchesSearch && matchesMajor;
   });
-  
-  // Convert data for table
-  const tableData: TeacherTableData[] = filteredTeachers.map(
-    (teacher, index) => ({
-      ...teacher,
-      key: teacher.DeleteID?.toString() || `${index}`,
-      order: (currentPage - 1) * pageSize + index + 1,
-    })
-  );
 
-  // Calculate pagination
+  // ── Table data & pagination ─────────────────────────────────────────────
+  const tableData: TeacherTableData[] = filteredTeachers.map((teacher, index) => ({
+    ...teacher,
+    key: teacher.DeleteID?.toString() || `${index}`,
+    order: (currentPage - 1) * pageSize + index + 1,
+  }));
+
   const totalItems = tableData.length;
   const totalPages = Math.ceil(totalItems / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const currentData = tableData.slice(startIndex, endIndex);
 
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  // Handle page size change
+  const handlePageChange = (page: number) => setCurrentPage(page);
   const handlePageSizeChange = (size: number) => {
     setPageSize(size);
     setCurrentPage(1);
@@ -196,13 +215,8 @@ const TeacherList: React.FC = () => {
 
         if (response.status === 200) {
           message.success(`ลบ ${title} ${fullName} สำเร็จ`);
-          setTeacherData((prev) =>
-            prev.filter((teacher) => teacher.DeleteID !== deleteID)
-          );
-
-          if (currentData.length === 1 && currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-          }
+          setTeacherData((prev) => prev.filter((t) => t.DeleteID !== deleteID));
+          if (currentData.length === 1 && currentPage > 1) setCurrentPage(currentPage - 1);
         } else {
           const errorMsg = response.data?.error || "ไม่สามารถลบอาจารย์ได้";
           message.error(`เกิดข้อผิดพลาด: ${errorMsg}`);
@@ -213,46 +227,30 @@ const TeacherList: React.FC = () => {
     }
   };
 
-  // Responsive columns configuration
+  // ── Columns: แยกตามหน้าจอ & role ───────────────────────────────────────
   const getColumns = (): ColumnsType<TeacherTableData> => {
     if (isMobile) {
-      // Mobile layout - Show only essential columns
-      return [
+      // Mobile layout (ไม่มี EmpId อยู่แล้ว) → ซ่อน "จัดการ" ถ้าไม่ใช่ admin
+      const base: ColumnsType<TeacherTableData> = [
         {
           title: "#",
           dataIndex: "order",
           key: "order",
           width: 40,
           align: "center",
-          render: (value: number) => (
-            <span style={{ fontWeight: "bold", fontSize: "10px" }}>
-              {value}
-            </span>
-          ),
+          render: (v: number) => <span style={{ fontWeight: "bold", fontSize: "10px" }}>{v}</span>,
         },
         {
           title: "อาจารย์",
           key: "teacher",
-          width: 140,
-          render: (_, record: TeacherTableData) => (
+          width: 160,
+          render: (_, r) => (
             <div style={{ fontSize: "11px" }}>
-              <div
-                style={{
-                  fontWeight: "bold",
-                  color: "#1890ff",
-                  marginBottom: "2px",
-                }}
-              >
-                {typeof record.Title === "string"
-                  ? record.Title
-                  : record.Title?.Title || "-"}
+              <div style={{ fontWeight: "bold", color: "#1890ff", marginBottom: "2px" }}>
+                {typeof r.Title === "string" ? r.Title : r.Title?.Title || "-"}
               </div>
-              <div style={{ fontWeight: "500" }}>
-                {record.Firstname} {record.Lastname}
-              </div>
-              <div style={{ color: "#666", fontSize: "9px" }}>
-                {record.Major}
-              </div>
+              <div style={{ fontWeight: 500 }}>{r.Firstname} {r.Lastname}</div>
+              <div style={{ color: "#666", fontSize: "9px" }}>{r.Major}</div>
             </div>
           ),
         },
@@ -261,83 +259,63 @@ const TeacherList: React.FC = () => {
           key: "status",
           width: 80,
           align: "center",
-          render: (_, record: TeacherTableData) => (
+          render: (_, r) => (
             <div style={{ textAlign: "center" }}>
               <div
                 style={{
-                  backgroundColor:
-                    record.Status === "active" ? "#f6ffed" : "#fff2e8",
-                  color: record.Status === "active" ? "#52c41a" : "#fa8c16",
+                  backgroundColor: r.Status === "active" ? "#f6ffed" : "#fff2e8",
+                  color: r.Status === "active" ? "#52c41a" : "#fa8c16",
                   padding: "2px 6px",
-                  borderRadius: "4px",
-                  fontSize: "10px",
+                  borderRadius: 4,
+                  fontSize: 10,
                   fontWeight: "bold",
-                  border: `1px solid ${
-                    record.Status === "active" ? "#b7eb8f" : "#ffd591"
-                  }`,
+                  border: `1px solid ${r.Status === "active" ? "#b7eb8f" : "#ffd591"}`,
                 }}
               >
-                {record.Status}
+                {r.Status}
               </div>
             </div>
           ),
         },
-        {
+      ];
+
+      if (isAdmin) {
+        base.push({
           title: "จัดการ",
           key: "action",
           width: 70,
           align: "center",
-          render: (_, record: TeacherTableData) => (
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "2px" }}
-            >
+          render: (_, record) => (
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Button
                 size="small"
-                style={{
-                  backgroundColor: "#F26522",
-                  borderColor: "#F26522",
-                  color: "white",
-                  fontSize: "9px",
-                  padding: "1px 4px",
-                  height: "20px",
-                  lineHeight: "18px",
-                }}
+                style={{ backgroundColor: "#F26522", borderColor: "#F26522", color: "white", fontSize: 9, padding: "1px 4px", height: 20, lineHeight: "18px" }}
                 onClick={() => navigate(`/manage-teacher/${record.DeleteID}`)}
-                title="แก้ไขข้อมูล"
               >
                 แก้ไข
               </Button>
               <Button
                 size="small"
-                style={{
-                  backgroundColor: "#ff4d4f",
-                  borderColor: "#ff4d4f",
-                  color: "white",
-                  fontSize: "9px",
-                  padding: "1px 4px",
-                  height: "20px",
-                  lineHeight: "18px",
-                }}
+                style={{ backgroundColor: "#ff4d4f", borderColor: "#ff4d4f", color: "white", fontSize: 9, padding: "1px 4px", height: 20, lineHeight: "18px" }}
                 onClick={() =>
                   handleDeleteTeacher(
                     record.DeleteID,
                     `${record.Firstname} ${record.Lastname}`,
-                    typeof record.Title === "string"
-                      ? record.Title
-                      : record.Title?.Title || ""
+                    typeof record.Title === "string" ? record.Title : record.Title?.Title || ""
                   )
                 }
-                title="ลบข้อมูล"
               >
                 ลบ
               </Button>
             </div>
           ),
-        },
-      ];
+        });
+      }
+
+      return base;
     }
 
-    // Desktop/Tablet layout
+    // Desktop / Tablet
     const columns: ColumnsType<TeacherTableData> = [
       {
         title: "ลำดับ",
@@ -345,18 +323,16 @@ const TeacherList: React.FC = () => {
         key: "order",
         width: 60,
         align: "center",
-        render: (value: number) => (
-          <span style={{ fontWeight: "bold" }}>{value}</span>
-        ),
+        render: (v: number) => <span style={{ fontWeight: "bold" }}>{v}</span>,
       },
       {
         title: "ตำแหน่งทางวิชาการ",
         dataIndex: "Title",
         key: "Title",
         width: 120,
-        render: (value: any) => (
+        render: (v: any) => (
           <span style={{ fontWeight: "bold", color: "#1890ff" }}>
-            {typeof value === "string" ? value : value?.Title || "-"}
+            {typeof v === "string" ? v : v?.Title || "-"}
           </span>
         ),
       },
@@ -364,22 +340,21 @@ const TeacherList: React.FC = () => {
         title: "ชื่อ-นามสกุล",
         key: "fullname",
         width: 200,
-        render: (_, record: TeacherTableData) => (
-          <span style={{ fontWeight: "500" }}>
-            {record.Firstname} {record.Lastname}
-          </span>
-        ),
+        render: (_, r) => <span style={{ fontWeight: 500 }}>{r.Firstname} {r.Lastname}</span>,
       },
-      {
+    ];
+
+    // ⛳ EmpId เฉพาะ admin
+    if (!isScheduler) {
+      columns.push({
         title: "รหัสพนักงาน",
         dataIndex: "EmpId",
         key: "EmpId",
         width: 120,
         align: "center",
-      },
-    ];
+      });
+    }
 
-    // Add email for large screens only
     if (!isSmallScreen) {
       columns.push({
         title: "อีเมล",
@@ -387,254 +362,170 @@ const TeacherList: React.FC = () => {
         key: "Email",
         width: 220,
         render: (value: string) => (
-          <a
-            href={`mailto:${value}`}
-            style={{ color: "#1890ff", fontSize: "12px" }}
-          >
+          <a href={`mailto:${value}`} style={{ color: "#1890ff", fontSize: 12 }}>
             {value}
           </a>
         ),
       });
     }
 
-    // Add department and major columns
     columns.push(
-      {
-        title: "สำนักวิชา",
-        dataIndex: "Department",
-        key: "Department",
-        width: isSmallScreen ? 120 : 160,
-        align: "center",
-      },
-      {
-        title: "สาขาวิชา",
-        dataIndex: "Major",
-        key: "Major",
-        width: isSmallScreen ? 140 : 180,
-        align: "center",
-      }
+      { title: "สำนักวิชา", dataIndex: "Department", key: "Department", width: isSmallScreen ? 120 : 160, align: "center" },
+      { title: "สาขาวิชา", dataIndex: "Major", key: "Major", width: isSmallScreen ? 140 : 180, align: "center" },
     );
 
-    // Add position and status for large screens
     if (!isSmallScreen) {
       columns.push(
-        {
-          title: "ตำแหน่ง",
-          dataIndex: "Position",
-          key: "Position",
-          width: 150,
-          align: "center",
-        },
+        { title: "ตำแหน่ง", dataIndex: "Position", key: "Position", width: 150, align: "center" },
         {
           title: "สถานะ",
           dataIndex: "Status",
           key: "Status",
           width: 100,
           align: "center",
-          render: (value: string) => (
+          render: (v: string) => (
             <span
               style={{
-                backgroundColor: value === "active" ? "#f6ffed" : "#fff2e8",
-                color: value === "active" ? "#52c41a" : "#fa8c16",
+                backgroundColor: v === "active" ? "#f6ffed" : "#fff2e8",
+                color: v === "active" ? "#52c41a" : "#fa8c16",
                 padding: "2px 8px",
-                borderRadius: "4px",
-                fontSize: "11px",
+                borderRadius: 4,
+                fontSize: 11,
                 fontWeight: "bold",
-                border: `1px solid ${
-                  value === "active" ? "#b7eb8f" : "#ffd591"
-                }`,
+                border: `1px solid ${v === "active" ? "#b7eb8f" : "#ffd591"}`,
               }}
             >
-              {value}
+              {v}
             </span>
           ),
         },
-        {
-          title: "บทบาท",
-          dataIndex: "Role",
-          key: "Role",
-          width: 100,
-          align: "center",
-        }
+        { title: "บทบาท", dataIndex: "Role", key: "Role", width: 100, align: "center" }
       );
     }
 
-    // Add action column
-    columns.push({
-      title: "จัดการ",
-      key: "action",
-      width: 120,
-      align: "center",
-      render: (_, record: TeacherTableData) => (
-        <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            style={{
-              backgroundColor: "#F26522",
-              borderColor: "#F26522",
-              color: "white",
-              fontSize: "11px",
-              padding: "2px 8px",
-              height: "auto",
-            }}
-            onClick={() => navigate(`/manage-teacher/${record.DeleteID}`)}
-            title="แก้ไขข้อมูล"
-          >
-            แก้ไข
-          </Button>
-          <Button
-            size="small"
-            icon={<DeleteOutlined />}
-            style={{
-              backgroundColor: "#ff4d4f",
-              borderColor: "#ff4d4f",
-              color: "white",
-              fontSize: "11px",
-              padding: "2px 8px",
-              height: "auto",
-            }}
-            onClick={() =>
-              handleDeleteTeacher(
-                record.DeleteID,
-                `${record.Firstname} ${record.Lastname}`,
-                typeof record.Title === "string"
-                  ? record.Title
-                  : record.Title?.Title || ""
-              )
-            }
-            title="ลบข้อมูล"
-          >
-            ลบ
-          </Button>
-        </div>
-      ),
-    });
+    // ⛳ คอลัมน์จัดการเฉพาะ admin
+    if (isAdmin) {
+      columns.push({
+        title: "จัดการ",
+        key: "action",
+        width: 120,
+        align: "center",
+        render: (_, record) => (
+          <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              style={{ backgroundColor: "#F26522", borderColor: "#F26522", color: "white", fontSize: 11, padding: "2px 8px", height: "auto" }}
+              onClick={() => navigate(`/manage-teacher/${record.DeleteID}`)}
+            >
+              แก้ไข
+            </Button>
+            <Button
+              size="small"
+              icon={<DeleteOutlined />}
+              style={{ backgroundColor: "#ff4d4f", borderColor: "#ff4d4f", color: "white", fontSize: 11, padding: "2px 8px", height: "auto" }}
+              onClick={() =>
+                handleDeleteTeacher(
+                  record.DeleteID,
+                  `${record.Firstname} ${record.Lastname}`,
+                  typeof record.Title === "string" ? record.Title : record.Title?.Title || ""
+                )
+              }
+            >
+              ลบ
+            </Button>
+          </div>
+        ),
+      });
+    }
 
     return columns;
   };
 
   return (
-    <div
-      style={{
-        fontFamily: "Sarabun, sans-serif",
-        padding: 0,
-        margin: 0,
-      }}
-    >
+    <div style={{ fontFamily: "Sarabun, sans-serif", padding: 0, margin: 0 }}>
       {/* Page Title */}
-      <div
-        style={{
-          marginBottom: "20px",
-          paddingBottom: "12px",
-          borderBottom: "2px solid #F26522",
-        }}
-      >
-        <h2
-          style={{
-            margin: "0 0 8px 0",
-            color: "#333",
-            fontSize: isMobile ? "18px" : "20px",
-            fontWeight: "bold",
-            fontFamily: "Sarabun, sans-serif",
-          }}
-        >
+      <div style={{ marginBottom: 20, paddingBottom: 12, borderBottom: "2px solid #F26522" }}>
+        <h2 style={{ margin: "0 0 8px 0", color: "#333", fontSize: isMobile ? 18 : 20, fontWeight: "bold" }}>
           รายชื่ออาจารย์ผู้สอน
         </h2>
-        <p
-          style={{
-            margin: 0,
-            color: "#666",
-            fontSize: isMobile ? "12px" : "13px",
-            fontFamily: "Sarabun, sans-serif",
-          }}
-        >
-          จัดการข้อมูลอาจารย์ผู้สอนทุกคน สำหรับการบริหารจัดการระบบ
+        <p style={{ margin: 0, color: "#666", fontSize: isMobile ? 12 : 13 }}>
+          {isScheduler
+            ? `แสดงเฉพาะอาจารย์ในสาขา: ${userMajor || "-"}`
+            : "จัดการข้อมูลอาจารย์ผู้สอนทุกคน สำหรับการบริหารจัดการระบบ"}
         </p>
       </div>
 
-      {/* Controls Section */}
-      <div style={{ marginBottom: "20px" }}>
+      {/* Controls */}
+      <div style={{ marginBottom: 20 }}>
         <div
           style={{
             display: "flex",
             alignItems: "center",
             backgroundColor: "#f8f9fa",
             padding: isMobile ? "8px 12px" : "12px 16px",
-            borderRadius: "8px",
+            borderRadius: 8,
             border: "1px solid #e9ecef",
-            minHeight: "48px",
+            minHeight: 48,
             flexWrap: isMobile ? "wrap" : "nowrap",
-            gap: isMobile ? "8px" : "12px",
+            gap: isMobile ? 8 : 12,
           }}
         >
-          {/* Search controls */}
-          {/* สำนักวิชา */}
-          <Select
-            value={selectedDepartmentID}
-            onChange={(value) => {
-              setSelectedDepartmentID(value);
-              setSelectedMajorID("all");
-            }}
-            style={{ width: isMobile ? "100%" : 200 }}
-            size="small"
-            placeholder="เลือกสำนักวิชา"
-          >
-            <Option value="all">ทุกสำนักวิชา</Option>
-            {departments.map((dep) => (
-              <Option key={dep.ID} value={dep.ID}>
-                {dep.DepartmentName}
-              </Option>
-            ))}
-          </Select>
+          {/* ⛳ ซ่อนดรอปดาวสำนักวิชา/สาขาเมื่อเป็น scheduler */}
+          {!isScheduler && (
+            <>
+              <Select
+                value={selectedDepartmentID}
+                onChange={(value) => {
+                  setSelectedDepartmentID(value);
+                  setSelectedMajorID("all");
+                }}
+                style={{ width: isMobile ? "100%" : 200 }}
+                size="small"
+                placeholder="เลือกสำนักวิชา"
+              >
+                <Option value="all">ทุกสำนักวิชา</Option>
+                {departments.map((dep) => (
+                  <Option key={dep.ID} value={dep.ID}>
+                    {dep.DepartmentName}
+                  </Option>
+                ))}
+              </Select>
 
-          {/* สาขาวิชา */}
-          <Select
-            value={selectedMajorID}
-            onChange={(value) => setSelectedMajorID(value)}
-            style={{ width: isMobile ? "100%" : 200 }}
-            size="small"
-            placeholder="เลือกสาขาวิชา"
-          >
-            <Option value="all">ทุกสาขาวิชา</Option>
-            {filteredMajors.map((major) => (
-              <Option key={major.ID} value={major.ID}>
-                {major.MajorName}
-              </Option>
-            ))}
-          </Select>
+              <Select
+                value={selectedMajorID}
+                onChange={(value) => setSelectedMajorID(value)}
+                style={{ width: isMobile ? "100%" : 200 }}
+                size="small"
+                placeholder="เลือกสาขาวิชา"
+              >
+                <Option value="all">ทุกสาขาวิชา</Option>
+                {filteredMajors.map((major) => (
+                  <Option key={major.ID} value={major.ID}>
+                    {major.MajorName}
+                  </Option>
+                ))}
+              </Select>
+            </>
+          )}
 
           <Input
             placeholder="ค้นหาอาจารย์..."
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            style={{
-              width: isMobile ? "100%" : 200,
-              fontFamily: "Sarabun, sans-serif",
-            }}
+            style={{ width: isMobile ? "100%" : 200 }}
             size="small"
           />
 
-          {/* Pagination controls for desktop */}
           {!isMobile && (
             <>
-              <span
-                style={{
-                  whiteSpace: "nowrap",
-                  fontSize: "12px",
-                  color: "#666",
-                  fontFamily: "Sarabun, sans-serif",
-                }}
-              >
+              <span style={{ whiteSpace: "nowrap", fontSize: 12, color: "#666" }}>
                 รายการที่แสดง
               </span>
               <Select
                 value={pageSize.toString()}
-                style={{
-                  width: 50,
-                  fontFamily: "Sarabun, sans-serif",
-                }}
+                style={{ width: 50 }}
                 size="small"
                 onChange={(value) => handlePageSizeChange(parseInt(value))}
               >
@@ -644,30 +535,25 @@ const TeacherList: React.FC = () => {
                 <Option value="50">50</Option>
               </Select>
 
-              {/* Page numbers */}
+              {/* page buttons (simple preview of first 5 pages) */}
               {totalPages > 1 && (
-                <div
-                  style={{ display: "flex", gap: "4px", alignItems: "center" }}
-                >
+                <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                   {[1, 2, 3, 4, 5].map(
                     (page) =>
                       page <= totalPages && (
                         <span
                           key={page}
                           style={{
-                            backgroundColor:
-                              currentPage === page ? "#F26522" : "transparent",
+                            backgroundColor: currentPage === page ? "#F26522" : "transparent",
                             color: currentPage === page ? "white" : "#666",
                             padding: "2px 6px",
-                            borderRadius: "3px",
-                            fontSize: "11px",
-                            fontWeight:
-                              currentPage === page ? "bold" : "normal",
-                            minWidth: "18px",
+                            borderRadius: 3,
+                            fontSize: 11,
+                            fontWeight: currentPage === page ? "bold" : "normal",
+                            minWidth: 18,
                             textAlign: "center",
                             cursor: "pointer",
                             display: "inline-block",
-                            fontFamily: "Sarabun, sans-serif",
                           }}
                           onClick={() => handlePageChange(page)}
                         >
@@ -676,52 +562,29 @@ const TeacherList: React.FC = () => {
                       )
                   )}
                   {totalPages > 5 && (
-                    <span
-                      style={{
-                        color: "#666",
-                        fontSize: "11px",
-                        fontFamily: "Sarabun, sans-serif",
-                      }}
-                    >
-                      ... {totalPages}
-                    </span>
+                    <span style={{ color: "#666", fontSize: 11 }}>... {totalPages}</span>
                   )}
                 </div>
               )}
 
-              <div style={{ flex: 1 }}></div>
+              <div style={{ flex: 1 }} />
             </>
           )}
 
-          {/* Add Teacher Button */}
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => navigate("/manage-teacher")}
-            style={{
-              backgroundColor: "#52c41a",
-              borderColor: "#52c41a",
-              fontSize: "12px",
-              width: isMobile ? "100%" : "auto",
-              fontFamily: "Sarabun, sans-serif",
-            }}
-            size="small"
-          >
-            เพิ่มอาจารย์
-          </Button>
+          {/* ⛳ ปุ่มเพิ่มอาจารย์: เฉพาะ admin */}
+          {isAdmin && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => navigate("/manage-teacher")}
+              style={{ backgroundColor: "#52c41a", borderColor: "#52c41a", fontSize: 12 }}
+              size="small"
+            >
+              เพิ่มอาจารย์
+            </Button>
+          )}
 
-          {/* Refresh Button */}
-          <Button
-            onClick={fetchAllTeachers}
-            disabled={loading}
-            style={{
-              fontSize: "12px",
-              color: "#666",
-              width: isMobile ? "100%" : "auto",
-              fontFamily: "Sarabun, sans-serif",
-            }}
-            size="small"
-          >
+          <Button onClick={fetchAllTeachers} disabled={loading} size="small" style={{ fontSize: 12 }}>
             🔄 รีเฟรช
           </Button>
         </div>
@@ -730,22 +593,16 @@ const TeacherList: React.FC = () => {
         {isMobile && totalPages > 1 && (
           <div
             style={{
-              marginTop: "12px",
+              marginTop: 12,
               padding: "8px 12px",
               backgroundColor: "#f8f9fa",
-              borderRadius: "6px",
+              borderRadius: 6,
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
             }}
           >
-            <Select
-              value={pageSize.toString()}
-              style={{
-                width: 70,
-                fontFamily: "Sarabun, sans-serif",
-              }}
-              size="small"
+            <Select value={pageSize.toString()} style={{ width: 70 }} size="small"
               onChange={(value) => handlePageSizeChange(parseInt(value))}
             >
               <Option value="5">5</Option>
@@ -753,30 +610,14 @@ const TeacherList: React.FC = () => {
               <Option value="20">20</Option>
             </Select>
 
-            <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-              <Button
-                size="small"
-                disabled={currentPage === 1}
-                onClick={() => handlePageChange(currentPage - 1)}
-                style={{ fontFamily: "Sarabun, sans-serif" }}
-              >
+            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <Button size="small" disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)}>
                 ←
               </Button>
-              <span
-                style={{
-                  fontSize: "12px",
-                  padding: "0 8px",
-                  fontFamily: "Sarabun, sans-serif",
-                }}
-              >
+              <span style={{ fontSize: 12, padding: "0 8px" }}>
                 {currentPage}/{totalPages}
               </span>
-              <Button
-                size="small"
-                disabled={currentPage === totalPages}
-                onClick={() => handlePageChange(currentPage + 1)}
-                style={{ fontFamily: "Sarabun, sans-serif" }}
-              >
+              <Button size="small" disabled={currentPage === totalPages} onClick={() => handlePageChange(currentPage + 1)}>
                 →
               </Button>
             </div>
@@ -784,84 +625,25 @@ const TeacherList: React.FC = () => {
         )}
       </div>
 
-      {/* Summary Stats */}
-      {teacherData.length > 0 && (
-        <div
-          style={{
-            marginBottom: "16px",
-            padding: isMobile ? "8px 12px" : "12px 16px",
-            backgroundColor: "#e6f7ff",
-            borderRadius: "6px",
-            border: "1px solid #91d5ff",
-            fontSize: isMobile ? "12px" : "13px",
-            fontFamily: "Sarabun, sans-serif",
-          }}
-        >
-          <strong>สรุป:</strong> อาจารย์ทั้งหมด {teacherData.length} คน |
-          ใช้งานอยู่ {teacherData.filter((t) => t.Status === "active").length}{" "}
-          คน | ไม่ใช้งาน{" "}
-          {teacherData.filter((t) => t.Status !== "active").length} คน
-        </div>
-      )}
-
-      {/* Main Table */}
-      <div
-        style={{
-          backgroundColor: "white",
-          border: "1px solid #d9d9d9",
-          borderRadius: "6px",
-          overflow: "hidden",
-        }}
-      >
+      {/* Table */}
+      <div style={{ backgroundColor: "white", border: "1px solid #d9d9d9", borderRadius: 6, overflow: "hidden" }}>
         <Table
           columns={getColumns()}
           dataSource={currentData}
           pagination={false}
           size="small"
           bordered
-          scroll={{
-            x: isMobile ? 350 : isSmallScreen ? 1000 : 1800,
-            y: isMobile ? 400 : 600,
-          }}
+          scroll={{ x: isMobile ? 350 : isSmallScreen ? 1000 : 1800, y: isMobile ? 400 : 600 }}
           loading={loading}
-          style={{
-            fontSize: isMobile ? "11px" : "12px",
-            fontFamily: "Sarabun, sans-serif",
-          }}
+          style={{ fontSize: isMobile ? 11 : 12 }}
           className="custom-table"
           locale={{
             emptyText: (
-              <div
-                style={{
-                  padding: isMobile ? "20px" : "40px",
-                  textAlign: "center",
-                  color: "#999",
-                  fontFamily: "Sarabun, sans-serif",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: isMobile ? "32px" : "48px",
-                    marginBottom: "16px",
-                  }}
-                >
-                  👨‍🏫
-                </div>
-                <div
-                  style={{
-                    fontSize: isMobile ? "14px" : "16px",
-                    marginBottom: "8px",
-                  }}
-                >
-                  ไม่พบข้อมูลอาจารย์
-                </div>
-                <div
-                  style={{
-                    fontSize: isMobile ? "12px" : "14px",
-                    color: "#ccc",
-                  }}
-                >
-                  ยังไม่มีข้อมูลอาจารย์ในระบบ
+              <div style={{ padding: isMobile ? 20 : 40, textAlign: "center", color: "#999" }}>
+                <div style={{ fontSize: isMobile ? 32 : 48, marginBottom: 16 }}>👨‍🏫</div>
+                <div style={{ fontSize: isMobile ? 14 : 16, marginBottom: 8 }}>ไม่พบข้อมูลอาจารย์</div>
+                <div style={{ fontSize: isMobile ? 12 : 14, color: "#ccc" }}>
+                  {isScheduler ? "ไม่พบอาจารย์ในสาขาของคุณ" : "ยังไม่มีข้อมูลอาจารย์ในระบบ"}
                 </div>
               </div>
             ),
@@ -872,14 +654,13 @@ const TeacherList: React.FC = () => {
       {/* Footer Info */}
       <div
         style={{
-          marginTop: "16px",
+          marginTop: 16,
           padding: isMobile ? "8px 12px" : "12px 16px",
           backgroundColor: "#f8f9fa",
-          borderRadius: "6px",
+          borderRadius: 6,
           border: "1px solid #e9ecef",
-          fontSize: isMobile ? "11px" : "12px",
+          fontSize: isMobile ? 11 : 12,
           color: "#666",
-          fontFamily: "Sarabun, sans-serif",
         }}
       >
         <div
@@ -888,22 +669,14 @@ const TeacherList: React.FC = () => {
             justifyContent: "space-between",
             alignItems: "center",
             flexDirection: isMobile ? "column" : "row",
-            gap: isMobile ? "8px" : "0",
+            gap: isMobile ? 8 : 0,
           }}
         >
-          <div>
-            💡 <strong>หมายเหตุ:</strong>{" "}
-            ข้อมูลอาจารย์เหล่านี้ใช้สำหรับการจัดการระบบตารางเรียน
-          </div>
+          <div>💡 <strong>หมายเหตุ:</strong> ข้อมูลอาจารย์เหล่านี้ใช้สำหรับการจัดการระบบตารางเรียน</div>
           <div>
             ข้อมูลล่าสุด: {new Date().toLocaleString("th-TH")} |
             <span
-              style={{
-                marginLeft: "8px",
-                cursor: "pointer",
-                color: "#F26522",
-                fontWeight: "500",
-              }}
+              style={{ marginLeft: 8, cursor: "pointer", color: "#F26522", fontWeight: 500 }}
               onClick={fetchAllTeachers}
               title="รีเฟรชข้อมูล"
             >
@@ -912,30 +685,6 @@ const TeacherList: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Additional Info for Mobile */}
-      {isMobile && (
-        <div
-          style={{
-            marginTop: "12px",
-            padding: "8px 12px",
-            backgroundColor: "#fff3cd",
-            borderRadius: "6px",
-            border: "1px solid #ffeaa7",
-            fontSize: "11px",
-            color: "#856404",
-            fontFamily: "Sarabun, sans-serif",
-          }}
-        >
-          <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
-            💡 เคล็ดลับการใช้งาน:
-          </div>
-          <div>• คลิกที่ชื่ออาจารย์เพื่อดูรายละเอียดเพิ่มเติม</div>
-          <div>• หมุนหน้าจอเป็นแนวนอนเพื่อดูข้อมูลเพิ่มเติม</div>
-          <div>• ใช้การค้นหาเพื่อหาอาจารย์ที่ต้องการได้เร็วขึ้น</div>
-          <div>• กดปุ่ม "เพิ่มอาจารย์" เพื่อเพิ่มข้อมูลใหม่</div>
-        </div>
-      )}
     </div>
   );
 };
