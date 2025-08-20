@@ -71,6 +71,7 @@ func GetScheduleByNameTableAndUserID(c *gin.Context) {
 
 // ////////////////////////////////////////////////////////// จัดตารางสอน
 func AutoGenerateSchedule(c *gin.Context) {
+	user_major := c.Query("major_name")
 	year := c.Query("year")
 	term := c.Query("term")
 	nameTable := fmt.Sprintf("ปีการศึกษา %s เทอม %s", year, term)
@@ -78,15 +79,17 @@ func AutoGenerateSchedule(c *gin.Context) {
 	var offeredCourses []entity.OfferedCourses
 	config.DB().Where("year = ? AND term = ?", year, term).
 		Preload("User.Position").
+		Preload("User.Major").
 		Preload("AllCourses.TypeOfCourses").
 		Preload("AllCourses.Credit").
 		Preload("AllCourses.AcademicYear").
+		Preload("AllCourses.Curriculum.Major").
 		Preload("Laboratory").
 		Find(&offeredCourses)
 
 	config.DB().Where("name_table = ?", nameTable).Delete(&entity.Schedule{})
 
-	// 🧩 [1] FIXED COURSES: วนตาม Section จริง
+	// [1] FIXED COURSES: วนตาม Section จริง
 	for _, course := range offeredCourses {
 		if !course.IsFixCourses {
 			continue
@@ -117,15 +120,24 @@ func AutoGenerateSchedule(c *gin.Context) {
 	var autoCourses []entity.OfferedCourses
 	config.DB().Where("year = ? AND term = ? AND is_fix_courses = false", year, term).
 		Preload("User.Position").
+		Preload("User.Major").
 		Preload("AllCourses.TypeOfCourses").
 		Preload("AllCourses.Credit").
 		Preload("AllCourses.AcademicYear").
+		Preload("AllCourses.Curriculum.Major").
 		Preload("Laboratory").
 		Find(&autoCourses)
 
+	var filteredCourses []entity.OfferedCourses
+	for _, course := range autoCourses {
+		if course.AllCourses.Curriculum.Major.MajorName == user_major {
+			filteredCourses = append(filteredCourses, course)
+		}
+	}
+
 	// แยกวิชาออกเป็นกลุ่มเพื่อจัดลำดับ
 	var coreCourses, electiveCourses []entity.OfferedCourses
-	for _, course := range autoCourses {
+	for _, course := range filteredCourses {
 		if course.AllCourses.TypeOfCoursesID == 1 {
 			coreCourses = append(coreCourses, course)
 		} else {
@@ -153,7 +165,7 @@ func AutoGenerateSchedule(c *gin.Context) {
 	var allSchedules []entity.Schedule
 	config.DB().Where("name_table = ?", nameTable).Find(&allSchedules)
 
-	// 🧩 [2] AUTO-GENERATE: วนทีละ Section
+	// [2] AUTO-GENERATE: วนทีละ Section
 	for _, group := range [][]entity.OfferedCourses{coreCourses, electiveCourses} {
 		for _, course := range group {
 			// สุ่มวัน (จันทร์-ศุกร์) และเวลาจัด
