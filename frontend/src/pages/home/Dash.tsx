@@ -14,7 +14,10 @@ import {
   getAllCourses,
 } from "../../services/https/AdminPageServices";
 import { getOffered } from "../../services/https/GetService";
-import { getSchedulesBynameTableid } from "../../services/https/SchedulerPageService";
+import {
+  getSchedulesBynameTableid,
+  getSchedulesBynameTable,
+} from "../../services/https/SchedulerPageService";
 import {
   UserProfile,
   CourseIn,
@@ -76,7 +79,7 @@ const Dashboard: React.FC = () => {
       setCount(res.data.count);
     }
   };
-  
+
   useEffect(() => {
     if (academicYear && term) {
       getgetOffered({ year: academicYear, term });
@@ -97,15 +100,30 @@ const Dashboard: React.FC = () => {
     }
   }, [academicYear, term]);
 
+  const user_id = localStorage.getItem("user_id");
+
   const [allSchedule, setallSchedule] = useState<ScheduleInterface[]>([]);
   const getSchedules = async (nameTable: string) => {
-    const user_id = localStorage.getItem("user_id");
-    let res = await getSchedulesBynameTableid(nameTable, String(user_id));
+    let res = await getSchedulesBynameTable(nameTable);
     if (res && Array.isArray(res.data)) {
+      console.log("tableeee: ", res.data);
       setallSchedule(res.data);
     }
   };
 
+  // const getThaiDayName = (): string => {
+  //   const daysInThai = [
+  //     "อาทิตย์",
+  //     "จันทร์",
+  //     "อังคาร",
+  //     "พุธ",
+  //     "พฤหัสบดี",
+  //     "ศุกร์",
+  //     "เสาร์",
+  //   ];
+  //   const today = new Date();
+  //   return daysInThai[today.getDay()];
+  // };
   const getThaiDayName = (): string => {
     const daysInThai = [
       "อาทิตย์",
@@ -116,13 +134,28 @@ const Dashboard: React.FC = () => {
       "ศุกร์",
       "เสาร์",
     ];
-    const today = new Date();
-    return daysInThai[today.getDay()];
+
+    const simulatedDayIndex = 1;
+    return daysInThai[simulatedDayIndex];
   };
 
   const todayName = getThaiDayName();
-  const todaySchedule = allSchedule.filter(
-    (sch) => sch.DayOfWeek === todayName
+
+  const todaySchedule = allSchedule.filter((sch) => {
+    const isToday = sch.DayOfWeek === todayName;
+
+    const isUserMatched = sch.OfferedCourses?.AllCourses?.UserAllCourses?.some(
+      (uac) => uac.UserID.toString() === "1"
+    );
+    console.log("Checking schedule:", sch.ID, "isUserMatched:", isUserMatched);
+
+    return isToday && isUserMatched;
+  });
+  console.log(
+    "👉 Schedules ของวันนี้สำหรับ user:",
+    user_id,
+    todayName,
+    todaySchedule
   );
 
   const mapToSchedule = (schedule: ScheduleInterface[]) => {
@@ -406,13 +439,7 @@ const Dashboard: React.FC = () => {
               </div>
             )}
 
-            {currentRole === "Instructor" && (
-              <div className="schedule-grid">
-                <ScheduleCard schedules={displaySchedule} />
-              </div>
-            )}
-
-            {currentRole === "Scheduler" && (
+            {(currentRole === "Instructor" || currentRole === "Scheduler") && (
               <div className="schedule-grid">
                 <ScheduleCard schedules={displaySchedule} />
               </div>

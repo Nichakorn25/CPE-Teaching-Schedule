@@ -25,6 +25,8 @@ func GetScheduleByNameTable(c *gin.Context) {
 		Preload("OfferedCourses.AllCourses.AcademicYear").
 		Preload("OfferedCourses.AllCourses.TypeOfCourses").
 		Preload("OfferedCourses.AllCourses.Credit").
+		Preload("OfferedCourses.AllCourses.UserAllCourses").
+		Preload("OfferedCourses.AllCourses.UserAllCourses.User").
 		Preload("TimeFixedCourses").
 		// Preload("ScheduleTeachingAssistant.User").   ถ้าเลือก ta แล้วอย่าลืมเรียก
 		Where("name_table = ?", nameTable).
