@@ -76,10 +76,10 @@ async function getNameTable() {
     .catch((e) => e.response);
 }
 
-async function postAutoGenerateSchedule(year: number, term: number) {
+async function postAutoGenerateSchedule(year: number, term: number, major_name: string) {
   return await axios
     .post(
-      `${apiUrl}/auto-generate-schedule?year=${year}&term=${term}`,
+      `${apiUrl}/auto-generate-schedule?year=${year}&term=${term}&major_name=${major_name}`,
       null,
       requestOptions
     )

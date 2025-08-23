@@ -215,6 +215,10 @@ const Schedulepage: React.FC = () => {
   const [term, setTerm] = useState(() => 
     localStorage.getItem("term") || ""
   );
+ const [major_name, setmajor_name] = useState(() => 
+    localStorage.getItem("major_name") || ""
+  );
+
   const [scheduleData, setScheduleData] = useState<ExtendedScheduleData[]>([]);
   const [filteredScheduleData, setFilteredScheduleData] = useState<ExtendedScheduleData[]>([]);
   const [allNameTable, setAllNameTable] = useState<string[]>([]);
@@ -1237,7 +1241,7 @@ const applyFilters = () => {
     }
 
     try {
-      const res = await postAutoGenerateSchedule(Number(academicYear), Number(term));
+      const res = await postAutoGenerateSchedule(Number(academicYear), Number(term), major_name);
       const nameTable = `ปีการศึกษา ${academicYear} เทอม ${term}`;
 
       if (res.status === 200 && res.data) {
@@ -1763,33 +1767,25 @@ const exportScheduleToPDF = async () => {
     });
 
     const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "mm", "a4"); // Portrait A4
+    const pdf = new jsPDF("p", "mm", "a4"); // ✅ ใช้ new jsPDF()
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    // คำนวณขนาดรูปตามอัตราส่วน (ไม่ให้เกิน pageWidth)
     const imgWidth = pageWidth;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
     let heightLeft = imgHeight;
     let position = 0;
 
-    // ถ้าภาพสูงกว่าหน้า → ตัดแบ่งเป็นหลายหน้า
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
     while (heightLeft > 0) {
-      pdf.addImage(
-        imgData,
-        "PNG",
-        0,
-        position,
-        imgWidth,
-        imgHeight
-      );
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
-      if (heightLeft > 0) {
-        pdf.addPage();
-        position = heightLeft - imgHeight;
-      }
     }
 
     const fileName = `schedule_printscreen_${new Date()
@@ -1805,7 +1801,6 @@ const exportScheduleToPDF = async () => {
     message.error("เกิดข้อผิดพลาดในการสร้าง PDF");
   }
 };
-
 
   // =================== TABLE COLUMNS WITH FIXED ROW GROUPING ===================
   const columns: ColumnsType<ExtendedScheduleData> = [
