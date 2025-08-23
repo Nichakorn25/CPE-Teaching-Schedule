@@ -21,8 +21,8 @@ func DB() *gorm.DB {
 }
 
 func CreateDatabase() {
-	// dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
-	dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
+	dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
+	// dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
 	dbSQL, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal("Failed to connect to PostgreSQL:", err)
@@ -40,8 +40,8 @@ func CreateDatabase() {
 
 func ConnectionDB() {
 	CreateDatabase()
-	// dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
-	dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
+	dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
+	// dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
@@ -1990,63 +1990,63 @@ func SeedTeachingAssistants() {
 		{
 			Firstname:   "กิตติพงศ์",
 			Lastname:    "พัฒนกุล",
-			Email:       "แม็ค",
+			Email:       "kittipong.p@g.sut.ac.th",
 			PhoneNumber: "0812345678",
 			TitleID:     9,
 		},
 		{
 			Firstname:   "วราภรณ์",
 			Lastname:    "จันทรเสน",
-			Email:       "นุ่น",
+			Email:       "waraporn.j@g.sut.ac.th",
 			PhoneNumber: "0898765432",
 			TitleID:     10,
 		},
 		{
 			Firstname:   "นภัสกร",
 			Lastname:    "ทองกวาว",
-			Email:       "บูม",
+			Email:       "naphatsakorn.t@g.sut.ac.th",
 			PhoneNumber: "0822223344",
 			TitleID:     11,
 		},
 		{
 			Firstname:   "ชยพล",
 			Lastname:    "วัฒนกุล",
-			Email:       "ต้อม",
+			Email:       "chayaphon.w@g.sut.ac.th",
 			PhoneNumber: "0812345678",
 			TitleID:     9,
 		},
 		{
 			Firstname:   "ปณิดา",
 			Lastname:    "ภู่ระหงษ์",
-			Email:       "ปุ้ย",
+			Email:       "panida.p@g.sut.ac.th",
 			PhoneNumber: "0898765432",
 			TitleID:     10,
 		},
 		{
 			Firstname:   "ธนวัฒน์",
 			Lastname:    "ศรีประเสริฐ",
-			Email:       "เฟิร์ส",
+			Email:       "thanawat.s@g.sut.ac.th",
 			PhoneNumber: "0822223344",
 			TitleID:     11,
 		},
 		{
 			Firstname:   "พิมพ์ชนก",
 			Lastname:    "สมประสงค์",
-			Email:       "แป้ง",
+			Email:       "pimchanok.s@g.sut.ac.th",
 			PhoneNumber: "0812345678",
 			TitleID:     9,
 		},
 		{
 			Firstname:   "ธีรภัทร",
 			Lastname:    "บุญเรือง",
-			Email:       "เจ",
+			Email:       "theeraphat..b@g.sut.ac.th",
 			PhoneNumber: "0898765432",
 			TitleID:     10,
 		},
 		{
 			Firstname:   "ลลิตา",
 			Lastname:    "ชื่นจิต",
-			Email:       "จ๋า",
+			Email:       "lalita.c@g.sut.ac.th",
 			PhoneNumber: "0822223344",
 			TitleID:     11,
 		},
