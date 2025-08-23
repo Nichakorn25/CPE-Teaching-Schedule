@@ -16,18 +16,23 @@
 }
 
 .dashboard-title {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  border-radius: 1.2rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  padding: 1.8rem 2.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   font-size: 1.5rem;
   font-weight: 600;
-  color: #000000;
-  padding: 0.75rem 1rem;
-  background-color: #ffff;
-  border-left: 6px solid #1100fb;
-  border-radius: 6px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  color: #2d3748;
+  border-left: 4px solid #1100fb;
+  transition: all 0.3s ease;
 }
 
 .dashboard-title:hover {
-  transform: scale(1.05);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  border-left-color: #6366f1;
 }
 
 .main-content {
@@ -42,23 +47,13 @@
   gap: 1.5rem;
 }
 
-.user-profile-card {
-  background-color: #ffff;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.user-profile-card:hover {
-  transform: scale(1.05);
-}
-
 .stat-card {
-  background: white;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-left: 4px solid #06b100;
   transform: scale(1);
   transition: all 0.3s ease;
@@ -74,71 +69,195 @@
   justify-content: space-between;
 }
 
+.user-profile-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.94));
+  backdrop-filter: blur(25px);
+  border-radius: 1.8rem;
+  width: 500px;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.08),
+    0 8px 16px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  padding: 2.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  margin-bottom: 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.user-profile-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 1.8rem 1.8rem 0 0;
+}
+
+.user-profile-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.12),
+    0 10px 20px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
 .profile-icon {
-  color: #2563eb;
+  color: #4f46e5;
+  width: 24px;
+  height: 24px;
 }
 
 .profile-title {
-  font-size: 1.2rem;
-  margin-bottom: 0.5rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  color: #1e293b;
+  letter-spacing: -0.025em;
 }
 
 .profile-content {
   display: flex;
-  flex-direction: column !important;
-  align-items: center;     
-  justify-content: flex-start;
-  gap: 1rem;
-  max-width: 400px;
-  margin: 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  max-width: 100%;
 }
 
 .profile-image {
-  width: 150px;          
-  height: auto;           
+  width: 140px;
+  height: 140px;
   object-fit: cover;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  display: block;         
-  margin: 0 auto;       
+  border-radius: 1.2rem;
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.12),
+    0 0 0 4px rgba(255, 255, 255, 0.8);
+  display: block;
+  margin: 0 auto;
+  transition: all 0.3s ease;
+}
+
+.profile-image:hover {
+  transform: scale(1.05);
+  box-shadow: 
+    0 12px 30px rgba(0, 0, 0, 0.15),
+    0 0 0 4px rgba(255, 255, 255, 1);
 }
 
 .profile-image svg {
-  width: 100%;
-  height: 100%;
-  color: #ccc; 
-  border-radius: 8px;
-  background-color: #f0f0f0;
-  padding: 1rem; 
+  width: 140px;
+  height: 140px;
+  color: #94a3b8;
+  border-radius: 1.2rem;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  padding: 2rem;
   box-sizing: border-box;
 }
 
 .profile-info {
-  width: 100%;             
-  padding-left: 40px;    
+  width: 100%;
+  max-width: 100%;
 }
 
 .profile-info p {
-  margin: 0.1rem 0;
+  margin: 0.5rem 0;
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 0.25rem;
+  align-items: baseline;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid rgba(241, 245, 249, 0.8);
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
+.profile-info p:last-child {
+  border-bottom: none;
+}
+
+.profile-info strong {
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.profile-info p span:last-child {
+  color: #1e293b;
+  font-weight: 500;
+}
 
 @media (min-width: 768px) {
+  .user-profile-card {
+    padding: 3rem;
+  }
+  
   .profile-content {
-    flex-direction: row;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: center;
+    gap: 2.5rem;
+    text-align: center;
+  }
+  
+  .profile-image {
+    margin: 0 auto;
+  }
+  
+  .profile-info {
+    width: 100%;
+    max-width: 500px;
+  }
+  
+  .profile-info p {
+    grid-template-columns: 140px 1fr;
+    gap: 0.5rem;
     text-align: left;
   }
 }
 
+@media (min-width: 1024px) {
+  .profile-info p {
+    grid-template-columns: 150px 1fr;
+    gap: 0.5rem;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .user-profile-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.9));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .profile-title {
+    color: #f8fafc;
+  }
+  
+  .profile-info strong {
+    color: #94a3b8;
+  }
+  
+  .profile-info p span:last-child {
+    color: #e2e8f0;
+  }
+  
+  .profile-info p {
+    border-bottom-color: rgba(51, 65, 85, 0.5);
+  }
+}
+
 .stat-card {
-  background: white;
-  border-radius: 0.75rem;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-left: 4px solid #06b100;
   transform: scale(1);
   transition: all 0.3s ease;
@@ -195,14 +314,19 @@
 }
 
 .schedule-card {
-  background: white;
-  border-radius: 0.75rem;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
 }
 
 .schedule-card:hover {
-  transform: scale(1.05);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.15);
 }
 
 .schedule-title {
@@ -233,10 +357,52 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem;
-  background: #f9fafb;
-  border-radius: 0.5rem;
-  border-left: 4px solid #06b100;
+  padding: 1.25rem;
+  background: linear-gradient(
+    135deg,
+    rgba(102, 126, 234, 0.05),
+    rgba(118, 75, 162, 0.05)
+  );
+  border-radius: 1rem;
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  border-left: 6px solid transparent;
+  border-image: linear-gradient(135deg, #06b100, #52d681) 1;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.schedule-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transition: left 0.6s;
+}
+
+.schedule-item:hover::before {
+  left: 100%;
+}
+
+.schedule-item.schedule-past {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 107, 0.05),
+    rgba(238, 90, 36, 0.05)
+  );
+  border: 1px solid rgba(255, 107, 107, 0.1);
+  border-left: 6px solid transparent;
+  border-image: linear-gradient(135deg, #ff0000, #ee5a24) 1;
+  color: #666;
+  opacity: 0.8;
 }
 
 .schedule-item-content {
@@ -266,10 +432,12 @@
 }
 
 .calendar-card {
-  background: white;
-  border-radius: 0.75rem;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .calendar-card:hover {
