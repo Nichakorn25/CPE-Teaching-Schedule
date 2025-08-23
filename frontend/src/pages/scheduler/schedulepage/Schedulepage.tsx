@@ -745,6 +745,16 @@ const applyFilters = () => {
               {subCell.classData.subject}
             </div>
             <div style={{
+              fontSize: "7px",
+              color: "#050505ff",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: "100%",
+            }}>
+              {subCell.classData.courseCode}
+            </div>
+            <div style={{
               fontSize: "10px",
               color: "#666",
               overflow: "hidden",
