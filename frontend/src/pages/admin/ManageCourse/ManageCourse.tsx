@@ -533,7 +533,23 @@ const ManageCourse: React.FC = () => {
 
             <Row gutter={[16, 16]}>
               <Col xs={24} md={12}>
-                <Form.Item label="ชื่อวิชา (ภาษาไทย)" required>
+                <Form.Item
+                  label="ชื่อวิชา (ภาษาไทย)"
+                  name="thaiName"
+                  rules={[
+                    { required: true, message: "กรุณากรอกชื่อวิชา (ภาษาไทย)" },
+                    {
+                      validator: (_, value) => {
+                        if (!value) return Promise.resolve();
+                        return /^[ก-๙\s]+$/.test(value)
+                          ? Promise.resolve()
+                          : Promise.reject(
+                              "ชื่อวิชา (ภาษาไทย) ต้องเป็นตัวอักษรไทยเท่านั้น"
+                            );
+                      },
+                    },
+                  ]}
+                >
                   <Input
                     placeholder="กรอกชื่อวิชาภาษาไทย"
                     value={thaiName}
@@ -543,7 +559,26 @@ const ManageCourse: React.FC = () => {
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
-                <Form.Item label="ชื่อวิชา (ภาษาอังกฤษ)" required>
+                <Form.Item
+                  label="ชื่อวิชา (ภาษาอังกฤษ)"
+                  name="englishName"
+                  rules={[
+                    {
+                      required: true,
+                      message: "กรุณากรอกชื่อวิชา (ภาษาอังกฤษ)",
+                    },
+                    {
+                      validator: (_, value) => {
+                        if (!value) return Promise.resolve();
+                        return /^[A-Za-z\s]+$/.test(value)
+                          ? Promise.resolve()
+                          : Promise.reject(
+                              "ชื่อวิชา (ภาษาอังกฤษ) ต้องเป็นตัวอักษรอังกฤษเท่านั้น"
+                            );
+                      },
+                    },
+                  ]}
+                >
                   <Input
                     placeholder="กรอกชื่อวิชาภาษาอังกฤษ"
                     value={englishName}

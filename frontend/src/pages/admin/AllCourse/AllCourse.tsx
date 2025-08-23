@@ -665,20 +665,6 @@ const AllCourse: React.FC = () => {
             เพิ่มรายวิชา
           </Button>
 
-          {/* Refresh Button */}
-          <Button
-            onClick={fetchCourses}
-            disabled={loading}
-            style={{
-              fontSize: "12px",
-              color: "#666",
-              width: isMobile ? "100%" : "auto",
-              fontFamily: "Sarabun, sans-serif",
-            }}
-            size="small"
-          >
-            🔄 รีเฟรช
-          </Button>
         </div>
 
         {/* Mobile pagination */}

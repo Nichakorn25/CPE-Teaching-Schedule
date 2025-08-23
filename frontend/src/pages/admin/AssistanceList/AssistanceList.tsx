@@ -561,20 +561,6 @@ const AssistanceList: React.FC = () => {
             เพิ่มผู้ช่วยสอน
           </Button>
 
-          {/* Refresh Button */}
-          <Button
-            onClick={fetchAllAssistants}
-            disabled={loading}
-            style={{
-              fontSize: "12px",
-              color: "#666",
-              width: isMobile ? "100%" : "auto",
-              fontFamily: "Sarabun, sans-serif",
-            }}
-            size="small"
-          >
-            🔄 รีเฟรช
-          </Button>
         </div>
 
         {/* Mobile pagination */}

@@ -584,9 +584,6 @@ const TeacherList: React.FC = () => {
             </Button>
           )}
 
-          <Button onClick={fetchAllTeachers} disabled={loading} size="small" style={{ fontSize: 12 }}>
-            🔄 รีเฟรช
-          </Button>
         </div>
 
         {/* Mobile pagination */}

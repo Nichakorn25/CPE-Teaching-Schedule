@@ -20,8 +20,12 @@ import {
   getUserById,
 } from "../../../services/https/AdminPageServices";
 import Swal from "sweetalert2";
-import { Button, Input, Select, Card, Form, Row, Col, message } from 'antd';
-import { SaveOutlined, ArrowLeftOutlined, UserOutlined } from '@ant-design/icons';
+import { Button, Input, Select, Card, Form, Row, Col, message } from "antd";
+import {
+  SaveOutlined,
+  ArrowLeftOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 
 const { Option } = Select;
 
@@ -29,7 +33,7 @@ const ManageTeacher: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [form] = Form.useForm();
-  
+
   const [title, setTitle] = useState<Alltitles[]>([]);
   const [position, setPosition] = useState<Allposition[]>([]);
   const [roles, setRole] = useState<AllRoleInterface[]>([]);
@@ -45,8 +49,8 @@ const ManageTeacher: React.FC = () => {
     const handleResize = () => {
       setContainerWidth(window.innerWidth);
     };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const isMobile = containerWidth < 768;
@@ -68,25 +72,29 @@ const ManageTeacher: React.FC = () => {
     Address: "",
     TitleID: 0,
     PositionID: 0,
-    MajorID: 1,
+    MajorID: 0,
     RoleID: 0,
   });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [titleResponse, positionResponse, majorResponse, roleResponse] = await Promise.all([
-          getAllTitle(),
-          getAllPosition(),
-          getMajorOfDepathment(),
-          getAllRoles()
-        ]);
+        const [titleResponse, positionResponse, majorResponse, roleResponse] =
+          await Promise.all([
+            getAllTitle(),
+            getAllPosition(),
+            getMajorOfDepathment(),
+            getAllRoles(),
+          ]);
 
         if (titleResponse.status === 200 && Array.isArray(titleResponse.data)) {
           setTitle(titleResponse.data);
         }
 
-        if (positionResponse.status === 200 && Array.isArray(positionResponse.data)) {
+        if (
+          positionResponse.status === 200 &&
+          Array.isArray(positionResponse.data)
+        ) {
           setPosition(positionResponse.data);
         }
 
@@ -107,7 +115,7 @@ const ManageTeacher: React.FC = () => {
           setRole(roleResponse.data);
         }
       } catch (error) {
-        message.error('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+        message.error("เกิดข้อผิดพลาดในการโหลดข้อมูล");
       }
     };
     fetchData();
@@ -116,7 +124,7 @@ const ManageTeacher: React.FC = () => {
   useEffect(() => {
     const fetchUser = async () => {
       if (!id) return;
-      
+
       try {
         const res = await getUserById(id);
         if (res.status === 200 && res.data) {
@@ -144,7 +152,7 @@ const ManageTeacher: React.FC = () => {
           setImagePreview(data.image || null);
         }
       } catch (error) {
-        message.error('ไม่สามารถโหลดข้อมูลผู้ใช้ได้');
+        message.error("ไม่สามารถโหลดข้อมูลผู้ใช้ได้");
       }
     };
 
@@ -172,23 +180,53 @@ const ManageTeacher: React.FC = () => {
 
   const validateForm = () => {
     const {
-      Username, Password, Firstname, Lastname, Image, Address, Email, 
-      PhoneNumber, TitleID, PositionID, RoleID
+      Username,
+      Password,
+      Firstname,
+      Lastname,
+      Image,
+      Address,
+      Email,
+      PhoneNumber,
+      TitleID,
+      PositionID,
+      RoleID,
     } = formData;
 
     if (id) {
       // สำหรับการแก้ไข - ไม่ต้องตรวจสอบรหัสผ่าน
-      return Username && Firstname && Lastname && Email && Address &&
-             PhoneNumber && TitleID !== 0 && PositionID !== 0 && RoleID !== 0;
+      return (
+        Username &&
+        Firstname &&
+        Lastname &&
+        Email &&
+        Address &&
+        PhoneNumber &&
+        TitleID !== 0 &&
+        PositionID !== 0 &&
+        RoleID !== 0
+      );
     }
 
     // สำหรับการเพิ่มใหม่
-    return Username && Password && Firstname && Lastname && Image && 
-           Email && Address && PhoneNumber && TitleID !== 0 && PositionID !== 0 && RoleID !== 0;
+    return (
+      Username &&
+      Password &&
+      Firstname &&
+      Lastname &&
+      Image &&
+      Email &&
+      Address &&
+      PhoneNumber &&
+      TitleID !== 0 &&
+      PositionID !== 0 &&
+      RoleID !== 0
+    );
   };
 
   const handleUpdate = async () => {
-    const selectedTitle = title.find((t) => t.ID === formData.TitleID)?.Title || "";
+    const selectedTitle =
+      title.find((t) => t.ID === formData.TitleID)?.Title || "";
     const fullname = `${formData.Firstname} ${formData.Lastname}`;
 
     const result = await Swal.fire({
@@ -223,11 +261,12 @@ const ManageTeacher: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      message.warning('กรุณากรอกข้อมูลให้ครบทุกช่องก่อนบันทึก');
+      message.warning("กรุณากรอกข้อมูลให้ครบทุกช่องก่อนบันทึก");
       return;
     }
 
-    const selectedTitle = title.find((t) => t.ID === formData.TitleID)?.Title || "";
+    const selectedTitle =
+      title.find((t) => t.ID === formData.TitleID)?.Title || "";
     const fullname = `${formData.Firstname} ${formData.Lastname}`;
 
     if (id) {
@@ -258,7 +297,9 @@ const ManageTeacher: React.FC = () => {
       const res = await postCreateUser(dataToSubmit);
 
       if (res.status === 201 || res.status === 200) {
-        message.success(`ข้อมูล ${selectedTitle} ${fullname} ถูกบันทึกเรียบร้อยแล้ว`);
+        message.success(
+          `ข้อมูล ${selectedTitle} ${fullname} ถูกบันทึกเรียบร้อยแล้ว`
+        );
         navigate("/teacher-list");
       } else {
         message.error(res?.data?.error || "ไม่สามารถบันทึกข้อมูลได้");
@@ -271,91 +312,109 @@ const ManageTeacher: React.FC = () => {
   };
 
   return (
-    <div style={{ 
-      fontFamily: 'Sarabun, sans-serif',
-      padding: isMobile ? '16px' : '24px',
-      backgroundColor: '#f5f5f5',
-      minHeight: '100vh'
-    }}>
+    <div
+      style={{
+        fontFamily: "Sarabun, sans-serif",
+        padding: isMobile ? "16px" : "24px",
+        backgroundColor: "#f5f5f5",
+        minHeight: "100vh",
+      }}
+    >
       {/* Header */}
-      <div style={{ 
-        marginBottom: '24px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px'
-      }}>
+      <div
+        style={{
+          marginBottom: "24px",
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+        }}
+      >
         <div>
-          <h1 style={{ 
-            margin: 0, 
-            color: '#333',
-            fontSize: isMobile ? '20px' : '24px',
-            fontWeight: 'bold'
-          }}>
-            {id ? 'แก้ไขข้อมูลอาจารย์' : 'เพิ่มอาจารย์ใหม่'}
+          <h1
+            style={{
+              margin: 0,
+              color: "#333",
+              fontSize: isMobile ? "20px" : "24px",
+              fontWeight: "bold",
+            }}
+          >
+            {id ? "แก้ไขข้อมูลอาจารย์" : "เพิ่มอาจารย์ใหม่"}
           </h1>
-          <p style={{ 
-            margin: 0, 
-            color: '#666',
-            fontSize: '14px'
-          }}>
-            {id ? 'แก้ไขข้อมูลอาจารย์ผู้สอน' : 'กรอกข้อมูลอาจารย์ผู้สอนใหม่'}
+          <p
+            style={{
+              margin: 0,
+              color: "#666",
+              fontSize: "14px",
+            }}
+          >
+            {id ? "แก้ไขข้อมูลอาจารย์ผู้สอน" : "กรอกข้อมูลอาจารย์ผู้สอนใหม่"}
           </p>
         </div>
       </div>
 
       {/* Main Form */}
-      <Card 
-        style={{ 
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-          borderRadius: '8px'
+      <Card
+        style={{
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+          borderRadius: "8px",
         }}
       >
         <Form
           form={form}
           layout="vertical"
-          style={{ fontFamily: 'Sarabun, sans-serif' }}
+          style={{ fontFamily: "Sarabun, sans-serif" }}
         >
           {/* Profile Image Section */}
-          <Card 
-            size="small" 
+          <Card
+            size="small"
             title={
-              <span style={{ color: '#F26522', fontSize: '16px', fontWeight: 'bold' }}>
+              <span
+                style={{
+                  color: "#F26522",
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                }}
+              >
                 รูปภาพประจำตัว
               </span>
             }
-            style={{ marginBottom: '24px' }}
+            style={{ marginBottom: "24px" }}
           >
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: isMobile ? 'column' : 'row',
-              alignItems: 'center', 
-              gap: '16px' 
-            }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: isMobile ? "column" : "row",
+                alignItems: "center",
+                gap: "16px",
+              }}
+            >
               {imagePreview ? (
                 <img
                   src={imagePreview}
                   alt="Preview"
                   style={{
-                    width: '120px',
-                    height: '120px',
-                    borderRadius: '8px',
-                    objectFit: 'cover',
-                    border: '2px solid #f0f0f0'
+                    width: "120px",
+                    height: "120px",
+                    borderRadius: "8px",
+                    objectFit: "cover",
+                    border: "2px solid #f0f0f0",
                   }}
                 />
               ) : (
-                <div style={{
-                  width: '120px',
-                  height: '120px',
-                  borderRadius: '8px',
-                  backgroundColor: '#f0f0f0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '2px dashed #d9d9d9',
-                  color: '#999'
-                }}>
-                  <UserOutlined style={{ fontSize: '48px' }} />
+                <div
+                  style={{
+                    width: "120px",
+                    height: "120px",
+                    borderRadius: "8px",
+                    backgroundColor: "#f0f0f0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "2px dashed #d9d9d9",
+                    color: "#999",
+                  }}
+                >
+                  <UserOutlined style={{ fontSize: "48px" }} />
                 </div>
               )}
               <div style={{ flex: 1 }}>
@@ -375,18 +434,20 @@ const ManageTeacher: React.FC = () => {
                     }
                   }}
                   style={{
-                    padding: '8px 12px',
-                    border: '1px solid #d9d9d9',
-                    borderRadius: '4px',
-                    width: '100%',
-                    fontSize: '14px'
+                    padding: "8px 12px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: "4px",
+                    width: "100%",
+                    fontSize: "14px",
                   }}
                 />
-                <div style={{ 
-                  marginTop: '8px', 
-                  color: '#666', 
-                  fontSize: '12px' 
-                }}>
+                <div
+                  style={{
+                    marginTop: "8px",
+                    color: "#666",
+                    fontSize: "12px",
+                  }}
+                >
                   รองรับไฟล์ JPG, PNG ขนาดไม่เกิน 5MB
                 </div>
               </div>
@@ -394,14 +455,20 @@ const ManageTeacher: React.FC = () => {
           </Card>
 
           {/* Personal Information */}
-          <Card 
-            size="small" 
+          <Card
+            size="small"
             title={
-              <span style={{ color: '#F26522', fontSize: '16px', fontWeight: 'bold' }}>
+              <span
+                style={{
+                  color: "#F26522",
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                }}
+              >
                 ข้อมูลส่วนตัว
               </span>
             }
-            style={{ marginBottom: '24px' }}
+            style={{ marginBottom: "24px" }}
           >
             <Row gutter={[16, 16]}>
               <Col xs={24} md={12}>
@@ -409,7 +476,7 @@ const ManageTeacher: React.FC = () => {
                   <Select
                     placeholder="-- เลือกคำนำหน้า --"
                     value={formData.TitleID || undefined}
-                    onChange={(value) => handleChange('TitleID', value)}
+                    onChange={(value) => handleChange("TitleID", value)}
                     size="large"
                   >
                     {title.map((t) => (
@@ -425,7 +492,7 @@ const ManageTeacher: React.FC = () => {
                   <Select
                     placeholder="-- เลือกตำแหน่ง --"
                     value={formData.PositionID || undefined}
-                    onChange={(value) => handleChange('PositionID', value)}
+                    onChange={(value) => handleChange("PositionID", value)}
                     size="large"
                   >
                     {position.map((p) => (
@@ -444,7 +511,7 @@ const ManageTeacher: React.FC = () => {
                   <Input
                     placeholder="กรอกชื่อ"
                     value={formData.Firstname}
-                    onChange={(e) => handleChange('Firstname', e.target.value)}
+                    onChange={(e) => handleChange("Firstname", e.target.value)}
                     size="large"
                   />
                 </Form.Item>
@@ -454,7 +521,7 @@ const ManageTeacher: React.FC = () => {
                   <Input
                     placeholder="กรอกนามสกุล"
                     value={formData.Lastname}
-                    onChange={(e) => handleChange('Lastname', e.target.value)}
+                    onChange={(e) => handleChange("Lastname", e.target.value)}
                     size="large"
                   />
                 </Form.Item>
@@ -463,33 +530,65 @@ const ManageTeacher: React.FC = () => {
 
             <Row gutter={[16, 16]}>
               <Col xs={24} md={12}>
-                <Form.Item label="อีเมล" required>
+                <Form.Item
+                  label="อีเมล"
+                  required
+                  validateStatus={
+                    formData.Email &&
+                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.Email)
+                      ? "error"
+                      : ""
+                  }
+                  help={
+                    formData.Email &&
+                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.Email)
+                      ? "รูปแบบอีเมลไม่ถูกต้อง"
+                      : ""
+                  }
+                >
                   <Input
                     type="email"
                     placeholder="กรอกอีเมล"
                     value={formData.Email}
-                    onChange={(e) => handleChange('Email', e.target.value)}
+                    onChange={(e) => handleChange("Email", e.target.value)}
                     size="large"
                   />
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
-                <Form.Item label="หมายเลขโทรศัพท์" required>
+                <Form.Item
+                  label="หมายเลขโทรศัพท์"
+                  required
+                  validateStatus={
+                    formData.PhoneNumber &&
+                    !/^\d{9,10}$/.test(formData.PhoneNumber)
+                      ? "error"
+                      : ""
+                  }
+                  help={
+                    formData.PhoneNumber &&
+                    !/^\d{9,10}$/.test(formData.PhoneNumber)
+                      ? "เบอร์โทรต้องเป็นตัวเลข 10 หลัก"
+                      : ""
+                  }
+                >
                   <Input
                     placeholder="กรอกเบอร์โทรศัพท์"
                     value={formData.PhoneNumber}
-                    onChange={(e) => handleChange('PhoneNumber', e.target.value)}
+                    onChange={(e) =>
+                      handleChange("PhoneNumber", e.target.value)
+                    }
                     size="large"
                   />
                 </Form.Item>
               </Col>
-               <Col xs={24} md={12}>
+              <Col xs={24} md={12}>
                 <Form.Item label="ที่อยู่" required>
                   <Input
                     type="address"
                     placeholder="อาคารบริการ 1 ชั้น 4 ห้อง CPE01"
                     value={formData.Address}
-                    onChange={(e) => handleChange('Address', e.target.value)}
+                    onChange={(e) => handleChange("Address", e.target.value)}
                     size="large"
                   />
                 </Form.Item>
@@ -498,14 +597,20 @@ const ManageTeacher: React.FC = () => {
           </Card>
 
           {/* Academic Information */}
-          <Card 
-            size="small" 
+          <Card
+            size="small"
             title={
-              <span style={{ color: '#F26522', fontSize: '16px', fontWeight: 'bold' }}>
+              <span
+                style={{
+                  color: "#F26522",
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                }}
+              >
                 ข้อมูลทางวิชาการ
               </span>
             }
-            style={{ marginBottom: '24px' }}
+            style={{ marginBottom: "24px" }}
           >
             <Row gutter={[16, 16]}>
               <Col xs={24} md={12}>
@@ -515,7 +620,7 @@ const ManageTeacher: React.FC = () => {
                     value={selectedDepartmentID || undefined}
                     onChange={(value) => {
                       setSelectedDepartmentID(value);
-                      handleChange('MajorID', 0); // Reset major when department changes
+                      handleChange("MajorID", 0); // Reset major when department changes
                     }}
                     size="large"
                   >
@@ -532,7 +637,7 @@ const ManageTeacher: React.FC = () => {
                   <Select
                     placeholder="-- เลือกสาขา --"
                     value={formData.MajorID || undefined}
-                    onChange={(value) => handleChange('MajorID', value)}
+                    onChange={(value) => handleChange("MajorID", value)}
                     size="large"
                     disabled={!selectedDepartmentID}
                   >
@@ -552,7 +657,7 @@ const ManageTeacher: React.FC = () => {
                   <Select
                     placeholder="-- เลือกบทบาท --"
                     value={formData.RoleID || undefined}
-                    onChange={(value) => handleChange('RoleID', value)}
+                    onChange={(value) => handleChange("RoleID", value)}
                     size="large"
                   >
                     {roles.map((r) => (
@@ -567,14 +672,20 @@ const ManageTeacher: React.FC = () => {
           </Card>
 
           {/* Account Information */}
-          <Card 
-            size="small" 
+          <Card
+            size="small"
             title={
-              <span style={{ color: '#F26522', fontSize: '16px', fontWeight: 'bold' }}>
+              <span
+                style={{
+                  color: "#F26522",
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                }}
+              >
                 ข้อมูลบัญชีผู้ใช้
               </span>
             }
-            style={{ marginBottom: '24px' }}
+            style={{ marginBottom: "24px" }}
           >
             <Row gutter={[16, 16]}>
               <Col xs={24} md={12}>
@@ -582,21 +693,21 @@ const ManageTeacher: React.FC = () => {
                   <Input
                     placeholder="กรอกรหัสพนักงาน"
                     value={formData.Username}
-                    onChange={(e) => handleChange('Username', e.target.value)}
+                    onChange={(e) => handleChange("Username", e.target.value)}
                     size="large"
                   />
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
-                <Form.Item 
-                  label="รหัสผ่าน" 
+                <Form.Item
+                  label="รหัสผ่าน"
                   required={!id}
                   help={id ? "เว้นว่างหากไม่ต้องการเปลี่ยนรหัสผ่าน" : ""}
                 >
                   <Input.Password
                     placeholder={id ? "เว้นว่างหากไม่เปลี่ยน" : "กรอกรหัสผ่าน"}
                     value={formData.Password}
-                    onChange={(e) => handleChange('Password', e.target.value)}
+                    onChange={(e) => handleChange("Password", e.target.value)}
                     size="large"
                   />
                 </Form.Item>
@@ -605,17 +716,19 @@ const ManageTeacher: React.FC = () => {
           </Card>
 
           {/* Action Buttons */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: '16px'
-          }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexDirection: isMobile ? "column" : "row",
+              gap: "16px",
+            }}
+          >
             <Button
               size="large"
-              onClick={() => navigate('/teacher-list')}
-              style={{ width: isMobile ? '100%' : 'auto' }}
+              onClick={() => navigate("/teacher-list")}
+              style={{ width: isMobile ? "100%" : "auto" }}
             >
               ยกเลิก
             </Button>
@@ -627,23 +740,27 @@ const ManageTeacher: React.FC = () => {
               onClick={handleSubmit}
               loading={loading}
               disabled={!validateForm()}
-              style={{ 
-                backgroundColor: validateForm() ? '#F26522' : undefined,
-                borderColor: validateForm() ? '#F26522' : undefined,
-                width: isMobile ? '100%' : 'auto'
+              style={{
+                backgroundColor: validateForm() ? "#F26522" : undefined,
+                borderColor: validateForm() ? "#F26522" : undefined,
+                width: isMobile ? "100%" : "auto",
               }}
             >
-              {loading ? 'กำลังบันทึก...' : (id ? 'บันทึกการแก้ไข' : 'เพิ่มอาจารย์')}
+              {loading
+                ? "กำลังบันทึก..."
+                : id
+                ? "บันทึกการแก้ไข"
+                : "เพิ่มอาจารย์"}
             </Button>
           </div>
         </Form>
       </Card>
 
       {/* Help Text */}
-      <Card style={{ marginTop: '16px', backgroundColor: '#f8f9fa' }}>
-        <div style={{ fontSize: '12px', color: '#666' }}>
+      <Card style={{ marginTop: "16px", backgroundColor: "#f8f9fa" }}>
+        <div style={{ fontSize: "12px", color: "#666" }}>
           <strong>💡 คำแนะนำ:</strong>
-          <ul style={{ margin: '8px 0 0 20px', paddingLeft: 0 }}>
+          <ul style={{ margin: "8px 0 0 20px", paddingLeft: 0 }}>
             <li>กรอกข้อมูลให้ครบถ้วนและถูกต้อง</li>
             <li>รูปภาพควรเป็นภาพถ่ายที่ชัดเจน</li>
             <li>อีเมลจะใช้สำหรับการติดต่อและการรับรหัสผ่านใหม่</li>

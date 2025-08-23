@@ -106,6 +106,18 @@ const ManageCesCourse: React.FC = () => {
     if (uid) setUserID(parseInt(uid));
   }, []);
 
+  // ดึงชื่อจาก localStorage
+  useEffect(() => {
+    const year = localStorage.getItem("academicYear");
+    const term = localStorage.getItem("term");
+
+    if (year && term) {
+      const autoNameTable = `ปีการศึกษา ${year} เทอม ${term}`;
+      setSelectedNameTable(autoNameTable);
+      form.setFieldsValue({ nameTable: autoNameTable });
+    }
+  }, [form]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -412,6 +424,19 @@ const ManageCesCourse: React.FC = () => {
                   name="courseNameTh"
                   rules={[
                     { required: true, message: "กรุณากรอกชื่อวิชาภาษาไทย" },
+                    {
+                      validator: (_, value) => {
+                        if (!value) return Promise.resolve();
+                        // ตรวจสอบตัวอักษรไทยและเว้นวรรค
+                        return /^[ก-๙\s]+$/.test(value)
+                          ? Promise.resolve()
+                          : Promise.reject(
+                              new Error(
+                                "ชื่อวิชา (ภาษาไทย) ต้องเป็นตัวอักษรไทยเท่านั้น"
+                              )
+                            );
+                      },
+                    },
                   ]}
                 >
                   <Input placeholder="ระบบฐานข้อมูล" size="large" />
@@ -423,6 +448,19 @@ const ManageCesCourse: React.FC = () => {
                   name="courseNameEn"
                   rules={[
                     { required: true, message: "กรุณากรอกชื่อวิชาภาษาอังกฤษ" },
+                    {
+                      validator: (_, value) => {
+                        if (!value) return Promise.resolve();
+                        // ตรวจสอบตัวอักษรอังกฤษและเว้นวรรค
+                        return /^[A-Za-z\s]+$/.test(value)
+                          ? Promise.resolve()
+                          : Promise.reject(
+                              new Error(
+                                "ชื่อวิชา (ภาษาอังกฤษ) ต้องเป็นตัวอักษรอังกฤษเท่านั้น"
+                              )
+                            );
+                      },
+                    },
                   ]}
                 >
                   <Input placeholder="Database System" size="large" />
@@ -432,31 +470,22 @@ const ManageCesCourse: React.FC = () => {
 
             <Row gutter={[16, 16]}>
               <Col xs={24}>
-                <Form.Item label="ชื่อตารางเรียน" required>
-                  <Select
-                    placeholder="เลือกชื่อตารางเรียน"
-                    value={selectedNameTable || undefined}
-                    onChange={setSelectedNameTable}
+                <Form.Item
+                  label="ชื่อตารางเรียน"
+                  name="nameTable"
+                  rules={[
+                    { required: true, message: "กรุณากรอกชื่อตารางเรียน" },
+                  ]}
+                >
+                  <Input
+                    value={selectedNameTable}
+                    readOnly
                     size="large"
-                    allowClear
-                  >
-                    {nameTables.map((nameTable, index) => (
-                      <Option key={index} value={nameTable}>
-                        {nameTable}
-                      </Option>
-                    ))}
-                  </Select>
-                  {nameTables.length === 0 && (
-                    <div
-                      style={{
-                        marginTop: "8px",
-                        color: "#ff4d4f",
-                        fontSize: "12px",
-                      }}
-                    >
-                      ⚠️ ไม่พบตารางเรียนในระบบ กรุณาสร้างตารางเรียนก่อน
-                    </div>
-                  )}
+                    style={{
+                      backgroundColor: "#f0f0f0", // สีเทาอ่อน
+                      cursor: "not-allowed", // เปลี่ยน cursor เพื่อบอกว่าไม่สามารถแก้ไข
+                    }}
+                  />
                 </Form.Item>
               </Col>
             </Row>

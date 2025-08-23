@@ -127,7 +127,7 @@ const Sidebar: React.FC = () => {
       label: "จัดการรายวิชา",
       icon: "🖊️",
       path: "/manage-course",
-      roles: ["Admin", "Scheduler"],
+      roles: ["Admin"],
     },
     {
       id: 13,
