@@ -16,6 +16,8 @@ export interface CreateCourseInteface {
 }
 
 export interface AllCourseInterface {
+  MajorID: number;
+  DepartmentID: number;
   seq:number;
   id: number;
   code: string;
@@ -23,7 +25,9 @@ export interface AllCourseInterface {
   credit: string;
   category: string;
   instructors: string[];
+  MajorName:string;
 }
+
 
 export interface AllCourseinOpenCourseInterface {
   ID: number;
@@ -190,4 +194,29 @@ export interface TimeFixedCoursesInterface {
   Capacity: number;
 
   AllCoursesID: number;
+}
+
+// ---------------------------------------------------------------------------
+export interface DepartmentInterfaceForAllcourse {
+  ID: number;
+  DepartmentName: string;
+}
+
+export interface MajorInterfaceForAllcourse{
+  ID: number;
+  MajorName: string;
+  DepartmentID: number;
+  Department: DepartmentInterface;
+}
+
+export interface AllCourseInterfaceForAllcourse {
+  ID: number;
+  No: number;
+  CourseCode: string;
+  CourseName: string;
+  CourseType: string;
+  Credit: string;
+  CurriculumID: number;
+  Instructor: string[];       // แก้จาก string[] เป็น string
+  MajorName: MajorInterface; // แก้จาก string เป็น object
 }

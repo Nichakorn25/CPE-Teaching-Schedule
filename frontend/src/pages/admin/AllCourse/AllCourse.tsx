@@ -3,7 +3,12 @@ import {
   getAllCourses,
   deleteCourse,
 } from "../../../services/https/AdminPageServices";
-import { AllCourseInterface } from "../../../interfaces/Adminpage";
+import { getMajorOfDepathment } from "../../../services/https/GetService";
+import {
+  AllCourseInterfaceForAllcourse,
+  MajorInterfaceForAllcourse,
+  DepartmentInterfaceForAllcourse,
+} from "../../../interfaces/Adminpage";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { Button, Table, Input, Select, message } from "antd";
@@ -17,7 +22,7 @@ import type { ColumnsType } from "antd/es/table";
 
 const { Option } = Select;
 
-interface CourseTableData extends AllCourseInterface {
+interface CourseTableData extends AllCourseInterfaceForAllcourse {
   key: string;
   order: number;
 }
@@ -26,12 +31,43 @@ const AllCourse: React.FC = () => {
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [department, setDepartment] = useState<
+    DepartmentInterfaceForAllcourse[]
+  >([]);
+  const [major, setMajor] = useState<MajorInterfaceForAllcourse[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<number | "all">(
+    "all"
+  );
+  const [selectedMajor, setSelectedMajor] = useState<number | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [courseData, setCourseData] = useState<AllCourseInterface[]>([]);
+  const [courseData, setCourseData] = useState<
+    AllCourseInterfaceForAllcourse[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
 
+  useEffect(() => {
+    const fetchMajors = async () => {
+      try {
+        const res = await getMajorOfDepathment();
+        if (res.status === 200 && Array.isArray(res.data)) {
+          const majorData = res.data as MajorInterfaceForAllcourse[];
+          setMajor(majorData);
+
+          const uniqueDepartments = Array.from(
+            new Map(
+              majorData.map((m) => [m.Department.ID, m.Department])
+            ).values()
+          );
+          setDepartment(uniqueDepartments);
+        }
+      } catch (error) {
+        message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลสาขาวิชา");
+      }
+    };
+    fetchMajors();
+  }, []);
 
   // Monitor container width for responsive behavior
   useEffect(() => {
@@ -53,20 +89,18 @@ const AllCourse: React.FC = () => {
       const response = await getAllCourses();
 
       if (response.status === 200 && Array.isArray(response.data)) {
-        const mappedData: AllCourseInterface[] = response.data
+        const mappedData: AllCourseInterfaceForAllcourse[] = response.data
           .filter((item: any) => item.CourseName && item.CourseCode)
           .map((item: any, index: number) => ({
-            seq: index + 1,
-            id: item.ID,
-            code: item.CourseCode,
-            name: item.CourseName,
-            credit: item.Credit,
-            category: item.CourseType,
-            instructors: [
-              ...new Set(
-                item.Instructor?.split(",").map((name: string) => name.trim())
-              ),
-            ],
+            ID: item.ID,
+            No: index + 1,
+            CourseCode: item.CourseCode,
+            CourseName: item.CourseName,
+            Credit: item.Credit,
+            CourseType: item.CourseType,
+            CurriculumID: item.CurriculumID,
+            Instructor: item.Instructor || [],
+            MajorName: item.MajorName || {},
           }));
         setCourseData(mappedData);
       } else {
@@ -85,26 +119,35 @@ const AllCourse: React.FC = () => {
     fetchCourses();
   }, []);
 
-  // Filter data based on search text and category
-  const filteredCourses = courseData.filter((course) => {
-    const matchesSearch =
-      course.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-      course.code?.toLowerCase().includes(searchText.toLowerCase()) ||
-      course.instructors
-        ?.join(", ")
-        .toLowerCase()
-        .includes(searchText.toLowerCase());
+  const filteredCourses = courseData.filter(
+    (course: AllCourseInterfaceForAllcourse) => {
+      const matchesSearch =
+        course.CourseName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        course.CourseCode?.toLowerCase().includes(searchText.toLowerCase()) ||
+        course.Instructor?.some((instructor) =>
+          instructor.toLowerCase().includes(searchText.toLowerCase())
+        );
 
-    const matchesCategory =
-      selectedCategory === "all" || course.category === selectedCategory;
+      const matchesCategory =
+        selectedCategory === "all" || course.CourseType === selectedCategory;
 
-    return matchesSearch && matchesCategory;
-  });
+      const matchesDepartment =
+        selectedDepartment === "all" ||
+        course.MajorName?.DepartmentID === selectedDepartment;
+
+      const matchesMajor =
+        selectedMajor === "all" || course.MajorName?.ID === selectedMajor;
+
+      return (
+        matchesSearch && matchesCategory && matchesDepartment && matchesMajor
+      );
+    }
+  );
 
   // Convert data for table
   const tableData: CourseTableData[] = filteredCourses.map((course, index) => ({
     ...course,
-    key: course.id?.toString() || `${index}`,
+    key: course.ID?.toString() || `${index}`,
     order: (currentPage - 1) * pageSize + index + 1,
   }));
 
@@ -163,7 +206,7 @@ const AllCourse: React.FC = () => {
 
   // Get unique categories for filter
   const categories = [
-    ...new Set(courseData.map((course) => course.category).filter(Boolean)),
+    ...new Set(courseData.map((course) => course.CourseType).filter(Boolean)),
   ];
 
   // Responsive columns configuration
@@ -196,13 +239,13 @@ const AllCourse: React.FC = () => {
                   marginBottom: "2px",
                 }}
               >
-                {record.code}
+                {record.CourseCode}
               </div>
               <div style={{ fontWeight: "500", marginBottom: "2px" }}>
-                {record.name}
+                {record.CourseName}
               </div>
               <div style={{ color: "#666", fontSize: "9px" }}>
-                {record.credit} หน่วยกิต | {record.category}
+                {record.Credit} หน่วยกิต | {record.CourseType}
               </div>
             </div>
           ),
@@ -211,16 +254,16 @@ const AllCourse: React.FC = () => {
           title: "อาจารย์",
           key: "instructors",
           width: 100,
-          render: (_, record: CourseTableData) => (
+          render: (_, record: AllCourseInterfaceForAllcourse) => (
             <div style={{ fontSize: "10px", textAlign: "center" }}>
-              {record.instructors?.slice(0, 2).map((instructor, idx) => (
+              {record.Instructor?.slice(0, 2).map((instructor, idx) => (
                 <div key={idx} style={{ marginBottom: "2px" }}>
                   {instructor}
                 </div>
               ))}
-              {record.instructors && record.instructors.length > 2 && (
+              {record.Instructor && record.Instructor.length > 2 && (
                 <div style={{ color: "#666", fontSize: "9px" }}>
-                  +{record.instructors.length - 2} คนอื่น
+                  +{record.Instructor.length - 2} คนอื่น
                 </div>
               )}
             </div>
@@ -246,7 +289,7 @@ const AllCourse: React.FC = () => {
                   height: "20px",
                   lineHeight: "18px",
                 }}
-                onClick={() => navigate(`/manage-course/${record.id}`)}
+                onClick={() => navigate(`/manage-course/${record.ID}`)}
                 title="แก้ไขรายวิชา"
               >
                 แก้ไข
@@ -262,7 +305,7 @@ const AllCourse: React.FC = () => {
                   height: "20px",
                   lineHeight: "18px",
                 }}
-                onClick={() => handleDeleteCourse(record.id, record.name)}
+                onClick={() => handleDeleteCourse(record.ID, record.CourseName)}
                 title="ลบรายวิชา"
               >
                 ลบ
@@ -287,7 +330,7 @@ const AllCourse: React.FC = () => {
       },
       {
         title: "รหัสวิชา",
-        dataIndex: "code",
+        dataIndex: "CourseCode",
         key: "code",
         width: 100,
         render: (value: string) => (
@@ -296,7 +339,7 @@ const AllCourse: React.FC = () => {
       },
       {
         title: "ชื่อวิชา",
-        dataIndex: "name",
+        dataIndex: "CourseName",
         key: "name",
         width: isSmallScreen ? 180 : 220,
         render: (value: string) => (
@@ -305,7 +348,7 @@ const AllCourse: React.FC = () => {
       },
       {
         title: "หน่วยกิต",
-        dataIndex: "credit",
+        dataIndex: "Credit",
         key: "credit",
         width: 80,
         align: "center",
@@ -327,7 +370,7 @@ const AllCourse: React.FC = () => {
       },
       {
         title: "หมวดวิชา",
-        dataIndex: "category",
+        dataIndex: "CourseType",
         key: "category",
         width: isSmallScreen ? 120 : 140,
         align: "center",
@@ -338,7 +381,7 @@ const AllCourse: React.FC = () => {
     if (!isSmallScreen) {
       columns.push({
         title: "อาจารย์ผู้สอน",
-        dataIndex: "instructors",
+        dataIndex: "Instructor",
         key: "instructors",
         width: 200,
         render: (value: string[]) => (
@@ -366,7 +409,7 @@ const AllCourse: React.FC = () => {
               padding: "2px 8px",
               height: "auto",
             }}
-            onClick={() => navigate(`/manage-course/${record.id}`)}
+            onClick={() => navigate(`/manage-course/${record.ID}`)}
             title="แก้ไขรายวิชา"
           >
             แก้ไข
@@ -382,7 +425,7 @@ const AllCourse: React.FC = () => {
               padding: "2px 8px",
               height: "auto",
             }}
-            onClick={() => handleDeleteCourse(record.id, record.name)}
+            onClick={() => handleDeleteCourse(record.ID, record.CourseName)}
             title="ลบรายวิชา"
           >
             ลบ
@@ -461,6 +504,7 @@ const AllCourse: React.FC = () => {
             size="small"
           />
 
+          {/* หมวดวิชา */}
           <Select
             value={selectedCategory}
             onChange={setSelectedCategory}
@@ -477,6 +521,54 @@ const AllCourse: React.FC = () => {
                 {category}
               </Option>
             ))}
+          </Select>
+
+          {/* สำนักวิชา */}
+          <Select
+            value={selectedDepartment}
+            onChange={(value) => {
+              setSelectedDepartment(value);
+              setSelectedMajor("all"); // reset major เมื่อเปลี่ยนสำนักวิชา
+            }}
+            style={{
+              width: isMobile ? "100%" : 150,
+              fontFamily: "Sarabun, sans-serif",
+            }}
+            placeholder="เลือกสำนักวิชา"
+            size="small"
+          >
+            <Option value="all">ทุกสำนักวิชา</Option>
+            {department.map((dep) => (
+              <Option key={dep.ID} value={dep.ID}>
+                {dep.DepartmentName}
+              </Option>
+            ))}
+          </Select>
+
+          {/* สาขาวิชา */}
+          <Select
+            value={selectedMajor}
+            onChange={setSelectedMajor}
+            style={{
+              width: isMobile ? "100%" : 150,
+              fontFamily: "Sarabun, sans-serif",
+            }}
+            placeholder="เลือกสาขาวิชา"
+            size="small"
+            disabled={selectedDepartment === "all"}
+          >
+            <Option value="all">ทุกสาขา</Option>
+            {major
+              .filter(
+                (m) =>
+                  selectedDepartment === "all" ||
+                  m.DepartmentID === selectedDepartment
+              )
+              .map((m) => (
+                <Option key={m.ID} value={m.ID}>
+                  {m.MajorName}
+                </Option>
+              ))}
           </Select>
 
           {/* Pagination controls for desktop */}

@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
-import "./OfferedCoursespage.css";
-import { Button, Table, Input, Select } from "antd";
+import { Button, Table, Input, Select, Card } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
-import type { ColumnsType } from "antd/es/table";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-
+import type { ColumnsType } from "antd/es/table";
 import {
   getSchedulesBynameTable,
   deleteOfferedCourse,
 } from "../../../services/https/SchedulerPageService";
-
 import { OpenCourseInterface } from "../../../interfaces/Adminpage";
 
 const { Option } = Select;
@@ -556,65 +553,108 @@ const filteredCourses = useMemo(() => {
     },
   ];
 
-  return (
-    <div>
-      <h2>
-        รายวิชาที่เปิดสอน
-        {filteredCourses.length ? ` (${filteredCourses.length})` : ""}
-      </h2>
-
-      {/* ✅ เหลือแค่ จำนวนต่อหน้า + ค้นหา (ตัดดรอปดาวสำนักวิชา/สาขาออก) */}
+return (
+    <div
+      style={{
+        fontFamily: "Sarabun, sans-serif",
+        padding: "24px",
+        backgroundColor: "#f5f5f5",
+        minHeight: "100vh",
+      }}
+    >
+      {/* Header */}
       <div
         style={{
-          marginBottom: 16,
+          marginBottom: "24px",
           display: "flex",
-          flexWrap: "wrap",
-          gap: "10px",
           alignItems: "center",
+          gap: "16px",
         }}
       >
-        <span
-          style={{
-            fontSize: "12px",
-            color: "#666",
-            fontFamily: "Sarabun, sans-serif",
-          }}
-        >
-          รายการที่แสดง
-        </span>
-
-        <Select
-          value={String(pageSize)}
-          style={{ width: 70, fontFamily: "Sarabun, sans-serif" }}
-          size="small"
-          onChange={(value) => setPageSize(parseInt(value))}
-        >
-          <Option value="5">5</Option>
-          <Option value="10">10</Option>
-          <Option value="20">20</Option>
-          <Option value="50">50</Option>
-        </Select>
-
-        <Input
-          placeholder="ค้นหา..."
-          prefix={<SearchOutlined />}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ width: 220, fontFamily: "Sarabun, sans-serif" }}
-        />
+        <div>
+          <h1
+            style={{
+              margin: 0,
+              color: "#333",
+              fontSize: "24px",
+              fontWeight: "bold",
+            }}
+          >
+            รายวิชาที่เปิดสอน
+          </h1>
+          <p
+            style={{
+              margin: 0,
+              color: "#666",
+              fontSize: "14px",
+            }}
+          >
+            จัดการรายวิชาที่คุณเปิดสอน
+          </p>
+        </div>
       </div>
 
-      <Table
-        dataSource={getExpandedTableData()}
-        rowKey={(record) => record.key}
-        columns={columns}
-        loading={loading}
-        pagination={{
-          current: currentPage,
-          pageSize,
-          onChange: setCurrentPage,
+      {/* Main Card */}
+      <Card
+        style={{
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+          borderRadius: "8px",
         }}
-      />
+      >
+        {/* Controls */}
+        <div
+          style={{
+            marginBottom: 16,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "10px",
+            alignItems: "center",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "12px",
+              color: "#666",
+              fontFamily: "Sarabun, sans-serif",
+            }}
+          >
+            รายการที่แสดง
+          </span>
+
+          <Select
+            value={String(pageSize)}
+            style={{ width: 70, fontFamily: "Sarabun, sans-serif" }}
+            size="small"
+            onChange={(value) => setPageSize(parseInt(value))}
+          >
+            <Option value="5">5</Option>
+            <Option value="10">10</Option>
+            <Option value="20">20</Option>
+            <Option value="50">50</Option>
+          </Select>
+
+          <Input
+            placeholder="ค้นหา..."
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ width: 220, fontFamily: "Sarabun, sans-serif" }}
+          />
+        </div>
+
+        {/* Table */}
+        <Table
+          dataSource={getExpandedTableData()}
+          rowKey={(record) => record.key}
+          columns={columns}
+          loading={loading}
+          pagination={{
+            current: currentPage,
+            pageSize,
+            onChange: setCurrentPage,
+          }}
+        />
+      </Card>
     </div>
   );
 };

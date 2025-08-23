@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -68,8 +67,9 @@ func GetAllCourses(c *gin.Context) {
 			"CourseName": course.EnglishName,
 			"Credit":     fmt.Sprintf("%d (%d-%d-%d)", course.Credit.Unit, course.Credit.Lecture, course.Credit.Lab, course.Credit.Self),
 			"CourseType": course.TypeOfCourses.TypeName,
-			"Instructor": strings.Join(teachers, ", "),
+			"Instructor": teachers,
 			"CurriculumID": course.CurriculumID,
+			"MajorName":    course.Curriculum.Major,
 		})
 	}
 
