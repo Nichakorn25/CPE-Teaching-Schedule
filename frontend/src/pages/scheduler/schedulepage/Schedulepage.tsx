@@ -218,6 +218,9 @@ const Schedulepage: React.FC = () => {
  const [major_name, setmajor_name] = useState(() => 
     localStorage.getItem("major_name") || ""
   );
+  const [role, setrole] = useState(() => 
+    localStorage.getItem("role") || ""
+  );
 
   const [scheduleData, setScheduleData] = useState<ExtendedScheduleData[]>([]);
   const [filteredScheduleData, setFilteredScheduleData] = useState<ExtendedScheduleData[]>([]);
@@ -2165,6 +2168,7 @@ const exportScheduleToPDF = async () => {
 
       {/* Action Buttons */}
       <Flex gap="small" wrap style={{ marginBottom: "20px" }}>
+        {role === "Scheduler" && (
         <Button
           type="primary"
           style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
@@ -2183,6 +2187,8 @@ const exportScheduleToPDF = async () => {
         >
           อัปเดตตาราง
         </Button>
+        )}
+        {role === "Scheduler" && (
         <Button 
           onClick={() => {
             setLoadModalVisible(true);
@@ -2191,9 +2197,13 @@ const exportScheduleToPDF = async () => {
         >
           โหลด
         </Button>
+        )}
+        {role === "Scheduler" && (
         <Button onClick={handleReset}>
           รีเซต
         </Button>
+        )}
+        {role === "Scheduler" && (
         <Button
           type="primary"
           style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
@@ -2201,6 +2211,8 @@ const exportScheduleToPDF = async () => {
         >
           สร้างอัตโนมัติ
         </Button>
+        )}
+        {role === "Scheduler" && (
         <Button
           type="primary"
           style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
@@ -2209,6 +2221,7 @@ const exportScheduleToPDF = async () => {
           ส่งออก PDF
           {(filterTags.length > 0 || searchValue) && " (กรอง)"}
         </Button>
+        )}
       </Flex>
 
       {/* Schedule Table */}
