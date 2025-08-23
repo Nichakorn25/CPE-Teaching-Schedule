@@ -600,11 +600,13 @@
 }
 
 .term-form {
-  background: #ffff;
-  padding: 1.5rem;
-  border-left: 6px solid #1900ff;
-  border-radius: 6px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-left: 4px solid #1900ff;
 }
 
 .term-form .form-group {
@@ -659,9 +661,13 @@
 }
 
 .term-form.disabled-form {
-  background-color: #ffff;
-  padding: 1rem;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-left: 4px solid #1900ff;
 }
 
 .term-form.disabled-form input {
