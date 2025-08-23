@@ -34,15 +34,11 @@ import {
   deleteSchedulebyNametable,
   putupdateScheduleTime,
 } from "../../../services/https/SchedulerPageService";
+import html2canvas from "html2canvas";   // <<== ต้องเพิ่มบรรทัดนี้
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
 // =================== TYPE DEFINITIONS ===================
-declare module "jspdf" {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
 
 interface ClassInfo {
   subject: string;
@@ -219,6 +215,10 @@ const Schedulepage: React.FC = () => {
   const [term, setTerm] = useState(() => 
     localStorage.getItem("term") || ""
   );
+ const [major_name, setmajor_name] = useState(() => 
+    localStorage.getItem("major_name") || ""
+  );
+
   const [scheduleData, setScheduleData] = useState<ExtendedScheduleData[]>([]);
   const [filteredScheduleData, setFilteredScheduleData] = useState<ExtendedScheduleData[]>([]);
   const [allNameTable, setAllNameTable] = useState<string[]>([]);
@@ -1241,7 +1241,7 @@ const applyFilters = () => {
     }
 
     try {
-      const res = await postAutoGenerateSchedule(Number(academicYear), Number(term));
+      const res = await postAutoGenerateSchedule(Number(academicYear), Number(term), major_name);
       const nameTable = `ปีการศึกษา ${academicYear} เทอม ${term}`;
 
       if (res.status === 200 && res.data) {
@@ -1751,90 +1751,56 @@ const applyFilters = () => {
     );
   };
 
-  // =================== PDF EXPORT ===================
-  const exportScheduleToPDF = async () => {
-    if (scheduleData.length === 0) {
-      message.warning("ไม่มีข้อมูลให้ส่งออก กรุณาสร้างตารางก่อน");
-      return;
+const exportScheduleToPDF = async () => {
+  if (!tableRef.current) {
+    message.warning("ไม่มีข้อมูลให้ส่งออก กรุณาสร้างตารางก่อน");
+    return;
+  }
+
+  try {
+    const hide = message.loading("กำลังสร้าง PDF...", 0);
+
+    // จับภาพตารางเป็น canvas
+    const canvas = await html2canvas(tableRef.current, {
+      scale: 2, // ความคมชัด
+      useCORS: true,
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "mm", "a4"); // ✅ ใช้ new jsPDF()
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
     }
 
-    try {
-      const hide = message.loading("กำลังสร้าง PDF...", 0);
-      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-      
-      // Use filtered data for PDF export
-      const dataToExport = filteredScheduleData.length > 0 ? filteredScheduleData : scheduleData;
-      
-      const tableData: string[][] = [];
-      const headers = ["Day/Time", ...TIME_SLOTS];
+    const fileName = `schedule_printscreen_${new Date()
+      .toISOString()
+      .split("T")[0]}.pdf`;
 
-      dataToExport.forEach((dayData) => {
-        const row: string[] = [dayData.day || ""];
-        TIME_SLOTS.forEach((time) => {
-          const subCells = dayData.subCells || [];
-          const timeSlotIndex = timeSlotToSlotIndex(time);
-          
-          let content = "";
-
-          const relevantSubCells = subCells.filter(subCell => {
-            const subCellStartSlotIndex = Math.floor(subCell.position.startSlot);
-            const subCellEndSlotIndex = Math.floor(subCell.position.endSlot);
-            return subCellStartSlotIndex <= timeSlotIndex && subCellEndSlotIndex > timeSlotIndex;
-          });
-
-          if (relevantSubCells.length > 0) {
-            content = relevantSubCells.map(subCell => 
-              `${subCell.classData.subject}\n${subCell.classData.teacher}\n${subCell.classData.room}\n(${subCell.startTime}-${subCell.endTime})`
-            ).join("\n---\n");
-          } else {
-            const cellData = dayData[time];
-            if (cellData && typeof cellData === "object") {
-              if (cellData.isBreak) {
-                content = "พักเที่ยง";
-              } else if (cellData.classes && Array.isArray(cellData.classes) && cellData.classes.length > 0) {
-                content = cellData.classes.map((cls: ClassInfo) => 
-                  `${cls.subject}\n${cls.teacher}\n${cls.room}`
-                ).join("\n---\n");
-              } else {
-                content = "-";
-              }
-            } else {
-              content = "-";
-            }
-          }
-          row.push(content);
-        });
-        tableData.push(row);
-      });
-
-      if (typeof doc.autoTable === "function") {
-        // Add filter info to PDF title
-        let title = "ตารางเรียน";
-        if (filterTags.length > 0 || searchValue) {
-          title += " (กรองข้อมูล)";
-        }
-        
-        doc.autoTable({
-          head: [headers],
-          body: tableData,
-          startY: 10,
-          styles: { fontSize: 6, cellPadding: 1, halign: "center", valign: "middle" },
-          headStyles: { fillColor: [242, 101, 34], textColor: [255, 255, 255], fontSize: 7, fontStyle: "bold" },
-          columnStyles: { 0: { cellWidth: 20, fillColor: [248, 249, 250], fontStyle: "bold" } },
-          theme: "grid",
-        });
-      }
-
-      const fileName = `schedule_table_${filterTags.length > 0 ? 'filtered_' : ''}${new Date().toISOString().split("T")[0]}.pdf`;
-      doc.save(fileName);
-      hide();
-      message.success("ส่งออก PDF สำเร็จ!");
-    } catch (error) {
-      message.destroy();
-      console.error("Error generating PDF:", error);
-      message.error("เกิดข้อผิดพลาดในการสร้าง PDF");
-    }
-  };
+    pdf.save(fileName);
+    hide();
+    message.success("ส่งออก PDF สำเร็จ!");
+  } catch (error) {
+    message.destroy();
+    console.error("Error generating PDF:", error);
+    message.error("เกิดข้อผิดพลาดในการสร้าง PDF");
+  }
+};
 
   // =================== TABLE COLUMNS WITH FIXED ROW GROUPING ===================
   const columns: ColumnsType<ExtendedScheduleData> = [
