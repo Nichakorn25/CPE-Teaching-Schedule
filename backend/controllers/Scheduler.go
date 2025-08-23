@@ -43,35 +43,6 @@ func GetScheduleByNameTable(c *gin.Context) {
 	c.JSON(http.StatusOK, schedules)
 }
 
-func GetScheduleByNameTableAndUserID(c *gin.Context) {
-	userID := c.Param("userID")
-	nameTable := c.Param("nameTable")
-
-	var schedules []entity.Schedule
-	err := config.DB().
-		Joins("JOIN offered_courses ON offered_courses.id = schedules.offered_courses_id").
-		Preload("OfferedCourses.User").
-		Preload("OfferedCourses.Laboratory").
-		Preload("OfferedCourses.AllCourses.Curriculum").
-		Preload("OfferedCourses.AllCourses.AcademicYear").
-		Preload("OfferedCourses.AllCourses.Curriculum.Major").
-		Preload("OfferedCourses.AllCourses.TypeOfCourses").
-		Preload("OfferedCourses.AllCourses.Credit").
-		Preload("TimeFixedCourses").
-		Where("schedules.name_table = ? AND offered_courses.user_id = ?", nameTable, userID).
-		Find(&schedules).Error
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "ไม่สามารถดึงตารางสอนได้",
-			"details": err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, schedules)
-}
-
 // ////////////////////////////////////////////////////////// จัดตารางสอน
 func AutoGenerateSchedule(c *gin.Context) {
 	user_major := c.Query("major_name")
