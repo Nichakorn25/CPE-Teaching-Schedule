@@ -14,7 +14,7 @@ import {
   getAllCourses,
 } from "../../services/https/AdminPageServices";
 import { getOffered } from "../../services/https/GetService";
-import { getSchedulesBynameTableid } from "../../services/https/SchedulerPageService";
+import { getSchedulesBynameTable } from "../../services/https/SchedulerPageService";
 import {
   UserProfile,
   CourseIn,
@@ -76,7 +76,7 @@ const Dashboard: React.FC = () => {
       setCount(res.data.count);
     }
   };
-  
+
   useEffect(() => {
     if (academicYear && term) {
       getgetOffered({ year: academicYear, term });
@@ -97,11 +97,13 @@ const Dashboard: React.FC = () => {
     }
   }, [academicYear, term]);
 
+  const user_id = localStorage.getItem("user_id");
+
   const [allSchedule, setallSchedule] = useState<ScheduleInterface[]>([]);
   const getSchedules = async (nameTable: string) => {
-    const user_id = localStorage.getItem("user_id");
-    let res = await getSchedulesBynameTableid(nameTable, String(user_id));
+    let res = await getSchedulesBynameTable(nameTable);
     if (res && Array.isArray(res.data)) {
+      console.log("tableeee: ", res.data);
       setallSchedule(res.data);
     }
   };
@@ -121,48 +123,77 @@ const Dashboard: React.FC = () => {
   };
 
   const todayName = getThaiDayName();
-  const todaySchedule = allSchedule.filter(
-    (sch) => sch.DayOfWeek === todayName
-  );
+
+  const todaySchedule = allSchedule.filter((sch) => {
+    const isToday = sch.DayOfWeek === todayName;
+
+    const isUserMatched = sch.OfferedCourses?.AllCourses?.UserAllCourses?.some(
+      (uac) => uac.UserID.toString() === user_id
+    );
+
+    return isToday && isUserMatched;
+  });
 
   const mapToSchedule = (schedule: ScheduleInterface[]) => {
     const now = new Date();
-    const mapped = schedule.map((item) => {
-      const startDate = new Date(item.StartTime);
-      const start = startDate.toLocaleTimeString([], {
+
+    const grouped: { [section: string]: ScheduleInterface[] } = {};
+    schedule.forEach((item) => {
+      const section =
+        item.SectionNumber !== undefined && item.SectionNumber !== null
+          ? String(item.SectionNumber)
+          : "ไม่ทราบกลุ่มเรียน";
+
+      if (!grouped[section]) grouped[section] = [];
+      grouped[section].push(item);
+    });
+
+    const mapped = Object.entries(grouped).map(([section, items]) => {
+      items.sort(
+        (a, b) =>
+          new Date(a.StartTime).getTime() - new Date(b.StartTime).getTime()
+      );
+
+      const startDate = new Date(items[0].StartTime);
+      const endDate = new Date(items[items.length - 1].EndTime);
+
+      const startStr = startDate.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
       });
-      const end = new Date(item.EndTime).toLocaleTimeString([], {
+      const endStr = endDate.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
       });
+
+      const firstItem = items[0];
+
+      const isPast = now > endDate;
 
       return {
-        time: `${start}-${end}`,
-        section:
-          item.SectionNumber !== undefined && item.SectionNumber !== null
-            ? String(item.SectionNumber)
-            : "ไม่ทราบกลุ่มเรียน",
-        code: item.OfferedCourses?.AllCourses?.Code || "ไม่ทราบชื่อวิชา",
+        time: `${startStr}-${endStr}`,
+        section: section,
+        code: firstItem.OfferedCourses?.AllCourses?.Code || "ไม่ทราบชื่อวิชา",
         subject_Eng:
-          item.OfferedCourses?.AllCourses?.EnglishName || "ไม่ทราบชื่อวิชา",
+          firstItem.OfferedCourses?.AllCourses?.EnglishName ||
+          "ไม่ทราบชื่อวิชา",
         subject_Thai:
-          item.OfferedCourses?.AllCourses?.ThaiName || "ไม่ทราบชื่อวิชา",
-        room: item.OfferedCourses?.Laboratory?.Room || "ไม่ทราบห้อง",
-
+          firstItem.OfferedCourses?.AllCourses?.ThaiName || "ไม่ทราบชื่อวิชา",
+        room: firstItem.OfferedCourses?.Laboratory?.Room || "ไม่ทราบห้อง",
         _startDate: startDate,
+        isPast,
       };
     });
 
-    // sort ใกล้เคียงกับ now มากที่สุดขึ้นก่อน
-    mapped.sort((a, b) => {
-      const diffA = Math.abs(a._startDate.getTime() - now.getTime());
-      const diffB = Math.abs(b._startDate.getTime() - now.getTime());
-      return diffA - diffB;
-    });
+    // sort ตามความใกล้เคียงกับ now
+    mapped.sort(
+      (a, b) =>
+        Math.abs(a._startDate.getTime() - now.getTime()) -
+        Math.abs(b._startDate.getTime() - now.getTime())
+    );
+
     return mapped.map(({ _startDate, ...rest }) => rest);
   };
 
@@ -261,7 +292,9 @@ const Dashboard: React.FC = () => {
                       {item.section}
                     </p>
                   </div>
-                  <span className="schedule-day">วันนี้</span>
+                  <span className="schedule-day">
+                    {isPast ? "เสร็จสิ้น" : "วันนี้"}
+                  </span>
                 </div>
               );
             })
@@ -292,8 +325,11 @@ const Dashboard: React.FC = () => {
         )}
         <div className="profile-info">
           <p>
-            <strong>ชื่อ:</strong> {userid?.title_name} {userid?.firstname}{" "}
-            {userid?.lastname}
+            <strong>คำนำหน้า:</strong> {userid?.title_name}
+          </p>
+          <p>
+            <strong>ชื่อ:</strong>
+            {userid?.firstname} {userid?.lastname}
           </p>
           <p>
             <strong>ตำแหน่ง:</strong> {userid?.position}
@@ -406,13 +442,7 @@ const Dashboard: React.FC = () => {
               </div>
             )}
 
-            {currentRole === "Instructor" && (
-              <div className="schedule-grid">
-                <ScheduleCard schedules={displaySchedule} />
-              </div>
-            )}
-
-            {currentRole === "Scheduler" && (
+            {(currentRole === "Instructor" || currentRole === "Scheduler") && (
               <div className="schedule-grid">
                 <ScheduleCard schedules={displaySchedule} />
               </div>

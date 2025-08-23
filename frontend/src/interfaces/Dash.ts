@@ -70,6 +70,19 @@ export interface LaboratoryInterface {
   OfferedCourses?: OfferedCoursesInterface[];
 }
 
+export interface AllCoursesInterface {
+  ID?: number;
+
+  Code?: string;
+  EnglishName?: string;
+  ThaiName?: string;
+
+  OfferedCourses?: OfferedCoursesInterface[];
+  TimeFixedCourses?: TimeFixedCoursesInterface[];
+
+  UserAllCourses?: UserAllCoursesInterface[];
+}
+
 export interface UserInterface {
   ID?: number;
   Username: string;
@@ -83,6 +96,17 @@ export interface UserInterface {
   FirstPassword: boolean;
 
   OfferedCourses?: OfferedCoursesInterface[];
+  UserAllCourses?: UserAllCoursesInterface[];
+}
+
+export interface UserAllCoursesInterface {
+  ID?: number;
+
+  UserID: number;
+  User?: UserInterface;
+
+  AllCoursesID: number;
+  AllCourses?: AllCoursesInterface;
 }
 
 ///////////////////////////////////////////////////////////////////////

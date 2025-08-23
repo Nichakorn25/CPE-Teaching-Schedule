@@ -62,13 +62,6 @@ async function getSchedulesBynameTable(nameTable: string) {
     .catch((e) => e.response);
 }
 
-async function getSchedulesBynameTableid(nameTable: string, userid: string) {
-  return await axios
-    .get(`${apiUrl}/schedules/${nameTable}/${userid}`, requestOptions)
-    .then((res) => res)
-    .catch((e) => e.response);
-}
-
 async function getNameTable() {
   return await axios
     .get(`${apiUrl}/unique-nametables`, requestOptions)
@@ -132,8 +125,7 @@ export {
   upCreateOfferedCourse, //used
   deleteOfferedCourse, //used
 
-  getSchedulesBynameTable,
-  getSchedulesBynameTableid, 
+  getSchedulesBynameTable, 
   getNameTable, //used
   postAutoGenerateSchedule,
   putupdateScheduleTime,
