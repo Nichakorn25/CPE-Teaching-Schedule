@@ -459,77 +459,107 @@ const applyFilters = () => {
     };
   };
 
-  const addSubCellToDay = (day: string, subCell: SubCell) => {
-    setScheduleData(prevData => {
-      // หาแถวของวันที่เหมาะสม (ไม่มีการซ้อนทับเวลา)
-      const dayRows = prevData.filter(row => row.day === day);
+ const addSubCellToDay = (day: string, subCell: SubCell) => {
+  setScheduleData(prevData => {
+    // หาแถวของวันที่เหมาะสม (ไม่มีการซ้อนทับเวลา)
+    const dayRows = prevData.filter(row => row.day === day);
+    
+    let targetRowIndex = -1;
+    for (let i = 0; i < dayRows.length; i++) {
+      const row = dayRows[i];
+      const hasConflict = (row.subCells || []).some(existingSubCell => 
+        doSubCellsOverlap(subCell, existingSubCell)
+      );
       
-      let targetRowIndex = -1;
-      for (let i = 0; i < dayRows.length; i++) {
-        const row = dayRows[i];
-        const hasConflict = (row.subCells || []).some(existingSubCell => 
-          doSubCellsOverlap(subCell, existingSubCell)
-        );
-        
-        if (!hasConflict) {
-          targetRowIndex = prevData.findIndex(r => r.key === row.key);
-          break;
-        }
+      if (!hasConflict) {
+        targetRowIndex = prevData.findIndex(r => r.key === row.key);
+        break;
       }
+    }
+    
+    const newData = [...prevData];
+    
+    if (targetRowIndex !== -1) {
+      // เพิ่มลงในแถวที่มีอยู่
+      newData[targetRowIndex] = {
+        ...newData[targetRowIndex],
+        subCells: [...(newData[targetRowIndex].subCells || []), subCell]
+      };
       
-      const newData = [...prevData];
+      // ✅ เช็คว่าเพิ่มลงในแถวสุดท้ายของวันหรือไม่
+      const isLastRowOfDay = targetRowIndex === dayRows.length - 1;
+      const isEmptyRow = (newData[targetRowIndex].subCells || []).length === 1; // มี subcell แค่ตัวเดียวที่เพิ่งเพิ่ม
       
-      if (targetRowIndex !== -1) {
-        // เพิ่มลงในแถวที่มีอยู่
-        newData[targetRowIndex] = {
-          ...newData[targetRowIndex],
-          subCells: [...(newData[targetRowIndex].subCells || []), subCell]
-        };
-      } else {
-        // สร้างแถวใหม่
+      if (isLastRowOfDay && !isEmptyRow) {
+        // สร้าง empty row ใหม่หลังจากแถวสุดท้าย
         const dayIndex = DAYS.findIndex(d => d === day);
-        const newRowIndex = dayRows.length;
+        const newEmptyRowIndex = dayRows.length;
+        const newTotalRows = dayRows.length + 1;
         
-        const newRowData: ExtendedScheduleData = {
-          key: `day-${dayIndex}-row-${newRowIndex}`,
-          day: day,
-          dayIndex: dayIndex,
-          rowIndex: newRowIndex,
-          isFirstRowOfDay: newRowIndex === 0,
-          totalRowsInDay: newRowIndex + 1,
-          subCells: [subCell]
-        };
-        
-        // เพิ่ม time slots
-        TIME_SLOTS.forEach((time) => {
-          if (time === "12:00-13:00") {
-            newRowData[time] = {
-              content: "พักเที่ยง",
-              backgroundColor: "#FFF5E5",
-              isBreak: true,
-            };
-          } else {
-            newRowData[time] = {
-              content: "",
-              backgroundColor: "#f9f9f9",
-              classes: [],
-            };
-          }
-        });
-        
-        newData.push(newRowData);
+        const newEmptyRow = createEmptyDayRow(day, dayIndex, newEmptyRowIndex, newTotalRows);
+        newEmptyRow.isFirstRowOfDay = false;
         
         // อัปเดต totalRowsInDay ของแถวอื่นในวันเดียวกัน
         newData.forEach(row => {
           if (row.day === day) {
-            row.totalRowsInDay = (row.totalRowsInDay || 1) + 1;
+            row.totalRowsInDay = newTotalRows;
           }
         });
+        
+        newData.push(newEmptyRow);
       }
+    } else {
+      // สร้างแถวใหม่
+      const dayIndex = DAYS.findIndex(d => d === day);
+      const newRowIndex = dayRows.length;
+      const newTotalRows = dayRows.length + 2; // +2 เพราะจะมีแถวใหม่ + empty row
       
-      return newData;
-    });
-  };
+      const newRowData: ExtendedScheduleData = {
+        key: `day-${dayIndex}-row-${newRowIndex}`,
+        day: day,
+        dayIndex: dayIndex,
+        rowIndex: newRowIndex,
+        isFirstRowOfDay: newRowIndex === 0,
+        totalRowsInDay: newTotalRows,
+        subCells: [subCell]
+      };
+      
+      // เพิ่ม time slots
+      TIME_SLOTS.forEach((time) => {
+        if (time === "12:00-13:00") {
+          newRowData[time] = {
+            content: "พักเที่ยง",
+            backgroundColor: "#FFF5E5",
+            isBreak: true,
+          };
+        } else {
+          newRowData[time] = {
+            content: "",
+            backgroundColor: "#f9f9f9",
+            classes: [],
+          };
+        }
+      });
+      
+      newData.push(newRowData);
+      
+      // ✅ เพิ่ม empty row หลังจากแถวใหม่
+      const emptyRowIndex = newRowIndex + 1;
+      const emptyRow = createEmptyDayRow(day, dayIndex, emptyRowIndex, newTotalRows);
+      emptyRow.isFirstRowOfDay = false;
+      newData.push(emptyRow);
+      
+      // อัปเดต totalRowsInDay ของแถวอื่นในวันเดียวกัน
+      newData.forEach(row => {
+        if (row.day === day) {
+          row.totalRowsInDay = newTotalRows;
+        }
+      });
+    }
+    
+    return newData;
+  });
+};
 
   const removeSubCell = (subCellId: string) => {
     setScheduleData(prevData => {
@@ -540,57 +570,81 @@ const applyFilters = () => {
     });
   };
 
-  const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, newStartSlot: number) => {
-    setScheduleData(prevData => {
-      const newData = [...prevData];
-      let subCellToMove: SubCell | null = null;
-      
-      // ค้นหาและลบ sub-cell
-      for (const dayData of newData) {
-        const cellIndex = (dayData.subCells || []).findIndex(cell => cell.id === subCellId);
-        if (cellIndex !== -1) {
-          subCellToMove = dayData.subCells![cellIndex];
-          dayData.subCells!.splice(cellIndex, 1);
-          break;
-        }
+const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, newStartSlot: number) => {
+  setScheduleData(prevData => {
+    const newData = [...prevData];
+    let subCellToMove: SubCell | null = null;
+    
+    // ค้นหาและลบ sub-cell
+    for (const dayData of newData) {
+      const cellIndex = (dayData.subCells || []).findIndex(cell => cell.id === subCellId);
+      if (cellIndex !== -1) {
+        subCellToMove = dayData.subCells![cellIndex];
+        dayData.subCells!.splice(cellIndex, 1);
+        break;
       }
-      
-      if (!subCellToMove) return prevData;
-      
-      // คำนวณตำแหน่งใหม่
-      const duration = subCellToMove.position.endSlot - subCellToMove.position.startSlot;
-      const newEndSlot = newStartSlot + duration;
-      
-      // ตรวจสอบขอบเขต
-      if (newEndSlot > PURE_TIME_SLOTS.length) {
-        message.warning("ไม่สามารถวางที่ตำแหน่งนี้ได้ เนื่องจากเกินเวลาสิ้นสุด");
-        return prevData;
+    }
+    
+    if (!subCellToMove) return prevData;
+    
+    // คำนวดตำแหน่งใหม่
+    const duration = subCellToMove.position.endSlot - subCellToMove.position.startSlot;
+    const newEndSlot = newStartSlot + duration;
+    
+    // ตรวจสอบขอบเขต
+    if (newEndSlot > PURE_TIME_SLOTS.length) {
+      message.warning("ไม่สามารถวางที่ตำแหน่งนี้ได้ เนื่องจากเกินเวลาสิ้นสุด");
+      return prevData;
+    }
+    
+    // สร้าง sub-cell ที่ถูกย้าย
+    const movedSubCell: SubCell = {
+      ...subCellToMove,
+      day: targetRow.day,
+      startTime: slotIndexToTime(newStartSlot),
+      endTime: slotIndexToTime(newEndSlot),
+      position: {
+        startSlot: newStartSlot,
+        endSlot: newEndSlot
       }
-      
-      // สร้าง sub-cell ที่ถูกย้าย
-      const movedSubCell: SubCell = {
-        ...subCellToMove,
-        day: targetRow.day,
-        startTime: slotIndexToTime(newStartSlot),
-        endTime: slotIndexToTime(newEndSlot),
-        position: {
-          startSlot: newStartSlot,
-          endSlot: newEndSlot
-        }
-      };
-      
-      // เพิ่มลงในแถวเป้าหมาย
-      const targetRowIndex = newData.findIndex(r => r.key === targetRow.key);
-      if (targetRowIndex !== -1) {
-        if (!newData[targetRowIndex].subCells) {
-          newData[targetRowIndex].subCells = [];
-        }
-        newData[targetRowIndex].subCells!.push(movedSubCell);
+    };
+    
+    // เพิ่มลงในแถวเป้าหมาย
+    const targetRowIndex = newData.findIndex(r => r.key === targetRow.key);
+    if (targetRowIndex !== -1) {
+      if (!newData[targetRowIndex].subCells) {
+        newData[targetRowIndex].subCells = [];
       }
+      newData[targetRowIndex].subCells!.push(movedSubCell);
       
-      return newData;
-    });
-  };
+      // ✅ เช็คว่าย้ายไปแถวสุดท้ายหรือไม่ และสร้าง empty row ใหม่ถ้าจำเป็น
+      const dayRows = newData.filter(row => row.day === targetRow.day);
+      const isTargetLastRow = targetRowIndex === Math.max(...dayRows.map(row => newData.findIndex(r => r.key === row.key)));
+      const targetRowHasOnlyMovedCell = newData[targetRowIndex].subCells!.length === 1;
+      
+      if (isTargetLastRow && !targetRowHasOnlyMovedCell) {
+        // สร้าง empty row ใหม่
+        const dayIndex = DAYS.findIndex(d => d === targetRow.day);
+        const newEmptyRowIndex = dayRows.length;
+        const newTotalRows = dayRows.length + 1;
+        
+        const newEmptyRow = createEmptyDayRow(targetRow.day, dayIndex, newEmptyRowIndex, newTotalRows);
+        newEmptyRow.isFirstRowOfDay = false;
+        
+        // อัปเดต totalRowsInDay
+        newData.forEach(row => {
+          if (row.day === targetRow.day) {
+            row.totalRowsInDay = newTotalRows;
+          }
+        });
+        
+        newData.push(newEmptyRow);
+      }
+    }
+    
+    return newData;
+  });
+};
 
   // =================== DRAG & DROP HANDLERS ===================
   const handleSubCellDragStart = (e: React.DragEvent, subCell: SubCell) => {
@@ -863,294 +917,218 @@ const applyFilters = () => {
     );
   };
 
-  // =================== DATA TRANSFORMATION WITH ROW SEPARATION ===================
-  const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[]): ExtendedScheduleData[] => {
-    console.log('🔍 Raw schedules received:', rawSchedules.length, rawSchedules);
+  // เพิ่ม helper function สำหรับสร้าง empty row
+const createEmptyDayRow = (day: string, dayIndex: number, rowIndex: number, totalRowsInDay: number): ExtendedScheduleData => {
+  const emptyRowData: ExtendedScheduleData = {
+    key: `day-${dayIndex}-row-${rowIndex}`,
+    day: day,
+    dayIndex: dayIndex,
+    rowIndex: rowIndex,
+    isFirstRowOfDay: rowIndex === 0,
+    totalRowsInDay: totalRowsInDay,
+    subCells: []
+  };
+  
+  // เพิ่ม time slots
+  TIME_SLOTS.forEach((time) => {
+    if (time === "12:00-13:00") {
+      emptyRowData[time] = {
+        content: "พักเที่ยง",
+        backgroundColor: "#FFF5E5",
+        isBreak: true,
+      };
+    } else {
+      emptyRowData[time] = {
+        content: "",
+        backgroundColor: "#f9f9f9",
+        classes: [],
+      };
+    }
+  });
+  
+  return emptyRowData;
+};
+
+// =================== DATA TRANSFORMATION WITH ROW SEPARATION ===================
+const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[]): ExtendedScheduleData[] => {
+  console.log('🔍 Raw schedules received:', rawSchedules.length, rawSchedules);
+  
+  const result: ExtendedScheduleData[] = [];
+  
+  DAYS.forEach((day, dayIndex) => {
+    const daySchedules = rawSchedules.filter(item => item.DayOfWeek === day);
+    console.log(`📅 Day ${day}: Found ${daySchedules.length} schedules`);
     
-    const result: ExtendedScheduleData[] = [];
-    
-    DAYS.forEach((day, dayIndex) => {
-      const daySchedules = rawSchedules.filter(item => item.DayOfWeek === day);
-      console.log(`📅 Day ${day}: Found ${daySchedules.length} schedules`);
+    if (daySchedules.length === 0) {
+      // ไม่มีวิชา -> สร้าง 2 แถว (1 แถวปกติ + 1 แถวว่าง)
+      const firstRow = createEmptyDayRow(day, dayIndex, 0, 2);
+      const secondRow = createEmptyDayRow(day, dayIndex, 1, 2);
       
-      if (daySchedules.length === 0) {
-        // ไม่มีวิชา -> สร้าง 1 แถวว่าง
-        const emptyDayData: ExtendedScheduleData = {
-          key: `day-${dayIndex}-row-0`,
+      // แถวที่ 2 ไม่ใช่ first row ของวัน
+      secondRow.isFirstRowOfDay = false;
+      
+      result.push(firstRow, secondRow);
+    } else {
+      // แปลงข้อมูลเป็น SubCells โดยใช้ interface ที่ถูกต้อง
+      const subCells: SubCell[] = daySchedules.map((item: ScheduleInterface, index: number) => {
+        // ... (โค้ดเดิมสำหรับสร้าง subCells - ไม่เปลี่ยน) ...
+        console.log(`\n🔍 Processing schedule ${index + 1}/${daySchedules.length} for ${day}:`, {
+          id: item.ID,
+          nameTable: item.NameTable,
+          section: item.SectionNumber,
+          dayOfWeek: item.DayOfWeek,
+          startTime: item.StartTime,
+          endTime: item.EndTime,
+          offeredCoursesId: item.OfferedCoursesID,
+        });
+
+        // ดึงข้อมูลห้องจาก TimeFixedCourses หรือ Laboratory
+        const getRoomInfo = (schedule: ScheduleInterface): string => {
+          if (schedule.TimeFixedCourses && schedule.TimeFixedCourses.length > 0) {
+            const matchingFixedCourse = schedule.TimeFixedCourses.find(
+              tc => tc.Section === schedule.SectionNumber && 
+                   tc.ScheduleID === schedule.ID &&
+                   tc.RoomFix && tc.RoomFix.trim() !== ""
+            );
+            
+            if (matchingFixedCourse?.RoomFix) {
+              return matchingFixedCourse.RoomFix;
+            }
+          }
+          
+          if (schedule.OfferedCourses?.Laboratory?.Room && 
+              schedule.OfferedCourses.Laboratory.Room.trim() !== "") {
+            return schedule.OfferedCourses.Laboratory.Room;
+          }
+          
+          return "TBA";
+        };
+
+        // ดึงข้อมูลชั้นปีจาก AcademicYearID
+        const getStudentYear = (schedule: ScheduleInterface): string => {
+          const academicYearId = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.AcademicYearID;
+          
+          if (academicYearId && academicYearId >= 1) {
+            return academicYearId.toString();
+          }
+          
+          const level = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.Level;
+          if (level && level !== 'เรียนได้ทุกชั้นปี') {
+            const yearMatch = level.match(/ปีที่\s*(\d+)/);
+            if (yearMatch) {
+              const year = parseInt(yearMatch[1]);
+              if (year >= 1) {
+                return year.toString();
+              }
+            }
+            
+            const numLevel = parseInt(level);
+            if (!isNaN(numLevel) && numLevel >= 1) {
+              return numLevel.toString();
+            }
+          }
+          
+          return "1";
+        };
+
+        const classInfo: ClassInfo = {
+          subject: item.OfferedCourses?.AllCourses?.ThaiName ||
+                  item.OfferedCourses?.AllCourses?.EnglishName ||
+                  item.OfferedCourses?.AllCourses?.Code ||
+                  "ไม่ทราบชื่อ",
+          teacher: item.OfferedCourses?.User ? 
+                  `${item.OfferedCourses.User.Firstname || ""} ${item.OfferedCourses.User.Lastname || ""}`.trim() ||
+                  "ไม่ระบุอาจารย์" :
+                  "ไม่ระบุอาจารย์",
+          room: getRoomInfo(item),
+          section: item.SectionNumber?.toString() || "",
+          courseCode: item.OfferedCourses?.AllCourses?.Code || "",
+          studentYear: getStudentYear(item),
+        };
+
+        const getTimeString = (time: string | Date): string => {
+          if (typeof time === 'string') {
+            if (time.includes('T')) {
+              return time.substring(11, 16);
+            }
+            return time.length > 5 ? time.substring(0, 5) : time;
+          } else if (time instanceof Date) {
+            return time.toTimeString().substring(0, 5);
+          }
+          return "00:00";
+        };
+
+        const startTime = getTimeString(item.StartTime);
+        const endTime = getTimeString(item.EndTime);
+        
+        return createSubCell(classInfo, day, startTime, endTime, item.ID);
+      });
+
+      console.log(`📊 Created ${subCells.length} SubCells for ${day}`);
+
+      // แยกวิชาที่ซ้อนกันออกเป็นแถวต่าง ๆ
+      const rowGroups = separateOverlappingSubCells(subCells);
+      console.log(`🗂️ Separated into ${rowGroups.length} row groups for ${day}`);
+      
+      // ✅ สำคัญ: เพิ่ม empty row หลังจาก rowGroups ที่มีข้อมูลแล้ว
+      const totalRowsForThisDay = rowGroups.length + 1; // +1 สำหรับ empty row
+      
+      rowGroups.forEach((rowSubCells, rowIndex) => {
+        const dayData: ExtendedScheduleData = {
+          key: `day-${dayIndex}-row-${rowIndex}`,
           day: day,
           dayIndex: dayIndex,
-          rowIndex: 0,
-          isFirstRowOfDay: true,
-          totalRowsInDay: 1,
-          subCells: []
+          rowIndex: rowIndex,
+          isFirstRowOfDay: rowIndex === 0,
+          totalRowsInDay: totalRowsForThisDay,
+          subCells: rowSubCells
         };
-        
+
+        // Fill time slots
         TIME_SLOTS.forEach((time) => {
-          if (time === "12:00-13:00") {
-            emptyDayData[time] = {
+          const matched = rowSubCells.filter(subCell => 
+            isTimeInSlot(subCell.startTime, subCell.endTime, time)
+          );
+
+          if (matched.length > 0) {
+            dayData[time] = {
+              backgroundColor: getRandomBackgroundColor(),
+              classes: matched.map(subCell => ({
+                subject: subCell.classData.subject,
+                teacher: subCell.classData.teacher,
+                room: subCell.classData.room,
+              })),
+            };
+          } else if (time === "12:00-13:00") {
+            dayData[time] = {
               content: "พักเที่ยง",
               backgroundColor: "#FFF5E5",
               isBreak: true,
             };
           } else {
-            emptyDayData[time] = {
+            dayData[time] = {
               content: "",
               backgroundColor: "#f9f9f9",
               classes: [],
             };
           }
         });
-        
-        result.push(emptyDayData);
-      } else {
-        // แปลงข้อมูลเป็น SubCells โดยใช้ interface ที่ถูกต้อง
-        const subCells: SubCell[] = daySchedules.map((item: ScheduleInterface, index: number) => {
-          console.log(`\n🔍 Processing schedule ${index + 1}/${daySchedules.length} for ${day}:`, {
-            id: item.ID,
-            nameTable: item.NameTable,
-            section: item.SectionNumber,
-            dayOfWeek: item.DayOfWeek,
-            startTime: item.StartTime,
-            endTime: item.EndTime,
-            offeredCoursesId: item.OfferedCoursesID,
-            offeredCourses: item.OfferedCourses ? {
-              id: item.OfferedCourses.ID,
-              year: item.OfferedCourses.Year,
-              term: item.OfferedCourses.Term,
-              section: item.OfferedCourses.Section,
-              allCourses: item.OfferedCourses.AllCourses ? {
-                id: item.OfferedCourses.AllCourses.ID,
-                code: item.OfferedCourses.AllCourses.Code,
-                thaiName: item.OfferedCourses.AllCourses.ThaiName,
-                englishName: item.OfferedCourses.AllCourses.EnglishName
-              } : null,
-              user: item.OfferedCourses.User ? {
-                id: item.OfferedCourses.User.ID,
-                firstname: item.OfferedCourses.User.Firstname,
-                lastname: item.OfferedCourses.User.Lastname
-              } : null,
-              laboratory: item.OfferedCourses.Laboratory ? {
-                id: item.OfferedCourses.Laboratory.ID,
-                room: item.OfferedCourses.Laboratory.Room,
-                building: item.OfferedCourses.Laboratory.Building
-              } : null
-            } : null,
-            timeFixedCourses: item.TimeFixedCourses ? item.TimeFixedCourses.map(tc => ({
-              id: tc.ID,
-              section: tc.Section,
-              roomFix: tc.RoomFix,
-              dayOfWeek: tc.DayOfWeek,
-              scheduleId: tc.ScheduleID
-            })) : []
-          });
 
-          // ดึงข้อมูลห้องจาก TimeFixedCourses หรือ Laboratory
-          const getRoomInfo = (schedule: ScheduleInterface): string => {
-            console.log('🏠 Getting room info for:', {
-              scheduleId: schedule.ID,
-              section: schedule.SectionNumber,
-              offeredCourses: schedule.OfferedCourses,
-              timeFixedCourses: schedule.TimeFixedCourses,
-              laboratory: schedule.OfferedCourses?.Laboratory
-            });
+        result.push(dayData);
+      });
 
-            // 1. ลำดับความสำคัญ: TimeFixedCourses.RoomFix (สำหรับวิชาที่กำหนดเวลาแล้ว)
-            if (schedule.TimeFixedCourses && schedule.TimeFixedCourses.length > 0) {
-              console.log('🔍 Checking TimeFixedCourses:', schedule.TimeFixedCourses);
-              
-              // หาห้องจาก TimeFixedCourses ที่ตรงกับ section และ schedule นี้
-              const matchingFixedCourse = schedule.TimeFixedCourses.find(
-                tc => tc.Section === schedule.SectionNumber && 
-                     tc.ScheduleID === schedule.ID &&
-                     tc.RoomFix && tc.RoomFix.trim() !== ""
-              );
-              
-              if (matchingFixedCourse?.RoomFix) {
-                console.log('✅ Found room from matching TimeFixedCourse:', matchingFixedCourse.RoomFix);
-                return matchingFixedCourse.RoomFix;
-              }
-              
-              // ถ้าไม่มีที่ตรงทั้ง section และ scheduleId ให้หาแค่ section
-              const sectionMatch = schedule.TimeFixedCourses.find(
-                tc => tc.Section === schedule.SectionNumber && 
-                     tc.RoomFix && tc.RoomFix.trim() !== ""
-              );
-              
-              if (sectionMatch?.RoomFix) {
-                console.log('✅ Found room from section match:', sectionMatch.RoomFix);
-                return sectionMatch.RoomFix;
-              }
-              
-              // สุดท้าย เอาอันแรกที่มีห้อง
-              const firstAvailable = schedule.TimeFixedCourses.find(
-                tc => tc.RoomFix && tc.RoomFix.trim() !== ""
-              );
-              
-              if (firstAvailable?.RoomFix) {
-                console.log('✅ Found room from first available TimeFixedCourse:', firstAvailable.RoomFix);
-                return firstAvailable.RoomFix;
-              }
-            }
-            
-            // 2. ดูจาก OfferedCourses.Laboratory (สำหรับวิชาปฏิบัติการ)
-            if (schedule.OfferedCourses?.Laboratory?.Room && 
-                schedule.OfferedCourses.Laboratory.Room.trim() !== "") {
-              console.log('✅ Found room from Laboratory:', schedule.OfferedCourses.Laboratory.Room);
-              return schedule.OfferedCourses.Laboratory.Room;
-            }
-            
-            // 3. ถ้าไม่มีทั้งสองแหล่ง ให้ใช้ค่าเริ่มต้น
-            console.log('❌ No room found, using default');
-            return "TBA"; // หรือ "ไม่ระบุห้อง"
-          };
+      // ✅ เพิ่ม empty row หลังจากแถวที่มีข้อมูลแล้ว
+      const emptyRowIndex = rowGroups.length;
+      const emptyRow = createEmptyDayRow(day, dayIndex, emptyRowIndex, totalRowsForThisDay);
+      emptyRow.isFirstRowOfDay = false; // empty row ไม่ใช่แถวแรกของวัน
+      result.push(emptyRow);
+    }
+  });
 
-          // ดึงข้อมูลชั้นปีจาก AcademicYearID (ส่งคืนเป็นตัวเลขเท่านั้น)
-          const getStudentYear = (schedule: ScheduleInterface): string => {
-            // ใช้ any เพื่อหลีกเลี่ยง TypeScript error แต่ API มีข้อมูลจริง
-            const academicYearId = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.AcademicYearID;
-            
-            if (academicYearId && academicYearId >= 1) {
-              // ส่งคืนเป็นตัวเลขเพื่อให้ตรงกับ filter
-              console.log(`📚 Found AcademicYearID: ${academicYearId} for schedule ${schedule.ID}`);
-              return academicYearId.toString();
-            }
-            
-            // Alternative: check Level field
-            const level = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.Level;
-            if (level && level !== 'เรียนได้ทุกชั้นปี') {
-              // ถ้า Level เป็น "ปีที่ X" ให้แปลงเป็นตัวเลข
-              const yearMatch = level.match(/ปีที่\s*(\d+)/);
-              if (yearMatch) {
-                const year = parseInt(yearMatch[1]);
-                if (year >= 1) {
-                  console.log(`📚 Found Level: ${level} -> ${year} for schedule ${schedule.ID}`);
-                  return year.toString();
-                }
-              }
-              
-              // ถ้าเป็นตัวเลขอยู่แล้ว
-              const numLevel = parseInt(level);
-              if (!isNaN(numLevel) && numLevel >= 1) {
-                console.log(`📚 Found numeric Level: ${level} for schedule ${schedule.ID}`);
-                return numLevel.toString();
-              }
-            }
-            
-            console.log(`⚠️ No valid student year found for schedule ${schedule.ID}, using default: 1`);
-            return "1"; // ค่าเริ่มต้นเป็นปี 1
-          };
-
-          const classInfo: ClassInfo = {
-            subject: item.OfferedCourses?.AllCourses?.ThaiName ||
-                    item.OfferedCourses?.AllCourses?.EnglishName ||
-                    item.OfferedCourses?.AllCourses?.Code ||
-                    "ไม่ทราบชื่อ",
-            teacher: item.OfferedCourses?.User ? 
-                    `${item.OfferedCourses.User.Firstname || ""} ${item.OfferedCourses.User.Lastname || ""}`.trim() ||
-                    "ไม่ระบุอาจารย์" :
-                    "ไม่ระบุอาจารย์",
-            room: getRoomInfo(item),
-            section: item.SectionNumber?.toString() || "",
-            courseCode: item.OfferedCourses?.AllCourses?.Code || "",
-            studentYear: getStudentYear(item), // เก็บเป็นตัวเลข
-          };
-
-          const getTimeString = (time: string | Date): string => {
-            if (typeof time === 'string') {
-              // ถ้าเป็น string แล้วมี T ให้เอาเฉพาะส่วนเวลา
-              if (time.includes('T')) {
-                return time.substring(11, 16);
-              }
-              return time.length > 5 ? time.substring(0, 5) : time;
-            } else if (time instanceof Date) {
-              return time.toTimeString().substring(0, 5);
-            }
-            return "00:00";
-          };
-
-          const startTime = getTimeString(item.StartTime);
-          const endTime = getTimeString(item.EndTime);
-          
-          console.log(`✅ Final classInfo for schedule ${item.ID}:`, {
-            subject: classInfo.subject,
-            teacher: classInfo.teacher,
-            room: classInfo.room,
-            section: classInfo.section,
-            courseCode: classInfo.courseCode,
-            studentYear: classInfo.studentYear,
-            day: item.DayOfWeek,
-            startTime,
-            endTime
-          });
-          
-          return createSubCell(classInfo, day, startTime, endTime, item.ID);
-        });
-
-        console.log(`📊 Created ${subCells.length} SubCells for ${day}`);
-
-        // แยกวิชาที่ซ้อนกันออกเป็นแถวต่าง ๆ
-        const rowGroups = separateOverlappingSubCells(subCells);
-        console.log(`🗂️ Separated into ${rowGroups.length} row groups for ${day}`);
-        
-        // ✅ แก้ไข: กำหนด totalRowsInDay ให้ถูกต้องก่อนสร้าง dayData
-        const totalRowsForThisDay = rowGroups.length;
-        
-        rowGroups.forEach((rowSubCells, rowIndex) => {
-          const dayData: ExtendedScheduleData = {
-            key: `day-${dayIndex}-row-${rowIndex}`,
-            day: day,
-            dayIndex: dayIndex,
-            rowIndex: rowIndex,
-            isFirstRowOfDay: rowIndex === 0,
-            totalRowsInDay: totalRowsForThisDay,  // ✅ ใช้ค่าที่คำนวณแล้ว
-            subCells: rowSubCells
-          };
-
-          // Fill time slots
-          TIME_SLOTS.forEach((time) => {
-            const matched = rowSubCells.filter(subCell => 
-              isTimeInSlot(subCell.startTime, subCell.endTime, time)
-            );
-
-            if (matched.length > 0) {
-              dayData[time] = {
-                backgroundColor: getRandomBackgroundColor(),
-                classes: matched.map(subCell => ({
-                  subject: subCell.classData.subject,
-                  teacher: subCell.classData.teacher,
-                  room: subCell.classData.room,
-                })),
-              };
-            } else if (time === "12:00-13:00") {
-              dayData[time] = {
-                content: "พักเที่ยง",
-                backgroundColor: "#FFF5E5",
-                isBreak: true,
-              };
-            } else {
-              dayData[time] = {
-                content: "",
-                backgroundColor: "#f9f9f9",
-                classes: [],
-              };
-            }
-          });
-
-          result.push(dayData);
-        });
-      }
-    });
-
-    console.log(`📋 Final result: ${result.length} rows total`);
-    
-    // ✅ เพิ่ม debug สำหรับตรวจสอบ rowSpan
-    result.forEach((row, index) => {
-      console.log(`Row ${index}: ${row.day} (${row.rowIndex}) - isFirst: ${row.isFirstRowOfDay}, totalRows: ${row.totalRowsInDay}`);
-    });
-    
-    return result;
-  };
-
+  console.log(`📋 Final result: ${result.length} rows total`);
+  
+  return result;
+};
   // =================== FUNCTION TO SEPARATE OVERLAPPING SUB-CELLS ===================
   const separateOverlappingSubCells = (subCells: SubCell[]): SubCell[][] => {
     if (subCells.length === 0) return [[]];
