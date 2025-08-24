@@ -1190,24 +1190,37 @@ const applyFilters = () => {
   };
 
   // =================== FUNCTION TO CHECK SUB-CELL OVERLAP ===================
-  const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
-    const start1 = subCell1.position.startSlot;
-    const end1 = subCell1.position.endSlot;
-    const start2 = subCell2.position.startSlot;
-    const end2 = subCell2.position.endSlot;
-    
-    // ตรวจสอบการทับซ้อนของเวลา
-    const overlap = !(end1 <= start2 || end2 <= start1);
-    
-    if (overlap) {
-      console.log(`⚠️ Overlap detected:`, {
-        subCell1: `${subCell1.classData.subject} (${start1}-${end1})`,
-        subCell2: `${subCell2.classData.subject} (${start2}-${end2})`
-      });
-    }
-    
-    return overlap;
-  };
+  // แก้ไขฟังก์ชัน doSubCellsOverlap - เพิ่มการตรวจสอบข้อมูลซ้ำที่แม่นยำ
+const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
+  // ถ้าเป็น SubCell เดียวกัน (ID เดียวกัน) ให้ return false
+  if (subCell1.id === subCell2.id) {
+    return false;
+  }
+
+  // ตรวจสอบข้อมูลซ้ำ: ต้องเหมือนกันทุกอย่าง
+  const isDuplicate = 
+    subCell1.classData.subject === subCell2.classData.subject &&
+    subCell1.classData.section === subCell2.classData.section &&
+    subCell1.classData.studentYear === subCell2.classData.studentYear &&
+    subCell1.classData.teacher === subCell2.classData.teacher &&
+    subCell1.startTime === subCell2.startTime &&
+    subCell1.endTime === subCell2.endTime &&
+    subCell1.day === subCell2.day;
+
+  if (isDuplicate) {
+    return false; // ถือว่าไม่ซ้อนทับ เพื่อป้องกัน infinite loop
+  }
+
+  // ตรวจสอบการทับซ้อนของเวลาปกติ
+  const start1 = subCell1.position.startSlot;
+  const end1 = subCell1.position.endSlot;
+  const start2 = subCell2.position.startSlot;
+  const end2 = subCell2.position.endSlot;
+  
+  const overlap = !(end1 <= start2 || end2 <= start1);
+  
+  return overlap;
+};
 
   // =================== API FUNCTIONS ===================
   const getSchedules = async (nameTable: string) => {
@@ -1851,11 +1864,11 @@ const exportScheduleToPDF = async () => {
         
         // หาวิชาที่เริ่มในช่องนี้และยาวกว่า 1 ช่อง
         const spanningSubCell = (record.subCells || []).find(subCell => {
-          const subCellStartSlotIndex = Math.floor(subCell.position.startSlot);
-          const subCellEndSlotIndex = Math.floor(subCell.position.endSlot);
+        const subCellStartSlotIndex = Math.floor(subCell.position.startSlot);
+        const subCellEndSlotIndex = Math.floor(subCell.position.endSlot);
           
           const shouldSpan = subCellStartSlotIndex === timeSlotIndex && 
-                            subCellEndSlotIndex > subCellStartSlotIndex + 1;
+                      (subCellEndSlotIndex - subCellStartSlotIndex) >= 2; // แก้จาก > 1 เป็น >= 2
           
           if (shouldSpan) {
             console.log(`🔗 ColSpan detected: ${subCell.classData.subject}`, {
