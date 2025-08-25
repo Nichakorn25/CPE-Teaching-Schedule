@@ -47,7 +47,9 @@ interface ClassInfo {
   color?: string;
   section?: string;
   courseCode?: string;
-  studentYear?: string; // เพิ่มข้อมูลชั้นปี
+  studentYear?: string;
+  // ใหม่: เก็บ OfferedCourses id เพื่อใช้เปรียบเทียบเมื่อรวมช่วง
+  offeredCoursesId?: string | number | null;
 }
 
 interface SubCell {
@@ -949,6 +951,79 @@ const createEmptyDayRow = (day: string, dayIndex: number, rowIndex: number, tota
   return emptyRowData;
 };
 
+// --- วางฟังก์ชันนี้ไว้ก่อนเรียกใช้ separateOverlappingSubCells ---
+// ---------------- Merge adjacent sub-cells (รวมช่วงที่ติดกันของวิชาเดียวกัน) ----------------
+function mergeAdjacentSubCells(subCells: SubCell[]): SubCell[] {
+  if (!subCells || subCells.length === 0) return [];
+
+  const parseTimeToMinutes = (t?: string | null) => {
+    if (!t) return null;
+    const hhmm = t.includes('T') ? t.substring(11, 16) : (t.length >= 5 ? t.substring(0,5) : t);
+    const [hStr, mStr] = hhmm.split(':');
+    const h = parseInt(hStr || '0', 10);
+    const m = parseInt(mStr || '0', 10);
+    if (isNaN(h) || isNaN(m)) return null;
+    return h * 60 + m;
+  };
+
+  const getScheduleId = (s: any) => s?.scheduleId ?? s?.scheduleID ?? s?.id ?? undefined;
+
+  // เรียงตามวัน -> startSlot (ถ้ามี) -> startTime
+  const sorted = [...subCells].sort((a, b) => {
+    if (a.day !== b.day) return a.day.localeCompare(b.day);
+    const aSlot = a.position?.startSlot ?? parseTimeToMinutes(a.startTime) ?? 0;
+    const bSlot = b.position?.startSlot ?? parseTimeToMinutes(b.startTime) ?? 0;
+    return aSlot - bSlot;
+  });
+
+  const merged: SubCell[] = [];
+  for (const sc of sorted) {
+    const last = merged[merged.length - 1];
+    if (!last) {
+      merged.push({ ...sc, position: sc.position ? { ...sc.position } : sc.position });
+      continue;
+    }
+
+    const sameDay = last.day === sc.day;
+
+    const lastId = getScheduleId(last);
+    const thisId = getScheduleId(sc);
+    const haveSameScheduleId = lastId !== undefined && thisId !== undefined && String(lastId) === String(thisId);
+
+    const haveSameOfferedId = last.classData?.offeredCoursesId != null && sc.classData?.offeredCoursesId != null &&
+                              String(last.classData.offeredCoursesId) === String(sc.classData.offeredCoursesId);
+
+    const sameCourseFields = !!(
+      last.classData?.courseCode &&
+      sc.classData?.courseCode &&
+      last.classData.courseCode === sc.classData.courseCode &&
+      String(last.classData.section) === String(sc.classData.section) &&
+      String(last.classData.teacher).trim() === String(sc.classData.teacher).trim()
+    );
+
+    const lastEnd = last.position?.endSlot ?? parseTimeToMinutes(last.endTime);
+    const thisStart = sc.position?.startSlot ?? parseTimeToMinutes(sc.startTime);
+
+    const slotsTouch = (lastEnd !== null && thisStart !== null) ? (Math.abs(Number(lastEnd) - Number(thisStart)) <= 0.001) : false;
+
+    if (sameDay && (haveSameScheduleId || haveSameOfferedId || sameCourseFields) && slotsTouch) {
+      // merge: ขยายช่วงให้ last ครอบ sc
+      last.endTime = sc.endTime || last.endTime;
+      if (last.position && sc.position) {
+        last.position.endSlot = sc.position.endSlot;
+      } else if (!last.position && sc.position) {
+        last.position = { ...sc.position };
+      }
+      // (อยากรวม room/อื่นๆ เพิ่มที่นี่ได้)
+    } else {
+      merged.push({ ...sc, position: sc.position ? { ...sc.position } : sc.position });
+    }
+  }
+
+  return merged;
+}
+
+
 // =================== DATA TRANSFORMATION WITH ROW SEPARATION ===================
 const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[]): ExtendedScheduleData[] => {
   console.log('🔍 Raw schedules received:', rawSchedules.length, rawSchedules);
@@ -1031,20 +1106,23 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
           return "1";
         };
 
-        const classInfo: ClassInfo = {
-          subject: item.OfferedCourses?.AllCourses?.ThaiName ||
-                  item.OfferedCourses?.AllCourses?.EnglishName ||
-                  item.OfferedCourses?.AllCourses?.Code ||
-                  "ไม่ทราบชื่อ",
-          teacher: item.OfferedCourses?.User ? 
-                  `${item.OfferedCourses.User.Firstname || ""} ${item.OfferedCourses.User.Lastname || ""}`.trim() ||
-                  "ไม่ระบุอาจารย์" :
-                  "ไม่ระบุอาจารย์",
-          room: getRoomInfo(item),
-          section: item.SectionNumber?.toString() || "",
-          courseCode: item.OfferedCourses?.AllCourses?.Code || "",
-          studentYear: getStudentYear(item),
-        };
+       const classInfo: ClassInfo = {
+  subject: item.OfferedCourses?.AllCourses?.ThaiName ||
+           item.OfferedCourses?.AllCourses?.EnglishName ||
+           item.OfferedCourses?.AllCourses?.Code ||
+           "ไม่ทราบชื่อ",
+  teacher: item.OfferedCourses?.User ? 
+           `${item.OfferedCourses.User.Firstname || ""} ${item.OfferedCourses.User.Lastname || ""}`.trim() ||
+           "ไม่ระบุอาจารย์" :
+           "ไม่ระบุอาจารย์",
+  room: getRoomInfo(item),
+  section: item.SectionNumber?.toString() || "",
+  courseCode: item.OfferedCourses?.AllCourses?.Code || "",
+  studentYear: getStudentYear(item),
+  // เก็บ ID ของ OfferedCourses (fallback ถ้ามีหลายฟิลด์)
+  offeredCoursesId: item.OfferedCoursesID ?? item.OfferedCourses?.ID ?? null,
+};
+
 
         const getTimeString = (time: string | Date): string => {
           if (typeof time === 'string') {
@@ -1066,8 +1144,11 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
 
       console.log(`📊 Created ${subCells.length} SubCells for ${day}`);
 
-      // แยกวิชาที่ซ้อนกันออกเป็นแถวต่าง ๆ
-      const rowGroups = separateOverlappingSubCells(subCells);
+      const mergedSubCells = mergeAdjacentSubCells(subCells);
+      console.log(`🔗 Merged: ${subCells.length} -> ${mergedSubCells.length} for day ${day}`);
+      const rowGroups = separateOverlappingSubCells(mergedSubCells);
+
+
       console.log(`🗂️ Separated into ${rowGroups.length} row groups for ${day}`);
       
       // ✅ สำคัญ: เพิ่ม empty row หลังจาก rowGroups ที่มีข้อมูลแล้ว
