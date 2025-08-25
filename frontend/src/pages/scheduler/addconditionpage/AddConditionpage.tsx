@@ -6,6 +6,7 @@ import { message } from "antd";
 import {
   postCreateConditions,
   getConditionsByUserId,
+  putUpdateConditions,
 } from "../../../services/https/SchedulerPageService";
 import {
   ConditionInterface,
@@ -105,6 +106,7 @@ const AddConditionpage: React.FC = () => {
   >({});
   const [userID, setUserID] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [deletedSlotIds, setDeletedSlotIds] = useState<number[]>([]);
 
   /////////////////////////////////////////////////////////////////// ดึงข้อมูลมาใช้จากการล็อกอิน
   const title = localStorage.getItem("title") || "";
@@ -191,12 +193,21 @@ const AddConditionpage: React.FC = () => {
   };
 
   const removeSlot = (dayIndex: number, slotId: number) => {
-    setTimeSlotsByDay((prev) => {
-      const updated = [...(prev[dayIndex] || [])];
-      const filteredSlots = updated.filter((slot) => slot.ID !== slotId);
-      return { ...prev, [dayIndex]: filteredSlots };
-    });
-  };
+  setTimeSlotsByDay((prev) => {
+    const updated = [...(prev[dayIndex] || [])];
+    const removedSlot = updated.find((slot) => slot.ID === slotId);
+
+    // ถ้าเป็น slot เดิม (ไม่มี isNew) ให้เก็บ ID ไว้ลบ
+    if (removedSlot && !(removedSlot as any).isNew) {
+      setDeletedSlotIds((prevIds) => [...prevIds, slotId]);
+    }
+
+    // ลบ slot ออกจาก state
+    const filteredSlots = updated.filter((slot) => slot.ID !== slotId);
+    return { ...prev, [dayIndex]: filteredSlots };
+  });
+};
+
 
   //////////////////////////////////////////////////////////////////// ฟอร์มของเวลาถูกต้องไหมก่อนส่งไป API
 
@@ -228,89 +239,109 @@ const AddConditionpage: React.FC = () => {
     return true;
   };
 
-  const handleSubmit = async () => {
-    if (!userID) {
-      Swal.fire({
-        icon: "error",
-        title: "ไม่พบข้อมูลผู้ใช้",
-        text: "กรุณาล็อกอินใหม่อีกครั้ง",
-      });
-      return;
-    }
-    if (!validateTimeSlots()) return;
+ const handleSubmit = async () => {
+  if (!userID) {
+    Swal.fire({
+      icon: "error",
+      title: "ไม่พบข้อมูลผู้ใช้",
+      text: "กรุณาล็อกอินใหม่อีกครั้ง",
+    });
+    return;
+  }
 
-    setIsLoading(true);
-    try {
-      const conditionsToSave: ConditionInputInterface[] = [];
+  if (!validateTimeSlots()) return;
 
-      Object.entries(timeSlotsByDay).forEach(([_, slots]) => {
-        slots.forEach((slot) => {
-          // ส่งเฉพาะ slot ใหม่
-         if ((slot as any).isNew && slot.Start && slot.End) {
-  conditionsToSave.push({
-    DayOfWeek: slot.DayOfWeek,
-    StartTime: slot.Start,
-    EndTime: slot.End,
-  });
-}
-        });
-      });
+  setIsLoading(true);
 
-      if (conditionsToSave.length === 0) {
-        Swal.fire({
-          icon: "warning",
-          title: "ยังไม่มีข้อมูลใหม่",
-          text: "กรุณาเพิ่มช่วงเวลาที่ไม่สะดวกใหม่อย่างน้อย 1 ช่วงเวลา",
-        });
-        setIsLoading(false);
-        return;
-      }
+  try {
+    const newSlots: ConditionInputInterface[] = [];
+    const updateSlots: ConditionInputInterface[] = [];
 
-      const payload: ConditionsRequestInterface = {
-        UserID: userID,
-        Conditions: conditionsToSave,
-      };
+    // แบ่ง slot ใหม่และ slot เดิม
+    Object.entries(timeSlotsByDay).forEach(([_, slots]) => {
+      slots.forEach((slot) => {
+        if (!slot.Start || !slot.End) return;
 
-      const result = await postCreateConditions(payload);
-
-      if (result && (result.status === 200 || result.status === 201)) {
-        Swal.fire({
-          icon: "success",
-          title: "บันทึกสำเร็จ",
-          text: `ข้อมูลเวลาที่ไม่สะดวกของคุณถูกบันทึกเรียบร้อยแล้ว (${conditionsToSave.length} รายการ)`,
-        });
-
-        // หลัง save สำเร็จ เปลี่ยน isNew = false
-        setTimeSlotsByDay((prev) => {
-          const updated: Record<number, ConditionInterface[]> = {};
-          Object.entries(prev).forEach(([dayIndex, slots]) => {
-            updated[parseInt(dayIndex)] = slots.map((slot) => ({
-              ...slot,
-              isNew: false, // reset flag
-            }));
+        if ((slot as any).isNew) {
+          newSlots.push({
+            DayOfWeek: slot.DayOfWeek,
+            StartTime: slot.Start,
+            EndTime: slot.End,
           });
-          return updated;
-        });
+        } else {
+          updateSlots.push({
+            // ID: slot.ID,
+            DayOfWeek: slot.DayOfWeek,
+            StartTime: slot.Start,
+            EndTime: slot.End,
+          });
+        }
+      });
+    });
 
-        fetchConditions(userID); // ดึงข้อมูลใหม่จาก API
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "เกิดข้อผิดพลาด",
-          text: result?.data?.error || "ไม่สามารถบันทึกข้อมูลได้",
+    // 1️⃣ ส่ง POST สำหรับ slot ใหม่
+    let postResult;
+    if (newSlots.length > 0) {
+      postResult = await postCreateConditions({
+        UserID: userID,
+        Conditions: newSlots,
+      });
+    }
+
+    // 2️⃣ ส่ง PUT สำหรับ slot เดิม + slot ที่ถูกลบ
+    let putResult;
+    if (updateSlots.length > 0 || deletedSlotIds.length > 0) {
+      putResult = await putUpdateConditions({
+        UserID: userID,
+        Conditions: updateSlots,
+        DeletedConditionIDs: deletedSlotIds,
+      });
+    }
+
+    // 3️⃣ ตรวจสอบผลลัพธ์
+    if (
+      (postResult?.status === 200 || postResult?.status === 201 || !postResult) &&
+      (putResult?.status === 200 || putResult?.status === 201 || !putResult)
+    ) {
+      Swal.fire({
+        icon: "success",
+        title: "บันทึกสำเร็จ",
+        text: `ข้อมูลเวลาที่ไม่สะดวกของคุณถูกบันทึกเรียบร้อยแล้ว (${newSlots.length} รายการใหม่)`,
+      });
+
+      // reset state
+      setDeletedSlotIds([]);
+      setTimeSlotsByDay((prev) => {
+        const updated: Record<number, ConditionInterface[]> = {};
+        Object.entries(prev).forEach(([dayIndex, slots]) => {
+          updated[parseInt(dayIndex)] = slots.map((slot) => ({
+            ...slot,
+            isNew: false,
+          }));
         });
-      }
-    } catch (error) {
-      console.error("Error saving conditions:", error);
+        return updated;
+      });
+
+      fetchConditions(userID);
+    } else {
       Swal.fire({
         icon: "error",
-        title: "ข้อผิดพลาด",
-        text: "เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง",
+        title: "เกิดข้อผิดพลาด",
+        text: "ไม่สามารถบันทึกข้อมูลได้",
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  } catch (error) {
+    console.error("Error saving conditions:", error);
+    Swal.fire({
+      icon: "error",
+      title: "ข้อผิดพลาด",
+      text: "เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <>
@@ -423,9 +454,8 @@ const AddConditionpage: React.FC = () => {
                   <td>
                     <div className="time-slot-container">
                       {(timeSlotsByDay[index] || []).map((slot, i) => (
-                        <div key={slot.ID} className="time-slot-item">
+                        <div key={`${slot.ID}-${index}`} className="time-slot-item">
                           <div className="time-slot-number">{i + 1}</div>
-
                           <CustomTimeInput
                             label="เวลาเริ่มต้น"
                             value={slot.Start}

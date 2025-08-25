@@ -28,6 +28,7 @@ export interface ConditionInputInterface {
 export interface ConditionsRequestInterface {
   UserID: number;
   Conditions: ConditionInputInterface[];
+  DeletedConditionIDs?: number[];
 }
 
 export interface ScheduleIn {

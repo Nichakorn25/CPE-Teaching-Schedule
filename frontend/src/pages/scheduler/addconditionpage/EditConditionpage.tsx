@@ -257,7 +257,7 @@ const EditConditionpage: React.FC = () => {
             border: '1px solid #ffeaa7'
           }}>
             <span style={{ fontSize: '14px', color: '#856404', fontWeight: '500' }}>
-              กำลังแก้ไขเงื่อนไขของ: {fullname} (ID: {userID})
+              กำลังแก้ไขเงื่อนไขของ: {fullname} 
             </span>
           </div>
         )}

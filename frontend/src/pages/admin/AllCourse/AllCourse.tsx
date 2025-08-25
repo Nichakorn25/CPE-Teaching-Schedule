@@ -28,6 +28,7 @@ interface CourseTableData extends AllCourseInterfaceForAllcourse {
 }
 
 const AllCourse: React.FC = () => {
+  const userRole = localStorage.getItem("role");
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -209,188 +210,187 @@ const AllCourse: React.FC = () => {
     ...new Set(courseData.map((course) => course.CourseType).filter(Boolean)),
   ];
 
-  // Responsive columns configuration
   const getColumns = (): ColumnsType<CourseTableData> => {
-    if (isMobile) {
-      // Mobile layout - Show only essential columns
-      return [
-        {
-          title: "#",
-          dataIndex: "order",
-          key: "order",
-          width: 40,
-          align: "center",
-          render: (value: number) => (
-            <span style={{ fontWeight: "bold", fontSize: "10px" }}>
-              {value}
-            </span>
-          ),
-        },
-        {
-          title: "รายวิชา",
-          key: "course",
-          width: 140,
-          render: (_, record: CourseTableData) => (
-            <div style={{ fontSize: "11px" }}>
-              <div
-                style={{
-                  fontWeight: "bold",
-                  color: "#1890ff",
-                  marginBottom: "2px",
-                }}
-              >
-                {record.CourseCode}
-              </div>
-              <div style={{ fontWeight: "500", marginBottom: "2px" }}>
-                {record.CourseName}
-              </div>
-              <div style={{ color: "#666", fontSize: "9px" }}>
-                {record.Credit} หน่วยกิต | {record.CourseType}
-              </div>
-            </div>
-          ),
-        },
-        {
-          title: "อาจารย์",
-          key: "instructors",
-          width: 100,
-          render: (_, record: AllCourseInterfaceForAllcourse) => (
-            <div style={{ fontSize: "10px", textAlign: "center" }}>
-              {record.Instructor?.slice(0, 2).map((instructor, idx) => (
-                <div key={idx} style={{ marginBottom: "2px" }}>
-                  {instructor}
-                </div>
-              ))}
-              {record.Instructor && record.Instructor.length > 2 && (
-                <div style={{ color: "#666", fontSize: "9px" }}>
-                  +{record.Instructor.length - 2} คนอื่น
-                </div>
-              )}
-            </div>
-          ),
-        },
-        {
-          title: "จัดการ",
-          key: "action",
-          width: 70,
-          align: "center",
-          render: (_, record: CourseTableData) => (
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "2px" }}
-            >
-              <Button
-                size="small"
-                style={{
-                  backgroundColor: "#F26522",
-                  borderColor: "#F26522",
-                  color: "white",
-                  fontSize: "9px",
-                  padding: "1px 4px",
-                  height: "20px",
-                  lineHeight: "18px",
-                }}
-                onClick={() => navigate(`/manage-course/${record.ID}`)}
-                title="แก้ไขรายวิชา"
-              >
-                แก้ไข
-              </Button>
-              <Button
-                size="small"
-                style={{
-                  backgroundColor: "#ff4d4f",
-                  borderColor: "#ff4d4f",
-                  color: "white",
-                  fontSize: "9px",
-                  padding: "1px 4px",
-                  height: "20px",
-                  lineHeight: "18px",
-                }}
-                onClick={() => handleDeleteCourse(record.ID, record.CourseName)}
-                title="ลบรายวิชา"
-              >
-                ลบ
-              </Button>
-            </div>
-          ),
-        },
-      ];
-    }
+  const columns: ColumnsType<CourseTableData> = [];
 
-    // Desktop/Tablet layout
-    const columns: ColumnsType<CourseTableData> = [
+  if (isMobile) {
+    // Mobile layout - Show essential columns only
+    columns.push(
       {
-        title: "ลำดับ",
+        title: "#",
         dataIndex: "order",
         key: "order",
-        width: 60,
+        width: 40,
         align: "center",
         render: (value: number) => (
-          <span style={{ fontWeight: "bold" }}>{value}</span>
+          <span style={{ fontWeight: "bold", fontSize: "10px" }}>{value}</span>
         ),
       },
       {
-        title: "รหัสวิชา",
-        dataIndex: "CourseCode",
-        key: "code",
-        width: 100,
-        render: (value: string) => (
-          <span style={{ fontWeight: "bold", color: "#1890ff" }}>{value}</span>
+        title: "รายวิชา",
+        key: "course",
+        width: 140,
+        render: (_, record: CourseTableData) => (
+          <div style={{ fontSize: "11px" }}>
+            <div
+              style={{
+                fontWeight: "bold",
+                color: "#1890ff",
+                marginBottom: "2px",
+              }}
+            >
+              {record.CourseCode}
+            </div>
+            <div style={{ fontWeight: "500", marginBottom: "2px" }}>
+              {record.CourseName}
+            </div>
+            <div style={{ color: "#666", fontSize: "9px" }}>
+              {record.Credit} หน่วยกิต | {record.CourseType}
+            </div>
+          </div>
         ),
       },
       {
-        title: "ชื่อวิชา",
-        dataIndex: "CourseName",
-        key: "name",
-        width: isSmallScreen ? 180 : 220,
-        render: (value: string) => (
-          <span style={{ fontWeight: "500" }}>{value}</span>
-        ),
-      },
-      {
-        title: "หน่วยกิต",
-        dataIndex: "Credit",
-        key: "credit",
-        width: 80,
-        align: "center",
-        render: (value: number) => (
-          <span
-            style={{
-              backgroundColor: "#e6f7ff",
-              color: "#1890ff",
-              padding: "2px 6px",
-              borderRadius: "4px",
-              fontSize: "11px",
-              fontWeight: "bold",
-              border: "1px solid #91d5ff",
-            }}
-          >
-            {value}
-          </span>
-        ),
-      },
-      {
-        title: "หมวดวิชา",
-        dataIndex: "CourseType",
-        key: "category",
-        width: isSmallScreen ? 120 : 140,
-        align: "center",
-      },
-    ];
-
-    // Add instructors column for larger screens
-    if (!isSmallScreen) {
-      columns.push({
-        title: "อาจารย์ผู้สอน",
-        dataIndex: "Instructor",
+        title: "อาจารย์",
         key: "instructors",
-        width: 200,
-        render: (value: string[]) => (
-          <div style={{ fontSize: "12px" }}>{value?.join(", ") || "-"}</div>
+        width: 100,
+        render: (_, record: CourseTableData) => (
+          <div style={{ fontSize: "10px", textAlign: "center" }}>
+            {record.Instructor?.slice(0, 2).map((instructor, idx) => (
+              <div key={idx} style={{ marginBottom: "2px" }}>
+                {instructor}
+              </div>
+            ))}
+            {record.Instructor && record.Instructor.length > 2 && (
+              <div style={{ color: "#666", fontSize: "9px" }}>
+                +{record.Instructor.length - 2} คนอื่น
+              </div>
+            )}
+          </div>
+        ),
+      }
+    );
+
+    // Add action column only if admin
+    if (userRole === "admin") {
+      columns.push({
+        title: "จัดการ",
+        key: "action",
+        width: 120,
+        align: "center",
+        render: (_, record: CourseTableData) => (
+          <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              style={{
+                backgroundColor: "#F26522",
+                borderColor: "#F26522",
+                color: "white",
+                fontSize: "11px",
+                padding: "2px 8px",
+                height: "auto",
+              }}
+              onClick={() => navigate(`/manage-course/${record.ID}`)}
+              title="แก้ไขรายวิชา"
+            >
+              แก้ไข
+            </Button>
+            <Button
+              size="small"
+              icon={<DeleteOutlined />}
+              style={{
+                backgroundColor: "#ff4d4f",
+                borderColor: "#ff4d4f",
+                color: "white",
+                fontSize: "11px",
+                padding: "2px 8px",
+                height: "auto",
+              }}
+              onClick={() => handleDeleteCourse(record.ID, record.CourseName)}
+              title="ลบรายวิชา"
+            >
+              ลบ
+            </Button>
+          </div>
         ),
       });
     }
 
-    // Add action column
+    return columns; // return สำหรับ mobile เสร็จ
+  }
+
+  // Desktop/Tablet layout
+  columns.push(
+    {
+      title: "ลำดับ",
+      dataIndex: "order",
+      key: "order",
+      width: 60,
+      align: "center",
+      render: (value: number) => <span style={{ fontWeight: "bold" }}>{value}</span>,
+    },
+    {
+      title: "รหัสวิชา",
+      dataIndex: "CourseCode",
+      key: "code",
+      width: 100,
+      render: (value: string) => (
+        <span style={{ fontWeight: "bold", color: "#1890ff" }}>{value}</span>
+      ),
+    },
+    {
+      title: "ชื่อวิชา",
+      dataIndex: "CourseName",
+      key: "name",
+      width: isSmallScreen ? 180 : 220,
+      render: (value: string) => <span style={{ fontWeight: "500" }}>{value}</span>,
+    },
+    {
+      title: "หน่วยกิต",
+      dataIndex: "Credit",
+      key: "credit",
+      width: 80,
+      align: "center",
+      render: (value: number) => (
+        <span
+          style={{
+            backgroundColor: "#e6f7ff",
+            color: "#1890ff",
+            padding: "2px 6px",
+            borderRadius: "4px",
+            fontSize: "11px",
+            fontWeight: "bold",
+            border: "1px solid #91d5ff",
+          }}
+        >
+          {value}
+        </span>
+      ),
+    },
+    {
+      title: "หมวดวิชา",
+      dataIndex: "CourseType",
+      key: "category",
+      width: isSmallScreen ? 120 : 140,
+      align: "center",
+    }
+  );
+
+  if (!isSmallScreen) {
+    columns.push({
+      title: "อาจารย์ผู้สอน",
+      dataIndex: "Instructor",
+      key: "instructors",
+      width: 200,
+      render: (value: string[]) => (
+        <div style={{ fontSize: "12px" }}>{value?.join(", ") || "-"}</div>
+      ),
+    });
+  }
+
+  // Add action column only if admin
+  if (userRole === "admin") {
     columns.push({
       title: "จัดการ",
       key: "action",
@@ -433,9 +433,11 @@ const AllCourse: React.FC = () => {
         </div>
       ),
     });
+  }
 
-    return columns;
-  };
+  return columns;
+};
+
 
   return (
     <div
