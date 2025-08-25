@@ -53,7 +53,7 @@ const EditConditionpage: React.FC = () => {
     } else {
       // ถ้าไม่มีข้อมูล redirect กลับไปหน้า Condition
       message.error("ไม่พบข้อมูลเงื่อนไขที่ต้องการแก้ไข");
-      navigate('/Conditionpage');
+      navigate('/condition-page');
     }
   }, [state, navigate]);
 
@@ -150,7 +150,7 @@ const EditConditionpage: React.FC = () => {
         message.success(`เงื่อนไขเวลาที่ไม่สะดวกของ ${fullname} ถูกอัปเดตเรียบร้อยแล้ว`);
         
         setTimeout(() => {
-          navigate("/Conditionpage");
+          navigate("/condition-page");
         }, 1000);
       } else {
         console.error("API Error:", result);
@@ -173,10 +173,10 @@ const EditConditionpage: React.FC = () => {
       );
       
       if (confirmCancel) {
-        navigate('/Conditionpage');
+        navigate('/condition-page');
       }
     } else {
-      navigate('/Conditionpage');
+      navigate('/condition-page');
     }
   };
 
@@ -196,7 +196,7 @@ const EditConditionpage: React.FC = () => {
           message.success(`ลบเงื่อนไขทั้งหมดของ ${fullname} เรียบร้อยแล้ว`);
           
           setTimeout(() => {
-            navigate("/Conditionpage");
+            navigate("/condition-page");
           }, 1000);
         } else {
           message.error("ไม่สามารถลบเงื่อนไขได้");
