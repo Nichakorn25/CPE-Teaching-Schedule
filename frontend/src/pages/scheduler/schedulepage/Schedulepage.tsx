@@ -938,162 +938,7 @@ const createEmptyDayRow = (day: string, dayIndex: number, rowIndex: number, tota
   return emptyRowData;
 };
 
-// ปรับปรุงฟังก์ชัน mergeAdjacentSubCells เพื่อรองรับคาบ 3 ชั่วโมงและมากกว่า
-function mergeAdjacentSubCells(subCells: SubCell[]): SubCell[] {
-  if (!subCells || subCells.length === 0) return [];
-
-  const parseTimeToMinutes = (t?: string | null) => {
-    if (!t) return null;
-    const hhmm = t.includes('T') ? t.substring(11, 16) : (t.length >= 5 ? t.substring(0, 5) : t);
-    const [hStr, mStr] = hhmm.split(':');
-    const h = parseInt(hStr || '0', 10);
-    const m = parseInt(mStr || '0', 10);
-    if (isNaN(h) || isNaN(m)) return null;
-    return h * 60 + m;
-  };
-
-  const getScheduleId = (s: any) => s?.scheduleId ?? s?.scheduleID ?? s?.id ?? undefined;
-
-  // เรียงตามวัน -> startSlot -> startTime
-  const sorted = [...subCells].sort((a, b) => {
-    if (a.day !== b.day) return a.day.localeCompare(b.day);
-    const aSlot = a.position?.startSlot ?? parseTimeToMinutes(a.startTime) ?? 0;
-    const bSlot = b.position?.startSlot ?? parseTimeToMinutes(b.startTime) ?? 0;
-    return aSlot - bSlot;
-  });
-
-  const merged: SubCell[] = [];
-  
-  for (const sc of sorted) {
-    const last = merged[merged.length - 1];
-    if (!last) {
-      merged.push({ ...sc, position: sc.position ? { ...sc.position } : sc.position });
-      continue;
-    }
-
-    const sameDay = last.day === sc.day;
-
-    // ตรวจสอบเวลาติดกัน (tolerance = 1 minute)
-    const lastEnd = last.position?.endSlot ?? parseTimeToMinutes(last.endTime);
-    const thisStart = sc.position?.startSlot ?? parseTimeToMinutes(sc.startTime);
-    const slotsTouch = (lastEnd !== null && thisStart !== null) ? 
-                      (Math.abs(Number(lastEnd) - Number(thisStart)) <= 1) : false;
-
-    // เงื่อนไขพื้นฐานที่ต้องเหมือนกัน (ทุกกรณี)
-    const sameSubject = last.classData?.subject && sc.classData?.subject &&
-                       last.classData.subject.trim() === sc.classData.subject.trim();
-    
-    const sameTeacher = last.classData?.teacher && sc.classData?.teacher &&
-                       last.classData.teacher.trim() === sc.classData.teacher.trim();
-    
-    const sameSection = last.classData?.section && sc.classData?.section &&
-                       String(last.classData.section).trim() === String(sc.classData.section).trim();
-
-    // เงื่อนไขเสริม (หลักฐานเพิ่มเติม)
-    const lastId = getScheduleId(last);
-    const thisId = getScheduleId(sc);
-    const haveSameScheduleId = lastId !== undefined && thisId !== undefined && String(lastId) === String(thisId);
-
-    const haveSameOfferedId = last.classData?.offeredCoursesId != null && 
-                              sc.classData?.offeredCoursesId != null &&
-                              String(last.classData.offeredCoursesId) === String(sc.classData.offeredCoursesId);
-
-    const sameCourseCode = last.classData?.courseCode && sc.classData?.courseCode &&
-                          last.classData.courseCode.trim() === sc.classData.courseCode.trim();
-
-    const sameStudentYear = last.classData?.studentYear && sc.classData?.studentYear &&
-                           String(last.classData.studentYear).trim() === String(sc.classData.studentYear).trim();
-
-    // ✅ เงื่อนไขการรวมแบบใหม่: เข้มงวดแต่ครอบคลุม
-    const basicMatch = sameDay && slotsTouch && sameSubject && sameTeacher;
-    
-    const shouldMerge = basicMatch && (
-      // กรณีที่ 1: มี section เหมือนกัน (เงื่อนไขเข้มงวดที่สุด)
-      sameSection ||
-      
-      // กรณีที่ 2: มี scheduleId หรือ offeredId เหมือนกัน (หลักฐานจาก API)
-      haveSameScheduleId ||
-      haveSameOfferedId ||
-      
-      // กรณีที่ 3: มี course code และ student year เหมือนกัน
-      (sameCourseCode && sameStudentYear) ||
-      
-      // กรณีที่ 4: fallback สำหรับข้อมูลที่ไม่สมบูรณ์
-      // (วิชาเดียวกัน + อาจารย์เดียวกัน + ไม่มี section หรือ section เหมือนกัน)
-      (!last.classData.section && !sc.classData.section) ||
-      (last.classData.section === sc.classData.section)
-    );
-
-    if (shouldMerge) {
-      // รวม
-      last.endTime = sc.endTime || last.endTime;
-      if (last.position && sc.position) {
-        last.position.endSlot = sc.position.endSlot;
-      } else if (!last.position && sc.position) {
-        last.position = { startSlot: sc.position.startSlot, endSlot: sc.position.endSlot };
-      }
-      
-      // รวมข้อมูลเพิ่มเติม
-      if (!last.classData.room && sc.classData.room) {
-        last.classData.room = sc.classData.room;
-      }
-      if (!last.classData.section && sc.classData.section) {
-        last.classData.section = sc.classData.section;
-      }
-      if (!last.classData.courseCode && sc.classData.courseCode) {
-        last.classData.courseCode = sc.classData.courseCode;
-      }
-      if (!last.classData.studentYear && sc.classData.studentYear) {
-        last.classData.studentYear = sc.classData.studentYear;
-      }
-    } else {
-      
-      merged.push({ ...sc, position: sc.position ? { ...sc.position } : sc.position });
-    }
-  }
-
-  return merged;
-}
-
-// ✅ ฟังก์ชัน Debug เฉพาะอาจารย์
-function debugTeacherMerging(subCells: SubCell[], teacherName: string) {
-  const teacherCells = subCells.filter(sc => 
-    sc.classData.teacher && sc.classData.teacher.includes(teacherName)
-  );
-
-  if (teacherCells.length === 0) {
-    return;
-  }
-
-  // จัดกลุ่มตามวิชา
-  const subjectGroups = new Map<string, SubCell[]>();
-  teacherCells.forEach(cell => {
-    const subject = cell.classData.subject;
-    if (!subjectGroups.has(subject)) {
-      subjectGroups.set(subject, []);
-    }
-    subjectGroups.get(subject)!.push(cell);
-  });
-
-  subjectGroups.forEach((cells, subject) => {
-    if (cells.length > 1) {
-
-      // ตรวจสอบความเป็นไปได้ในการรวม
-      const dayGroups = new Map<string, SubCell[]>();
-      cells.forEach(cell => {
-        if (!dayGroups.has(cell.day)) {
-          dayGroups.set(cell.day, []);
-        }
-        dayGroups.get(cell.day)!.push(cell);
-      });
-
-    }
-  });
-
-  console.groupEnd();
-}
-
-// ✅ ปรับปรุงการเรียกใช้ใน transformScheduleDataWithRowSeparation
+// ✅ ปรับปรุงการเรียกใช้ใน transformScheduleDataWithRowSeparation (ลบการ merge)
 const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[]): ExtendedScheduleData[] => {
   
   const result: ExtendedScheduleData[] = [];
@@ -1121,10 +966,6 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
             if (matchingFixedCourse?.RoomFix) {
               return matchingFixedCourse.RoomFix;
             }
-          }
-          if (schedule.OfferedCourses?.Laboratory?.Room && 
-              schedule.OfferedCourses.Laboratory.Room.trim() !== "") {
-            return schedule.OfferedCourses.Laboratory.Room;
           }
           return "TBA";
         };
@@ -1178,11 +1019,8 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
         return createSubCell(classInfo, day, startTime, endTime, item.ID);
       });
 
-      // รวมคาบที่อยู่ติดกัน
-      const mergedSubCells = mergeAdjacentSubCells(subCells);
-
       // แยกการทับซ้อน
-      const rowGroups = separateOverlappingSubCells(mergedSubCells);
+      const rowGroups = separateOverlappingSubCells(subCells);
       
       const totalRowsForThisDay = rowGroups.length + 1;
       
@@ -2135,7 +1973,7 @@ const exportScheduleToPDF = async () => {
   }, []);
 
   useEffect(() => {
-    // เซ็ตชื่อตารางใน modal ให้ตรงกับตารางปัจจุบัน
+    // เซ็ตชื่อชื่อตารางใน modal ให้ตรงกับตารางปัจจุบัน
     if (isTableFromAPI && currentTableName) {
       setScheduleNameToSave(currentTableName);
     }
