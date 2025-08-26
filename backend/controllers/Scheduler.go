@@ -199,7 +199,8 @@ func AutoGenerateSchedule(c *gin.Context) {
 							}
 
 							if !conflict {
-								for _, s := range tempSlots {
+								merged := mergeConsecutiveSlots(tempSlots)
+								for _, s := range merged {
 									allSchedules = append(allSchedules, s)
 									config.DB().Create(&s)
 								}
@@ -351,6 +352,33 @@ func isLabConflict(day string, start, end time.Time, schedules []entity.Schedule
 		}
 	}
 	return false
+}
+
+func mergeConsecutiveSlots(slots []entity.Schedule) []entity.Schedule {
+	if len(slots) == 0 {
+		return slots
+	}
+	
+	// sort ตามเวลาเริ่ม
+	sort.Slice(slots, func(i, j int) bool {
+		return slots[i].StartTime.Before(slots[j].StartTime)
+	})
+
+	merged := []entity.Schedule{}
+	current := slots[0]
+
+	for i := 1; i < len(slots); i++ {
+		if slots[i].StartTime.Equal(current.EndTime) { 
+			// ต่อเนื่อง → ขยาย EndTime
+			current.EndTime = slots[i].EndTime
+		} else {
+			// ไม่ต่อเนื่อง → เก็บ block ปัจจุบัน
+			merged = append(merged, current)
+			current = slots[i]
+		}
+	}
+	merged = append(merged, current)
+	return merged
 }
 
 // ///////////////////////////////////////// ดึงตารางสอนไปแสดงตาม nametable
