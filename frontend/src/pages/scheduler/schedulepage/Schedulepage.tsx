@@ -168,8 +168,6 @@ const timeToSlotIndex = (time: string): number => {
   const formatted = cleanTime.padStart(5, '0');
   const index = PURE_TIME_SLOTS.findIndex(slot => slot === formatted);
   
-  console.log(`🕐 timeToSlotIndex: ${time} -> ${cleanTime} -> ${formatted} -> index: ${index}`);
-  
   return index !== -1 ? index : 0;
 };
 
@@ -305,8 +303,6 @@ const Schedulepage: React.FC = () => {
       studentYears: validYears.sort((a, b) => parseInt(a) - parseInt(b))
     });
 
-    console.log('🎓 Extracted Student Years from API only:', validYears);
-    console.log('🧑‍🏫 Extracted Teachers:', Array.from(teachers).filter(Boolean).sort());
   };
 
   const addFilterTag = (type: FilterTag['type'], value: string) => {
@@ -433,15 +429,6 @@ const applyFilters = () => {
     
     const startSlot = timeToSlotIndex(cleanStartTime);
     const endSlot = timeToSlotIndex(cleanEndTime);
-    
-    console.log(`📚 createSubCell: ${classData.subject}`, {
-      startTime: cleanStartTime,
-      endTime: cleanEndTime,
-      startSlot,
-      endSlot,
-      duration: endSlot - startSlot,
-      scheduleId
-    });
     
     return {
       id: `${day}-${Date.now()}-${Math.random()}`,
@@ -1038,19 +1025,6 @@ function mergeAdjacentSubCells(subCells: SubCell[]): SubCell[] {
     );
 
     if (shouldMerge) {
-      console.log(`🔗 Merging: ${last.classData.subject} with ${sc.classData.subject}`, {
-        reason: sameSection ? 'same section' :
-                haveSameScheduleId ? 'same scheduleId' :
-                haveSameOfferedId ? 'same offeredId' :
-                (sameCourseCode && sameStudentYear) ? 'same course+year' :
-                'fallback (no section conflict)',
-        teacher: last.classData.teacher,
-        section: `${last.classData.section} vs ${sc.classData.section}`,
-        lastEnd: lastEnd,
-        thisStart: thisStart,
-        timeDiff: lastEnd && thisStart ? Math.abs(Number(lastEnd) - Number(thisStart)) : 'N/A'
-      });
-
       // รวม
       last.endTime = sc.endTime || last.endTime;
       if (last.position && sc.position) {
@@ -1073,32 +1047,11 @@ function mergeAdjacentSubCells(subCells: SubCell[]): SubCell[] {
         last.classData.studentYear = sc.classData.studentYear;
       }
     } else {
-      // Debug เมื่อไม่รวม
-      console.log(`➕ Adding new: ${sc.classData.subject}`, {
-        sameDay: sameDay,
-        slotsTouch: slotsTouch,
-        sameSubject: sameSubject,
-        sameTeacher: sameTeacher,
-        sameSection: sameSection,
-        teacher: `"${last.classData.teacher}" vs "${sc.classData.teacher}"`,
-        section: `"${last.classData.section}" vs "${sc.classData.section}"`,
-        subject: `"${last.classData.subject}" vs "${sc.classData.subject}"`,
-        timeDiff: lastEnd && thisStart ? Math.abs(Number(lastEnd) - Number(thisStart)) : 'N/A',
-        // เหตุผลที่ไม่รวม
-        reasons: [
-          !sameDay ? 'different day' : null,
-          !slotsTouch ? 'time not adjacent' : null,
-          !sameSubject ? 'different subject' : null,
-          !sameTeacher ? 'different teacher' : null,
-          !sameSection && !haveSameScheduleId && !haveSameOfferedId && !(sameCourseCode && sameStudentYear) ? 'no matching criteria' : null
-        ].filter(Boolean)
-      });
       
       merged.push({ ...sc, position: sc.position ? { ...sc.position } : sc.position });
     }
   }
 
-  console.log(`📊 Merge result: ${subCells.length} -> ${merged.length} SubCells`);
   return merged;
 }
 
@@ -1109,12 +1062,8 @@ function debugTeacherMerging(subCells: SubCell[], teacherName: string) {
   );
 
   if (teacherCells.length === 0) {
-    console.log(`❌ ไม่พบข้อมูลของอาจารย์ "${teacherName}"`);
     return;
   }
-
-  console.group(`🔍 วิเคราะห์การรวมคาบของอาจารย์ "${teacherName}"`);
-  console.log(`พบ ${teacherCells.length} คาบ`);
 
   // จัดกลุ่มตามวิชา
   const subjectGroups = new Map<string, SubCell[]>();
@@ -1128,19 +1077,6 @@ function debugTeacherMerging(subCells: SubCell[], teacherName: string) {
 
   subjectGroups.forEach((cells, subject) => {
     if (cells.length > 1) {
-      console.log(`\n📚 วิชา "${subject}" (${cells.length} คาบ):`);
-      
-      cells.forEach((cell, index) => {
-        console.log(`  คาบ ${index + 1}:`, {
-          day: cell.day,
-          time: `${cell.startTime}-${cell.endTime}`,
-          section: cell.classData.section,
-          courseCode: cell.classData.courseCode,
-          studentYear: cell.classData.studentYear,
-          scheduleId: cell.scheduleId,
-          offeredCoursesId: cell.classData.offeredCoursesId
-        });
-      });
 
       // ตรวจสอบความเป็นไปได้ในการรวม
       const dayGroups = new Map<string, SubCell[]>();
@@ -1151,70 +1087,19 @@ function debugTeacherMerging(subCells: SubCell[], teacherName: string) {
         dayGroups.get(cell.day)!.push(cell);
       });
 
-      dayGroups.forEach((dayCells, day) => {
-        if (dayCells.length > 1) {
-          const sorted = dayCells.sort((a, b) => 
-            (a.position?.startSlot || 0) - (b.position?.startSlot || 0)
-          );
-          
-          console.log(`  📅 วัน${day} มี ${sorted.length} คาบ - ควรรวมได้หรือไม่?`);
-          
-          for (let i = 0; i < sorted.length - 1; i++) {
-            const current = sorted[i];
-            const next = sorted[i + 1];
-            
-            const currentEnd = current.position?.endSlot;
-            const nextStart = next.position?.startSlot;
-            const timeDiff = currentEnd && nextStart ? Math.abs(nextStart - currentEnd) : null;
-            
-            console.log(`    คาบ ${i+1} -> ${i+2}:`, {
-              timeAdjacent: timeDiff !== null && timeDiff <= 1,
-              timeDiff: timeDiff,
-              sameSection: current.classData.section === next.classData.section,
-              currentSection: current.classData.section,
-              nextSection: next.classData.section
-            });
-          }
-        }
-      });
     }
   });
 
   console.groupEnd();
 }
 
-// ✅ เพิ่มฟังก์ชันช่วยสำหรับ debug การรวมคาบ
-function debugSubCellMerging(subCells: SubCell[], day: string) {
-  const dayCells = subCells.filter(sc => sc.day === day);
-  console.group(`🔍 Debug merging for ${day}:`);
-  
-  dayCells.forEach((sc, index) => {
-    console.log(`Cell ${index + 1}:`, {
-      subject: sc.classData.subject,
-      teacher: sc.classData.teacher,
-      room: sc.classData.room,
-      section: sc.classData.section,
-      courseCode: sc.classData.courseCode,
-      scheduleId: sc.scheduleId,
-      offeredCoursesId: sc.classData.offeredCoursesId,
-      startTime: sc.startTime,
-      endTime: sc.endTime,
-      position: sc.position
-    });
-  });
-  
-  console.groupEnd();
-}
-
 // ✅ ปรับปรุงการเรียกใช้ใน transformScheduleDataWithRowSeparation
 const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[]): ExtendedScheduleData[] => {
-  console.log('📋 Raw schedules received:', rawSchedules.length, rawSchedules);
   
   const result: ExtendedScheduleData[] = [];
   
   DAYS.forEach((day, dayIndex) => {
     const daySchedules = rawSchedules.filter(item => item.DayOfWeek === day);
-    console.log(`📅 Day ${day}: Found ${daySchedules.length} schedules`);
     
     if (daySchedules.length === 0) {
       // สร้างแถวว่างสำหรับวันที่ไม่มีเรียน
@@ -1293,20 +1178,11 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
         return createSubCell(classInfo, day, startTime, endTime, item.ID);
       });
 
-      console.log(`📊 Created ${subCells.length} SubCells for ${day}`);
-
-      // ✅ เพิ่ม debug ก่อนการรวม
-      if (subCells.length > 1) {
-        debugSubCellMerging(subCells, day);
-      }
-
       // รวมคาบที่อยู่ติดกัน
       const mergedSubCells = mergeAdjacentSubCells(subCells);
-      console.log(`🔗 Merged: ${subCells.length} -> ${mergedSubCells.length} for day ${day}`);
 
       // แยกการทับซ้อน
       const rowGroups = separateOverlappingSubCells(mergedSubCells);
-      console.log(`🗂️ Separated into ${rowGroups.length} row groups for ${day}`);
       
       const totalRowsForThisDay = rowGroups.length + 1;
       
@@ -1361,206 +1237,14 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
       result.push(emptyRow);
     }
   });
-
-  console.log(`📋 Final result: ${result.length} rows total`);
   return result;
 };
 
-
-// // =================== DATA TRANSFORMATION WITH ROW SEPARATION ===================
-// const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[]): ExtendedScheduleData[] => {
-//   console.log('🔍 Raw schedules received:', rawSchedules.length, rawSchedules);
-  
-//   const result: ExtendedScheduleData[] = [];
-  
-//   DAYS.forEach((day, dayIndex) => {
-//     const daySchedules = rawSchedules.filter(item => item.DayOfWeek === day);
-//     console.log(`📅 Day ${day}: Found ${daySchedules.length} schedules`);
-    
-//     if (daySchedules.length === 0) {
-//       // ไม่มีวิชา -> สร้าง 2 แถว (1 แถวปกติ + 1 แถวว่าง)
-//       const firstRow = createEmptyDayRow(day, dayIndex, 0, 2);
-//       const secondRow = createEmptyDayRow(day, dayIndex, 1, 2);
-      
-//       // แถวที่ 2 ไม่ใช่ first row ของวัน
-//       secondRow.isFirstRowOfDay = false;
-      
-//       result.push(firstRow, secondRow);
-//     } else {
-//       // แปลงข้อมูลเป็น SubCells โดยใช้ interface ที่ถูกต้อง
-//       const subCells: SubCell[] = daySchedules.map((item: ScheduleInterface, index: number) => {
-//         // ... (โค้ดเดิมสำหรับสร้าง subCells - ไม่เปลี่ยน) ...
-//         console.log(`\n🔍 Processing schedule ${index + 1}/${daySchedules.length} for ${day}:`, {
-//           id: item.ID,
-//           nameTable: item.NameTable,
-//           section: item.SectionNumber,
-//           dayOfWeek: item.DayOfWeek,
-//           startTime: item.StartTime,
-//           endTime: item.EndTime,
-//           offeredCoursesId: item.OfferedCoursesID,
-//         });
-
-//         // ดึงข้อมูลห้องจาก TimeFixedCourses หรือ Laboratory
-//         const getRoomInfo = (schedule: ScheduleInterface): string => {
-//           if (schedule.TimeFixedCourses && schedule.TimeFixedCourses.length > 0) {
-//             const matchingFixedCourse = schedule.TimeFixedCourses.find(
-//               tc => tc.Section === schedule.SectionNumber && 
-//                    tc.ScheduleID === schedule.ID &&
-//                    tc.RoomFix && tc.RoomFix.trim() !== ""
-//             );
-            
-//             if (matchingFixedCourse?.RoomFix) {
-//               return matchingFixedCourse.RoomFix;
-//             }
-//           }
-          
-//           if (schedule.OfferedCourses?.Laboratory?.Room && 
-//               schedule.OfferedCourses.Laboratory.Room.trim() !== "") {
-//             return schedule.OfferedCourses.Laboratory.Room;
-//           }
-          
-//           return "TBA";
-//         };
-
-//         // ดึงข้อมูลชั้นปีจาก AcademicYearID
-//         const getStudentYear = (schedule: ScheduleInterface): string => {
-//           const academicYearId = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.AcademicYearID;
-          
-//           if (academicYearId && academicYearId >= 1) {
-//             return academicYearId.toString();
-//           }
-          
-//           const level = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.Level;
-//           if (level && level !== 'เรียนได้ทุกชั้นปี') {
-//             const yearMatch = level.match(/ปีที่\s*(\d+)/);
-//             if (yearMatch) {
-//               const year = parseInt(yearMatch[1]);
-//               if (year >= 1) {
-//                 return year.toString();
-//               }
-//             }
-            
-//             const numLevel = parseInt(level);
-//             if (!isNaN(numLevel) && numLevel >= 1) {
-//               return numLevel.toString();
-//             }
-//           }
-          
-//           return "1";
-//         };
-
-//        const classInfo: ClassInfo = {
-//   subject: item.OfferedCourses?.AllCourses?.ThaiName ||
-//            item.OfferedCourses?.AllCourses?.EnglishName ||
-//            item.OfferedCourses?.AllCourses?.Code ||
-//            "ไม่ทราบชื่อ",
-//   teacher: item.OfferedCourses?.User ? 
-//            `${item.OfferedCourses.User.Firstname || ""} ${item.OfferedCourses.User.Lastname || ""}`.trim() ||
-//            "ไม่ระบุอาจารย์" :
-//            "ไม่ระบุอาจารย์",
-//   room: getRoomInfo(item),
-//   section: item.SectionNumber?.toString() || "",
-//   courseCode: item.OfferedCourses?.AllCourses?.Code || "",
-//   studentYear: getStudentYear(item),
-//   // เก็บ ID ของ OfferedCourses (fallback ถ้ามีหลายฟิลด์)
-//   offeredCoursesId: item.OfferedCoursesID ?? item.OfferedCourses?.ID ?? null,
-// };
-
-
-//         const getTimeString = (time: string | Date): string => {
-//           if (typeof time === 'string') {
-//             if (time.includes('T')) {
-//               return time.substring(11, 16);
-//             }
-//             return time.length > 5 ? time.substring(0, 5) : time;
-//           } else if (time instanceof Date) {
-//             return time.toTimeString().substring(0, 5);
-//           }
-//           return "00:00";
-//         };
-
-//         const startTime = getTimeString(item.StartTime);
-//         const endTime = getTimeString(item.EndTime);
-        
-//         return createSubCell(classInfo, day, startTime, endTime, item.ID);
-//       });
-
-//       console.log(`📊 Created ${subCells.length} SubCells for ${day}`);
-
-//       const mergedSubCells = mergeAdjacentSubCells(subCells);
-//       console.log(`🔗 Merged: ${subCells.length} -> ${mergedSubCells.length} for day ${day}`);
-//       const rowGroups = separateOverlappingSubCells(mergedSubCells);
-
-
-//       console.log(`🗂️ Separated into ${rowGroups.length} row groups for ${day}`);
-      
-//       // ✅ สำคัญ: เพิ่ม empty row หลังจาก rowGroups ที่มีข้อมูลแล้ว
-//       const totalRowsForThisDay = rowGroups.length + 1; // +1 สำหรับ empty row
-      
-//       rowGroups.forEach((rowSubCells, rowIndex) => {
-//         const dayData: ExtendedScheduleData = {
-//           key: `day-${dayIndex}-row-${rowIndex}`,
-//           day: day,
-//           dayIndex: dayIndex,
-//           rowIndex: rowIndex,
-//           isFirstRowOfDay: rowIndex === 0,
-//           totalRowsInDay: totalRowsForThisDay,
-//           subCells: rowSubCells
-//         };
-
-//         // Fill time slots
-//         TIME_SLOTS.forEach((time) => {
-//           const matched = rowSubCells.filter(subCell => 
-//             isTimeInSlot(subCell.startTime, subCell.endTime, time)
-//           );
-
-//           if (matched.length > 0) {
-//             dayData[time] = {
-//               backgroundColor: getRandomBackgroundColor(),
-//               classes: matched.map(subCell => ({
-//                 subject: subCell.classData.subject,
-//                 teacher: subCell.classData.teacher,
-//                 room: subCell.classData.room,
-//               })),
-//             };
-//           } else if (time === "12:00-13:00") {
-//             dayData[time] = {
-//               content: "พักเที่ยง",
-//               backgroundColor: "#FFF5E5",
-//               isBreak: true,
-//             };
-//           } else {
-//             dayData[time] = {
-//               content: "",
-//               backgroundColor: "#f9f9f9",
-//               classes: [],
-//             };
-//           }
-//         });
-
-//         result.push(dayData);
-//       });
-
-//       // ✅ เพิ่ม empty row หลังจากแถวที่มีข้อมูลแล้ว
-//       const emptyRowIndex = rowGroups.length;
-//       const emptyRow = createEmptyDayRow(day, dayIndex, emptyRowIndex, totalRowsForThisDay);
-//       emptyRow.isFirstRowOfDay = false; // empty row ไม่ใช่แถวแรกของวัน
-//       result.push(emptyRow);
-//     }
-//   });
-
-//   console.log(`📋 Final result: ${result.length} rows total`);
-  
-//   return result;
-// };
-  // =================== FUNCTION TO SEPARATE OVERLAPPING SUB-CELLS ===================
   const separateOverlappingSubCells = (subCells: SubCell[]): SubCell[][] => {
     if (subCells.length === 0) return [[]];
     
     const rows: SubCell[][] = [];
     const sortedSubCells = [...subCells].sort((a, b) => a.position.startSlot - b.position.startSlot);
-    
-    console.log(`📊 separateOverlappingSubCells: Processing ${sortedSubCells.length} sub-cells`);
     
     for (const subCell of sortedSubCells) {
       let placed = false;
@@ -1575,7 +1259,6 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
         if (!hasOverlap) {
           row.push(subCell);
           placed = true;
-          console.log(`✅ Placed ${subCell.classData.subject} in row ${i}`);
           break;
         }
       }
@@ -1583,11 +1266,9 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
       // ถ้าใส่ในแถวที่มีไม่ได้ ให้สร้างแถวใหม่
       if (!placed) {
         rows.push([subCell]);
-        console.log(`🆕 Created new row ${rows.length - 1} for ${subCell.classData.subject}`);
       }
     }
-    
-    console.log(`📋 Total rows created: ${rows.length}`);
+
     return rows;
   };
 
@@ -1641,8 +1322,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
         setOriginalScheduleData(res.data);
         setCurrentTableName(nameTable);
         setIsTableFromAPI(true);
-        
-        console.log('✅ Transformed schedule data:', newScheduleData);
+     
       }
     } catch (error) {
       console.error("Error loading schedules:", error);
@@ -1704,12 +1384,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
   // =================== FIND SCHEDULE CHANGES ===================
   const findScheduleChanges = (): ScheduleChange[] => {
     const changes: ScheduleChange[] = [];
-    
-    console.log('🔍 Finding changes...', {
-      scheduleDataLength: scheduleData.length,
-      originalDataLength: originalScheduleData.length
-    });
-    
+
     // สร้าง Map ของข้อมูลปัจจุบันจาก subCells
     const currentMap = new Map<number, {
       day: string;
@@ -1732,7 +1407,6 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
               teacher: subCell.classData.teacher,
               room: subCell.classData.room
             });
-            console.log(`📍 Current mapping: ID ${subCell.scheduleId} -> ${subCell.day} ${subCell.startTime}-${subCell.endTime}`);
           }
         });
       }
@@ -1755,11 +1429,6 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
         const originalStartTime = getTimeString(original.StartTime);
         const originalEndTime = getTimeString(original.EndTime);
         
-        console.log(`🔎 Comparing ID ${original.ID}:`, {
-          original: `${original.DayOfWeek} ${originalStartTime}-${originalEndTime}`,
-          current: `${current.day} ${current.startTime}-${current.endTime}`
-        });
-        
         // ตรวจสอบการเปลี่ยนแปลง
         if (current.day !== original.DayOfWeek ||
             current.startTime !== originalStartTime ||
@@ -1780,14 +1449,10 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
           };
           
           changes.push(scheduleChange);
-          console.log(`✏️ Change detected for ID ${original.ID}`);
         }
-      } else {
-        console.log(`⚠️ Missing current data for ID ${original.ID}`);
       }
     });
 
-    console.log(`📋 Total changes found: ${changes.length}`);
     return changes;
   };
 
@@ -1848,13 +1513,6 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
 
   // =================== NEW SAVE FUNCTION USING API ===================
   const handleSaveConfirm = async () => {
-    console.log('🔍 Debug Save:', {
-      name: scheduleNameToSave,
-      dataLength: scheduleData.length,
-      currentTableName: currentTableName,
-      isFromAPI: isTableFromAPI,
-      originalDataLength: originalScheduleData.length
-    });
 
     if (!scheduleNameToSave.trim()) {
       message.error("กรุณาใส่ชื่อตาราง");
@@ -1893,7 +1551,6 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
     try {
       // หาการเปลี่ยนแปลง
       const changes = findScheduleChanges();
-      console.log('📝 Changes detected:', changes);
 
       if (changes.length === 0) {
         hide();
@@ -1911,9 +1568,6 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
         EndTime: `2006-01-02T${change.newData.endTime}:00+07:00`
       }));
 
-      console.log(`🔄 Updating ${payloadArray.length} schedules:`, payloadArray);
-
-      // ✅ สร้าง API call โดยตรงแทนการใช้ putupdateScheduleTime
       try {
         const apiUrl = "http://localhost:8080";
         const Authorization = localStorage.getItem("token");
@@ -1934,7 +1588,6 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
 
         if (response.ok) {
           message.success(`อัปเดตตารางสำเร็จ ${changes.length} รายการ`);
-          console.log(`✅ Updated all schedules successfully`);
           
           setSaveModalVisible(false);
           setScheduleNameToSave("");
@@ -1947,9 +1600,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
       } catch (fetchError) {
         hide();
         console.error('💥 Error with direct API call:', fetchError);
-        
-        // ✅ ถ้า batch API ไม่มี ให้ fallback เป็นการอัปเดตทีละรายการ
-        console.log('🔄 Falling back to individual updates...');
+    
         await updateSchedulesIndividually(changes);
         
         hide();
@@ -1980,13 +1631,10 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
           EndTime: `2006-01-02T${change.newData.endTime}:00+07:00`
         };
 
-        console.log(`🔄 Updating schedule ID: ${change.id}`, payload);
-
         const result = await putupdateScheduleTime(change.id, payload);
         
         if (result.status === 200) {
           successCount++;
-          console.log(`✅ Updated schedule ID: ${change.id}`);
         } else {
           errorCount++;
           console.error(`❌ Failed to update schedule ID: ${change.id}`, result);
@@ -1996,8 +1644,6 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
         console.error(`💥 Error updating schedule ID: ${change.id}`, error);
       }
     }
-
-    console.log(`📊 Individual update results: ${successCount} success, ${errorCount} errors`);
   };
 
   // =================== RESET FUNCTION ===================
@@ -2272,15 +1918,6 @@ const exportScheduleToPDF = async () => {
           const shouldSpan = subCellStartSlotIndex === timeSlotIndex && 
                       (subCellEndSlotIndex - subCellStartSlotIndex) >= 2; // แก้จาก > 1 เป็น >= 2
           
-          if (shouldSpan) {
-            console.log(`🔗 ColSpan detected: ${subCell.classData.subject}`, {
-              startSlot: subCellStartSlotIndex,
-              endSlot: subCellEndSlotIndex,
-              timeSlotIndex,
-              spanLength: subCellEndSlotIndex - subCellStartSlotIndex
-            });
-          }
-          
           return shouldSpan;
         });
         
@@ -2532,13 +2169,6 @@ const exportScheduleToPDF = async () => {
         });
         return rowData;
       });
-
-  console.log('📊 Final data for rendering:', {
-    filteredDataLength: filteredScheduleData.length,
-    scheduleDataLength: scheduleData.length,
-    finalDataLength: data.length,
-    days: data.map(d => d.day)
-  });
 
   // =================== RENDER ===================
   return (
