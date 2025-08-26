@@ -130,7 +130,7 @@ const Sidebar: React.FC = () => {
       roles: ["Admin"],
     },
     {
-      id: 13,
+      id: 14,
       label: "จัดการวิชาจากศูนย์บริการ",
       icon: "🖋️",
       path: "/manage-cescourse",
