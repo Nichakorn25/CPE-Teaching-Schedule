@@ -181,6 +181,7 @@ func AutoGenerateSchedule(c *gin.Context) {
 
 								if isConflictWithConditions(dayName, start, end, conditions) ||
 									isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
+									isAcademicYearConflict(dayName, start, end, allSchedules, course) ||
 									(course.LaboratoryID != nil &&
 										isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) {
 									conflict = true
@@ -229,6 +230,7 @@ func AutoGenerateSchedule(c *gin.Context) {
 
 						if isConflictWithConditions(dayName, start, end, conditions) ||
 							isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
+							isAcademicYearConflict(dayName, start, end, allSchedules, course) ||
 							(course.LaboratoryID != nil &&
 								isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) {
 							continue
@@ -259,6 +261,7 @@ func AutoGenerateSchedule(c *gin.Context) {
 
 							if isConflictWithConditions(dayName, start, end, conditions) ||
 								isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
+								isAcademicYearConflict(dayName, start, end, allSchedules, course) ||
 								(course.LaboratoryID != nil &&
 									isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) {
 								continue
@@ -312,6 +315,22 @@ func isInstructorConflict(day string, start, end time.Time, schedules []entity.S
 		var oc entity.OfferedCourses
 		if err := config.DB().First(&oc, s.OfferedCoursesID).Error; err == nil {
 			if oc.UserID == userID {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func isAcademicYearConflict(day string, start, end time.Time, schedules []entity.Schedule, course entity.OfferedCourses) bool {
+	for _, s := range schedules {
+		if s.DayOfWeek != day || !(start.Before(s.EndTime) && end.After(s.StartTime)) {
+			continue
+		}
+
+		var oc entity.OfferedCourses
+		if err := config.DB().Preload("AllCourses.AcademicYear").First(&oc, s.OfferedCoursesID).Error; err == nil {
+			if oc.AllCourses.AcademicYearID == course.AllCourses.AcademicYearID {
 				return true
 			}
 		}
