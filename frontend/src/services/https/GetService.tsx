@@ -92,6 +92,14 @@ async function getOffered(params) {
     .then((res) => res)
     .catch((e) => e.response);
 }
+///////////////////////////////////////////////// วิชาที่เปิดสอน
+async function getOfferedCoursesByMajor(majorID: number) {
+  return await axios
+    .get(`${apiUrl}/offered-courses-schedule?majorID=${majorID}`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 
 export {
   getAllTitle, //used
@@ -104,4 +112,6 @@ export {
   getLaboratory,
   getAllDepartment,
   getOffered,
+
+  getOfferedCoursesByMajor,
 };

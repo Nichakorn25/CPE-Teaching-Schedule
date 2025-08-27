@@ -282,3 +282,105 @@ func DeleteOfferedCourse(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "ลบรายวิชาที่เปิดสอนสำเร็จ"})
 }
+
+// /////////////////////////// final-offerated
+type SectionDetail struct {
+	SectionNumber  uint
+	Room           string
+	DayOfWeek      string
+	Time           string
+	Capacity       uint
+	InstructorName string
+}
+
+type OfferedCoursesDetail struct {
+	Code          string
+	CourseName    string
+	Credit        string
+	TypeOfCourse  string
+	TotalSections uint
+	Sections      []SectionDetail
+}
+
+func GetOfferedCoursesAndSchedule(c *gin.Context) {
+	majorID := c.Query("majorID")
+
+	var offeredCourses []entity.OfferedCourses
+	if err := config.DB().Preload("AllCourses.Credit").
+		Preload("AllCourses.TypeOfCourses").
+		Preload("AllCourses.Curriculum.Major").
+		Preload("User").
+		Preload("Schedule.TimeFixedCourses"). 
+		Preload("Laboratory").
+		Find(&offeredCourses).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	grouped := make(map[string]*OfferedCoursesDetail)
+
+	for _, oc := range offeredCourses {
+		if !oc.IsFixCourses && strconv.Itoa(int(oc.AllCourses.Curriculum.MajorID)) != majorID {
+			continue
+		}
+
+		credit := fmt.Sprintf("%d(%d-%d-%d)",
+			oc.AllCourses.Credit.Unit,
+			oc.AllCourses.Credit.Lecture,
+			oc.AllCourses.Credit.Lab,
+			oc.AllCourses.Credit.Self,
+		)
+
+		if _, ok := grouped[oc.AllCourses.Code]; !ok {
+			grouped[oc.AllCourses.Code] = &OfferedCoursesDetail{
+				Code:          oc.AllCourses.Code,
+				CourseName:    oc.AllCourses.ThaiName,
+				Credit:        credit,
+				TypeOfCourse:  oc.AllCourses.TypeOfCourses.TypeName,
+				TotalSections: oc.Section,
+				Sections:      []SectionDetail{},
+			}
+		}
+
+		instructor := oc.User.Firstname + " " + oc.User.Lastname
+
+		if oc.IsFixCourses {
+			for _, sch := range oc.Schedule {
+				for _, tf := range sch.TimeFixedCourses {
+					grouped[oc.AllCourses.Code].Sections = append(grouped[oc.AllCourses.Code].Sections, SectionDetail{
+						SectionNumber:  tf.Section,
+						Room:           tf.RoomFix,
+						DayOfWeek:      tf.DayOfWeek,
+						Time:           tf.StartTime.Format("15:04") + " - " + tf.EndTime.Format("15:04"),
+						Capacity:       tf.Capacity,
+						InstructorName: instructor,
+					})
+				}
+			}
+		} else {
+			if len(oc.Schedule) > 0 {
+				for _, sch := range oc.Schedule {
+					room := ""
+					if oc.LaboratoryID != nil {
+						room = oc.Laboratory.Room
+					}
+					grouped[oc.AllCourses.Code].Sections = append(grouped[oc.AllCourses.Code].Sections, SectionDetail{
+						SectionNumber:  sch.SectionNumber,
+						Room:           room,
+						DayOfWeek:      sch.DayOfWeek,
+						Time:           sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
+						Capacity:       oc.Capacity,
+						InstructorName: instructor,
+					})
+				}
+			}
+		}
+	}
+
+	var responses []OfferedCoursesDetail
+	for _, v := range grouped {
+		responses = append(responses, *v)
+	}
+
+	c.JSON(http.StatusOK, responses)
+}
