@@ -154,8 +154,7 @@ func AutoGenerateSchedule(c *gin.Context) {
 			rand.Shuffle(len(fallbackHours), func(i, j int) { fallbackHours[i], fallbackHours[j] = fallbackHours[j], fallbackHours[i] })
 
 			credit := course.AllCourses.Credit
-			labHours := int(credit.Lab)
-			lecHours := int(credit.Lecture)
+			lecHours, labHours := calcWeeklyHours(credit)
 
 			for sec := uint(1); sec <= course.Section; sec++ {
 				var conditions []entity.Condition
@@ -181,9 +180,9 @@ func AutoGenerateSchedule(c *gin.Context) {
 
 								if isConflictWithConditions(dayName, start, end, conditions) ||
 									isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
-									isAcademicYearConflict(dayName, start, end, allSchedules, course) ||
 									(course.LaboratoryID != nil &&
-										isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) {
+										isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) ||
+									!isConsecutiveSlot(allSchedules, dayName, start, course.ID, sec) {
 									conflict = true
 									break
 								}
@@ -199,8 +198,7 @@ func AutoGenerateSchedule(c *gin.Context) {
 							}
 
 							if !conflict {
-								merged := mergeConsecutiveSlots(tempSlots)
-								for _, s := range merged {
+								for _, s := range tempSlots {
 									allSchedules = append(allSchedules, s)
 									config.DB().Create(&s)
 								}
@@ -226,14 +224,23 @@ func AutoGenerateSchedule(c *gin.Context) {
 
 					// จัด preferred slot ก่อน
 					for _, hour := range preferredHours {
+						if hour == 12 {
+							continue
+						}
+
 						start := time.Date(2006, 1, 2, hour, 0, 0, 0, time.FixedZone("Asia/Bangkok", 7*60*60))
 						end := start.Add(time.Hour)
+
+						if start.Hour() < 12 && end.Hour() > 12 {
+							continue
+						}
 
 						if isConflictWithConditions(dayName, start, end, conditions) ||
 							isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
 							isAcademicYearConflict(dayName, start, end, allSchedules, course) ||
 							(course.LaboratoryID != nil &&
-								isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) {
+								isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) ||
+							!isConsecutiveSlot(allSchedules, dayName, start, course.ID, sec) {
 							continue
 						}
 
@@ -264,7 +271,8 @@ func AutoGenerateSchedule(c *gin.Context) {
 								isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
 								isAcademicYearConflict(dayName, start, end, allSchedules, course) ||
 								(course.LaboratoryID != nil &&
-									isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) {
+									isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) ||
+								!isConsecutiveSlot(allSchedules, dayName, start, course.ID, sec) {
 								continue
 							}
 
@@ -298,6 +306,12 @@ func getDayName(index int) string {
 	return days[index%7]
 }
 
+func calcWeeklyHours(credit entity.Credit) (int, int) {
+	lecHours := int(credit.Lecture) * 1
+	labHours := int(credit.Lab) * 3
+	return lecHours, labHours
+}
+
 func isConflictWithConditions(day string, start, end time.Time, conditions []entity.Condition) bool {
 	for _, c := range conditions {
 		if c.DayOfWeek == day &&
@@ -306,6 +320,15 @@ func isConflictWithConditions(day string, start, end time.Time, conditions []ent
 		}
 	}
 	return false
+}
+
+func isConsecutiveSlot(schedules []entity.Schedule, day string, start time.Time, courseID uint, sec uint) bool {
+	for _, s := range schedules {
+		if s.DayOfWeek == day && s.OfferedCoursesID == courseID && s.SectionNumber == sec {
+			return s.EndTime.Equal(start)
+		}
+	}
+	return true
 }
 
 func isInstructorConflict(day string, start, end time.Time, schedules []entity.Schedule, userID uint) bool {
@@ -352,33 +375,6 @@ func isLabConflict(day string, start, end time.Time, schedules []entity.Schedule
 		}
 	}
 	return false
-}
-
-func mergeConsecutiveSlots(slots []entity.Schedule) []entity.Schedule {
-	if len(slots) == 0 {
-		return slots
-	}
-	
-	// sort ตามเวลาเริ่ม
-	sort.Slice(slots, func(i, j int) bool {
-		return slots[i].StartTime.Before(slots[j].StartTime)
-	})
-
-	merged := []entity.Schedule{}
-	current := slots[0]
-
-	for i := 1; i < len(slots); i++ {
-		if slots[i].StartTime.Equal(current.EndTime) { 
-			// ต่อเนื่อง → ขยาย EndTime
-			current.EndTime = slots[i].EndTime
-		} else {
-			// ไม่ต่อเนื่อง → เก็บ block ปัจจุบัน
-			merged = append(merged, current)
-			current = slots[i]
-		}
-	}
-	merged = append(merged, current)
-	return merged
 }
 
 // ///////////////////////////////////////// ดึงตารางสอนไปแสดงตาม nametable
