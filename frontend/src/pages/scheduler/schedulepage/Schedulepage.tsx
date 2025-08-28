@@ -34,14 +34,9 @@ import {
   deleteSchedulebyNametable,
   putupdateScheduleTime,
 } from "../../../services/https/SchedulerPageService";
-import { jsPDF } from "jspdf"; // เปลี่ยนจาก import jsPDF
-import autoTable from 'jspdf-autotable'; // import แบบใหม่;
+import * as XLSX from "xlsx";
 
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+
 
 // =================== TYPE DEFINITIONS ===================
 
@@ -1668,29 +1663,23 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
     );
   };
 
-// =================== NEW PDF EXPORT FUNCTION ===================
-// ฟังก์ชัน exportScheduleToPDF ที่แก้ไข TypeScript array type errors
-const exportScheduleToPDF = async () => {
+const exportScheduleToXLSX = async () => {
   if (scheduleData.length === 0) {
     message.warning("ไม่มีข้อมูลให้ส่งออก กรุณาสร้างตารางก่อน");
     return;
   }
 
   try {
-    const hide = message.loading("กำลังสร้าง PDF...", 0);
+    const hide = message.loading("กำลังสร้าง Excel...", 0);
 
-    // สร้าง jsPDF instance
-    const pdf = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4'
-    });
+    // สร้าง header row
+    const timeHeaders = ['วัน/เวลา', ...TIME_SLOTS];
 
-    // สร้าง header row - กำหนด type อย่างชัดเจน
-    const timeHeaders: string[] = ['วัน/เวลา', ...TIME_SLOTS];
-
-    // สร้าง body data จาก scheduleData - กำหนด type เป็น string[][]
-    const tableData: string[][] = [];
+    // สร้าง body data จาก scheduleData
+    const tableData: (string | number)[][] = [];
+    
+    // เพิ่ม header row ลงใน tableData
+    tableData.push(timeHeaders);
     
     // จัดกลุ่มข้อมูลตามวัน
     const dayGroups = DAYS.map(day => {
@@ -1701,7 +1690,7 @@ const exportScheduleToPDF = async () => {
     dayGroups.forEach(({ day, rows }) => {
       if (rows.length === 0) {
         // วันที่ไม่มีเรียน - สร้างแถวว่าง
-        const emptyRow: string[] = [day];
+        const emptyRow: (string | number)[] = [day];
         TIME_SLOTS.forEach(timeSlot => {
           if (timeSlot === "12:00-13:00") {
             emptyRow.push("พักเที่ยง");
@@ -1713,7 +1702,7 @@ const exportScheduleToPDF = async () => {
       } else {
         // วันที่มีเรียน - วนลูปแต่ละ row
         rows.forEach((row, rowIndex) => {
-          const rowData: string[] = [rowIndex === 0 ? day : ""]; // แสดงชื่อวันเฉพาะแถวแรก
+          const rowData: (string | number)[] = [rowIndex === 0 ? day : ""]; // แสดงชื่อวันเฉพาะแถวแรก
           
           TIME_SLOTS.forEach(timeSlot => {
             if (timeSlot === "12:00-13:00") {
@@ -1730,15 +1719,16 @@ const exportScheduleToPDF = async () => {
 
             if (subCellsInSlot.length > 0) {
               const subCell = subCellsInSlot[0];
-              const cellTextParts: string[] = [
+              const cellTextParts = [
                 subCell.classData.subject || "",
-                subCell.classData.courseCode || "",
-                subCell.classData.teacher || "",
-                subCell.classData.room || "",
-                `ปีที่ ${subCell.classData.studentYear || '1'}`
-              ].filter((text: string) => text && text.trim() !== "");
+                `รหัส: ${subCell.classData.courseCode || ""}`,
+                `อาจารย์: ${subCell.classData.teacher || ""}`,
+                `ห้อง: ${subCell.classData.room || ""}`,
+                `ปีที่: ${subCell.classData.studentYear || '1'}`,
+                `หมู่: ${subCell.classData.section || ""}`
+              ].filter(text => text && text.trim() !== "" && !text.includes(": "));
               
-              const cellText: string = cellTextParts.join('\n');
+              const cellText = cellTextParts.join('\n');
               rowData.push(cellText);
             } else {
               rowData.push("");
@@ -1750,103 +1740,113 @@ const exportScheduleToPDF = async () => {
       }
     });
 
-    // เพิ่มหัวข้อเอกสาร
-    pdf.setFontSize(16);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('ตารางเรียน', pdf.internal.pageSize.width / 2, 10, { align: 'center' });
-    
-    // สร้าง PDF table - ใช้ autoTable function
-    autoTable(pdf, {
-      head: [timeHeaders],
-      body: tableData,
-      startY: 15,
-      
-      // การตั้งค่าทั่วไป
-      styles: {
-        font: 'helvetica',
-        fontSize: 8,
-        cellPadding: 2,
-        halign: 'center',
-        valign: 'middle',
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1,
-        overflow: 'linebreak',
-        cellWidth: 'wrap'
-      },
-      
-      // ส่วนหัว
-      headStyles: {
-        fillColor: [242, 101, 34], // สี #F26522
-        textColor: 255,
-        fontSize: 9,
-        fontStyle: 'bold',
-        halign: 'center'
-      },
-      
-      // คอลัมน์แรก (วัน)
-      columnStyles: {
-        0: {
-          fillColor: [248, 249, 250],
-          fontStyle: 'bold',
-          cellWidth: 20,
-          halign: 'center'
-        },
-        // คอลัมน์เวลา - กำหนดความกว้างเท่ากัน
-        1: { cellWidth: 18 },
-        2: { cellWidth: 18 },
-        3: { cellWidth: 18 },
-        4: { cellWidth: 18 },
-        5: { cellWidth: 18, fillColor: [255, 245, 229] }, // พักเที่ยง
-        6: { cellWidth: 18 },
-        7: { cellWidth: 18 },
-        8: { cellWidth: 18 },
-        9: { cellWidth: 18 },
-        10: { cellWidth: 18 },
-        11: { cellWidth: 18 },
-        12: { cellWidth: 18 },
-        13: { cellWidth: 18 }
-      },
-      
-      // สลับสีแถว
-      alternateRowStyles: {
-        fillColor: [250, 250, 250]
-      },
-      
-      // การตั้งค่าขอบและระยะห่าง
-      margin: { top: 15, left: 10, right: 10, bottom: 15 },
-      
-      // การจัดการเซลล์พิเศษ
-      didParseCell: function(data: any) {
-        // เซลล์พักเที่ยง
-        if (data.cell.text && data.cell.text[0] === 'พักเที่ยง') {
-          data.cell.styles.fillColor = [255, 245, 229];
-          data.cell.styles.textColor = [102, 102, 102];
-          data.cell.styles.fontStyle = 'bold';
-        }
-        
-        // เซลล์ว่าง
-        if (!data.cell.text || data.cell.text[0] === '') {
-          data.cell.styles.fillColor = [249, 249, 249];
-        }
-      },
+    // สร้าง workbook และ worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(tableData);
 
-      // การจัดการแถวที่มีข้อมูลเยอะ
-      didDrawCell: function(data: any) {
-        // ถ้าเป็นเซลล์ที่มีข้อความยาว ให้ลดขนาดฟอนต์
-        if (data.cell.text && data.cell.text.join('').length > 60) {
-          data.cell.styles.fontSize = 7;
+    // ตั้งค่าความกว้างของคอลัมน์
+    const colWidths = [
+      { wch: 15 }, // คอลัมน์วัน
+      ...TIME_SLOTS.map(() => ({ wch: 25 })) // คอลัมน์เวลา
+    ];
+    ws['!cols'] = colWidths;
+
+    // ตั้งค่าความสูงของแถว
+    const rowHeights = tableData.map((_, index) => {
+      if (index === 0) return { hpt: 25 }; // header row
+      return { hpt: 60 }; // data rows
+    });
+    ws['!rows'] = rowHeights;
+
+    // จัดรูปแบบเซลล์ header
+    const headerRange = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
+      const headerCell = ws[XLSX.utils.encode_cell({ r: 0, c: col })];
+      if (headerCell) {
+        headerCell.s = {
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "F26522" } },
+          alignment: { horizontal: "center", vertical: "center" }
+        };
+      }
+    }
+
+    // จัดรูปแบบคอลัมน์วัน (คอลัมน์แรก)
+    for (let row = 1; row <= headerRange.e.r; row++) {
+      const dayCell = ws[XLSX.utils.encode_cell({ r: row, c: 0 })];
+      if (dayCell && dayCell.v) {
+        dayCell.s = {
+          font: { bold: true },
+          fill: { fgColor: { rgb: "F8F9FA" } },
+          alignment: { horizontal: "center", vertical: "center" }
+        };
+      }
+    }
+
+    // จัดรูปแบบเซลล์พักเที่ยง
+    for (let row = 1; row <= headerRange.e.r; row++) {
+      for (let col = 1; col <= headerRange.e.c; col++) {
+        const cell = ws[XLSX.utils.encode_cell({ r: row, c: col })];
+        if (cell && cell.v === "พักเที่ยง") {
+          cell.s = {
+            font: { bold: true, color: { rgb: "666666" } },
+            fill: { fgColor: { rgb: "FFF5E5" } },
+            alignment: { horizontal: "center", vertical: "center" }
+          };
+        } else if (cell && cell.v && cell.v !== "") {
+          // เซลล์ที่มีข้อมูล
+          cell.s = {
+            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+            border: {
+              top: { style: "thin", color: { rgb: "000000" } },
+              bottom: { style: "thin", color: { rgb: "000000" } },
+              left: { style: "thin", color: { rgb: "000000" } },
+              right: { style: "thin", color: { rgb: "000000" } }
+            }
+          };
         }
       }
-    });
+    }
 
-    // เพิ่มข้อมูลเพิ่มเติม (หลังจากสร้างตาราง)
+    // เพิ่ม worksheet ลง workbook
+    let sheetName = "ตารางเรียน";
     if (currentTableName) {
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
+      sheetName = currentTableName.length > 31 ? currentTableName.substring(0, 31) : currentTableName;
+    }
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+    // เพิ่มข้อมูลการกรองในแผ่นงานใหม่ (ถ้ามี)
+    if (filterTags.length > 0 || searchValue) {
+      const filterData: (string | number)[][] = [
+        ["ข้อมูลการกรอง"],
+        [""],
+      ];
+
+      if (searchValue) {
+        filterData.push(["ค้นหา:", searchValue]);
+      }
+
+      if (filterTags.length > 0) {
+        filterData.push(["ตัวกรอง:", ""]);
+        filterTags.forEach(tag => {
+          const filterType = tag.type === 'teacher' ? 'อาจารย์' : 'ชั้นปี';
+          filterData.push([filterType, tag.value]);
+        });
+      }
+
+      const filterWs = XLSX.utils.aoa_to_sheet(filterData);
+      filterWs['!cols'] = [{ wch: 20 }, { wch: 30 }];
       
-      // หา finalY position หลังจากตาราง
-      const finalY = (pdf as any).lastAutoTable?.finalY || 100;
-      pdf.text(currentTableName, pdf.internal.pageSize.width / 2, finalY + 10, { align: 'center' });
+      // จัดรูปแบบหัวข้อ
+      const filterHeaderCell = filterWs['A1'];
+      if (filterHeaderCell) {
+        filterHeaderCell.s = {
+          font: { bold: true, sz: 14 },
+          alignment: { horizontal: "center" }
+        };
+      }
+
+      XLSX.utils.book_append_sheet(wb, filterWs, "ข้อมูลการกรอง");
     }
 
     // สร้างชื่อไฟล์
@@ -1859,38 +1859,22 @@ const exportScheduleToPDF = async () => {
 
     let fileName = `ตารางเรียน_${dateStr}`;
     
-    // เพิ่มข้อมูลการกรอง
     if (filterTags.length > 0 || searchValue) {
       fileName += '_กรองแล้ว';
-      
-      // เพิ่มข้อมูลตัวกรองในเอกสาร
-      pdf.setFontSize(8);
-      pdf.setFont('helvetica', 'italic');
-      let filterInfo = 'ตัวกรองที่ใช้: ';
-      
-      if (searchValue) {
-        filterInfo += `ค้นหา: "${searchValue}" `;
-      }
-      
-      if (filterTags.length > 0) {
-        const filterTexts: string[] = filterTags.map(tag => `${tag.type === 'teacher' ? 'อาจารย์' : 'ชั้นปี'}: ${tag.value}`);
-        filterInfo += filterTexts.join(', ');
-      }
-      
-      pdf.text(filterInfo, 15, pdf.internal.pageSize.height - 10);
     }
     
-    fileName += '.pdf';
+    fileName += '.xlsx';
 
     // บันทึกไฟล์
-    pdf.save(fileName);
+    XLSX.writeFile(wb, fileName);
+    
     hide();
-    message.success("ส่งออก PDF สำเร็จ!");
+    message.success("ส่งออก Excel สำเร็จ!");
 
   } catch (error: any) {
     message.destroy();
-    console.error("Error generating PDF:", error);
-    message.error("เกิดข้อผิดพลาดในการสร้าง PDF: " + (error?.message || 'Unknown error'));
+    console.error("Error generating Excel:", error);
+    message.error("เกิดข้อผิดพลาดในการสร้าง Excel: " + (error?.message || 'Unknown error'));
   }
 };
 
@@ -2279,7 +2263,7 @@ const exportScheduleToPDF = async () => {
         <Button
           type="primary"
           style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
-          onClick={exportScheduleToPDF}
+          onClick={exportScheduleToXLSX}
         >
           ส่งออก PDF
           {(filterTags.length > 0 || searchValue) && " (กรอง)"}
