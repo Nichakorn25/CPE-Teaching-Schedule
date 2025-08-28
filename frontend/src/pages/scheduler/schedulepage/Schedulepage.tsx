@@ -34,9 +34,14 @@ import {
   deleteSchedulebyNametable,
   putupdateScheduleTime,
 } from "../../../services/https/SchedulerPageService";
-import html2canvas from "html2canvas";   // <<== ต้องเพิ่มบรรทัดนี้
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { jsPDF } from "jspdf"; // เปลี่ยนจาก import jsPDF
+import autoTable from 'jspdf-autotable'; // import แบบใหม่;
+
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 // =================== TYPE DEFINITIONS ===================
 
@@ -475,7 +480,7 @@ const applyFilters = () => {
         subCells: [...(newData[targetRowIndex].subCells || []), subCell]
       };
       
-      // ✅ เช็คว่าเพิ่มลงในแถวสุดท้ายของวันหรือไม่
+      // ✅ เช็ควา่เพิ่มลงในแถวสุดท้ายของวันหรือไม่
       const isLastRowOfDay = targetRowIndex === dayRows.length - 1;
       const isEmptyRow = (newData[targetRowIndex].subCells || []).length === 1; // มี subcell แค่ตัวเดียวที่เพิ่งเพิ่ม
       
@@ -576,7 +581,7 @@ const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, ne
     
     if (!subCellToMove) return prevData;
     
-    // คำนวดตำแหน่งใหม่
+    // คำนวณตำแหน่งใหม่
     const duration = subCellToMove.position.endSlot - subCellToMove.position.startSlot;
     const newEndSlot = newStartSlot + duration;
     
@@ -606,7 +611,7 @@ const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, ne
       }
       newData[targetRowIndex].subCells!.push(movedSubCell);
       
-      // ✅ เช็คว่าย้ายไปแถวสุดท้ายหรือไม่ และสร้าง empty row ใหม่ถ้าจำเป็น
+      // ✅ เช็ควา่ย้ายไปแถวสุดท้ายหรือไม่ และสร้าง empty row ใหม่ถ้าจำเป็น
       const dayRows = newData.filter(row => row.day === targetRow.day);
       const isTargetLastRow = targetRowIndex === Math.max(...dayRows.map(row => newData.findIndex(r => r.key === row.key)));
       const targetRowHasOnlyMovedCell = newData[targetRowIndex].subCells!.length === 1;
@@ -1663,8 +1668,10 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
     );
   };
 
+// =================== NEW PDF EXPORT FUNCTION ===================
+// ฟังก์ชัน exportScheduleToPDF ที่แก้ไข TypeScript array type errors
 const exportScheduleToPDF = async () => {
-  if (!tableRef.current) {
+  if (scheduleData.length === 0) {
     message.warning("ไม่มีข้อมูลให้ส่งออก กรุณาสร้างตารางก่อน");
     return;
   }
@@ -1672,45 +1679,218 @@ const exportScheduleToPDF = async () => {
   try {
     const hide = message.loading("กำลังสร้าง PDF...", 0);
 
-    // จับภาพตารางเป็น canvas
-    const canvas = await html2canvas(tableRef.current, {
-      scale: 2, // ความคมชัด
-      useCORS: true,
+    // สร้าง jsPDF instance
+    const pdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
     });
 
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "mm", "a4"); // ✅ ใช้ new jsPDF()
+    // สร้าง header row - กำหนด type อย่างชัดเจน
+    const timeHeaders: string[] = ['วัน/เวลา', ...TIME_SLOTS];
 
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+    // สร้าง body data จาก scheduleData - กำหนด type เป็น string[][]
+    const tableData: string[][] = [];
+    
+    // จัดกลุ่มข้อมูลตามวัน
+    const dayGroups = DAYS.map(day => {
+      const dayRows = scheduleData.filter(row => row.day === day);
+      return { day, rows: dayRows };
+    });
 
-    const imgWidth = pageWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    dayGroups.forEach(({ day, rows }) => {
+      if (rows.length === 0) {
+        // วันที่ไม่มีเรียน - สร้างแถวว่าง
+        const emptyRow: string[] = [day];
+        TIME_SLOTS.forEach(timeSlot => {
+          if (timeSlot === "12:00-13:00") {
+            emptyRow.push("พักเที่ยง");
+          } else {
+            emptyRow.push("");
+          }
+        });
+        tableData.push(emptyRow);
+      } else {
+        // วันที่มีเรียน - วนลูปแต่ละ row
+        rows.forEach((row, rowIndex) => {
+          const rowData: string[] = [rowIndex === 0 ? day : ""]; // แสดงชื่อวันเฉพาะแถวแรก
+          
+          TIME_SLOTS.forEach(timeSlot => {
+            if (timeSlot === "12:00-13:00") {
+              rowData.push("พักเที่ยง");
+              return;
+            }
 
-    let heightLeft = imgHeight;
-    let position = 0;
+            // หาวิชาในช่วงเวลานี้
+            const subCellsInSlot = (row.subCells || []).filter(subCell => {
+              const timeSlotIndex = timeSlotToSlotIndex(timeSlot);
+              return subCell.position.startSlot <= timeSlotIndex && 
+                     subCell.position.endSlot > timeSlotIndex;
+            });
 
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+            if (subCellsInSlot.length > 0) {
+              const subCell = subCellsInSlot[0];
+              const cellTextParts: string[] = [
+                subCell.classData.subject || "",
+                subCell.classData.courseCode || "",
+                subCell.classData.teacher || "",
+                subCell.classData.room || "",
+                `ปีที่ ${subCell.classData.studentYear || '1'}`
+              ].filter((text: string) => text && text.trim() !== "");
+              
+              const cellText: string = cellTextParts.join('\n');
+              rowData.push(cellText);
+            } else {
+              rowData.push("");
+            }
+          });
+          
+          tableData.push(rowData);
+        });
+      }
+    });
 
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+    // เพิ่มหัวข้อเอกสาร
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('ตารางเรียน', pdf.internal.pageSize.width / 2, 10, { align: 'center' });
+    
+    // สร้าง PDF table - ใช้ autoTable function
+    autoTable(pdf, {
+      head: [timeHeaders],
+      body: tableData,
+      startY: 15,
+      
+      // การตั้งค่าทั่วไป
+      styles: {
+        font: 'helvetica',
+        fontSize: 8,
+        cellPadding: 2,
+        halign: 'center',
+        valign: 'middle',
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+        overflow: 'linebreak',
+        cellWidth: 'wrap'
+      },
+      
+      // ส่วนหัว
+      headStyles: {
+        fillColor: [242, 101, 34], // สี #F26522
+        textColor: 255,
+        fontSize: 9,
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      
+      // คอลัมน์แรก (วัน)
+      columnStyles: {
+        0: {
+          fillColor: [248, 249, 250],
+          fontStyle: 'bold',
+          cellWidth: 20,
+          halign: 'center'
+        },
+        // คอลัมน์เวลา - กำหนดความกว้างเท่ากัน
+        1: { cellWidth: 18 },
+        2: { cellWidth: 18 },
+        3: { cellWidth: 18 },
+        4: { cellWidth: 18 },
+        5: { cellWidth: 18, fillColor: [255, 245, 229] }, // พักเที่ยง
+        6: { cellWidth: 18 },
+        7: { cellWidth: 18 },
+        8: { cellWidth: 18 },
+        9: { cellWidth: 18 },
+        10: { cellWidth: 18 },
+        11: { cellWidth: 18 },
+        12: { cellWidth: 18 },
+        13: { cellWidth: 18 }
+      },
+      
+      // สลับสีแถว
+      alternateRowStyles: {
+        fillColor: [250, 250, 250]
+      },
+      
+      // การตั้งค่าขอบและระยะห่าง
+      margin: { top: 15, left: 10, right: 10, bottom: 15 },
+      
+      // การจัดการเซลล์พิเศษ
+      didParseCell: function(data: any) {
+        // เซลล์พักเที่ยง
+        if (data.cell.text && data.cell.text[0] === 'พักเที่ยง') {
+          data.cell.styles.fillColor = [255, 245, 229];
+          data.cell.styles.textColor = [102, 102, 102];
+          data.cell.styles.fontStyle = 'bold';
+        }
+        
+        // เซลล์ว่าง
+        if (!data.cell.text || data.cell.text[0] === '') {
+          data.cell.styles.fillColor = [249, 249, 249];
+        }
+      },
+
+      // การจัดการแถวที่มีข้อมูลเยอะ
+      didDrawCell: function(data: any) {
+        // ถ้าเป็นเซลล์ที่มีข้อความยาว ให้ลดขนาดฟอนต์
+        if (data.cell.text && data.cell.text.join('').length > 60) {
+          data.cell.styles.fontSize = 7;
+        }
+      }
+    });
+
+    // เพิ่มข้อมูลเพิ่มเติม (หลังจากสร้างตาราง)
+    if (currentTableName) {
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      
+      // หา finalY position หลังจากตาราง
+      const finalY = (pdf as any).lastAutoTable?.finalY || 100;
+      pdf.text(currentTableName, pdf.internal.pageSize.width / 2, finalY + 10, { align: 'center' });
     }
 
-    const fileName = `schedule_printscreen_${new Date()
-      .toISOString()
-      .split("T")[0]}.pdf`;
+    // สร้างชื่อไฟล์
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).replace(/\//g, '-');
 
+    let fileName = `ตารางเรียน_${dateStr}`;
+    
+    // เพิ่มข้อมูลการกรอง
+    if (filterTags.length > 0 || searchValue) {
+      fileName += '_กรองแล้ว';
+      
+      // เพิ่มข้อมูลตัวกรองในเอกสาร
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'italic');
+      let filterInfo = 'ตัวกรองที่ใช้: ';
+      
+      if (searchValue) {
+        filterInfo += `ค้นหา: "${searchValue}" `;
+      }
+      
+      if (filterTags.length > 0) {
+        const filterTexts: string[] = filterTags.map(tag => `${tag.type === 'teacher' ? 'อาจารย์' : 'ชั้นปี'}: ${tag.value}`);
+        filterInfo += filterTexts.join(', ');
+      }
+      
+      pdf.text(filterInfo, 15, pdf.internal.pageSize.height - 10);
+    }
+    
+    fileName += '.pdf';
+
+    // บันทึกไฟล์
     pdf.save(fileName);
     hide();
     message.success("ส่งออก PDF สำเร็จ!");
-  } catch (error) {
+
+  } catch (error: any) {
     message.destroy();
     console.error("Error generating PDF:", error);
-    message.error("เกิดข้อผิดพลาดในการสร้าง PDF");
+    message.error("เกิดข้อผิดพลาดในการสร้าง PDF: " + (error?.message || 'Unknown error'));
   }
 };
 
