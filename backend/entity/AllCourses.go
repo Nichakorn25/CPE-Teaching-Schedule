@@ -9,6 +9,7 @@ type AllCourses struct {
 	Code string `gorm:"unique" valid:"required~Code is required."`
 	EnglishName string `valid:"required~English name is required.,alpha~English name must contain only letters."`
 	ThaiName    string	`valid:"required~ThaiName is required."`
+	Ismain	 	bool   `valid:"required~ismain is required."`
 
 	CurriculumID    uint
 	Curriculum      Curriculum `gorm:"foreignKey:CurriculumID"`
