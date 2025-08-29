@@ -521,12 +521,18 @@ func SeedCredits() {
 // เคลีย
 func SeedTypeOfCourses() {
 	types := []entity.TypeOfCourses{
-		{Type: 1, TypeName: "หมวดวิชาจากศูนย์บริการ"},
+		{Type: 1, TypeName: "กลุ่มวิชาแกนศึกษาทั่วไป"},
 		{Type: 2, TypeName: "กลุ่มวิชาพื้นฐานทางวิศวกรรมศาสตร์"},
 		{Type: 3, TypeName: "กลุ่มวิชาชีพบังคับทางวิศวกรรมคอมพิวเตอร์"},
 		{Type: 4, TypeName: "กลุ่มวิชาเลือกทางวิศวกรรมคอมพิวเตอร์"},
-		{Type: 3, TypeName: "กลุ่มวิชาชีพบังคับทางวิศวกรรมไฟฟ้า"},
-		{Type: 4, TypeName: "กลุ่มวิชาเลือกทางวิศวกรรมไฟฟ้า"},
+		{Type: 5, TypeName: "กลุ่มวิชาชีพบังคับทางวิศวกรรมไฟฟ้า"},
+		{Type: 6, TypeName: "กลุ่มวิชาเลือกทางวิศวกรรมไฟฟ้า"},
+		{Type: 7, TypeName: "กลุ่มวิชาภาษา"},
+		{Type: 8, TypeName: "กลุ่มวิชาศึกษาทั่วไปแบบเลือก"},
+		{Type: 9, TypeName: "กลุ่มวิชาพื้นฐานทางวิทยาศาสตร์และคณิตศาสตร์"},
+		{Type: 10, TypeName: "กลุ่มวิชาพื้นฐานทางวิศวกรรมศาสตร์"},
+		{Type: 11, TypeName: "กลุ่มวิชาเลือกทางวิศวกรรมคอมพิวเตอร์"},
+		{Type: 12, TypeName: "หมวดวิชาสหกิจศึกษา"},
 	}
 	for _, t := range types {
 		db.FirstOrCreate(&entity.TypeOfCourses{}, entity.TypeOfCourses{
@@ -604,6 +610,14 @@ func SeedAllCourses() {
 		type2 entity.TypeOfCourses
 		type3 entity.TypeOfCourses
 		type4 entity.TypeOfCourses
+		type5 entity.TypeOfCourses
+		type6 entity.TypeOfCourses
+		type7 entity.TypeOfCourses
+		type8 entity.TypeOfCourses
+		type9 entity.TypeOfCourses
+		type10 entity.TypeOfCourses
+		type11 entity.TypeOfCourses
+		type12 entity.TypeOfCourses
 
 		credit2_2_0_4 entity.Credit
 		credit1_0_2_1 entity.Credit
@@ -629,10 +643,19 @@ func SeedAllCourses() {
 	db.First(&year3, "level = ?", "3")
 	db.First(&year4, "level = ?", "4")
 
-	db.First(&type1, "type_name = ?", "หมวดวิชาจากศูนย์บริการ")
+	db.First(&type1, "type_name = ?", "กลุ่มวิชาแกนศึกษาทั่วไป")
 	db.First(&type2, "type_name = ?", "กลุ่มวิชาพื้นฐานทางวิศวกรรมศาสตร์")
 	db.First(&type3, "type_name = ?", "กลุ่มวิชาชีพบังคับทางวิศวกรรมคอมพิวเตอร์")
 	db.First(&type4, "type_name = ?", "กลุ่มวิชาเลือกทางวิศวกรรมคอมพิวเตอร์")
+	db.First(&type5, "type_name = ?", "กลุ่มวิชาชีพบังคับทางวิศวกรรมไฟฟ้า")
+	db.First(&type6, "type_name = ?", "กลุ่มวิชาเลือกทางวิศวกรรมไฟฟ้า")
+	db.First(&type7, "type_name = ?", "กลุ่มวิชาภาษา")
+	db.First(&type8, "type_name = ?", "กลุ่มวิชาศึกษาทั่วไปแบบเลือก")
+	db.First(&type9, "type_name = ?", "กลุ่มวิชาพื้นฐานทางวิทยาศาสตร์และคณิตศาสตร์")
+	db.First(&type10, "type_name = ?", "กลุ่มวิชาพื้นฐานทางวิศวกรรมศาสตร์")
+	db.First(&type11, "type_name = ?", "กลุ่มวิชาเลือกทางวิศวกรรมคอมพิวเตอร์")
+	db.First(&type12, "type_name = ?", "หมวดวิชาสหกิจศึกษา")
+
 
 	db.First(&credit2_2_0_4, "unit = ? AND lecture = ? AND lab = ? AND self = ?", 2, 2, 0, 4)
 	db.First(&credit1_0_2_1, "unit = ? AND lecture = ? AND lab = ? AND self = ?", 1, 0, 2, 1)
@@ -658,8 +681,8 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 1,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
-		/////////////////////2//////////////////////////////
 		{
 			Code:            "IST20 1002",
 			EnglishName:     "Use of Application Programs for Learning",
@@ -668,6 +691,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 1,
 			CreditID:        credit1_0_2_1.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST20 1003",
@@ -677,6 +701,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 1,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST20 1004",
@@ -686,6 +711,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 1,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST20 2001",
@@ -695,6 +721,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 1,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST20 2002",
@@ -704,6 +731,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 1,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST30 1101",
@@ -711,8 +739,9 @@ func SeedAllCourses() {
 			ThaiName:        "ภาษาอังกฤษเพื่อการสื่อสาร 1",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 5,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST30 1102",
@@ -720,8 +749,9 @@ func SeedAllCourses() {
 			ThaiName:        "ภาษาอังกฤษเพื่อการสื่อสาร 2",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 5,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST30 1103",
@@ -729,8 +759,9 @@ func SeedAllCourses() {
 			ThaiName:        "ภาษาอังกฤษเพื่อวัตถุประสงค์ทางวิชาการ",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 5,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST30 1104",
@@ -738,8 +769,9 @@ func SeedAllCourses() {
 			ThaiName:        "ภาษาอังกฤษเพื่อวัตถุประสงค์เฉพาะ",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 5,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST30 1105",
@@ -747,8 +779,9 @@ func SeedAllCourses() {
 			ThaiName:        "ภาษาอังกฤษเพื่อการทำงาน",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 5,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "DGT00 0140",
@@ -756,8 +789,9 @@ func SeedAllCourses() {
 			ThaiName:        "การรู้เท่าทันปัญญาประดิษฐ์",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 6,
 			CreditID:        credit1_1_0_2.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "ENG20 1110",
@@ -765,8 +799,9 @@ func SeedAllCourses() {
 			ThaiName:        "การเงินส่วนบุคคล",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 6,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "ENG51 1901",
@@ -774,8 +809,9 @@ func SeedAllCourses() {
 			ThaiName:        "การใช้ปัญญาประดิษฐ์สำหรับการเรียนรู้อย่างมีประสิทธิภาพ",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 6,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IPH03 4013",
@@ -783,8 +819,9 @@ func SeedAllCourses() {
 			ThaiName:        "ความปลอดภัยสำหรับวัยรุ่นและเยาวชน",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 6,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST20 1501",
@@ -792,8 +829,9 @@ func SeedAllCourses() {
 			ThaiName:        "ภาษาไทยเพื่อการสื่อสาร",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 6,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST20 1502",
@@ -801,8 +839,9 @@ func SeedAllCourses() {
 			ThaiName:        "ศิลปวิจักษ์",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 6,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST20 1503",
@@ -810,8 +849,9 @@ func SeedAllCourses() {
 			ThaiName:        "สุขภาพองค์รวม",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 6,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST20 1504",
@@ -819,8 +859,9 @@ func SeedAllCourses() {
 			ThaiName:        "กฎหมายในชีวิตประจำวัน",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 6,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST20 2501",
@@ -828,8 +869,9 @@ func SeedAllCourses() {
 			ThaiName:        "พันธกิจสัมพันธ์ชุมชนกับกลุ่มอาชีพ",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 6,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST20 2502",
@@ -837,8 +879,9 @@ func SeedAllCourses() {
 			ThaiName:        "ไทยศึกษาเชิงพหุวัฒนธรรม",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 6,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST20 2503",
@@ -846,8 +889,9 @@ func SeedAllCourses() {
 			ThaiName:        "อาเซียนศึกษา ",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 6,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST20 2504",
@@ -855,8 +899,9 @@ func SeedAllCourses() {
 			ThaiName:        "การคิดเชิงออกแบบ ",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 6,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "IST20 2505",
@@ -864,8 +909,9 @@ func SeedAllCourses() {
 			ThaiName:        "ฮักเจ้าของ",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &yearAll.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 6,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "ENG20 1010",
@@ -873,8 +919,9 @@ func SeedAllCourses() {
 			ThaiName:        "แนะนำวิชาชีพวิศวกรรม",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &year1.ID,
-			TypeOfCoursesID: 2,
+			TypeOfCoursesID: 10,
 			CreditID:        credit1_0_3_3.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "ENG23 1001",
@@ -882,8 +929,9 @@ func SeedAllCourses() {
 			ThaiName:        "การเขียนโปรแกรมคอมพิวเตอร์ 1",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &year1.ID,
-			TypeOfCoursesID: 2,
+			TypeOfCoursesID: 10,
 			CreditID:        credit2_1_3_5.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "ENG23 2001",
@@ -891,8 +939,9 @@ func SeedAllCourses() {
 			ThaiName:        "การเขียนโปรแกรมคอมพิวเตอร์ 2",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &year2.ID,
-			TypeOfCoursesID: 2,
+			TypeOfCoursesID: 10,
 			CreditID:        credit2_1_3_5.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "ENG23 3001",
@@ -902,6 +951,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 2,
 			CreditID:        credit2_2_0_4.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "ENG25 1010",
@@ -911,6 +961,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year1.ID,
 			TypeOfCoursesID: 2,
 			CreditID:        credit2_1_3_5.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "ENG31 1001",
@@ -920,6 +971,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year1.ID,
 			TypeOfCoursesID: 2,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          true,
 		},
 		{
 			Code:            "ENG23 2003",
@@ -929,6 +981,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit2_1_3_5.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 2011",
@@ -938,6 +991,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4080",
@@ -947,6 +1001,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year3.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 2031",
@@ -956,15 +1011,17 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 2032",
-			EnglishName:     "Object–Oriented Technology",
+			EnglishName:     "Object-Oriented Technology",
 			ThaiName:        "เทคโนโลยีเชิงวัตถุ",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3031",
@@ -974,6 +1031,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year3.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3032",
@@ -983,6 +1041,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year3.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 2051",
@@ -992,6 +1051,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3051",
@@ -1001,6 +1061,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year3.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3052",
@@ -1010,6 +1071,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year3.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3053",
@@ -1019,6 +1081,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year3.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3054",
@@ -1028,6 +1091,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year3.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 2071",
@@ -1037,6 +1101,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 2072",
@@ -1046,6 +1111,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit1_0_3_3.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 2073",
@@ -1055,6 +1121,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 2074",
@@ -1064,6 +1131,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit1_0_3_3.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 2075",
@@ -1073,6 +1141,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 2076",
@@ -1082,6 +1151,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 2077",
@@ -1091,6 +1161,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3012",
@@ -1100,6 +1171,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3013",
@@ -1109,6 +1181,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3014",
@@ -1118,6 +1191,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3015",
@@ -1127,6 +1201,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3016",
@@ -1136,6 +1211,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3033",
@@ -1145,6 +1221,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3055",
@@ -1154,6 +1231,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3072",
@@ -1163,6 +1241,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3073",
@@ -1172,6 +1251,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3074",
@@ -1181,6 +1261,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 3075",
@@ -1190,6 +1271,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4011",
@@ -1199,6 +1281,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4013",
@@ -1208,6 +1291,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4014",
@@ -1217,6 +1301,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4015",
@@ -1226,6 +1311,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4016",
@@ -1235,6 +1321,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4017",
@@ -1244,6 +1331,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4018",
@@ -1253,6 +1341,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4019",
@@ -1262,6 +1351,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4033",
@@ -1271,6 +1361,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4035",
@@ -1280,6 +1371,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4041",
@@ -1289,6 +1381,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4042",
@@ -1298,6 +1391,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4031",
@@ -1307,6 +1401,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4032",
@@ -1316,6 +1411,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4053",
@@ -1325,6 +1421,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4034",
@@ -1334,6 +1431,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4060",
@@ -1343,6 +1441,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4071",
@@ -1352,6 +1451,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4072",
@@ -1361,6 +1461,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4073",
@@ -1370,6 +1471,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4074",
@@ -1379,6 +1481,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_3_3_9.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4081",
@@ -1388,6 +1491,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4082",
@@ -1397,6 +1501,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4097",
@@ -1406,6 +1511,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4098",
@@ -1415,6 +1521,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4099",
@@ -1424,6 +1531,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 4,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4090",
@@ -1431,8 +1539,9 @@ func SeedAllCourses() {
 			ThaiName:        "เตรียมสหกิจศึกษา",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &year4.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 12,
 			CreditID:        credit1_0_0_0.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4091",
@@ -1440,8 +1549,9 @@ func SeedAllCourses() {
 			ThaiName:        "สหกิจศึกษา 1",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &year4.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 12,
 			CreditID:        credit8_0_0_0.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4092",
@@ -1449,8 +1559,9 @@ func SeedAllCourses() {
 			ThaiName:        "สหกิจศึกษา 2",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &year4.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 12,
 			CreditID:        credit8_0_0_0.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG23 4094",
@@ -1458,8 +1569,9 @@ func SeedAllCourses() {
 			ThaiName:        "โครงการศึกษาวิศวกรรมคอมพิวเตอร์",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &year4.ID,
-			TypeOfCoursesID: 1,
+			TypeOfCoursesID: 12,
 			CreditID:        credit9_0_0_0.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG20 2010",
@@ -1469,6 +1581,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_2_4_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG20 3010",
@@ -1478,6 +1591,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_2_4_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG20 4010",
@@ -1487,6 +1601,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_2_4_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG20 2020",
@@ -1496,6 +1611,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_2_4_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG20 3020",
@@ -1505,6 +1621,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_2_4_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG20 4020",
@@ -1514,6 +1631,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 3,
 			CreditID:        credit4_2_4_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG29 2001",
@@ -1523,6 +1641,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year1.ID,
 			TypeOfCoursesID: 5,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG29 2111",
@@ -1532,6 +1651,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 6,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG29 2113",
@@ -1541,6 +1661,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 5,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG29 2115",
@@ -1550,6 +1671,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year3.ID,
 			TypeOfCoursesID: 6,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG29 2141",
@@ -1559,6 +1681,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 5,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG29 2142",
@@ -1568,6 +1691,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 6,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG29 2131",
@@ -1577,6 +1701,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 5,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG29 3131",
@@ -1586,6 +1711,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year3.ID,
 			TypeOfCoursesID: 6,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG29 3132",
@@ -1595,6 +1721,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year4.ID,
 			TypeOfCoursesID: 5,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG29 3151",
@@ -1604,6 +1731,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year4.ID,
 			TypeOfCoursesID: 6,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG29 3152",
@@ -1613,6 +1741,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year3.ID,
 			TypeOfCoursesID: 5,
 			CreditID:        credit3_3_0_6.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG29 3153",
@@ -1622,6 +1751,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year4.ID,
 			TypeOfCoursesID: 6,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG29 3154",
@@ -1631,7 +1761,9 @@ func SeedAllCourses() {
 			AcademicYearID:  &yearAll.ID,
 			TypeOfCoursesID: 5,
 			CreditID:        credit4_4_0_8.ID,
+			Ismain:          false,
 		},
+				
 	}
 	for _, c := range courses {
 		var course entity.AllCourses
@@ -1645,6 +1777,7 @@ func SeedAllCourses() {
 				AcademicYearID:  c.AcademicYearID,
 				TypeOfCoursesID: c.TypeOfCoursesID,
 				CreditID:        c.CreditID,
+				Ismain:          c.Ismain,
 			})
 	}
 }
