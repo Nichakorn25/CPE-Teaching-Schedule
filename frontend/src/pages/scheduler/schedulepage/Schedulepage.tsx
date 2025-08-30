@@ -15,6 +15,7 @@ import {
   Space,
   Divider,
   AutoComplete,
+  Drawer,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -22,6 +23,8 @@ import {
   SearchOutlined,
   FilterOutlined,
   ClearOutlined,
+  MenuOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import {
   OfferedCoursesInterface,
@@ -119,6 +122,20 @@ interface FilterOptions {
   subjects: string[];
   courseCodes: string[];
   rooms: string[];
+}
+
+// =================== NEW COURSE CARD TYPES ===================
+interface CourseCard {
+  id: string;
+  subject: string;
+  courseCode: string;
+  teacher: string;
+  room: string;
+  section: string;
+  studentYear: string;
+  duration: number; // duration in hours
+  color: string;
+  scheduleId?: number;
 }
 
 // =================== CONSTANTS ===================
@@ -265,7 +282,383 @@ const Schedulepage: React.FC = () => {
   const [searchValue, setSearchValue] = useState("");
   const [filterVisible, setFilterVisible] = useState(false);
 
+  // =================== NEW SIDEBAR STATES ===================
+  const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [courseCards, setCourseCards] = useState<CourseCard[]>([]);
+  const [draggedCourseCard, setDraggedCourseCard] = useState<CourseCard | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(350);
+
   const tableRef = useRef<HTMLDivElement>(null);
+
+  // =================== COURSE CARD FUNCTIONS ===================
+  const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
+    const cards: CourseCard[] = [];
+    const seenCourses = new Set<string>();
+
+    schedules.forEach((schedule, index) => {
+      const getRoomInfo = (schedule: ScheduleInterface): string => {
+        if (schedule.TimeFixedCourses && schedule.TimeFixedCourses.length > 0) {
+          const matchingFixedCourse = schedule.TimeFixedCourses.find(
+            tc => tc.Section === schedule.SectionNumber && 
+                 tc.ScheduleID === schedule.ID &&
+                 tc.RoomFix && tc.RoomFix.trim() !== ""
+          );
+          if (matchingFixedCourse?.RoomFix) {
+            return matchingFixedCourse.RoomFix;
+          }
+        }
+        return "TBA";
+      };
+
+      const getStudentYear = (schedule: ScheduleInterface): string => {
+        const academicYearId = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.AcademicYearID;
+        if (academicYearId && academicYearId >= 1) {
+          return academicYearId.toString();
+        }
+        const level = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.Level;
+        if (level && level !== 'เรียนได้ทุกชั้นปี') {
+          const yearMatch = level.match(/ปีที่\s*(\d+)/);
+          if (yearMatch) {
+            return yearMatch[1];
+          }
+        }
+        return "1";
+      };
+
+      const subject = schedule.OfferedCourses?.AllCourses?.ThaiName ||
+                     schedule.OfferedCourses?.AllCourses?.EnglishName ||
+                     schedule.OfferedCourses?.AllCourses?.Code ||
+                     "ไม่ทราบชื่อ";
+      
+      const courseCode = schedule.OfferedCourses?.AllCourses?.Code || "";
+      const teacher = schedule.OfferedCourses?.User ? 
+                     `${schedule.OfferedCourses.User.Firstname || ""} ${schedule.OfferedCourses.User.Lastname || ""}`.trim() ||
+                     "ไม่ระบุอาจารย์" :
+                     "ไม่ระบุอาจารย์";
+      const room = getRoomInfo(schedule);
+      const section = schedule.SectionNumber?.toString() || "";
+      const studentYear = getStudentYear(schedule);
+
+      // Create unique identifier for course combinations
+      const courseKey = `${courseCode}-${section}-${studentYear}-${teacher}`;
+      
+      if (!seenCourses.has(courseKey)) {
+        seenCourses.add(courseKey);
+        
+        const getTimeString = (time: string | Date): string => {
+          if (typeof time === 'string') {
+            if (time.includes('T')) {
+              return time.substring(11, 16);
+            }
+            return time.length > 5 ? time.substring(0, 5) : time;
+          } else if (time instanceof Date) {
+            return time.toTimeString().substring(0, 5);
+          }
+          return "00:00";
+        };
+
+        // Calculate duration
+        const startTime = getTimeString(schedule.StartTime);
+        const endTime = getTimeString(schedule.EndTime);
+        const startSlot = timeToSlotIndex(startTime);
+        const endSlot = timeToSlotIndex(endTime);
+        const duration = endSlot - startSlot;
+
+        const card: CourseCard = {
+          id: `course-card-${index}`,
+          subject,
+          courseCode,
+          teacher,
+          room,
+          section,
+          studentYear,
+          duration: Math.max(1, duration),
+          color: getSubjectColor(subject, courseCode),
+          scheduleId: schedule.ID
+        };
+
+        cards.push(card);
+      }
+    });
+
+    setCourseCards(cards);
+  };
+
+  // =================== COURSE CARD DRAG HANDLERS ===================
+  const handleCourseCardDragStart = (e: React.DragEvent, courseCard: CourseCard) => {
+    setDraggedCourseCard(courseCard);
+    e.dataTransfer.effectAllowed = "copy";
+    
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = "0.5";
+    }
+  };
+
+  const handleCourseCardDragEnd = (e: React.DragEvent) => {
+    setDraggedCourseCard(null);
+    setDragPreview(null);
+    
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = "1";
+    }
+  };
+
+  // Modified cell drag handlers to handle course cards
+  const handleCellDragOver = (e: React.DragEvent, targetRow: ExtendedScheduleData, timeSlot: string) => {
+    e.preventDefault();
+    
+    const slotIndex = timeToSlotIndex(timeSlot.split('-')[0]);
+    let duration = 1;
+    
+    if (draggedSubCell) {
+      duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
+    } else if (draggedCourseCard) {
+      duration = draggedCourseCard.duration;
+    }
+    
+    setDragPreview({
+      day: targetRow.day,
+      startSlot: slotIndex,
+      endSlot: slotIndex + duration,
+      show: true
+    });
+  };
+
+  // Modified drop handler to handle both subcells and course cards
+  const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, timeSlot: string) => {
+    e.preventDefault();
+    
+    const slotIndex = timeToSlotIndex(timeSlot.split('-')[0]);
+    
+    if (draggedCourseCard) {
+      // Handle course card drop
+      const startTime = slotIndexToTime(slotIndex);
+      const endTime = slotIndexToTime(slotIndex + draggedCourseCard.duration);
+      
+      const classInfo: ClassInfo = {
+        subject: draggedCourseCard.subject,
+        teacher: draggedCourseCard.teacher,
+        room: draggedCourseCard.room,
+        section: draggedCourseCard.section,
+        courseCode: draggedCourseCard.courseCode,
+        studentYear: draggedCourseCard.studentYear,
+        color: draggedCourseCard.color
+      };
+      
+      const newSubCell = createSubCell(classInfo, targetRow.day, startTime, endTime, draggedCourseCard.scheduleId);
+      
+      // Check for conflicts
+      const hasConflict = (targetRow.subCells || []).some(existingSubCell => 
+        doSubCellsOverlap(newSubCell, existingSubCell)
+      );
+      
+      if (hasConflict) {
+        message.warning("ไม่สามารถวางที่ตำแหน่งนี้ได้ เนื่องจากมีการซ้อนทับเวลา");
+        setDraggedCourseCard(null);
+        setDragPreview(null);
+        return;
+      }
+      
+      addSubCellToDay(targetRow.day, newSubCell);
+      setDraggedCourseCard(null);
+      setDragPreview(null);
+      message.success(`เพิ่มวิชา ${draggedCourseCard.subject} ลงในตารางแล้ว`);
+      
+    } else if (draggedSubCell) {
+      // Handle existing subcell move
+      const duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
+      const tempSubCell = {
+        ...draggedSubCell,
+        position: { startSlot: slotIndex, endSlot: slotIndex + duration }
+      };
+      
+      const hasConflict = (targetRow.subCells || []).some(existingSubCell => 
+        existingSubCell.id !== draggedSubCell.id && doSubCellsOverlap(tempSubCell, existingSubCell)
+      );
+      
+      if (hasConflict) {
+        message.warning("ไม่สามารถวางที่ตำแหน่งนี้ได้ เนื่องจากมีการซ้อนทับเวลา");
+        return;
+      }
+      
+      moveSubCellToRow(draggedSubCell.id, targetRow, slotIndex);
+      setDraggedSubCell(null);
+      setDragPreview(null);
+    }
+  };
+
+  // =================== RENDER COURSE CARD ===================
+  const renderCourseCard = (courseCard: CourseCard) => {
+    return (
+      <div
+        key={courseCard.id}
+        draggable
+        onDragStart={(e) => handleCourseCardDragStart(e, courseCard)}
+        onDragEnd={handleCourseCardDragEnd}
+        style={{
+          backgroundColor: courseCard.color,
+          border: "2px solid rgba(0,0,0,0.1)",
+          borderRadius: "8px",
+          padding: "12px",
+          margin: "8px 0",
+          cursor: "grab",
+          transition: "all 0.2s ease",
+          fontSize: "11px",
+          lineHeight: "1.3",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "translateY(-2px)";
+          e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "translateY(0px)";
+          e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+        }}
+      >
+        <Tooltip
+          title={
+            <div style={{ fontFamily: "Sarabun, sans-serif", minWidth: "250px" }}>
+              <div style={{ fontWeight: "bold", fontSize: "13px", marginBottom: "6px", color: "#F26522" }}>
+                📚 รายละเอียดวิชา
+              </div>
+              <p><b>🏷️ รหัสวิชา:</b> {courseCard.courseCode || "ไม่ระบุ"}</p>
+              <p><b>📖 ชื่อวิชา:</b> {courseCard.subject || "ไม่ระบุ"}</p>
+              <p><b>🎓 ชั้นปี:</b> {courseCard.studentYear ? `ปีที่ ${courseCard.studentYear}` : "ไม่ระบุ"}</p>
+              <p><b>📄 หมู่เรียน:</b> {courseCard.section || "ไม่ระบุ"}</p>
+              <p><b>👩‍🏫 อาจารย์:</b> {courseCard.teacher || "ไม่ระบุ"}</p>
+              <p><b>🏢 ห้องเรียน:</b> {courseCard.room || "ไม่ระบุ"}</p>
+              <p><b>⏱️ ระยะเวลา:</b> {courseCard.duration} ชั่วโมง</p>
+              <div style={{ marginTop: "8px", fontSize: "11px", color: "#666", fontStyle: "italic" }}>
+                💡 ลากการ์ดนี้ไปวางในตารางเรียน
+              </div>
+            </div>
+          }
+          placement="left"
+          overlayStyle={{ maxWidth: "350px" }}
+        >
+          <div>
+            <div style={{ fontWeight: "bold", fontSize: "12px", marginBottom: "4px", color: "#333" }}>
+              {courseCard.subject}
+            </div>
+            <div style={{ fontSize: "9px", color: "#666", marginBottom: "2px" }}>
+              รหัส: {courseCard.courseCode}
+            </div>
+            <div style={{ fontSize: "10px", color: "#555", marginBottom: "2px" }}>
+              อาจารย์: {courseCard.teacher}
+            </div>
+            <div style={{ fontSize: "9px", color: "#777", marginBottom: "2px" }}>
+              ห้อง: {courseCard.room}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+              <span style={{ fontSize: "9px", color: "#888" }}>
+                ปี {courseCard.studentYear} หมู่ {courseCard.section}
+              </span>
+              <span style={{ fontSize: "10px", fontWeight: "bold", color: "#F26522" }}>
+                {courseCard.duration}ชม.
+              </span>
+            </div>
+          </div>
+        </Tooltip>
+      </div>
+    );
+  };
+
+  // =================== RENDER SIDEBAR ===================
+  const renderSidebar = () => {
+    if (!sidebarVisible) return null;
+    
+    return (
+      <div
+        style={{
+          width: `${sidebarWidth}px`,
+          backgroundColor: "#fafafa",
+          borderLeft: "1px solid #d9d9d9",
+          height: "100vh",
+          overflowY: "auto",
+          padding: "16px",
+          position: "fixed",
+          right: 0,
+          top: 0,
+          zIndex: 1000,
+          boxShadow: "-2px 0 8px rgba(0,0,0,0.1)",
+          transition: "right 0.3s ease"
+        }}
+      >
+        {/* Sidebar Header */}
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center",
+          marginBottom: "16px",
+          paddingBottom: "12px",
+          borderBottom: "2px solid #F26522"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <BookOutlined style={{ color: "#F26522", fontSize: "18px" }} />
+            <h3 style={{ margin: 0, color: "#333", fontSize: "16px" }}>
+              กล่องวิชา
+            </h3>
+          </div>
+          <Button
+            type="text"
+            icon={<CloseOutlined />}
+            onClick={() => setSidebarVisible(false)}
+            size="small"
+          />
+        </div>
+
+        {/* Course Cards Count */}
+        <div style={{ 
+          backgroundColor: "#e6f7ff", 
+          padding: "8px 12px", 
+          borderRadius: "6px",
+          marginBottom: "16px",
+          border: "1px solid #91d5ff"
+        }}>
+          <div style={{ fontSize: "12px", color: "#1890ff" }}>
+            📊 มีวิชาทั้งหมด: <strong>{courseCards.length}</strong> รายการ
+          </div>
+          <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>
+            💡 ลากการ์ดวิชาไปวางในตารางเรียนได้เลย
+          </div>
+        </div>
+
+        {/* Course Cards List */}
+        <div style={{ maxHeight: "calc(100vh - 200px)", overflowY: "auto" }}>
+          {courseCards.length === 0 ? (
+            <div style={{ 
+              textAlign: "center", 
+              padding: "40px 20px", 
+              color: "#999",
+              backgroundColor: "#f9f9f9",
+              borderRadius: "8px",
+              border: "2px dashed #ddd"
+            }}>
+              <BookOutlined style={{ fontSize: "32px", marginBottom: "8px", color: "#ccc" }} />
+              <div>ไม่มีวิชาในกล่อง</div>
+              <div style={{ fontSize: "11px", marginTop: "4px" }}>
+                กรุณาโหลดตารางจาก API ก่อน
+              </div>
+            </div>
+          ) : (
+            courseCards.map(courseCard => renderCourseCard(courseCard))
+          )}
+        </div>
+
+        {/* Sidebar Footer */}
+        <div style={{ 
+          marginTop: "16px",
+          paddingTop: "12px",
+          borderTop: "1px solid #e8e8e8",
+          fontSize: "10px",
+          color: "#999",
+          textAlign: "center"
+        }}>
+          🔧 ใช้ปุ่มข้างบนเพื่อปิด sidebar
+        </div>
+      </div>
+    );
+  };
 
   // =================== FILTER FUNCTIONS ===================
   const extractFilterOptions = (data: ExtendedScheduleData[]) => {
@@ -698,52 +1091,8 @@ const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, ne
     }
   };
 
-  const handleCellDragOver = (e: React.DragEvent, targetRow: ExtendedScheduleData, timeSlot: string) => {
-    e.preventDefault();
-    
-    if (!draggedSubCell) return;
-    
-    const slotIndex = timeToSlotIndex(timeSlot.split('-')[0]);
-    const duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
-    
-    setDragPreview({
-      day: targetRow.day,
-      startSlot: slotIndex,
-      endSlot: slotIndex + duration,
-      show: true
-    });
-  };
-
   const handleCellDragLeave = () => {
     setDragPreview(prev => prev ? { ...prev, show: false } : null);
-  };
-
-  const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, timeSlot: string) => {
-    e.preventDefault();
-    
-    if (!draggedSubCell) return;
-    
-    const slotIndex = timeToSlotIndex(timeSlot.split('-')[0]);
-    
-    // ตรวจสอบการทับซ้อนในแถวเป้าหมาย
-    const duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
-    const tempSubCell = {
-      ...draggedSubCell,
-      position: { startSlot: slotIndex, endSlot: slotIndex + duration }
-    };
-    
-    const hasConflict = (targetRow.subCells || []).some(existingSubCell => 
-      existingSubCell.id !== draggedSubCell.id && doSubCellsOverlap(tempSubCell, existingSubCell)
-    );
-    
-    if (hasConflict) {
-      message.warning("ไม่สามารถวางที่ตำแหน่งนี้ได้ เนื่องจากมีการซ้อนทับเวลา");
-      return;
-    }
-    
-    moveSubCellToRow(draggedSubCell.id, targetRow, slotIndex);
-    setDraggedSubCell(null);
-    setDragPreview(null);
   };
 
   // =================== RENDER SUB-CELL FUNCTION ===================
@@ -991,7 +1340,7 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
     const daySchedules = rawSchedules.filter(item => item.DayOfWeek === day);
     
     if (daySchedules.length === 0) {
-      // สร้างแถวว่างสำหรับวันที่ไม่มีเรียน
+      // สร้างแถววางสำหรับวันที่ไม่มีเรียน
       const firstRow = createEmptyDayRow(day, dayIndex, 0, 2);
       const secondRow = createEmptyDayRow(day, dayIndex, 1, 2);
       secondRow.isFirstRowOfDay = false;
@@ -1205,6 +1554,9 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
         setOriginalScheduleData(res.data);
         setCurrentTableName(nameTable);
         setIsTableFromAPI(true);
+        
+        // Generate course cards from API data
+        generateCourseCardsFromAPI(typedSchedules);
      
       }
     } catch (error) {
@@ -1250,6 +1602,9 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
           setOriginalScheduleData(tableRes.data);
           setCurrentTableName(nameTable);
           setIsTableFromAPI(true);
+          
+          // Generate course cards from auto-generated data
+          generateCourseCardsFromAPI(typedSchedules);
           
           message.success("สร้างตารางอัตโนมัติสำเร็จ และโหลดตารางแล้ว");
         } else {
@@ -1357,6 +1712,9 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
         setCurrentTableName(scheduleName);
         setIsTableFromAPI(true);
         
+        // Generate course cards from loaded data
+        generateCourseCardsFromAPI(typedSchedules);
+        
         message.success("โหลดตารางเรียบร้อย");
         setLoadModalVisible(false);
       } else {
@@ -1380,6 +1738,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
         setCurrentTableName("");
         setIsTableFromAPI(false);
         setOriginalScheduleData([]);
+        setCourseCards([]); // Clear course cards
         await getAllNameTable();
         message.success(`ลบตาราง "${scheduleName}" สำเร็จ`);
         setLoadModalVisible(false);
@@ -1535,6 +1894,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
     setCurrentTableName("");
     setIsTableFromAPI(false);
     setOriginalScheduleData([]);
+    setCourseCards([]); // Clear course cards
     clearAllFilters();
     
     // รีเซ็ต color mapping
@@ -1793,7 +2153,7 @@ const exportScheduleToXLSX = async () => {
 
     dayGroups.forEach(({ day, rows }) => {
       if (rows.length === 0) {
-        // วันที่ไม่มีเรียน - สร้างแถวว่าง
+        // วันที่ไม่มีเรียน - สร้างแถววาง
         const emptyRow: (string | number)[] = [day];
         TIME_SLOTS.forEach(timeSlot => {
           if (timeSlot === "12:00-13:00") {
@@ -2044,7 +2404,7 @@ const exportScheduleToXLSX = async () => {
           };
         }
         
-        // ตรวจสอบว่าถูกครอบคลุมโดยช่องอื่นหรือไม่
+        // ตรวจสอบว่าถูกคครอบคลุมโดยช่องอื่นหรือไม่
         const spannedByOther = (record.subCells || []).some(subCell => {
           const subCellStartSlotIndex = Math.floor(subCell.position.startSlot);
           const subCellEndSlotIndex = Math.floor(subCell.position.endSlot);
@@ -2279,272 +2639,296 @@ const exportScheduleToXLSX = async () => {
 
   // =================== RENDER ===================
   return (
-    <div style={{ width: "100%", padding: "20px" }}>
-      {/* Page Title */}
-      <div
-        style={{
-          marginBottom: "20px",
-          paddingBottom: "12px",
-          borderBottom: "2px solid #F26522",
-        }}
-      >
-        <h2
-          style={{
-            margin: "0 0 8px 0",
-            color: "#333",
-            fontSize: "20px",
-            fontWeight: "bold",
-          }}
-        >
-          จัดตารางเรียน (กรองอาจารย์ & ชั้นปี) 🎯
-        </h2>
-        <p
-          style={{
-            margin: 0,
-            color: "#666",
-            fontSize: "13px",
-          }}
-        >
-          สร้างและจัดการตารางเรียนแบบ Drag & Drop | 
-          กรองข้อมูลตามอาจารย์, ชั้นปี, วิชา, รหัสวิชา และห้องเรียน | 
-          วิชาที่มีเวลาซ้อนทับกันจะแยกเป็นแถวต่างหาก | 
-          การบันทึกจะอัปเดตข้อมูลใน API ผ่าน putupdateScheduleTime
-        </p>
-      </div>
-
-      {/* Table Status */}
-      {renderTableStatus()}
-
-      {/* Filter Section */}
-      {renderFilterSection()}
-
-      {/* Action Buttons */}
-      <Flex gap="small" wrap style={{ marginBottom: "20px" }}>
-        {role === "Scheduler" && (
-        <Button
-          type="primary"
-          style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
-          onClick={() => {
-            if (scheduleData.length === 0) {
-              message.warning("ไม่มีข้อมูลให้บันทึก กรุณาสร้างตารางก่อน");
-              return;
-            }
-            if (!isTableFromAPI) {
-              message.warning("สามารถบันทึกได้เฉพาะตารางที่มาจาก API เท่านั้น");
-              return;
-            }
-            setSaveModalVisible(true);
-          }}
-          disabled={!isTableFromAPI}
-        >
-          อัปเดตตาราง
-        </Button>
-        )}
-        {role === "Scheduler" && (
-        <Button 
-          onClick={() => {
-            setLoadModalVisible(true);
-            getAllNameTable();
-          }}
-        >
-          โหลด
-        </Button>
-        )}
-        {role === "Scheduler" && (
-        <Button onClick={handleReset}>
-          รีเซต
-        </Button>
-        )}
-        {role === "Scheduler" && (
-        <Button
-          type="primary"
-          style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
-          onClick={generateAutoSchedule}
-        >
-          สร้างอัตโนมัติ
-        </Button>
-        )}
-        {role === "Scheduler" && (
-        <Button
-          type="primary"
-          style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
-          onClick={exportScheduleToXLSX}
-        >
-          ส่งออก Xlsx
-          {(filterTags.length > 0 || searchValue) && " (กรอง)"}
-        </Button>
-        )}
-      </Flex>
-      {/* Schedule Table */}
-      <div ref={tableRef} style={{ 
-        flex: 1, 
-        width: "100%"
+    <div style={{ 
+      width: "100%", 
+      height: "100vh",
+      position: "relative"
+    }}>
+      {/* Main Content */}
+      <div style={{ 
+        width: "100%",
+        padding: "20px",
+        overflowY: "auto",
+        height: "100vh"
       }}>
-        <Table
-          columns={columns}
-          dataSource={data}
-          pagination={false}
-          size="small"
-          bordered
+        {/* Page Title */}
+        <div
           style={{
-            backgroundColor: "white",
-            borderRadius: "8px",
+            marginBottom: "20px",
+            paddingBottom: "12px",
+            borderBottom: "2px solid #F26522",
           }}
-        />
+        >
+          <h2
+            style={{
+              margin: "0 0 8px 0",
+              color: "#333",
+              fontSize: "20px",
+              fontWeight: "bold",
+            }}
+          >
+            จัดตารางเรียน (กรองอาจารย์ & ชั้นปี) 🎯
+          </h2>
+          <p
+            style={{
+              margin: 0,
+              color: "#666",
+              fontSize: "13px",
+            }}
+          >
+            สร้างและจัดการตารางเรียนแบบ Drag & Drop | 
+            กรองข้อมูลตามอาจารย์, ชั้นปี, วิชา, รหัสวิชา และห้องเรียน | 
+            วิชาที่มีเวลาซ้อนทับกันจะแยกเป็นแถวต่างหาก | 
+            การบันทึกจะอัปเดตข้อมูลใน API ผ่าน putupdateScheduleTime
+          </p>
+        </div>
+
+        {/* Table Status */}
+        {renderTableStatus()}
+
+        {/* Filter Section */}
+        {renderFilterSection()}
+
+        {/* Action Buttons */}
+        <Flex gap="small" wrap style={{ marginBottom: "20px" }}>
+          {role === "Scheduler" && (
+          <Button
+            type="primary"
+            style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
+            onClick={() => {
+              if (scheduleData.length === 0) {
+                message.warning("ไม่มีข้อมูลให้บันทึก กรุณาสร้างตารางก่อน");
+                return;
+              }
+              if (!isTableFromAPI) {
+                message.warning("สามารถบันทึกได้เฉพาะตารางที่มาจาก API เท่านั้น");
+                return;
+              }
+              setSaveModalVisible(true);
+            }}
+            disabled={!isTableFromAPI}
+          >
+            อัปเดตตาราง
+          </Button>
+          )}
+          {role === "Scheduler" && (
+          <Button 
+            onClick={() => {
+              setLoadModalVisible(true);
+              getAllNameTable();
+            }}
+          >
+            โหลด
+          </Button>
+          )}
+          {role === "Scheduler" && (
+          <Button onClick={handleReset}>
+            รีเซต
+          </Button>
+          )}
+          {role === "Scheduler" && (
+          <Button
+            type="primary"
+            style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
+            onClick={generateAutoSchedule}
+          >
+            สร้างอัตโนมัติ
+          </Button>
+          )}
+          {role === "Scheduler" && (
+          <Button
+            type="primary"
+            style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
+            onClick={exportScheduleToXLSX}
+          >
+            ส่งออก Xlsx
+            {(filterTags.length > 0 || searchValue) && " (กรอง)"}
+          </Button>
+          )}
+          
+          {/* Sidebar Toggle Button */}
+          <Button
+            icon={<MenuOutlined />}
+            onClick={() => setSidebarVisible(!sidebarVisible)}
+            type={sidebarVisible ? "primary" : "default"}
+          >
+            {sidebarVisible ? "ซ่อนกล่องวิชา" : "แสดงกล่องวิชา"}
+          </Button>
+        </Flex>
+
+        {/* Schedule Table */}
+        <div ref={tableRef} style={{ 
+          flex: 1, 
+          width: "100%"
+        }}>
+          <Table
+            columns={columns}
+            dataSource={data}
+            pagination={false}
+            size="small"
+            bordered
+            style={{
+              backgroundColor: "white",
+              borderRadius: "8px",
+            }}
+          />
+        </div>
+
+        {/* Save Modal */}
+        <Modal
+          title="อัปเดตตาราง"
+          open={saveModalVisible}
+          onOk={handleSaveConfirm}
+          onCancel={() => {
+            setSaveModalVisible(false);
+            setScheduleNameToSave("");
+          }}
+          okText="อัปเดต"
+          cancelText="ยกเลิก"
+        >
+          <div style={{ margin: "20px 0" }}>
+            {isTableFromAPI && currentTableName ? (
+              <>
+                <p>ชื่อตารางปัจจุบัน:</p>
+                <Input
+                  value={currentTableName}
+                  disabled
+                  style={{ 
+                    backgroundColor: "#f5f5f5",
+                    marginBottom: "10px"
+                  }}
+                />
+                <p style={{ 
+                  fontSize: "12px", 
+                  color: "#666",
+                  marginBottom: "15px",
+                  padding: "8px",
+                  backgroundColor: "#f0f8ff",
+                  borderRadius: "4px",
+                  border: "1px solid #d1ecf1"
+                }}>
+                  💡 ระบบจะอัปเดตเฉพาะรายการที่มีการเปลี่ยนแปลงเวลาหรือวันใน API
+                </p>
+                
+                {/* Hidden input for form consistency */}
+                <Input
+                  type="hidden"
+                  value={currentTableName}
+                  onChange={(e) => setScheduleNameToSave(e.target.value)}
+                />
+              </>
+            ) : (
+              <>
+                <p>กรุณาใส่ชื่อตาราง:</p>
+                <Input
+                  placeholder="เช่น ตารางเรียนภาคเรียนที่ 1/2567"
+                  value={scheduleNameToSave}
+                  onChange={(e) => setScheduleNameToSave(e.target.value)}
+                  onPressEnter={handleSaveConfirm}
+                  maxLength={50}
+                  disabled
+                />
+                <p style={{ 
+                  fontSize: "12px", 
+                  color: "#999", 
+                  marginTop: "8px",
+                  fontStyle: "italic"
+                }}>
+                  ⚠️ สามารถบันทึกได้เฉพาะตารางที่มาจาก 'สร้างอัตโนมัติ' หรือ 'โหลด' เท่านั้น
+                </p>
+              </>
+            )}
+          </div>
+        </Modal>
+
+        {/* Load Modal */}
+        <Modal
+          title="เลือกตารางที่จะโหลด"
+          open={loadModalVisible}
+          onCancel={() => setLoadModalVisible(false)}
+          footer={[
+            <Button key="cancel" onClick={() => setLoadModalVisible(false)}>
+              ยกเลิก
+            </Button>,
+          ]}
+          width={600}
+        >
+          <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+            {allNameTable.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
+                ไม่มีตารางที่บันทึกไว้
+              </div>
+            ) : (
+              <List
+                dataSource={allNameTable}
+                renderItem={(name: string) => (
+                  <List.Item>
+                    <Card
+                      size="small"
+                      style={{ 
+                        width: "100%", 
+                        cursor: "pointer",
+                        border: currentTableName === name ? "2px solid #1890ff" : "1px solid #d9d9d9"
+                      }}
+                      hoverable
+                      actions={[
+                        <Button
+                          key="load"
+                          type="primary"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLoadSchedule(name);
+                          }}
+                        >
+                          โหลด
+                        </Button>,
+                        <Button
+                          key="delete"
+                          danger
+                          size="small"
+                          loading={deletingName === name}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSchedule(name);
+                          }}
+                        >
+                          ลบ
+                        </Button>,
+                      ]}
+                    >
+                      <Card.Meta 
+                        title={
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            {name}
+                            {currentTableName === name && (
+                              <span style={{ 
+                                fontSize: "10px", 
+                                color: "#1890ff", 
+                                backgroundColor: "#e6f7ff",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                border: "1px solid #91d5ff"
+                              }}>
+                                กำลังแก้ไข
+                              </span>
+                            )}
+                          </div>
+                        } 
+                      />
+                    </Card>
+                  </List.Item>
+                )}
+              />
+            )}
+          </div>
+        </Modal>
       </div>
 
-      {/* Save Modal */}
-      <Modal
-        title="อัปเดตตาราง"
-        open={saveModalVisible}
-        onOk={handleSaveConfirm}
-        onCancel={() => {
-          setSaveModalVisible(false);
-          setScheduleNameToSave("");
-        }}
-        okText="อัปเดต"
-        cancelText="ยกเลิก"
-      >
-        <div style={{ margin: "20px 0" }}>
-          {isTableFromAPI && currentTableName ? (
-            <>
-              <p>ชื่อตารางปัจจุบัน:</p>
-              <Input
-                value={currentTableName}
-                disabled
-                style={{ 
-                  backgroundColor: "#f5f5f5",
-                  marginBottom: "10px"
-                }}
-              />
-              <p style={{ 
-                fontSize: "12px", 
-                color: "#666",
-                marginBottom: "15px",
-                padding: "8px",
-                backgroundColor: "#f0f8ff",
-                borderRadius: "4px",
-                border: "1px solid #d1ecf1"
-              }}>
-                💡 ระบบจะอัปเดตเฉพาะรายการที่มีการเปลี่ยนแปลงเวลาหรือวันใน API
-              </p>
-              
-              {/* Hidden input for form consistency */}
-              <Input
-                type="hidden"
-                value={currentTableName}
-                onChange={(e) => setScheduleNameToSave(e.target.value)}
-              />
-            </>
-          ) : (
-            <>
-              <p>กรุณาใส่ชื่อตาราง:</p>
-              <Input
-                placeholder="เช่น ตารางเรียนภาคเรียนที่ 1/2567"
-                value={scheduleNameToSave}
-                onChange={(e) => setScheduleNameToSave(e.target.value)}
-                onPressEnter={handleSaveConfirm}
-                maxLength={50}
-                disabled
-              />
-              <p style={{ 
-                fontSize: "12px", 
-                color: "#999", 
-                marginTop: "8px",
-                fontStyle: "italic"
-              }}>
-                ⚠️ สามารถบันทึกได้เฉพาะตารางที่มาจาก 'สร้างอัตโนมัติ' หรือ 'โหลด' เท่านั้น
-              </p>
-            </>
-          )}
-        </div>
-      </Modal>
-
-      {/* Load Modal */}
-      <Modal
-        title="เลือกตารางที่จะโหลด"
-        open={loadModalVisible}
-        onCancel={() => setLoadModalVisible(false)}
-        footer={[
-          <Button key="cancel" onClick={() => setLoadModalVisible(false)}>
-            ยกเลิก
-          </Button>,
-        ]}
-        width={600}
-      >
-        <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-          {allNameTable.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
-              ไม่มีตารางที่บันทึกไว้
-            </div>
-          ) : (
-            <List
-              dataSource={allNameTable}
-              renderItem={(name: string) => (
-                <List.Item>
-                  <Card
-                    size="small"
-                    style={{ 
-                      width: "100%", 
-                      cursor: "pointer",
-                      border: currentTableName === name ? "2px solid #1890ff" : "1px solid #d9d9d9"
-                    }}
-                    hoverable
-                    actions={[
-                      <Button
-                        key="load"
-                        type="primary"
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleLoadSchedule(name);
-                        }}
-                      >
-                        โหลด
-                      </Button>,
-                      <Button
-                        key="delete"
-                        danger
-                        size="small"
-                        loading={deletingName === name}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteSchedule(name);
-                        }}
-                      >
-                        ลบ
-                      </Button>,
-                    ]}
-                  >
-                    <Card.Meta 
-                      title={
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          {name}
-                          {currentTableName === name && (
-                            <span style={{ 
-                              fontSize: "10px", 
-                              color: "#1890ff", 
-                              backgroundColor: "#e6f7ff",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                              border: "1px solid #91d5ff"
-                            }}>
-                              กำลังแก้ไข
-                            </span>
-                          )}
-                        </div>
-                      } 
-                    />
-                  </Card>
-                </List.Item>
-              )}
-            />
-          )}
-        </div>
-      </Modal>
+      {/* Sidebar */}
+      {renderSidebar()}
     </div>
   );
 };
 
 export default Schedulepage;
-      
