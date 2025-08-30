@@ -1720,13 +1720,14 @@ const exportScheduleToXLSX = async () => {
             if (subCellsInSlot.length > 0) {
               const subCell = subCellsInSlot[0];
               const cellTextParts = [
-                subCell.classData.subject || "",
-                `รหัส: ${subCell.classData.courseCode || ""}`,
-                `อาจารย์: ${subCell.classData.teacher || ""}`,
-                `ห้อง: ${subCell.classData.room || ""}`,
+                subCell.classData.subject || "ไม่ระบุชื่อวิชา",
+                `รหัส: ${subCell.classData.courseCode || "ไม่ระบุ"}`,
+                `อาจารย์: ${subCell.classData.teacher || "ไม่ระบุ"}`,
+                `ห้อง: ${subCell.classData.room || "ไม่ระบุ"}`,
                 `ปีที่: ${subCell.classData.studentYear || '1'}`,
-                `หมู่: ${subCell.classData.section || ""}`
-              ].filter(text => text && text.trim() !== "" && !text.includes(": "));
+                `หมู่: ${subCell.classData.section || "ไม่ระบุ"}`,
+                `เวลา: ${subCell.startTime} - ${subCell.endTime}`
+              ];
               
               const cellText = cellTextParts.join('\n');
               rowData.push(cellText);
@@ -2265,7 +2266,7 @@ const exportScheduleToXLSX = async () => {
           style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
           onClick={exportScheduleToXLSX}
         >
-          ส่งออก PDF
+          ส่งออก Xlsx
           {(filterTags.length > 0 || searchValue) && " (กรอง)"}
         </Button>
         )}
