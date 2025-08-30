@@ -107,7 +107,7 @@ interface ScheduleBatchUpdate {
 // =================== FILTER TYPES ===================
 interface FilterTag {
   id: string;
-  type: 'teacher' | 'studentYear';
+  type: 'teacher' | 'studentYear' | 'subject' | 'courseCode' | 'room';
   value: string;
   label: string;
   color: string;
@@ -116,6 +116,9 @@ interface FilterTag {
 interface FilterOptions {
   teachers: string[];
   studentYears: string[];
+  subjects: string[];
+  courseCodes: string[];
+  rooms: string[];
 }
 
 // =================== CONSTANTS ===================
@@ -132,7 +135,7 @@ const PURE_TIME_SLOTS = [
 
 const DAYS = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"];
 
-// ✅ เปลี่ยนจากการสุ่มสีเป็น predefined colors สำหรับวิชาต่างๆ
+// เปลี่ยนจากการสุ่มสีเป็น predefined colors สำหรับวิชาต่างๆ
 const SUBJECT_COLORS = [
   "#FFE5E5", "#E5F3FF", "#E5FFE5", "#FFF5E5", "#F5E5FF", "#E5FFF5",
   "#FFE5F5", "#F5FFE5", "#E5E5FF", "#FFF5F5", "#FFE5CC", "#CCFFE5",
@@ -144,7 +147,10 @@ const SUBJECT_COLORS = [
 // =================== FILTER TAG COLORS ===================
 const FILTER_TAG_COLORS = {
   teacher: '#52c41a',
-  studentYear: '#1890ff'
+  studentYear: '#1890ff',
+  subject: '#722ed1',
+  courseCode: '#f5222d',
+  room: '#fa8c16'
 };
 
 // =================== CELL CONFIG ===================
@@ -157,7 +163,7 @@ const CELL_CONFIG = {
 };
 
 // =================== UTILITY FUNCTIONS ===================
-// ✅ แทนที่ getRandomBackgroundColor ด้วย getSubjectColor
+// แทนที่ getRandomBackgroundColor ด้วย getSubjectColor
 const subjectColorMap = new Map<string, string>();
 let colorIndex = 0;
 
@@ -251,7 +257,10 @@ const Schedulepage: React.FC = () => {
   const [filterTags, setFilterTags] = useState<FilterTag[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     teachers: [],
-    studentYears: []
+    studentYears: [],
+    subjects: [],
+    courseCodes: [],
+    rooms: []
   });
   const [searchValue, setSearchValue] = useState("");
   const [filterVisible, setFilterVisible] = useState(false);
@@ -262,12 +271,24 @@ const Schedulepage: React.FC = () => {
   const extractFilterOptions = (data: ExtendedScheduleData[]) => {
     const teachers = new Set<string>();
     const studentYears = new Set<string>();
+    const subjects = new Set<string>();
+    const courseCodes = new Set<string>();
+    const rooms = new Set<string>();
 
     data.forEach(dayData => {
       dayData.subCells?.forEach(subCell => {
         if (subCell.classData.teacher) teachers.add(subCell.classData.teacher);
         if (subCell.classData.studentYear) {
           studentYears.add(subCell.classData.studentYear);
+        }
+        if (subCell.classData.subject) {
+          subjects.add(subCell.classData.subject);
+        }
+        if (subCell.classData.courseCode) {
+          courseCodes.add(subCell.classData.courseCode);
+        }
+        if (subCell.classData.room) {
+          rooms.add(subCell.classData.room);
         }
       });
     });
@@ -302,7 +323,10 @@ const Schedulepage: React.FC = () => {
 
     setFilterOptions({
       teachers: Array.from(teachers).filter(Boolean).sort(),
-      studentYears: validYears.sort((a, b) => parseInt(a) - parseInt(b))
+      studentYears: validYears.sort((a, b) => parseInt(a) - parseInt(b)),
+      subjects: Array.from(subjects).filter(Boolean).sort(),
+      courseCodes: Array.from(courseCodes).filter(Boolean).sort(),
+      rooms: Array.from(rooms).filter(Boolean).sort()
     });
 
   };
@@ -336,6 +360,9 @@ const Schedulepage: React.FC = () => {
     switch (type) {
       case 'teacher': return 'อาจารย์';
       case 'studentYear': return 'ชั้นปี';
+      case 'subject': return 'วิชา';
+      case 'courseCode': return 'รหัสวิชา';
+      case 'room': return 'ห้อง';
       default: return type;
     }
   };
@@ -382,6 +409,21 @@ const applyFilters = () => {
             }
 
             return subCell.classData.studentYear === tag.value;
+
+          case 'subject':
+            return subCell.classData.subject
+              .toLowerCase()
+              .includes(tag.value.toLowerCase());
+
+          case 'courseCode':
+            return subCell.classData.courseCode
+              ?.toLowerCase()
+              .includes(tag.value.toLowerCase()) || false;
+
+          case 'room':
+            return subCell.classData.room
+              .toLowerCase()
+              .includes(tag.value.toLowerCase());
 
           default:
             return true;
@@ -435,7 +477,7 @@ const applyFilters = () => {
       id: `${day}-${Date.now()}-${Math.random()}`,
       classData: {
         ...classData,
-        // ✅ ใช้สีที่สอดคล้องกับวิชาแทนการสุ่ม
+        // ใช้สีที่สอดคล้องกับวิชาแทนการสุ่ม
         color: classData.color || getSubjectColor(classData.subject, classData.courseCode)
       },
       startTime: cleanStartTime,
@@ -477,7 +519,7 @@ const applyFilters = () => {
         subCells: [...(newData[targetRowIndex].subCells || []), subCell]
       };
       
-      // ✅ เช็คว่าเพิ่มลงในแถวสุดท้ายของวันหรือไม่
+      // เช็คว่าเพิ่มลงในแถวสุดท้ายของวันหรือไม่
       const isLastRowOfDay = targetRowIndex === dayRows.length - 1;
       const isEmptyRow = (newData[targetRowIndex].subCells || []).length === 1; // มี subcell แค่ตัวเดียวที่เพิ่งเพิ่ม
       
@@ -534,7 +576,7 @@ const applyFilters = () => {
       
       newData.push(newRowData);
       
-      // ✅ เพิ่ม empty row หลังจากแถวใหม่
+      // เพิ่ม empty row หลังจากแถวใหม่
       const emptyRowIndex = newRowIndex + 1;
       const emptyRow = createEmptyDayRow(day, dayIndex, emptyRowIndex, newTotalRows);
       emptyRow.isFirstRowOfDay = false;
@@ -608,7 +650,7 @@ const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, ne
       }
       newData[targetRowIndex].subCells!.push(movedSubCell);
       
-      // ✅ เช็คว่าย้ายไปแถวสุดท้ายหรือไม่ และสร้าง empty row ใหม่ถ้าจำเป็น
+      // เช็คว่าย้ายไปแถวสุดท้ายหรือไม่ และสร้าง empty row ใหม่ถ้าจำเป็น
       const dayRows = newData.filter(row => row.day === targetRow.day);
       const isTargetLastRow = targetRowIndex === Math.max(...dayRows.map(row => newData.findIndex(r => r.key === row.key)));
       const targetRowHasOnlyMovedCell = newData[targetRowIndex].subCells!.length === 1;
@@ -940,7 +982,7 @@ const createEmptyDayRow = (day: string, dayIndex: number, rowIndex: number, tota
   return emptyRowData;
 };
 
-// ✅ ปรับปรุงการเรียกใช้ใน transformScheduleDataWithRowSeparation (ลบการ merge)
+// ปรับปรุงการเรียกใช้ใน transformScheduleDataWithRowSeparation (ลบการ merge)
 const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[]): ExtendedScheduleData[] => {
   
   const result: ExtendedScheduleData[] = [];
@@ -955,7 +997,7 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
       secondRow.isFirstRowOfDay = false;
       result.push(firstRow, secondRow);
     } else {
-      // ✅ ไม่ merge offered courses ที่ซ้ำกัน - สร้าง SubCells แยกทุกตัว
+      // ไม่ merge offered courses ที่ซ้ำกัน - สร้าง SubCells แยกทุกตัว
       const subCells: SubCell[] = daySchedules.map((item: ScheduleInterface, index: number) => {
         const getRoomInfo = (schedule: ScheduleInterface): string => {
           if (schedule.TimeFixedCourses && schedule.TimeFixedCourses.length > 0) {
@@ -1112,14 +1154,14 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
   };
 
   // =================== FUNCTION TO CHECK SUB-CELL OVERLAP ===================
-  // ✅ แก้ไขฟังก์ชัน doSubCellsOverlap - จัดการ duplicate อย่างระเอียด
+  // แก้ไขฟังก์ชัน doSubCellsOverlap - จัดการ duplicate อย่างระเอียด
 const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
   // ถ้าเป็น SubCell เดียวกัน (ID เดียวกัน) ให้ return false
   if (subCell1.id === subCell2.id) {
     return false;
   }
 
-  // ✅ ตรวจสอบ TimeFixedCourse ที่เหมือนกันทุกประการ - ให้ถือว่าเป็น duplicate
+  // ตรวจสอบ TimeFixedCourse ที่เหมือนกันทุกประการ - ให้ถือว่าเป็น duplicate
   const isExactDuplicate = 
     subCell1.classData.subject === subCell2.classData.subject &&
     subCell1.classData.courseCode === subCell2.classData.courseCode &&
@@ -1401,7 +1443,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
         return;
       }
 
-      // ✅ สร้าง payload เป็น array ตาม Backend API format (PascalCase)
+      // สร้าง payload เป็น array ตาม Backend API format (PascalCase)
       const payloadArray: ScheduleBatchUpdate[] = changes.map(change => ({
         ID: change.id,
         DayOfWeek: change.newData.dayOfWeek,
@@ -1458,7 +1500,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
     }
   };
 
-  // ✅ ฟังก์ชัน fallback สำหรับอัปเดตทีละรายการ
+  // ฟังก์ชัน fallback สำหรับอัปเดตทีละรายการ
   const updateSchedulesIndividually = async (changes: ScheduleChange[]) => {
     let successCount = 0;
     let errorCount = 0;
@@ -1478,7 +1520,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
           successCount++;
         } else {
           errorCount++;
-          console.error(`⌛ Failed to update schedule ID: ${change.id}`, result);
+          console.error(`⏰ Failed to update schedule ID: ${change.id}`, result);
         }
       } catch (error) {
         errorCount++;
@@ -1495,7 +1537,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
     setOriginalScheduleData([]);
     clearAllFilters();
     
-    // ✅ รีเซ็ต color mapping
+    // รีเซ็ต color mapping
     subjectColorMap.clear();
     colorIndex = 0;
     
@@ -1560,7 +1602,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
               กรองข้อมูล ({filteredScheduleData.length} แถว)
             </span>
             {filterTags.length > 0 && (
-              <Tag color="blue">{filterTags.length} ตัวกรong</Tag>
+              <Tag color="blue">{filterTags.length} ตัวกรอง</Tag>
             )}
           </div>
           <div style={{ display: "flex", gap: "8px" }}>
@@ -1623,7 +1665,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
         {filterVisible && (
           <div style={{ 
             display: "grid", 
-            gridTemplateColumns: "1fr 1fr", 
+            gridTemplateColumns: "1fr 1fr 1fr", 
             gap: "16px",
             borderTop: "1px solid #e8e8e8",
             paddingTop: "12px"
@@ -1665,6 +1707,60 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
                 }))}
               />
             </div>
+
+            {/* Subject Filter */}
+            <div>
+              <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
+                📚 วิชา:
+              </label>
+              <AutoComplete
+                placeholder="เลือกวิชา"
+                options={filterOptions.subjects.map(subject => ({ value: subject }))}
+                onSelect={(value) => addFilterTag('subject', value)}
+                style={{ width: "100%" }}
+                size="small"
+                filterOption={(inputValue, option) =>
+                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                }
+              />
+            </div>
+
+            {/* Course Code Filter */}
+            <div>
+              <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
+                🏷️ รหัสวิชา:
+              </label>
+              <AutoComplete
+                placeholder="เลือกรหัสวิชา"
+                options={filterOptions.courseCodes.map(code => ({ value: code }))}
+                onSelect={(value) => addFilterTag('courseCode', value)}
+                style={{ width: "100%" }}
+                size="small"
+                filterOption={(inputValue, option) =>
+                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                }
+              />
+            </div>
+
+            {/* Room Filter */}
+            <div>
+              <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
+                🏢 ห้อง:
+              </label>
+              <AutoComplete
+                placeholder="เลือกห้อง"
+                options={filterOptions.rooms.map(room => ({ value: room }))}
+                onSelect={(value) => addFilterTag('room', value)}
+                style={{ width: "100%" }}
+                size="small"
+                filterOption={(inputValue, option) =>
+                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                }
+              />
+            </div>
+
+            {/* Empty cell to balance the grid */}
+            <div></div>
           </div>
         )}
       </div>
@@ -2210,7 +2306,7 @@ const exportScheduleToXLSX = async () => {
           }}
         >
           สร้างและจัดการตารางเรียนแบบ Drag & Drop | 
-          กรองข้อมูลตามอาจารย์และชั้นปี (ปีที่ 1, 2, 3, 4) | 
+          กรองข้อมูลตามอาจารย์, ชั้นปี, วิชา, รหัสวิชา และห้องเรียน | 
           วิชาที่มีเวลาซ้อนทับกันจะแยกเป็นแถวต่างหาก | 
           การบันทึกจะอัปเดตข้อมูลใน API ผ่าน putupdateScheduleTime
         </p>
@@ -2451,3 +2547,4 @@ const exportScheduleToXLSX = async () => {
 };
 
 export default Schedulepage;
+      
