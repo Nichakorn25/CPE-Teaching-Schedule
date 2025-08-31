@@ -291,6 +291,7 @@ type SectionDetail struct {
 	DayOfWeek      string
 	Time           string
 	Capacity       uint
+	ID_user	       uint
 	InstructorName string
 }
 
@@ -315,6 +316,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 		Preload("AllCourses.TypeOfCourses").
 		Preload("AllCourses.Curriculum.Major").
 		Preload("User").
+		Preload("User.Title").
 		Preload("Schedule.TimeFixedCourses").
 		Preload("Laboratory").
 		Where("year = ? AND term = ?", year, term).
@@ -349,7 +351,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 			}
 		}
 
-		instructor := oc.User.Firstname + " " + oc.User.Lastname
+		instructor := oc.User.Title.Title + " " + oc.User.Firstname + " " + oc.User.Lastname
 
 		sectionMap := make(map[string]SectionDetail)
 
@@ -365,6 +367,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 						DayOfWeek:      tf.DayOfWeek,
 						Time:           tf.StartTime.Format("15:04") + " - " + tf.EndTime.Format("15:04"),
 						Capacity:       tf.Capacity,
+						ID_user:        oc.User.ID,
 						InstructorName: instructor,
 					}
 				}
@@ -384,6 +387,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 					DayOfWeek:      sch.DayOfWeek,
 					Time:           sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
 					Capacity:       oc.Capacity,
+					ID_user:        oc.User.ID,
 					InstructorName: instructor,
 				}
 			}

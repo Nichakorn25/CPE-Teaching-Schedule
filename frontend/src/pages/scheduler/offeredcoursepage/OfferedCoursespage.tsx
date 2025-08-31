@@ -4,11 +4,9 @@ import { SearchOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import type { ColumnsType } from "antd/es/table";
-import {
-  getSchedulesBynameTable,
-  deleteOfferedCourse,
-} from "../../../services/https/SchedulerPageService";
+import { deleteOfferedCourse } from "../../../services/https/SchedulerPageService";
 import { OpenCourseInterface } from "../../../interfaces/Adminpage";
+import { getOfferedCoursesByMajor } from "../../../services/https/GetService";
 
 const { Option } = Select;
 
@@ -228,7 +226,9 @@ const OfferedCoursespage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [academicYear, setAcademicYear] = useState<number>(0);
   const [term, setTerm] = useState<number>(0);
-  const [expandedRowKeys, setExpandedRowKeys] = useState<(number | string)[]>([]);
+  const [expandedRowKeys, setExpandedRowKeys] = useState<(number | string)[]>(
+    []
+  );
   const [userMajor, setUserMajor] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -259,102 +259,44 @@ const OfferedCoursespage: React.FC = () => {
     }
   }, []);
 
+  // Fetch courses
   useEffect(() => {
-  const fetchSchedules = async () => {
-    setLoading(true);
-    const nameTable = `ปีการศึกษา ${academicYear} เทอม ${term}`;
-    try {
-      const response = await getSchedulesBynameTable(nameTable);
-      const schedules: Schedule[] = Array.isArray(response?.data)
-        ? response.data
-        : response?.data?.data ?? [];
-
-      // [DEBUG] ดูสาขา/หมวดจาก payload โดยตรง (เอา 30 แถวแรกพอ)
-      console.groupCollapsed("[DEBUG] raw schedules (first 30)");
-      console.table(
-        (schedules ?? []).slice(0, 30).map((s) => ({
-          scheduleId: s.ID,
-          code: s?.OfferedCourses?.AllCourses?.Code,
-          name:
-            s?.OfferedCourses?.AllCourses?.ThaiName ??
-            s?.OfferedCourses?.AllCourses?.EnglishName,
-          majorFromPayload:
-            s?.OfferedCourses?.AllCourses?.Curriculum?.Major?.MajorName ?? "",
-          typeName: s?.OfferedCourses?.AllCourses?.TypeOfCourses?.TypeName ?? "",
-        }))
-      );
-      console.groupEnd();
-
-      const ocList = mapSchedulesToOpenCourses(schedules ?? []);
-      setCourses(ocList);
-
-      // [DEBUG] สรุปสาขา/หมวดที่ได้หลัง map แล้ว
-      console.groupCollapsed("[DEBUG] mapped courses (first 30)");
-      console.table(
-        ocList.slice(0, 30).map((c) => ({
-          id: c.ID,
-          code: c.Code,
-          name: c.Name,
-          major: c.Major,
-          typeName: c.TypeName,
-        }))
-      );
-      console.groupEnd();
-
-      console.log(
-        "[DEBUG] unique majors:",
-        Array.from(new Set(ocList.map((c) => c.Major || "(empty)")))
-      );
-    } catch (err) {
-      console.error("ไม่สามารถโหลดตาราง:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-  if (academicYear && term) fetchSchedules();
-}, [academicYear, term]);
-
-
-  // ฟิลเตอร์: ศูนย์บริการ(TypeName) หรือ สาขาผู้ใช้ + ค้นหา
-  // 🔁 แทนที่ useMemo ของ filteredCourses เดิมทั้งหมดด้วยบล็อคนี้
-const filteredCourses = useMemo(() => {
-  const q = searchText.trim().toLowerCase();
-
-  // อนุญาตให้แสดง ถ้า (1) เป็นคอร์ส time-fixed (IsFixCourses === true)
-  // หรือ (2) สาขาตรงกับผู้ใช้
-  const allow = (c: OpenCourseInterface) => {
-    const isTimeFixed = c.IsFixCourses === true;       // ✅ ใช้ธงจาก backend
-    const sameAsUser = userMajor ? sameMajor(c.Major, userMajor) : false;
-    return isTimeFixed || sameAsUser;
-  };
-
-  return courses
-    .filter((course) => {
-      if (!allow(course)) return false;
-      const matchesSearch =
-        (course.Code ?? "").toLowerCase().includes(q) ||
-        (course.Name ?? "").toLowerCase().includes(q);
-      return matchesSearch;
-    })
-    .sort((a, b) => a.ID - b.ID);
-}, [courses, searchText, userMajor]);
-
+    const fetchCourses = async () => {
+      if (!userMajor || !academicYear || !term) return;
+      setLoading(true);
+      try {
+        const response = await getOfferedCoursesByMajor(
+          userMajor,
+          academicYear,
+          term
+        );
+        const rawCourses = Array.isArray(response?.data) ? response.data : [];
+        setCourses(rawCourses); // ใช้ API response ตรง ๆ
+      } catch (err) {
+        console.error(err);
+        setCourses([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCourses();
+  }, [userMajor, academicYear, term]);
 
   /** ทำ flat rows สำหรับแสดง/ซ่อนกลุ่มเพิ่มเติม */
   const getExpandedTableData = () => {
     const result: any[] = [];
-    filteredCourses.forEach((course) => {
+    courses.forEach((course: any) => {
       result.push({ ...course, isChild: false, key: course.ID });
 
-      if (expandedRowKeys.includes(course.ID) && course.GroupInfos.length > 1) {
-        const extraGroups = course.GroupInfos.slice(1);
-        extraGroups.forEach((group, i) => {
-          const isLast = i === extraGroups.length - 1;
+      // ถ้ามีหลายกลุ่มและ expand แล้ว
+      if (expandedRowKeys.includes(course.ID) && course.Sections?.length > 1) {
+        const extraGroups = course.Sections.slice(1);
+        extraGroups.forEach((group: any, i: number) => {
           result.push({
             ...course,
             isChild: true,
-            isLastChild: isLast,
-            GroupInfo: group,
+            isLastChild: i === extraGroups.length - 1,
+            Section: group, // เก็บแต่ละกลุ่ม
             key: `${course.ID}-extra-${i}`,
           });
         });
@@ -363,16 +305,11 @@ const filteredCourses = useMemo(() => {
     return result;
   };
 
-  // Reset หน้าเมื่อ search/major เปลี่ยน
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchText, userMajor]);
-
   // เลือกกลุ่มแรกที่มีห้อง (ถ้ากลุ่มแรกไม่มีห้อง)
   const pickFirstGroupWithRoom = (record: any) => {
     if (!record?.GroupInfos?.length) return undefined;
     return (
-      record.GroupInfos.find((g: any) => String(g?.Room ?? "").trim() !== "") ??
+      record.GroupInfos.find((g: any) => String(g?.Room ?? "").trim() !== "") ||
       record.GroupInfos[0]
     );
   };
@@ -383,99 +320,111 @@ const filteredCourses = useMemo(() => {
       title: "ลำดับ",
       key: "index",
       width: 80,
-      render: (_text, record) => {
+      render: (_text, record, index) => {
+        // ไม่ต้องแสดงลำดับสำหรับ row ลูก
         if (record.isChild) return null;
-        const indexInMain = filteredCourses.findIndex((c) => c.ID === record.ID);
-        return indexInMain + 1 + (currentPage - 1) * pageSize;
+
+        // index ของ row หลัก (ไม่รวม row ลูก)
+        const mainIndex = getExpandedTableData()
+          .filter((r) => !r.isChild)
+          .findIndex((r) => r.ID === record.ID);
+
+        return mainIndex + 1 + (currentPage - 1) * pageSize;
       },
     },
-    { title: "รหัสวิชา", key: "Code", render: (_t, r) => <span>{r.Code}</span> },
-    { title: "ชื่อวิชา", key: "Name", render: (_t, r) => <span>{r.Name}</span> },
-    { title: "หน่วยกิต", key: "Credit", render: (_t, r) => <span>{r.Credit}</span> },
-    { title: "หมวดวิชา", key: "TypeName", render: (_t, r) => <span>{r.TypeName}</span> },
+    {
+      title: "รหัสวิชา",
+      key: "Code",
+      render: (_t, r) => <span>{r.Code}</span>,
+    },
+    {
+      title: "ชื่อวิชา",
+      key: "CourseName",
+      render: (_t, r) => <span>{r.CourseName}</span>,
+    },
+    {
+      title: "หน่วยกิต",
+      key: "Credit",
+      render: (_t, r) => <span>{r.Credit}</span>,
+    },
+    {
+      title: "หมวดวิชา",
+      key: "TypeOfCourse",
+      render: (_t, r) => <span>{r.TypeOfCourse}</span>,
+    },
     {
       title: "กลุ่มเรียน",
-      key: "Group",
+      key: "Sections",
       render: (_text, record) => {
-        if (!record.isChild) {
-          const firstGroup = record.GroupInfos?.[0];
-          const hasMore = record.GroupInfos?.length > 1;
-          return (
-            <div>
-              {firstGroup?.Group}
-              {hasMore && !expandedRowKeys.includes(record.ID) && (
-                <div>
-                  <button
-                    onClick={() => toggleExpandRow(record.ID)}
-                    style={{
-                      color: "#1677ff",
-                      background: "none",
-                      border: "none",
-                      padding: 0,
-                      cursor: "pointer",
-                      marginLeft: "4px",
-                    }}
-                  >
-                    ดูเพิ่มเติม
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        }
-        return <div>{record.GroupInfo?.Group}</div>;
+        if (!record.Sections?.length) return "-";
+
+        // sort Sections ตาม SectionNumber
+        const sortedSections = [...record.Sections].sort(
+          (a, b) => a.SectionNumber - b.SectionNumber
+        );
+
+        if (record.isChild) return record.Section.SectionNumber;
+
+        const firstSection = sortedSections[0];
+        const hasMore = sortedSections.length > 1;
+
+        return (
+          <div>
+            {firstSection?.SectionNumber ?? "-"}
+            {hasMore && !expandedRowKeys.includes(record.ID) && (
+              <button
+                onClick={() => toggleExpandRow(record.ID)}
+                style={{
+                  color: "#1677ff",
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  marginLeft: "4px",
+                }}
+              >
+                ดูเพิ่มเติม
+              </button>
+            )}
+          </div>
+        );
       },
     },
     {
       title: "ห้อง",
       key: "Room",
-      render: (_t, r) => {
-        if (r.isChild) return r.GroupInfo?.Room;
-        const g = pickFirstGroupWithRoom(r);
-        return g?.Room ?? "";
-      },
+      render: (_t, r) =>
+        r.isChild ? r.Section.Room : r.Sections?.[0]?.Room ?? "-",
     },
     {
       title: "วันที่สอน",
-      key: "Day",
-      render: (_t, r) => {
-        if (r.isChild) return r.GroupInfo?.Day;
-        const g = pickFirstGroupWithRoom(r);
-        return g?.Day ?? "";
-      },
+      key: "DayOfWeek",
+      render: (_t, r) =>
+        r.isChild ? r.Section.DayOfWeek : r.Sections?.[0]?.DayOfWeek ?? "-",
     },
     {
       title: "เวลา",
-      key: "TimeSpan",
-      render: (_t, r) => {
-        if (r.isChild) return r.GroupInfo?.TimeSpan;
-        const g = pickFirstGroupWithRoom(r);
-        return g?.TimeSpan ?? "";
-      },
+      key: "Time",
+      render: (_t, r) =>
+        r.isChild ? r.Section.Time : r.Sections?.[0]?.Time ?? "-",
     },
-
-    { title: "จำนวนกลุ่ม", dataIndex: "GroupTotal", key: "GroupTotal", width: 120 },
+    {
+      title: "จำนวนกลุ่ม",
+      key: "TotalSections",
+      render: (_t, r) => r.TotalSections ?? 1,
+    },
     {
       title: "จำนวนนักศึกษาต่อกลุ่มเรียน",
-      dataIndex: "CapacityPer",
-      key: "CapacityPer",
-      width: 220,
+      key: "Capacity",
+      render: (_t, r) => r.Sections?.[0]?.Capacity ?? "-",
     },
     {
       title: "อาจารย์ผู้สอน",
       key: "Teacher",
-      render: (_t, r) => (
-        <span>
-          {Array.isArray(r.Teachers)
-            ? r.Teachers
-                .map(
-                  (t: any) =>
-                    `${t.Title ? t.Title + " " : ""}${t.Firstname} ${t.Lastname}`
-                )
-                .join(", ")
-            : ""}
-        </span>
-      ),
+      render: (_t, record) => {
+        if (record.isChild) return record.Section.InstructorName;
+        return record.Sections?.[0]?.InstructorName ?? "-";
+      },
     },
     {
       title: "จัดการ",
@@ -483,7 +432,8 @@ const filteredCourses = useMemo(() => {
       width: 160,
       render: (_text, record) => {
         const userID = Number(localStorage.getItem("user_id"));
-        const canEdit = !!userID && record.TeacherID === userID;
+        // ตรวจสอบว่าผู้ใช้ตรงกับ ID_user ของ section ใด ๆ หรือไม่
+        const canEdit = record.Sections?.some((s: any) => s.ID_user === userID);
         if (!canEdit) return null;
 
         const isCesCourse = record.IsFixCourses === true;
@@ -503,7 +453,7 @@ const filteredCourses = useMemo(() => {
               }}
               onClick={() => {
                 const targetPath = isCesCourse
-                  ? `/manage-cescourse/${record.ID + 1}`
+                  ? `/manage-cescourse/${record.ID}`
                   : `/add-open-course/${record.ID}`;
                 navigate(targetPath);
               }}
@@ -536,7 +486,9 @@ const filteredCourses = useMemo(() => {
                 if (result.isConfirmed) {
                   const res = await deleteOfferedCourse(record.ID);
                   if (res.status === 200) {
-                    setCourses((prev) => prev.filter((c) => c.ID !== record.ID));
+                    setCourses((prev) =>
+                      prev.filter((c) => c.ID !== record.ID)
+                    );
                     Swal.fire("ลบสำเร็จ!", "รายวิชาถูกลบแล้ว", "success");
                   } else {
                     Swal.fire("ผิดพลาด", "ไม่สามารถลบรายวิชาได้", "error");
@@ -553,7 +505,7 @@ const filteredCourses = useMemo(() => {
     },
   ];
 
-return (
+  return (
     <div
       style={{
         fontFamily: "Sarabun, sans-serif",
