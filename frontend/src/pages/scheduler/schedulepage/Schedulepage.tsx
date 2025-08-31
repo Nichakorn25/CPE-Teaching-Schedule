@@ -392,19 +392,65 @@ const Schedulepage: React.FC = () => {
       };
 
       const getStudentYear = (schedule: ScheduleInterface): string => {
-        const academicYearId = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.AcademicYearID;
-        if (academicYearId && academicYearId >= 1) {
-          return academicYearId.toString();
+  const academicYear = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear;
+  
+  // Method 1: ใช้ Level field ก่อน (ถ้ามีข้อมูลชัดเจน)
+  if (academicYear?.Level && academicYear.Level !== 'เรียนได้ทุกชั้นปี') {
+    // ถ้า Level เป็นตัวเลขโดยตรง (เช่น "3")
+    if (/^\d+$/.test(academicYear.Level)) {
+      return academicYear.Level;
+    }
+    
+    // ถ้า Level เป็นรูปแบบ "ปีที่ X"
+    const yearMatch = academicYear.Level.match(/ปีที่\s*(\d+)/);
+    if (yearMatch) {
+      return yearMatch[1];
+    }
+  }
+  
+  // Method 2: Mapping AcademicYearID ตามที่คุณอธิบาย
+  const academicYearId = academicYear?.AcademicYearID;
+  if (academicYearId) {
+    switch (academicYearId) {
+      case 2: return "1"; // เรียนเฉพาะปี 1
+      case 3: return "2"; // เรียนเฉพาะปี 2
+      case 4: return "3"; // เรียนเฉพาะปี 3
+      case 1: // เรียนได้ทุกชั้นปี - ต้องหาจากที่อื่น
+        break;
+      default:
+        // สำหรับ ID อื่นๆ ที่อาจมีเพิ่มเติม (ปี 4, 5, 6...)
+        if (academicYearId >= 5 && academicYearId <= 10) {
+          return (academicYearId - 1).toString(); // ID 5 = ปี 4, ID 6 = ปี 5, etc.
         }
-        const level = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.Level;
-        if (level && level !== 'เรียนได้ทุกชั้นปี') {
-          const yearMatch = level.match(/ปีที่\s*(\d+)/);
-          if (yearMatch) {
-            return yearMatch[1];
-          }
-        }
-        return "1";
-      };
+        break;
+    }
+  }
+  
+  // Method 3: ถ้า AcademicYearID = 1 (เรียนได้ทุกชั้นปี) ให้ดูจาก Course Code
+  if (schedule.OfferedCourses?.AllCourses?.Code) {
+    const code = schedule.OfferedCourses.AllCourses.Code;
+    
+    // ลองดูจากตัวเลขที่ 2 ของ course code (เช่น IST20 1002 -> "1")
+    const codeYearMatch1 = code.match(/[A-Z]{2,4}\d+\s+(\d)/);
+    if (codeYearMatch1) {
+      return codeYearMatch1[1];
+    }
+    
+    // ลองดูจากตัวเลขแรกหลัง prefix (เช่น IST21234 -> "2")  
+    const codeYearMatch2 = code.match(/[A-Z]{2,4}(\d)/);
+    if (codeYearMatch2) {
+      return codeYearMatch2[1];
+    }
+  }
+  
+  console.warn('⚠️ Cannot determine student year from:', {
+    academicYearId,
+    level: academicYear?.Level,
+    code: schedule.OfferedCourses?.AllCourses?.Code
+  });
+  
+  return "1"; // fallback
+};
 
       const subject = schedule.OfferedCourses?.AllCourses?.ThaiName ||
                      schedule.OfferedCourses?.AllCourses?.EnglishName ||
@@ -1690,19 +1736,65 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
         };
 
         const getStudentYear = (schedule: ScheduleInterface): string => {
-          const academicYearId = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.AcademicYearID;
-          if (academicYearId && academicYearId >= 1) {
-            return academicYearId.toString();
-          }
-          const level = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.Level;
-          if (level && level !== 'เรียนได้ทุกชั้นปี') {
-            const yearMatch = level.match(/ปีที่\s*(\d+)/);
-            if (yearMatch) {
-              return yearMatch[1];
-            }
-          }
-          return "1";
-        };
+  const academicYear = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear;
+  
+  // Method 1: ใช้ Level field ก่อน (ถ้ามีข้อมูลชัดเจน)
+  if (academicYear?.Level && academicYear.Level !== 'เรียนได้ทุกชั้นปี') {
+    // ถ้า Level เป็นตัวเลขโดยตรง (เช่น "3")
+    if (/^\d+$/.test(academicYear.Level)) {
+      return academicYear.Level;
+    }
+    
+    // ถ้า Level เป็นรูปแบบ "ปีที่ X"
+    const yearMatch = academicYear.Level.match(/ปีที่\s*(\d+)/);
+    if (yearMatch) {
+      return yearMatch[1];
+    }
+  }
+  
+  // Method 2: Mapping AcademicYearID ตามที่คุณอธิบาย
+  const academicYearId = academicYear?.AcademicYearID;
+  if (academicYearId) {
+    switch (academicYearId) {
+      case 2: return "1"; // เรียนเฉพาะปี 1
+      case 3: return "2"; // เรียนเฉพาะปี 2
+      case 4: return "3"; // เรียนเฉพาะปี 3
+      case 1: // เรียนได้ทุกชั้นปี - ต้องหาจากที่อื่น
+        break;
+      default:
+        // สำหรับ ID อื่นๆ ที่อาจมีเพิ่มเติม (ปี 4, 5, 6...)
+        if (academicYearId >= 5 && academicYearId <= 10) {
+          return (academicYearId - 1).toString(); // ID 5 = ปี 4, ID 6 = ปี 5, etc.
+        }
+        break;
+    }
+  }
+  
+  // Method 3: ถ้า AcademicYearID = 1 (เรียนได้ทุกชั้นปี) ให้ดูจาก Course Code
+  if (schedule.OfferedCourses?.AllCourses?.Code) {
+    const code = schedule.OfferedCourses.AllCourses.Code;
+    
+    // ลองดูจากตัวเลขที่ 2 ของ course code (เช่น IST20 1002 -> "1")
+    const codeYearMatch1 = code.match(/[A-Z]{2,4}\d+\s+(\d)/);
+    if (codeYearMatch1) {
+      return codeYearMatch1[1];
+    }
+    
+    // ลองดูจากตัวเลขแรกหลัง prefix (เช่น IST21234 -> "2")  
+    const codeYearMatch2 = code.match(/[A-Z]{2,4}(\d)/);
+    if (codeYearMatch2) {
+      return codeYearMatch2[1];
+    }
+  }
+  
+  console.warn('⚠️ Cannot determine student year from:', {
+    academicYearId,
+    level: academicYear?.Level,
+    code: schedule.OfferedCourses?.AllCourses?.Code
+  });
+  
+  return "1"; // fallback
+};
 
         const classInfo: ClassInfo = {
           subject: item.OfferedCourses?.AllCourses?.ThaiName ||
