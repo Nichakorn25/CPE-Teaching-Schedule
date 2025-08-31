@@ -467,14 +467,21 @@ const Schedulepage: React.FC = () => {
   };
 
   // =================== COURSE CARD DRAG HANDLERS ===================
-  const handleCourseCardDragStart = (e: React.DragEvent, courseCard: CourseCard) => {
-    setDraggedCourseCard(courseCard);
-    e.dataTransfer.effectAllowed = "copy";
-    
-    if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.opacity = "0.5";
-    }
-  };
+const handleCourseCardDragStart = (e: React.DragEvent, courseCard: CourseCard) => {
+  // ตรวจสอบ role ก่อน
+  if (role !== "Scheduler") {
+    e.preventDefault();
+    message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลากวิชาไปใส่ในตารางได้");
+    return;
+  }
+
+  setDraggedCourseCard(courseCard);
+  e.dataTransfer.effectAllowed = "copy";
+  
+  if (e.currentTarget instanceof HTMLElement) {
+    e.currentTarget.style.opacity = "0.5";
+  }
+};
 
   const handleCourseCardDragEnd = (e: React.DragEvent) => {
     setDraggedCourseCard(null);
@@ -486,168 +493,201 @@ const Schedulepage: React.FC = () => {
   };
 
   // Modified cell drag handlers to handle course cards
-  const handleCellDragOver = (e: React.DragEvent, targetRow: ExtendedScheduleData, timeSlot: string) => {
+const handleCellDragOver = (e: React.DragEvent, targetRow: ExtendedScheduleData, timeSlot: string) => {
+  // ตรวจสอบ role ก่อน
+  if (role !== "Scheduler") {
     e.preventDefault();
-    
-    const slotIndex = timeToSlotIndex(timeSlot.split('-')[0]);
-    let duration = 1;
-    
-    if (draggedSubCell) {
-      duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
-    } else if (draggedCourseCard) {
-      duration = draggedCourseCard.duration;
-    }
-    
-    setDragPreview({
-      day: targetRow.day,
-      startSlot: slotIndex,
-      endSlot: slotIndex + duration,
-      show: true
-    });
-  };
+    return;
+  }
+  
+  e.preventDefault();
+  
+  const slotIndex = timeToSlotIndex(timeSlot.split('-')[0]);
+  let duration = 1;
+  
+  if (draggedSubCell) {
+    duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
+  } else if (draggedCourseCard) {
+    duration = draggedCourseCard.duration;
+  }
+  
+  setDragPreview({
+    day: targetRow.day,
+    startSlot: slotIndex,
+    endSlot: slotIndex + duration,
+    show: true
+  });
+};
 
   // Modified drop handler to handle both subcells and course cards
   const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, timeSlot: string) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  // ตรวจสอบ role ก่อน
+  if (role !== "Scheduler") {
+    message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถย้ายตารางเรียนได้");
+    setDraggedCourseCard(null);
+    setDraggedSubCell(null);
+    setDragPreview(null);
+    return;
+  }
+  
+  const slotIndex = timeToSlotIndex(timeSlot.split('-')[0]);
+  
+  if (draggedCourseCard) {
+    // Handle course card drop
+    const startTime = slotIndexToTime(slotIndex);
+    const endTime = slotIndexToTime(slotIndex + draggedCourseCard.duration);
     
-    const slotIndex = timeToSlotIndex(timeSlot.split('-')[0]);
+    const classInfo: ClassInfo = {
+      subject: draggedCourseCard.subject,
+      teacher: draggedCourseCard.teacher,
+      room: draggedCourseCard.room,
+      section: draggedCourseCard.section,
+      courseCode: draggedCourseCard.courseCode,
+      studentYear: draggedCourseCard.studentYear,
+      color: draggedCourseCard.color
+    };
     
-    if (draggedCourseCard) {
-      // Handle course card drop
-      const startTime = slotIndexToTime(slotIndex);
-      const endTime = slotIndexToTime(slotIndex + draggedCourseCard.duration);
-      
-      const classInfo: ClassInfo = {
-        subject: draggedCourseCard.subject,
-        teacher: draggedCourseCard.teacher,
-        room: draggedCourseCard.room,
-        section: draggedCourseCard.section,
-        courseCode: draggedCourseCard.courseCode,
-        studentYear: draggedCourseCard.studentYear,
-        color: draggedCourseCard.color
-      };
-      
-      const newSubCell = createSubCell(classInfo, targetRow.day, startTime, endTime, draggedCourseCard.scheduleId);
-      
-      // Check for conflicts
-      const hasConflict = (targetRow.subCells || []).some(existingSubCell => 
-        doSubCellsOverlap(newSubCell, existingSubCell)
-      );
-      
-      if (hasConflict) {
-        message.warning("ไม่สามารถวางที่ตำแหน่งนี้ได้ เนื่องจากมีการซ้อนทับเวลา");
-        setDraggedCourseCard(null);
-        setDragPreview(null);
-        return;
-      }
-      
-      addSubCellToDay(targetRow.day, newSubCell);
+    const newSubCell = createSubCell(classInfo, targetRow.day, startTime, endTime, draggedCourseCard.scheduleId);
+    
+    // Check for conflicts
+    const hasConflict = (targetRow.subCells || []).some(existingSubCell => 
+      doSubCellsOverlap(newSubCell, existingSubCell)
+    );
+    
+    if (hasConflict) {
+      message.warning("ไม่สามารถวางที่ตำแหน่งนี้ได้ เนื่องจากมีการซ้อนทับเวลา");
       setDraggedCourseCard(null);
       setDragPreview(null);
-      message.success(`เพิ่มวิชา ${draggedCourseCard.subject} ลงในตารางแล้ว`);
-      
-    } else if (draggedSubCell) {
-      // Handle existing subcell move
-      const duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
-      const tempSubCell = {
-        ...draggedSubCell,
-        position: { startSlot: slotIndex, endSlot: slotIndex + duration }
-      };
-      
-      const hasConflict = (targetRow.subCells || []).some(existingSubCell => 
-        existingSubCell.id !== draggedSubCell.id && doSubCellsOverlap(tempSubCell, existingSubCell)
-      );
-      
-      if (hasConflict) {
-        message.warning("ไม่สามารถวางที่ตำแหน่งนี้ได้ เนื่องจากมีการซ้อนทับเวลา");
-        return;
-      }
-      
-      moveSubCellToRow(draggedSubCell.id, targetRow, slotIndex);
-      setDraggedSubCell(null);
-      setDragPreview(null);
+      return;
     }
-  };
+    
+    addSubCellToDay(targetRow.day, newSubCell);
+    setDraggedCourseCard(null);
+    setDragPreview(null);
+    message.success(`เพิ่มวิชา ${draggedCourseCard.subject} ลงในตารางแล้ว`);
+    
+  } else if (draggedSubCell) {
+    // Handle existing subcell move
+    const duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
+    const tempSubCell = {
+      ...draggedSubCell,
+      position: { startSlot: slotIndex, endSlot: slotIndex + duration }
+    };
+    
+    const hasConflict = (targetRow.subCells || []).some(existingSubCell => 
+      existingSubCell.id !== draggedSubCell.id && doSubCellsOverlap(tempSubCell, existingSubCell)
+    );
+    
+    if (hasConflict) {
+      message.warning("ไม่สามารถวางที่ตำแหน่งนี้ได้ เนื่องจากมีการซ้อนทับเวลา");
+      return;
+    }
+    
+    moveSubCellToRow(draggedSubCell.id, targetRow, slotIndex);
+    setDraggedSubCell(null);
+    setDragPreview(null);
+  }
+};
 
   // =================== RENDER COURSE CARD ===================
-  const renderCourseCard = (courseCard: CourseCard) => {
-    return (
-      <div
-        key={courseCard.id}
-        draggable
-        onDragStart={(e) => handleCourseCardDragStart(e, courseCard)}
-        onDragEnd={handleCourseCardDragEnd}
-        style={{
-          backgroundColor: courseCard.color,
-          border: "2px solid rgba(0,0,0,0.1)",
-          borderRadius: "8px",
-          padding: "12px",
-          margin: "8px 0",
-          cursor: "grab",
-          transition: "all 0.2s ease",
-          fontSize: "11px",
-          lineHeight: "1.3",
-        }}
-        onMouseEnter={(e) => {
+const renderCourseCard = (courseCard: CourseCard) => {
+  const isScheduler = role === "Scheduler";
+
+  return (
+    <div
+      key={courseCard.id}
+      draggable={isScheduler} // เฉพาะ Scheduler เท่านั้นที่ drag ได้
+      onDragStart={isScheduler ? (e) => handleCourseCardDragStart(e, courseCard) : undefined}
+      onDragEnd={isScheduler ? handleCourseCardDragEnd : undefined}
+      style={{
+        backgroundColor: courseCard.color,
+        border: "2px solid rgba(0,0,0,0.1)",
+        borderRadius: "8px",
+        padding: "12px",
+        margin: "8px 0",
+        cursor: isScheduler ? "grab" : "default", // เปลี่ยน cursor ตาม role
+        transition: "all 0.2s ease",
+        fontSize: "11px",
+        lineHeight: "1.3",
+        opacity: !isScheduler ? 0.7 : 1, // ลด opacity สำหรับ non-scheduler
+      }}
+      onMouseEnter={(e) => {
+        if (isScheduler) {
           e.currentTarget.style.transform = "translateY(-2px)";
           e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
-        }}
-        onMouseLeave={(e) => {
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (isScheduler) {
           e.currentTarget.style.transform = "translateY(0px)";
           e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
-        }}
-      >
-        <Tooltip
-          title={
-            <div style={{ fontFamily: "Sarabun, sans-serif", minWidth: "250px" }}>
-              <div style={{ fontWeight: "bold", fontSize: "13px", marginBottom: "6px", color: "#F26522" }}>
-                📚 รายละเอียดวิชา
-              </div>
-              <p><b>🏷️ รหัสวิชา:</b> {courseCard.courseCode || "ไม่ระบุ"}</p>
-              <p><b>📖 ชื่อวิชา:</b> {courseCard.subject || "ไม่ระบุ"}</p>
-              <p><b>🎓 ชั้นปี:</b> {courseCard.studentYear ? `ปีที่ ${courseCard.studentYear}` : "ไม่ระบุ"}</p>
-              <p><b>📄 หมู่เรียน:</b> {courseCard.section || "ไม่ระบุ"}</p>
-              <p><b>👩‍🏫 อาจารย์:</b> {courseCard.teacher || "ไม่ระบุ"}</p>
-              <p><b>🏢 ห้องเรียน:</b> {courseCard.room || "ไม่ระบุ"}</p>
-              <p><b>⏱️ ระยะเวลา:</b> {courseCard.duration} ชั่วโมง</p>
-              <div style={{ marginTop: "8px", fontSize: "11px", color: "#666", fontStyle: "italic" }}>
-                💡 ลากการ์ดนี้ไปวางในตารางเรียน
-              </div>
+        }
+      }}
+      onClick={() => {
+        if (!isScheduler) {
+          message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลากวิชาไปใส่ในตารางได้");
+        }
+      }}
+    >
+      <Tooltip
+        title={
+          <div style={{ fontFamily: "Sarabun, sans-serif", minWidth: "250px" }}>
+            <div style={{ fontWeight: "bold", fontSize: "13px", marginBottom: "6px", color: "#F26522" }}>
+              📚 รายละเอียดวิชา
             </div>
-          }
-          placement="left"
-          overlayStyle={{ maxWidth: "350px" }}
-        >
-          <div>
-            <div style={{ fontWeight: "bold", fontSize: "12px", marginBottom: "4px", color: "#333" }}>
-              {courseCard.subject}
-            </div>
-            <div style={{ fontSize: "9px", color: "#666", marginBottom: "2px" }}>
-              รหัส: {courseCard.courseCode}
-            </div>
-            <div style={{ fontSize: "10px", color: "#555", marginBottom: "2px" }}>
-              อาจารย์: {courseCard.teacher}
-            </div>
-            <div style={{ fontSize: "9px", color: "#777", marginBottom: "2px" }}>
-              ห้อง: {courseCard.room}
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
-              <span style={{ fontSize: "9px", color: "#888" }}>
-                ปี {courseCard.studentYear} หมู่ {courseCard.section}
-              </span>
-              <span style={{ fontSize: "10px", fontWeight: "bold", color: "#F26522" }}>
-                {courseCard.duration}ชม.
-              </span>
+            <p><b>🏷️ รหัสวิชา:</b> {courseCard.courseCode || "ไม่ระบุ"}</p>
+            <p><b>📖 ชื่อวิชา:</b> {courseCard.subject || "ไม่ระบุ"}</p>
+            <p><b>🎓 ชั้นปี:</b> {courseCard.studentYear ? `ปีที่ ${courseCard.studentYear}` : "ไม่ระบุ"}</p>
+            <p><b>📄 หมู่เรียน:</b> {courseCard.section || "ไม่ระบุ"}</p>
+            <p><b>👩‍🏫 อาจารย์:</b> {courseCard.teacher || "ไม่ระบุ"}</p>
+            <p><b>🏢 ห้องเรียน:</b> {courseCard.room || "ไม่ระบุ"}</p>
+            <p><b>⏱️ ระยะเวลา:</b> {courseCard.duration} ชั่วโมง</p>
+            <div style={{ marginTop: "8px", fontSize: "11px", color: "#666", fontStyle: "italic" }}>
+              {isScheduler 
+                ? "💡 ลากการ์ดนี้ไปวางในตารางเรียน"
+                : "🔒 ต้องเป็น Scheduler เท่านั้นถึงจะลากได้"
+              }
             </div>
           </div>
-        </Tooltip>
-      </div>
-    );
-  };
+        }
+        placement="left"
+        overlayStyle={{ maxWidth: "350px" }}
+      >
+        <div>
+          <div style={{ fontWeight: "bold", fontSize: "12px", marginBottom: "4px", color: "#333" }}>
+            {courseCard.subject}
+            {!isScheduler && (
+              <span style={{ marginLeft: "8px", fontSize: "10px" }}>🔒</span>
+            )}
+          </div>
+          <div style={{ fontSize: "9px", color: "#666", marginBottom: "2px" }}>
+            รหัส: {courseCard.courseCode}
+          </div>
+          <div style={{ fontSize: "10px", color: "#555", marginBottom: "2px" }}>
+            อาจารย์: {courseCard.teacher}
+          </div>
+          <div style={{ fontSize: "9px", color: "#777", marginBottom: "2px" }}>
+            ห้อง: {courseCard.room}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+            <span style={{ fontSize: "9px", color: "#888" }}>
+              ปี {courseCard.studentYear} หมู่ {courseCard.section}
+            </span>
+            <span style={{ fontSize: "10px", fontWeight: "bold", color: "#F26522" }}>
+              {courseCard.duration}ชม.
+            </span>
+          </div>
+        </div>
+      </Tooltip>
+    </div>
+  );
+};
 
   // =================== RENDER SIDEBAR ===================
   const renderSidebar = () => {
-    if (!sidebarVisible) return null;
+    if (role !== "Scheduler" || !sidebarVisible) return null;
     
     return (
       <div
@@ -1327,14 +1367,21 @@ const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, ne
 };
 
   // =================== DRAG & DROP HANDLERS ===================
-  const handleSubCellDragStart = (e: React.DragEvent, subCell: SubCell) => {
-    setDraggedSubCell(subCell);
-    e.dataTransfer.effectAllowed = "move";
-    
-    if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.opacity = "0.5";
-    }
-  };
+const handleSubCellDragStart = (e: React.DragEvent, subCell: SubCell) => {
+  // ตรวจสอบ role ก่อน
+  if (role !== "Scheduler") {
+    e.preventDefault();
+    message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถย้ายตารางเรียนได้");
+    return;
+  }
+
+  setDraggedSubCell(subCell);
+  e.dataTransfer.effectAllowed = "move";
+  
+  if (e.currentTarget instanceof HTMLElement) {
+    e.currentTarget.style.opacity = "0.5";
+  }
+};
 
   const handleSubCellDragEnd = (e: React.DragEvent) => {
     setDraggedSubCell(null);
@@ -1350,127 +1397,135 @@ const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, ne
   };
 
   // =================== RENDER SUB-CELL FUNCTION ===================
-  const renderSubCell = (subCell: SubCell) => {
-    const duration = subCell.position.endSlot - subCell.position.startSlot;
-    const shouldSpan = duration > 1;
+const renderSubCell = (subCell: SubCell) => {
+  const duration = subCell.position.endSlot - subCell.position.startSlot;
+  const shouldSpan = duration > 1;
+  const isScheduler = role === "Scheduler";
 
-    return (
-      <div
-        key={subCell.id}
-        draggable
-        onDragStart={(e) => handleSubCellDragStart(e, subCell)}
-        onDragEnd={handleSubCellDragEnd}
-        style={{
-          backgroundColor: subCell.classData.color,
-          border: "2px solid rgba(0,0,0,0.2)",
-          borderRadius: "6px",
-          padding: "6px 8px",
-          cursor: "grab",
+  return (
+    <div
+      key={subCell.id}
+      draggable={isScheduler} // เฉพาะ Scheduler เท่านั้นที่ drag ได้
+      onDragStart={isScheduler ? (e) => handleSubCellDragStart(e, subCell) : undefined}
+      onDragEnd={isScheduler ? handleSubCellDragEnd : undefined}
+      style={{
+        backgroundColor: subCell.classData.color,
+        border: "2px solid rgba(0,0,0,0.2)",
+        borderRadius: "6px",
+        padding: "6px 8px",
+        cursor: isScheduler ? "grab" : "default", // เปลี่ยน cursor ตาม role
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        overflow: "hidden",
+        transition: "all 0.2s ease",
+        fontSize: duration > 2 ? "11px" : shouldSpan ? "10px" : "9px",
+        lineHeight: "1.2",
+        textAlign: "center",
+        color: "#333",
+        height: `${CELL_CONFIG.FIXED_HEIGHT}px`,
+        position: "absolute",
+        width: "calc(100% - 4px)",
+        left: "2px",
+        top: "0px",
+        zIndex: shouldSpan ? 10 : 5,
+        fontWeight: shouldSpan ? "bold" : "normal",
+        boxShadow: shouldSpan ? 
+          "0 4px 12px rgba(242, 101, 34, 0.4)" : 
+          "0 3px 6px rgba(0,0,0,0.15)",
+        // เพิ่ม visual indicator สำหรับ non-scheduler
+        opacity: !isScheduler ? 0.8 : 1,
+      }}
+    >
+      <Tooltip
+        title={
+          <div
+            style={{
+              fontFamily: "Sarabun, sans-serif",
+              minWidth: "300px",
+              backgroundColor: "white",
+              color: "black",
+              padding: "10px",
+              borderRadius: "6px",
+            }}
+          >
+            <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "6px", color: "#F26522" }}>
+              📚 รายละเอียดวิชา
+            </div>
+            <p><b>🏷️ รหัสวิชา:</b> {subCell.classData.courseCode || "ไม่ระบุ"}</p>
+            <p><b>📖 ชื่อวิชา:</b> {subCell.classData.subject || "ไม่ระบุ"}</p>
+            <p><b>🎓 ชั้นปี:</b> {subCell.classData.studentYear ? `ปีที่ ${subCell.classData.studentYear}` : "ไม่ระบุ"}</p>
+            <p><b>📄 หมู่เรียน:</b> {subCell.classData.section || "ไม่ระบุ"}</p>
+            <p><b>👩‍🏫 อาจารย์:</b> {subCell.classData.teacher || "ไม่ระบุ"}</p>
+            <p><b>🏢 ห้องเรียน:</b> {subCell.classData.room || "ไม่ระบุ"}</p>
+            <p><b>📅 วัน:</b> {subCell.day}</p>
+            <p><b>🕐 เวลา:</b> {subCell.startTime} - {subCell.endTime}</p>
+            {!isScheduler && (
+              <p style={{ color: "#ff4d4f", fontSize: "12px", marginTop: "8px" }}>
+                ⚠️ ต้องเป็น Scheduler เท่านั้นถึงจะย้ายได้
+              </p>
+            )}
+          </div>
+        }
+        placement="top"
+        overlayStyle={{ maxWidth: "400px", backgroundColor: "white", color: "black" }}
+        trigger="hover"
+      >
+        <div style={{
+          flex: 1,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          overflow: "hidden",
-          transition: "all 0.2s ease",
-          fontSize: duration > 2 ? "11px" : shouldSpan ? "10px" : "9px",
-          lineHeight: "1.2",
-          textAlign: "center",
-          color: "#333",
-          height: `${CELL_CONFIG.FIXED_HEIGHT}px`,
-          position: "absolute",
-          width: "calc(100% - 4px)",
-          left: "2px",
-          top: "0px",
-          zIndex: shouldSpan ? 10 : 5,
-          fontWeight: shouldSpan ? "bold" : "normal",
-          boxShadow: shouldSpan ? 
-            "0 4px 12px rgba(242, 101, 34, 0.4)" : 
-            "0 3px 6px rgba(0,0,0,0.15)",
-        }}
-      >
-        <Tooltip
-          title={
-            <div
-              style={{
-                fontFamily: "Sarabun, sans-serif",
-                minWidth: "300px",
-                backgroundColor: "white",
-                color: "black",
-                padding: "10px",
-                borderRadius: "6px",
-              }}
-            >
-              <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "6px", color: "#F26522" }}>
-                📚 รายละเอียดวิชา
-              </div>
-
-              <p><b>🏷️ รหัสวิชา:</b> {subCell.classData.courseCode || "ไม่ระบุ"}</p>
-              <p><b>📖 ชื่อวิชา:</b> {subCell.classData.subject || "ไม่ระบุ"}</p>
-              <p><b>🎓 ชั้นปี:</b> {subCell.classData.studentYear ? `ปีที่ ${subCell.classData.studentYear}` : "ไม่ระบุ"}</p>
-              <p><b>📄 หมู่เรียน:</b> {subCell.classData.section || "ไม่ระบุ"}</p>
-              <p><b>👩‍🏫 อาจารย์:</b> {subCell.classData.teacher || "ไม่ระบุ"}</p>
-              <p><b>🏢 ห้องเรียน:</b> {subCell.classData.room || "ไม่ระบุ"}</p>
-              <p><b>📅 วัน:</b> {subCell.day}</p>
-              <p><b>🕐 เวลา:</b> {subCell.startTime} - {subCell.endTime}</p>
-            </div>
-          }
-          placement="top"
-          overlayStyle={{ maxWidth: "400px", backgroundColor: "white", color: "black" }}
-          trigger="hover"
-        >
+          width: "100%",
+          textAlign: "center"
+        }}>
           <div style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            alignItems: "center",
-            width: "100%",
-            textAlign: "center"
+            fontWeight: "bold",
+            fontSize: "12px",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            maxWidth: "100%",
           }}>
-            <div style={{
-              fontWeight: "bold",
-              fontSize: "12px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: "100%",
-            }}>
-              {subCell.classData.subject}
-            </div>
-            <div style={{
-              fontSize: "7px",
-              color: "#050505ff",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: "100%",
-            }}>
-              {subCell.classData.courseCode}
-            </div>
-            <div style={{
-              fontSize: "10px",
-              color: "#666",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: "100%",
-            }}>
-              {subCell.classData.teacher}
-            </div>
-            <div style={{
-              fontSize: "10px",
-              color: "#888",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: "100%",
-            }}>
-              {subCell.classData.room}
-            </div>
+            {subCell.classData.subject}
           </div>
-        </Tooltip>
+          <div style={{
+            fontSize: "7px",
+            color: "#050505ff",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            maxWidth: "100%",
+          }}>
+            {subCell.classData.courseCode}
+          </div>
+          <div style={{
+            fontSize: "10px",
+            color: "#666",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            maxWidth: "100%",
+          }}>
+            {subCell.classData.teacher}
+          </div>
+          <div style={{
+            fontSize: "10px",
+            color: "#888",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            maxWidth: "100%",
+          }}>
+            {subCell.classData.room}
+          </div>
+        </div>
+      </Tooltip>
 
-        {/* Delete Button */}
+      {/* Delete Button - เฉพาะ Scheduler เท่านั้น */}
+      {isScheduler && (
         <div
           style={{
             position: "absolute",
@@ -1504,54 +1559,72 @@ const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, ne
         >
           ×
         </div>
+      )}
 
-        {/* Duration Indicator */}
+      {/* Duration Indicator */}
+      <div style={{
+        position: "absolute",
+        bottom: "4px",
+        left: "4px",
+        fontSize: duration > 2 ? "10px" : "9px",
+        color: "#F26522",
+        fontWeight: "bold",
+        backgroundColor: "rgba(255,255,255,0.95)",
+        borderRadius: "4px",
+        padding: duration > 1 ? "2px 6px" : "1px 4px",
+        border: "1px solid rgba(242, 101, 34, 0.4)"
+      }}>
+        {duration}คาบ
+      </div>
+
+      {/* Role indicator for non-scheduler */}
+      {!isScheduler && (
         <div style={{
           position: "absolute",
+          top: "4px",
+          right: "4px",
+          fontSize: "10px",
+          color: "#666",
+          backgroundColor: "rgba(255,255,255,0.9)",
+          borderRadius: "3px",
+          padding: "1px 4px",
+          border: "1px solid #ddd"
+        }}>
+          🔒
+        </div>
+      )}
+
+      {/* Proportional Height Indicator */}
+      <div style={{
+        position: "absolute",
+        left: "0",
+        bottom: "0",
+        right: "0",
+        height: duration > 2 ? "6px" : shouldSpan ? "5px" : "4px",
+        backgroundColor: `rgba(242, 101, 34, ${0.3 + (duration * 0.1)})`,
+        borderRadius: "0 0 6px 6px"
+      }} />
+      
+      {/* Visual Scale Indicator */}
+      {duration > 1 && (
+        <div style={{
+          position: "absolute",
+          right: "4px",
           bottom: "4px",
-          left: "4px",
-          fontSize: duration > 2 ? "10px" : "9px",
+          fontSize: "8px",
           color: "#F26522",
           fontWeight: "bold",
-          backgroundColor: "rgba(255,255,255,0.95)",
-          borderRadius: "4px",
-          padding: duration > 1 ? "2px 6px" : "1px 4px",
-          border: "1px solid rgba(242, 101, 34, 0.4)"
+          backgroundColor: "rgba(255,255,255,0.9)",
+          borderRadius: "3px",
+          padding: "1px 4px",
+          border: "1px solid rgba(242, 101, 34, 0.3)"
         }}>
-          {duration}คาบ
+          {duration}ช่วง
         </div>
-
-        {/* Proportional Height Indicator */}
-        <div style={{
-          position: "absolute",
-          left: "0",
-          bottom: "0",
-          right: "0",
-          height: duration > 2 ? "6px" : shouldSpan ? "5px" : "4px",
-          backgroundColor: `rgba(242, 101, 34, ${0.3 + (duration * 0.1)})`,
-          borderRadius: "0 0 6px 6px"
-        }} />
-        
-        {/* Visual Scale Indicator */}
-        {duration > 1 && (
-          <div style={{
-            position: "absolute",
-            right: "4px",
-            bottom: "4px",
-            fontSize: "8px",
-            color: "#F26522",
-            fontWeight: "bold",
-            backgroundColor: "rgba(255,255,255,0.9)",
-            borderRadius: "3px",
-            padding: "1px 4px",
-            border: "1px solid rgba(242, 101, 34, 0.3)"
-          }}>
-            {duration}ช่วง
-          </div>
-        )}
-      </div>
-    );
-  };
+      )}
+    </div>
+  );
+};
 
   // เพิ่ม helper function สำหรับสร้าง empty row
 const createEmptyDayRow = (day: string, dayIndex: number, rowIndex: number, totalRowsInDay: number): ExtendedScheduleData => {
@@ -3003,6 +3076,7 @@ const exportScheduleToXLSX = async () => {
           )}
           
           {/* Sidebar Toggle Button */}
+          {role === "Scheduler" && (
           <Button
             icon={<MenuOutlined />}
             onClick={() => setSidebarVisible(!sidebarVisible)}
@@ -3010,6 +3084,7 @@ const exportScheduleToXLSX = async () => {
           >
             {sidebarVisible ? "ซ่อนกล่องวิชา" : "แสดงกล่องวิชา"}
           </Button>
+          )}
         </Flex>
 
         {/* Schedule Table */}
