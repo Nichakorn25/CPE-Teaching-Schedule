@@ -285,6 +285,7 @@ func DeleteOfferedCourse(c *gin.Context) {
 
 // /////////////////////////// final-offerated
 type SectionDetail struct {
+	ID             uint
 	SectionNumber  uint
 	Room           string
 	DayOfWeek      string
@@ -294,6 +295,7 @@ type SectionDetail struct {
 }
 
 type OfferedCoursesDetail struct {
+	ID            uint
 	Code          string
 	CourseName    string
 	Credit        string
@@ -303,16 +305,20 @@ type OfferedCoursesDetail struct {
 }
 
 func GetOfferedCoursesAndSchedule(c *gin.Context) {
-	majorID := c.Query("majorID")
+	majorName := c.Query("major_name")
+	year := c.Query("year")
+	term := c.Query("term")
 
 	var offeredCourses []entity.OfferedCourses
-	if err := config.DB().Preload("AllCourses.Credit").
+	if err := config.DB().
+		Preload("AllCourses.Credit").
 		Preload("AllCourses.TypeOfCourses").
 		Preload("AllCourses.Curriculum.Major").
 		Preload("User").
-		Preload("Schedule.TimeFixedCourses"). 
+		Preload("Schedule.TimeFixedCourses").
 		Preload("Laboratory").
-		Find(&offeredCourses).Error; err != nil {
+		Where("year = ? AND term = ?", year, term).
+		Find(&offeredCourses).Distinct("offered_courses.id").Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -320,7 +326,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 	grouped := make(map[string]*OfferedCoursesDetail)
 
 	for _, oc := range offeredCourses {
-		if !oc.IsFixCourses && strconv.Itoa(int(oc.AllCourses.Curriculum.MajorID)) != majorID {
+		if !oc.IsFixCourses && oc.AllCourses.Curriculum.Major.MajorName != majorName {
 			continue
 		}
 
@@ -333,6 +339,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 
 		if _, ok := grouped[oc.AllCourses.Code]; !ok {
 			grouped[oc.AllCourses.Code] = &OfferedCoursesDetail{
+				ID:            oc.ID,
 				Code:          oc.AllCourses.Code,
 				CourseName:    oc.AllCourses.ThaiName,
 				Credit:        credit,
@@ -344,36 +351,46 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 
 		instructor := oc.User.Firstname + " " + oc.User.Lastname
 
+		sectionMap := make(map[string]SectionDetail)
+
 		if oc.IsFixCourses {
 			for _, sch := range oc.Schedule {
 				for _, tf := range sch.TimeFixedCourses {
-					grouped[oc.AllCourses.Code].Sections = append(grouped[oc.AllCourses.Code].Sections, SectionDetail{
+					key := fmt.Sprintf("%d-%s-%s", tf.Section, tf.DayOfWeek, tf.StartTime)
+
+					sectionMap[key] = SectionDetail{
+						ID:             tf.ID,
 						SectionNumber:  tf.Section,
 						Room:           tf.RoomFix,
 						DayOfWeek:      tf.DayOfWeek,
 						Time:           tf.StartTime.Format("15:04") + " - " + tf.EndTime.Format("15:04"),
 						Capacity:       tf.Capacity,
 						InstructorName: instructor,
-					})
+					}
 				}
 			}
 		} else {
-			if len(oc.Schedule) > 0 {
-				for _, sch := range oc.Schedule {
-					room := ""
-					if oc.LaboratoryID != nil {
-						room = oc.Laboratory.Room
-					}
-					grouped[oc.AllCourses.Code].Sections = append(grouped[oc.AllCourses.Code].Sections, SectionDetail{
-						SectionNumber:  sch.SectionNumber,
-						Room:           room,
-						DayOfWeek:      sch.DayOfWeek,
-						Time:           sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
-						Capacity:       oc.Capacity,
-						InstructorName: instructor,
-					})
+			for _, sch := range oc.Schedule {
+				room := ""
+				if oc.LaboratoryID != nil {
+					room = oc.Laboratory.Room
+				}
+				key := fmt.Sprintf("%d-%s-%s", sch.SectionNumber, sch.DayOfWeek, sch.StartTime)
+
+				sectionMap[key] = SectionDetail{
+					ID:             sch.ID,
+					SectionNumber:  sch.SectionNumber,
+					Room:           room,
+					DayOfWeek:      sch.DayOfWeek,
+					Time:           sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
+					Capacity:       oc.Capacity,
+					InstructorName: instructor,
 				}
 			}
+		}
+
+		for _, sec := range sectionMap {
+			grouped[oc.AllCourses.Code].Sections = append(grouped[oc.AllCourses.Code].Sections, sec)
 		}
 	}
 
