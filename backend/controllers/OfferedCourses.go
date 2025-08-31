@@ -304,15 +304,19 @@ type OfferedCoursesDetail struct {
 }
 
 func GetOfferedCoursesAndSchedule(c *gin.Context) {
-	majorID := c.Query("majorID")
+	majorName := c.Query("major_name")
+	year := c.Query("year")
+	term := c.Query("term")
 
 	var offeredCourses []entity.OfferedCourses
-	if err := config.DB().Preload("AllCourses.Credit").
+	if err := config.DB().
+		Preload("AllCourses.Credit").
 		Preload("AllCourses.TypeOfCourses").
 		Preload("AllCourses.Curriculum.Major").
 		Preload("User").
-		Preload("Schedule.TimeFixedCourses"). 
+		Preload("Schedule.TimeFixedCourses").
 		Preload("Laboratory").
+		Where("year = ? AND term = ?", year, term).
 		Find(&offeredCourses).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -321,7 +325,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 	grouped := make(map[string]*OfferedCoursesDetail)
 
 	for _, oc := range offeredCourses {
-		if !oc.IsFixCourses && strconv.Itoa(int(oc.AllCourses.Curriculum.MajorID)) != majorID {
+		if !oc.IsFixCourses && oc.AllCourses.Curriculum.Major.MajorName != majorName {
 			continue
 		}
 
@@ -360,21 +364,19 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 				}
 			}
 		} else {
-			if len(oc.Schedule) > 0 {
-				for _, sch := range oc.Schedule {
-					room := ""
-					if oc.LaboratoryID != nil {
-						room = oc.Laboratory.Room
-					}
-					grouped[oc.AllCourses.Code].Sections = append(grouped[oc.AllCourses.Code].Sections, SectionDetail{
-						SectionNumber:  sch.SectionNumber,
-						Room:           room,
-						DayOfWeek:      sch.DayOfWeek,
-						Time:           sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
-						Capacity:       oc.Capacity,
-						InstructorName: instructor,
-					})
+			for _, sch := range oc.Schedule {
+				room := ""
+				if oc.LaboratoryID != nil {
+					room = oc.Laboratory.Room
 				}
+				grouped[oc.AllCourses.Code].Sections = append(grouped[oc.AllCourses.Code].Sections, SectionDetail{
+					SectionNumber:  sch.SectionNumber,
+					Room:           room,
+					DayOfWeek:      sch.DayOfWeek,
+					Time:           sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
+					Capacity:       oc.Capacity,
+					InstructorName: instructor,
+				})
 			}
 		}
 	}
