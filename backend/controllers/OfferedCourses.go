@@ -285,6 +285,7 @@ func DeleteOfferedCourse(c *gin.Context) {
 
 // /////////////////////////// final-offerated
 type SectionDetail struct {
+	ID             uint
 	SectionNumber  uint
 	Room           string
 	DayOfWeek      string
@@ -294,7 +295,7 @@ type SectionDetail struct {
 }
 
 type OfferedCoursesDetail struct {
-	ID            uint 
+	ID            uint
 	Code          string
 	CourseName    string
 	Credit        string
@@ -317,7 +318,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 		Preload("Schedule.TimeFixedCourses").
 		Preload("Laboratory").
 		Where("year = ? AND term = ?", year, term).
-		Find(&offeredCourses).Error; err != nil {
+		Find(&offeredCourses).Distinct("offered_courses.id").Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -350,17 +351,22 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 
 		instructor := oc.User.Firstname + " " + oc.User.Lastname
 
+		sectionMap := make(map[string]SectionDetail)
+
 		if oc.IsFixCourses {
 			for _, sch := range oc.Schedule {
 				for _, tf := range sch.TimeFixedCourses {
-					grouped[oc.AllCourses.Code].Sections = append(grouped[oc.AllCourses.Code].Sections, SectionDetail{
+					key := fmt.Sprintf("%d-%s-%s", tf.Section, tf.DayOfWeek, tf.StartTime)
+
+					sectionMap[key] = SectionDetail{
+						ID:             tf.ID,
 						SectionNumber:  tf.Section,
 						Room:           tf.RoomFix,
 						DayOfWeek:      tf.DayOfWeek,
 						Time:           tf.StartTime.Format("15:04") + " - " + tf.EndTime.Format("15:04"),
 						Capacity:       tf.Capacity,
 						InstructorName: instructor,
-					})
+					}
 				}
 			}
 		} else {
@@ -369,15 +375,22 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 				if oc.LaboratoryID != nil {
 					room = oc.Laboratory.Room
 				}
-				grouped[oc.AllCourses.Code].Sections = append(grouped[oc.AllCourses.Code].Sections, SectionDetail{
+				key := fmt.Sprintf("%d-%s-%s", sch.SectionNumber, sch.DayOfWeek, sch.StartTime)
+
+				sectionMap[key] = SectionDetail{
+					ID:             sch.ID,
 					SectionNumber:  sch.SectionNumber,
 					Room:           room,
 					DayOfWeek:      sch.DayOfWeek,
 					Time:           sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
 					Capacity:       oc.Capacity,
 					InstructorName: instructor,
-				})
+				}
 			}
+		}
+
+		for _, sec := range sectionMap {
+			grouped[oc.AllCourses.Code].Sections = append(grouped[oc.AllCourses.Code].Sections, sec)
 		}
 	}
 
