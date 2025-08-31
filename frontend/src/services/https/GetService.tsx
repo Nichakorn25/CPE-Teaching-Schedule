@@ -93,9 +93,9 @@ async function getOffered(params) {
     .catch((e) => e.response);
 }
 ///////////////////////////////////////////////// วิชาที่เปิดสอน
-async function getOfferedCoursesByMajor(majorID: number) {
+async function getOfferedCoursesByMajor(majorName: string, year: number, term: number) {
   return await axios
-    .get(`${apiUrl}/offered-courses-schedule?majorID=${majorID}`, requestOptions)
+    .get(`${apiUrl}/offered-courses-schedule?major_name=${majorName}&year=${year}&term=${term}`, requestOptions)
     .then((res) => res)
     .catch((e) => e.response);
 }
