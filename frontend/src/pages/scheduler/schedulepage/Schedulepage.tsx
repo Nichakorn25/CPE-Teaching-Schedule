@@ -16,6 +16,9 @@ import {
   Divider,
   AutoComplete,
   Drawer,
+  Tabs,
+  Badge,
+  Empty,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -25,6 +28,9 @@ import {
   ClearOutlined,
   MenuOutlined,
   BookOutlined,
+  DeleteOutlined,
+  RestTwoTone,
+  HistoryOutlined,
 } from "@ant-design/icons";
 import {
   OfferedCoursesInterface,
@@ -136,6 +142,24 @@ interface CourseCard {
   duration: number; // duration in hours
   color: string;
   scheduleId?: number;
+}
+
+// =================== REMOVED COURSE TYPES ===================
+interface RemovedCourse {
+  id: string;
+  subject: string;
+  courseCode: string;
+  teacher: string;
+  room: string;
+  section: string;
+  studentYear: string;
+  duration: number;
+  color: string;
+  scheduleId?: number;
+  removedAt: Date;
+  originalDay: string;
+  originalStartTime: string;
+  originalEndTime: string;
 }
 
 // =================== CONSTANTS ===================
@@ -294,7 +318,35 @@ const Schedulepage: React.FC = () => {
   const [sidebarSearchValue, setSidebarSearchValue] = useState("");
   const [sidebarFilterVisible, setSidebarFilterVisible] = useState(false);
 
+  // =================== NEW REMOVED COURSES STATES ===================
+  const [removedCourses, setRemovedCourses] = useState<RemovedCourse[]>([]);
+  const [filteredRemovedCourses, setFilteredRemovedCourses] = useState<RemovedCourse[]>([]);
+  const [removedSearchValue, setRemovedSearchValue] = useState("");
+  const [activeTab, setActiveTab] = useState("available"); // "available" | "removed"
+
   const tableRef = useRef<HTMLDivElement>(null);
+
+  // =================== REMOVED COURSES FILTER FUNCTIONS ===================
+  const applyRemovedCoursesFilter = () => {
+    if (!removedSearchValue) {
+      setFilteredRemovedCourses(removedCourses);
+      return;
+    }
+
+    const filtered = removedCourses.filter(course => 
+      course.subject.toLowerCase().includes(removedSearchValue.toLowerCase()) ||
+      course.teacher.toLowerCase().includes(removedSearchValue.toLowerCase()) ||
+      course.courseCode.toLowerCase().includes(removedSearchValue.toLowerCase()) ||
+      course.room.toLowerCase().includes(removedSearchValue.toLowerCase())
+    );
+
+    setFilteredRemovedCourses(filtered);
+  };
+
+  // Apply removed courses filter when search value changes
+  useEffect(() => {
+    applyRemovedCoursesFilter();
+  }, [removedSearchValue, removedCourses]);
 
   // =================== SIDEBAR FILTER FUNCTIONS ===================
   const addSidebarFilterTag = (type: FilterTag['type'], value: string) => {
@@ -371,6 +423,136 @@ const Schedulepage: React.FC = () => {
   useEffect(() => {
     applySidebarFilters();
   }, [sidebarFilterTags, sidebarSearchValue, courseCards]);
+
+  // =================== REMOVED COURSES FUNCTIONS ===================
+  const addToRemovedCourses = (subCell: SubCell) => {
+    // สร้าง unique identifier เพื่อตรวจสอบการซ้ำกัน
+    const uniqueKey = `${subCell.classData.subject}-${subCell.classData.courseCode}-${subCell.classData.section}-${subCell.classData.teacher}-${subCell.day}-${subCell.startTime}-${subCell.endTime}`;
+    
+    // ตรวจสอบว่ามีวิชานี้ใน removed courses แล้วหรือไม่
+    const isDuplicate = removedCourses.some(existing => {
+      const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
+      return existingKey === uniqueKey;
+    });
+
+    if (isDuplicate) {
+      console.warn('🚫 Duplicate course detected, not adding to removed courses:', uniqueKey);
+      return;
+    }
+
+    const removedCourse: RemovedCourse = {
+      id: `removed-${Date.now()}-${Math.random()}`,
+      subject: subCell.classData.subject,
+      courseCode: subCell.classData.courseCode || "",
+      teacher: subCell.classData.teacher,
+      room: subCell.classData.room,
+      section: subCell.classData.section || "",
+      studentYear: subCell.classData.studentYear || "",
+      duration: subCell.position.endSlot - subCell.position.startSlot,
+      color: subCell.classData.color || getSubjectColor(subCell.classData.subject),
+      scheduleId: subCell.scheduleId,
+      removedAt: new Date(),
+      originalDay: subCell.day,
+      originalStartTime: subCell.startTime,
+      originalEndTime: subCell.endTime
+    };
+
+    setRemovedCourses(prev => [removedCourse, ...prev]);
+    console.log('✅ Added to removed courses:', removedCourse.subject);
+  };
+
+  const restoreRemovedCourse = (removedCourse: RemovedCourse) => {
+    // ตรวจสอบ role ก่อน
+    if (role !== "Scheduler") {
+      message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถกู้คืนวิชาได้");
+      return;
+    }
+
+    // สร้าง ClassInfo จาก removed course
+    const classInfo: ClassInfo = {
+      subject: removedCourse.subject,
+      teacher: removedCourse.teacher,
+      room: removedCourse.room,
+      section: removedCourse.section,
+      courseCode: removedCourse.courseCode,
+      studentYear: removedCourse.studentYear,
+      color: removedCourse.color
+    };
+
+    // สร้าง SubCell ใหม่
+    const newSubCell = createSubCell(
+      classInfo, 
+      removedCourse.originalDay, 
+      removedCourse.originalStartTime, 
+      removedCourse.originalEndTime,
+      removedCourse.scheduleId
+    );
+
+    // หา row ที่เหมาะสมในวันเดิม
+    const dayRows = scheduleData.filter(row => row.day === removedCourse.originalDay);
+    let canRestore = false;
+    let targetRow: ExtendedScheduleData | null = null;
+
+    // ตรวจสอบว่ามี row ว่างในช่วงเวลาเดิมหรือไม่
+    for (const row of dayRows) {
+      const hasConflict = (row.subCells || []).some(existingSubCell => 
+        doSubCellsOverlap(newSubCell, existingSubCell)
+      );
+      
+      if (!hasConflict) {
+        targetRow = row;
+        canRestore = true;
+        break;
+      }
+    }
+
+    if (canRestore && targetRow) {
+      addSubCellToDay(removedCourse.originalDay, newSubCell);
+      // ลบออกจาก removed courses
+      setRemovedCourses(prev => prev.filter(course => course.id !== removedCourse.id));
+      message.success(`กู้คืนวิชา "${removedCourse.subject}" สำเร็จ`);
+    } else {
+      message.warning("ไม่สามารถกู้คืนได้ เนื่องจากมีการซ้อนทับเวลาในตำแหน่งเดิม");
+    }
+  };
+
+  const deleteRemovedCoursePermanently = (removedCourseId: string) => {
+    const removedCourse = removedCourses.find(course => course.id === removedCourseId);
+    if (!removedCourse) return;
+
+    Modal.confirm({
+      title: 'ยืนยันการลบถาวร',
+      content: `คุณต้องการลบวิชา "${removedCourse.subject}" ออกจากรายการถาวรหรือไม่? การดำเนินการนี้ไม่สามารถยกเลิกได้`,
+      okText: 'ลบถาวร',
+      okType: 'danger',
+      cancelText: 'ยกเลิก',
+      onOk() {
+        setRemovedCourses(prev => prev.filter(course => course.id !== removedCourseId));
+        message.success("ลบวิชาออกจากรายการถาวรแล้ว");
+      }
+    });
+  };
+
+  const clearAllRemovedCourses = () => {
+    if (removedCourses.length === 0) {
+      message.info("ไม่มีรายการวิชาที่ถูกลบ");
+      return;
+    }
+
+    Modal.confirm({
+      title: 'ยืนยันการล้างรายการทั้งหมด',
+      content: `คุณต้องการลบรายการวิชาที่ถูกลบทั้งหมด ${removedCourses.length} รายการหรือไม่? การดำเนินการนี้ไม่สามารถยกเลิกได้`,
+      okText: 'ล้างทั้งหมด',
+      okType: 'danger',
+      cancelText: 'ยกเลิก',
+      onOk() {
+        setRemovedCourses([]);
+        setRemovedSearchValue("");
+        message.success("ล้างรายการวิชาที่ถูกลบทั้งหมดแล้ว");
+      }
+    });
+  };
+
   // =================== COURSE CARD FUNCTIONS ===================
   const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
     const cards: CourseCard[] = [];
@@ -637,6 +819,121 @@ const handleCellDragOver = (e: React.DragEvent, targetRow: ExtendedScheduleData,
   }
 };
 
+  // =================== RENDER REMOVED COURSE ===================
+  const renderRemovedCourse = (removedCourse: RemovedCourse) => {
+    const isScheduler = role === "Scheduler";
+
+    return (
+      <div
+        key={removedCourse.id}
+        style={{
+          backgroundColor: "#f5f5f5",
+          border: "2px solid #d9d9d9",
+          borderRadius: "8px",
+          padding: "12px",
+          margin: "8px 0",
+          opacity: 0.8,
+          transition: "all 0.2s ease",
+          fontSize: "11px",
+          lineHeight: "1.3",
+          position: "relative"
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "translateY(-1px)";
+          e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "translateY(0px)";
+          e.currentTarget.style.boxShadow = "none";
+        }}
+      >
+        <Tooltip
+          title={
+            <div style={{ fontFamily: "Sarabun, sans-serif", minWidth: "250px" }}>
+              <div style={{ fontWeight: "bold", fontSize: "13px", marginBottom: "6px", color: "#ff4d4f" }}>
+                🗑️ รายละเอียดวิชาที่ถูกลบ
+              </div>
+              <p><b>🏷️ รหัสวิชา:</b> {removedCourse.courseCode || "ไม่ระบุ"}</p>
+              <p><b>📖 ชื่อวิชา:</b> {removedCourse.subject || "ไม่ระบุ"}</p>
+              <p><b>🎓 ชั้นปี:</b> {removedCourse.studentYear ? `ปีที่ ${removedCourse.studentYear}` : "ไม่ระบุ"}</p>
+              <p><b>📄 หมู่เรียน:</b> {removedCourse.section || "ไม่ระบุ"}</p>
+              <p><b>👩‍🏫 อาจารย์:</b> {removedCourse.teacher || "ไม่ระบุ"}</p>
+              <p><b>🏢 ห้องเรียน:</b> {removedCourse.room || "ไม่ระบุ"}</p>
+              <p><b>📅 วันเดิม:</b> {removedCourse.originalDay}</p>
+              <p><b>🕐 เวลาเดิม:</b> {removedCourse.originalStartTime} - {removedCourse.originalEndTime}</p>
+              <p><b>🗓️ ลบเมื่อ:</b> {removedCourse.removedAt.toLocaleString('th-TH')}</p>
+              <div style={{ marginTop: "8px", fontSize: "11px", color: "#666", fontStyle: "italic" }}>
+                {isScheduler 
+                  ? "💡 คลิกปุ่มเพื่อกู้คืนหรือลบถาวร"
+                  : "🔒 ต้องเป็น Scheduler เท่านั้นถึงจะกู้คืนได้"
+                }
+              </div>
+            </div>
+          }
+          placement="left"
+          overlayStyle={{ maxWidth: "350px" }}
+        >
+          <div>
+            <div style={{ fontWeight: "bold", fontSize: "12px", marginBottom: "4px", color: "#666" }}>
+              <DeleteOutlined style={{ color: "#ff4d4f", marginRight: "4px" }} />
+              {removedCourse.subject}
+              {!isScheduler && (
+                <span style={{ marginLeft: "8px", fontSize: "10px" }}>🔒</span>
+              )}
+            </div>
+            <div style={{ fontSize: "9px", color: "#999", marginBottom: "2px" }}>
+              รหัส: {removedCourse.courseCode}
+            </div>
+            <div style={{ fontSize: "10px", color: "#888", marginBottom: "2px" }}>
+              อาจารย์: {removedCourse.teacher}
+            </div>
+            <div style={{ fontSize: "9px", color: "#aaa", marginBottom: "4px" }}>
+              ห้อง: {removedCourse.room} | วันเดิม: {removedCourse.originalDay}
+            </div>
+            
+            {/* Action Buttons */}
+            <div style={{ display: "flex", gap: "4px", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+              <div style={{ fontSize: "8px", color: "#999" }}>
+                ลบเมื่อ: {removedCourse.removedAt.toLocaleTimeString('th-TH', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}
+              </div>
+              
+              {isScheduler && (
+                <div style={{ display: "flex", gap: "4px" }}>
+                  <Button
+                    size="small"
+                    type="primary"
+                    icon={<RestTwoTone />}
+                    onClick={() => restoreRemovedCourse(removedCourse)}
+                    style={{ 
+                      height: "24px", 
+                      fontSize: "10px",
+                      backgroundColor: "#52c41a",
+                      borderColor: "#52c41a"
+                    }}
+                  >
+                    กู้คืน
+                  </Button>
+                  <Button
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => deleteRemovedCoursePermanently(removedCourse.id)}
+                    style={{ height: "24px", fontSize: "10px" }}
+                  >
+                    ลบถาวร
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </Tooltip>
+      </div>
+    );
+  };
+
   // =================== RENDER COURSE CARD ===================
 const renderCourseCard = (courseCard: CourseCard) => {
   const isScheduler = role === "Scheduler";
@@ -735,6 +1032,32 @@ const renderCourseCard = (courseCard: CourseCard) => {
   const renderSidebar = () => {
     if (role !== "Scheduler" || !sidebarVisible) return null;
     
+    const tabItems = [
+      {
+        key: 'available',
+        label: (
+          <span>
+            📚 วิชาพร้อมใช้ 
+            <Badge count={filteredCourseCards.length} style={{ marginLeft: '8px' }} />
+          </span>
+        ),
+        children: renderAvailableCourses()
+      },
+      {
+        key: 'removed',
+        label: (
+          <span>
+            🗑️ วิชาที่ลบแล้ว 
+            <Badge 
+              count={filteredRemovedCourses.length} 
+              style={{ marginLeft: '8px', backgroundColor: '#ff4d4f' }} 
+            />
+          </span>
+        ),
+        children: renderRemovedCourses()
+      }
+    ];
+    
     return (
       <div
         style={{
@@ -742,14 +1065,17 @@ const renderCourseCard = (courseCard: CourseCard) => {
           backgroundColor: "#fafafa",
           borderLeft: "1px solid #d9d9d9",
           height: "100vh",
-          overflowY: "auto",
-          padding: "16px",
+          minHeight: "100vh",
+          maxHeight: "100vh",
           position: "fixed",
           right: 0,
           top: 0,
+          bottom: 0,
           zIndex: 1000,
           boxShadow: "-2px 0 8px rgba(0,0,0,0.1)",
-          transition: "right 0.3s ease"
+          transition: "right 0.3s ease",
+          display: "flex",
+          flexDirection: "column"
         }}
       >
         {/* Sidebar Header */}
@@ -757,9 +1083,10 @@ const renderCourseCard = (courseCard: CourseCard) => {
           display: "flex", 
           justifyContent: "space-between", 
           alignItems: "center",
-          marginBottom: "16px",
+          padding: "16px",
           paddingBottom: "12px",
-          borderBottom: "2px solid #F26522"
+          borderBottom: "2px solid #F26522",
+          flexShrink: 0
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <BookOutlined style={{ color: "#F26522", fontSize: "18px" }} />
@@ -775,7 +1102,52 @@ const renderCourseCard = (courseCard: CourseCard) => {
           />
         </div>
 
-        {/* Sidebar Filter Section */}
+        {/* Tabs for Available and Removed Courses */}
+        <div style={{ 
+          flex: 1,
+          padding: "0 16px 16px 16px",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column"
+        }}>
+          <Tabs 
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            items={tabItems}
+            size="small"
+            style={{ 
+              height: "100%",
+              display: "flex",
+              flexDirection: "column"
+            }}
+            tabBarStyle={{ 
+              marginBottom: "16px",
+              flexShrink: 0
+            }}
+          />
+        </div>
+
+        {/* Sidebar Footer */}
+        <div style={{ 
+          padding: "12px 16px",
+          borderTop: "1px solid #e8e8e8",
+          fontSize: "10px",
+          color: "#999",
+          textAlign: "center",
+          flexShrink: 0,
+          backgroundColor: "#f0f0f0"
+        }}>
+          🔧 ใช้ปุ่มข้างบนเพื่อปิด sidebar
+        </div>
+      </div>
+    );
+  };
+
+  // =================== RENDER AVAILABLE COURSES TAB ===================
+  const renderAvailableCourses = () => {
+    return (
+      <div style={{ height: "100%" }}>
+        {/* Available Courses Filter Section */}
         <div style={{ 
           backgroundColor: "#f5f5f5", 
           padding: "12px", 
@@ -956,7 +1328,7 @@ const renderCourseCard = (courseCard: CourseCard) => {
         </div>
 
         {/* Course Cards List */}
-        <div style={{ maxHeight: "calc(100vh - 400px)", overflowY: "auto" }}>
+        <div style={{ maxHeight: "calc(100vh - 500px)", overflowY: "auto" }}>
           {filteredCourseCards.length === 0 ? (
             <div style={{ 
               textAlign: "center", 
@@ -984,17 +1356,103 @@ const renderCourseCard = (courseCard: CourseCard) => {
             filteredCourseCards.map(courseCard => renderCourseCard(courseCard))
           )}
         </div>
+      </div>
+    );
+  };
 
-        {/* Sidebar Footer */}
+  // =================== RENDER REMOVED COURSES TAB ===================
+  const renderRemovedCourses = () => {
+    return (
+      <div style={{ height: "100%" }}>
+        {/* Removed Courses Header */}
         <div style={{ 
-          marginTop: "16px",
-          paddingTop: "12px",
-          borderTop: "1px solid #e8e8e8",
-          fontSize: "10px",
-          color: "#999",
-          textAlign: "center"
+          backgroundColor: "#fff1f0", 
+          padding: "12px", 
+          borderRadius: "6px", 
+          border: "1px solid #ffccc7",
+          marginBottom: "16px" 
         }}>
-          🔧 ใช้ปุ่มข้างบนเพื่อปิด sidebar
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center", 
+            marginBottom: "8px" 
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <HistoryOutlined style={{ color: "#ff4d4f", fontSize: "12px" }} />
+              <span style={{ fontWeight: "bold", color: "#333", fontSize: "12px" }}>
+                วิชาที่ลบแล้ว ({filteredRemovedCourses.length})
+              </span>
+            </div>
+            {removedCourses.length > 0 && (
+              <Button
+                size="small"
+                icon={<DeleteOutlined />}
+                onClick={clearAllRemovedCourses}
+                danger
+                style={{ fontSize: "10px", height: "24px" }}
+              >
+                ล้างทั้งหมด
+              </Button>
+            )}
+          </div>
+
+          {/* Search Bar for Removed Courses */}
+          <div style={{ marginBottom: "8px" }}>
+            <Input
+              placeholder="ค้นหาวิชาที่ลบแล้ว..."
+              prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+              value={removedSearchValue}
+              onChange={(e) => setRemovedSearchValue(e.target.value)}
+              allowClear
+              size="small"
+              style={{ width: "100%" }}
+            />
+          </div>
+        </div>
+
+        {/* Removed Courses Count */}
+        <div style={{ 
+          backgroundColor: "#fff1f0", 
+          padding: "8px 12px", 
+          borderRadius: "6px",
+          marginBottom: "16px",
+          border: "1px solid #ffccc7"
+        }}>
+          <div style={{ fontSize: "12px", color: "#ff4d4f" }}>
+            📊 วิชาที่ถูกลบ: <strong>{filteredRemovedCourses.length}</strong> รายการ
+          </div>
+          <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>
+            💡 สามารถกู้คืนหรือลบถาวรได้
+          </div>
+        </div>
+
+        {/* Removed Courses List */}
+        <div style={{ maxHeight: "calc(100vh - 500px)", overflowY: "auto" }}>
+          {filteredRemovedCourses.length === 0 ? (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={
+                <div>
+                  <div style={{ color: "#999", marginBottom: "4px" }}>
+                    {removedCourses.length === 0 
+                      ? "ยังไม่มีวิชาที่ถูกลบ" 
+                      : "ไม่มีวิชาที่ตรงกับการค้นหา"
+                    }
+                  </div>
+                  <div style={{ fontSize: "11px", color: "#ccc" }}>
+                    {removedCourses.length === 0 
+                      ? "วิชาที่ลบออกจากตารางจะปรากฏที่นี่"
+                      : "ลองใช้คำค้นหาอื่น"
+                    }
+                  </div>
+                </div>
+              }
+              style={{ padding: "40px 20px" }}
+            />
+          ) : (
+            filteredRemovedCourses.map(removedCourse => renderRemovedCourse(removedCourse))
+          )}
         </div>
       </div>
     );
@@ -1327,12 +1785,86 @@ const applyFilters = () => {
   });
 };
 
+  // =================== MODIFIED REMOVE SUB CELL FUNCTION ===================
   const removeSubCell = (subCellId: string) => {
+    // ตรวจสอบ role ก่อน
+    if (role !== "Scheduler") {
+      message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลบวิชาได้");
+      return;
+    }
+
     setScheduleData(prevData => {
-      return prevData.map(dayData => ({
-        ...dayData,
-        subCells: (dayData.subCells || []).filter(cell => cell.id !== subCellId)
-      }));
+      const newData = [...prevData];
+      let removedSubCell: SubCell | null = null;
+      let wasRemoved = false;
+      
+      // หา SubCell ที่จะลบและเก็บข้อมูลไว้
+      for (const dayData of newData) {
+        const cellIndex = (dayData.subCells || []).findIndex(cell => cell.id === subCellId);
+        if (cellIndex !== -1) {
+          removedSubCell = dayData.subCells![cellIndex];
+          // ลบออกจากตารางทันที
+          dayData.subCells!.splice(cellIndex, 1);
+          wasRemoved = true;
+          break;
+        }
+      }
+      
+      // เพิ่มไปยัง removed courses เฉพาะเมื่อเจอและลบได้จริง
+      if (removedSubCell && wasRemoved) {
+        // ตรวจสอบการซ้ำกันก่อนเพิ่ม
+        const uniqueKey = `${removedSubCell.classData.subject}-${removedSubCell.classData.courseCode}-${removedSubCell.classData.section}-${removedSubCell.classData.teacher}-${removedSubCell.day}-${removedSubCell.startTime}-${removedSubCell.endTime}`;
+        
+        const isDuplicate = removedCourses.some(existing => {
+          const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
+          return existingKey === uniqueKey;
+        });
+
+        if (!isDuplicate) {
+          const removedCourse: RemovedCourse = {
+            id: `removed-${Date.now()}-${Math.random()}`,
+            subject: removedSubCell.classData.subject,
+            courseCode: removedSubCell.classData.courseCode || "",
+            teacher: removedSubCell.classData.teacher,
+            room: removedSubCell.classData.room,
+            section: removedSubCell.classData.section || "",
+            studentYear: removedSubCell.classData.studentYear || "",
+            duration: removedSubCell.position.endSlot - removedSubCell.position.startSlot,
+            color: removedSubCell.classData.color || getSubjectColor(removedSubCell.classData.subject),
+            scheduleId: removedSubCell.scheduleId,
+            removedAt: new Date(),
+            originalDay: removedSubCell.day,
+            originalStartTime: removedSubCell.startTime,
+            originalEndTime: removedSubCell.endTime
+          };
+
+          // ใช้ setTimeout เพื่อให้ state update เสร็จก่อน
+          setTimeout(() => {
+            setRemovedCourses(prev => {
+              // ตรวจสอบอีกครั้งก่อนเพิ่ม (double check)
+              const stillNotDuplicate = !prev.some(existing => {
+                const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
+                return existingKey === uniqueKey;
+              });
+              
+              if (stillNotDuplicate) {
+                console.log('✅ Added to removed courses:', removedCourse.subject);
+                return [removedCourse, ...prev];
+              } else {
+                console.warn('🚫 Duplicate detected in final check, not adding');
+                return prev;
+              }
+            });
+          }, 50);
+          
+          message.success("ลบวิชาออกจากตารางแล้ว (ย้ายไปยังรายการวิชาที่ลบ)");
+        } else {
+          console.warn('🚫 Duplicate course detected, not adding to removed courses:', uniqueKey);
+          message.success("ลบวิชาออกจากตารางแล้ว");
+        }
+      }
+      
+      return newData;
     });
   };
 
@@ -1713,7 +2245,7 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
     const daySchedules = rawSchedules.filter(item => item.DayOfWeek === day);
     
     if (daySchedules.length === 0) {
-      // สร้างแถววางสำหรับวันที่ไม่มีเรียน
+      // สร้างแถวว่างสำหรับวันที่ไม่มีเรียน
       const firstRow = createEmptyDayRow(day, dayIndex, 0, 2);
       const secondRow = createEmptyDayRow(day, dayIndex, 1, 2);
       secondRow.isFirstRowOfDay = false;
@@ -2134,6 +2666,10 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
         // Generate course cards from loaded data
         generateCourseCardsFromAPI(typedSchedules);
         
+        // Clear removed courses when loading new schedule
+        setRemovedCourses([]);
+        setRemovedSearchValue("");
+        
         message.success("โหลดตารางเรียบร้อย");
         setLoadModalVisible(false);
       } else {
@@ -2158,6 +2694,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
         setIsTableFromAPI(false);
         setOriginalScheduleData([]);
         setCourseCards([]); // Clear course cards
+        setRemovedCourses([]); // Clear removed courses
         await getAllNameTable();
         message.success(`ลบตาราง "${scheduleName}" สำเร็จ`);
         setLoadModalVisible(false);
@@ -2315,6 +2852,9 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
     setOriginalScheduleData([]);
     setCourseCards([]);
     setFilteredCourseCards([]);
+    setRemovedCourses([]);
+    setFilteredRemovedCourses([]);
+    setRemovedSearchValue("");
     clearAllFilters();
     clearAllSidebarFilters(); // Clear sidebar filters too
     
@@ -2574,7 +3114,7 @@ const exportScheduleToXLSX = async () => {
 
     dayGroups.forEach(({ day, rows }) => {
       if (rows.length === 0) {
-        // วันที่ไม่มีเรียน - สร้างแถววาง
+        // วันที่ไม่มีเรียน - สร้างแถวว่าง
         const emptyRow: (string | number)[] = [day];
         TIME_SLOTS.forEach(timeSlot => {
           if (timeSlot === "12:00-13:00") {
@@ -2825,7 +3365,7 @@ const exportScheduleToXLSX = async () => {
           };
         }
         
-        // ตรวจสอบว่าถูกคครอบคลุมโดยช่องอื่นหรือไม่
+        // ตรวจสอบว่าถูกคคลุมโดยช่องอื่นหรือไม่
         const spannedByOther = (record.subCells || []).some(subCell => {
           const subCellStartSlotIndex = Math.floor(subCell.position.startSlot);
           const subCellEndSlotIndex = Math.floor(subCell.position.endSlot);
