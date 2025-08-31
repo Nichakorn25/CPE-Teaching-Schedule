@@ -294,6 +294,7 @@ type SectionDetail struct {
 }
 
 type OfferedCoursesDetail struct {
+	ID            uint 
 	Code          string
 	CourseName    string
 	Credit        string
@@ -333,6 +334,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 
 		if _, ok := grouped[oc.AllCourses.Code]; !ok {
 			grouped[oc.AllCourses.Code] = &OfferedCoursesDetail{
+				ID:            oc.ID,
 				Code:          oc.AllCourses.Code,
 				CourseName:    oc.AllCourses.ThaiName,
 				Credit:        credit,
