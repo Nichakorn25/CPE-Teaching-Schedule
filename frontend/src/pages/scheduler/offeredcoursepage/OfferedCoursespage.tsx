@@ -214,8 +214,65 @@ function mapSchedulesToOpenCourses(rows: Schedule[]): OpenCourseInterface[] {
 function normalize(str: string) {
   return (str ?? "").toString().trim().toLowerCase();
 }
-function sameMajor(a?: string, b?: string | null) {
-  return normalize(a || "") === normalize(b || "");
+
+// ฟังก์ชันรวมเวลาเรียน (กลุ่มเดียวกัน + วันเดียวกัน)
+const dayOrder: Record<string, number> = {
+  อาทิตย์: 0,
+  จันทร์: 1,
+  อังคาร: 2,
+  พุธ: 3,
+  พฤหัสบดี: 4,
+  ศุกร์: 5,
+  เสาร์: 6,
+};
+
+function mergeAndSortSections(sections: any[]) {
+  const grouped = new Map<string, any[]>();
+
+  // จัดกลุ่มด้วย SectionNumber + DayOfWeek
+  for (const s of sections) {
+    const key = `${s.SectionNumber}_${s.DayOfWeek}`;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(s);
+  }
+
+  const merged: any[] = [];
+
+  for (const [, group] of grouped) {
+    if (group.length === 1) {
+      merged.push(group[0]);
+    } else {
+      // เรียงเวลาในแต่ละกลุ่ม
+      const sorted = [...group].sort(
+        (a, b) =>
+          new Date("1970-01-01 " + a.Time.split("-")[0]).getTime() -
+          new Date("1970-01-01 " + b.Time.split("-")[0]).getTime()
+      );
+      const first = sorted[0];
+      const last = sorted[sorted.length - 1];
+
+      merged.push({
+        ...first,
+        Time: `${first.Time.split("-")[0]} - ${last.Time.split("-")[1]}`,
+      });
+    }
+  }
+
+  // เรียงวันและ SectionNumber
+  return merged.sort((a, b) => {
+    if (a.SectionNumber !== b.SectionNumber) {
+      return a.SectionNumber - b.SectionNumber;
+    } else {
+      return dayOrder[a.DayOfWeek] - dayOrder[b.DayOfWeek];
+    }
+  });
+}
+
+function processCourses(courses: any[]) {
+  return courses.map((c) => ({
+    ...c,
+    Sections: mergeAndSortSections(c.Sections ?? []),
+  }));
 }
 
 const OfferedCoursespage: React.FC = () => {
@@ -271,7 +328,12 @@ const OfferedCoursespage: React.FC = () => {
           term
         );
         const rawCourses = Array.isArray(response?.data) ? response.data : [];
-        setCourses(rawCourses); // ใช้ API response ตรง ๆ
+        const mergedCourses = rawCourses.map((c: any) => ({
+          ...c,
+          Sections: mergeAndSortSections(c.Sections ?? []),
+        }));
+
+        setCourses(mergedCourses);
       } catch (err) {
         console.error(err);
         setCourses([]);
@@ -371,7 +433,7 @@ const OfferedCoursespage: React.FC = () => {
         return (
           <div>
             {firstSection?.SectionNumber ?? "-"}
-            {hasMore && !expandedRowKeys.includes(record.ID) && (
+            {hasMore && (
               <button
                 onClick={() => toggleExpandRow(record.ID)}
                 style={{
@@ -383,7 +445,7 @@ const OfferedCoursespage: React.FC = () => {
                   marginLeft: "4px",
                 }}
               >
-                ดูเพิ่มเติม
+                {expandedRowKeys.includes(record.ID) ? "ซ่อน" : "ดูเพิ่มเติม"}
               </button>
             )}
           </div>
@@ -432,7 +494,7 @@ const OfferedCoursespage: React.FC = () => {
       width: 160,
       render: (_text, record) => {
         const userID = Number(localStorage.getItem("user_id"));
-        // ตรวจสอบว่าผู้ใช้ตรงกับ ID_user ของ section ใด ๆ หรือไม่
+        // ตรวจสอบว่าผู้ใช้ตรงกับ ID_user ของ section
         const canEdit = record.Sections?.some((s: any) => s.ID_user === userID);
         if (!canEdit) return null;
 
