@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Button, Table, Input, Select, Card } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
+import { Button, Table, Input, Select, message } from "antd";
+import { SearchOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import type { ColumnsType } from "antd/es/table";
@@ -77,6 +77,22 @@ interface Schedule {
     };
   };
   TimeFixedCourses?: TimeFixedCourse[];
+}
+
+interface CourseTableData {
+  key: string;
+  order: number;
+  ID: number;
+  Code: string;
+  CourseName: string;
+  Credit: string;
+  TypeOfCourse: string;
+  Sections: any[];
+  TotalSections: number;
+  IsFixCourses: boolean;
+  isChild?: boolean;
+  isLastChild?: boolean;
+  Section?: any;
 }
 
 /** ---------------- helpers: format ---------------- */
@@ -189,7 +205,7 @@ function mapSchedulesToOpenCourses(rows: Schedule[]): OpenCourseInterface[] {
       Code: ac.Code,
       Name: name,
       Credit: creditStr,
-      TypeName: ac.TypeOfCourses.TypeName, // ใช้ฟิลด์นี้ตัดสิน “ศูนย์บริการ”
+      TypeName: ac.TypeOfCourses.TypeName,
       TeacherID: oc.UserID,
       Teachers: [
         {
@@ -258,7 +274,7 @@ function mergeAndSortSections(sections: any[]) {
     }
   }
 
-  // เรียงวันและ SectionNumber
+  // เรียงวัน และ SectionNumber
   return merged.sort((a, b) => {
     if (a.SectionNumber !== b.SectionNumber) {
       return a.SectionNumber - b.SectionNumber;
@@ -283,11 +299,25 @@ const OfferedCoursespage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [academicYear, setAcademicYear] = useState<number>(0);
   const [term, setTerm] = useState<number>(0);
-  const [expandedRowKeys, setExpandedRowKeys] = useState<(number | string)[]>(
-    []
-  );
+  const [expandedRowKeys, setExpandedRowKeys] = useState<(number | string)[]>([]);
   const [userMajor, setUserMajor] = useState<string | null>(null);
+  const [containerWidth, setContainerWidth] = useState(window.innerWidth);
+  
   const navigate = useNavigate();
+
+  // Monitor container width for responsive behavior
+  useEffect(() => {
+    const handleResize = () => {
+      setContainerWidth(window.innerWidth);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Determine responsive breakpoints
+  const isSmallScreen = containerWidth < 1400;
+  const isMobile = containerWidth < 768;
 
   const toggleExpandRow = (id: number) => {
     setExpandedRowKeys((prev) =>
@@ -337,6 +367,7 @@ const OfferedCoursespage: React.FC = () => {
       } catch (err) {
         console.error(err);
         setCourses([]);
+        message.error("เกิดข้อผิดพลาดในการโหลดข้อมูล");
       } finally {
         setLoading(false);
       }
@@ -367,151 +398,334 @@ const OfferedCoursespage: React.FC = () => {
     return result;
   };
 
-  // เลือกกลุ่มแรกที่มีห้อง (ถ้ากลุ่มแรกไม่มีห้อง)
-  const pickFirstGroupWithRoom = (record: any) => {
-    if (!record?.GroupInfos?.length) return undefined;
-    return (
-      record.GroupInfos.find((g: any) => String(g?.Room ?? "").trim() !== "") ||
-      record.GroupInfos[0]
-    );
+  // Filter courses based on search
+  const filteredCourses = useMemo(() => {
+    if (!searchText) return getExpandedTableData();
+    
+    const searchLower = searchText.toLowerCase();
+    return getExpandedTableData().filter((course: any) => {
+      if (course.isChild) return true; // Always show child rows if parent matches
+      
+      return (
+        course.Code?.toLowerCase().includes(searchLower) ||
+        course.CourseName?.toLowerCase().includes(searchLower) ||
+        course.TypeOfCourse?.toLowerCase().includes(searchLower) ||
+        course.Sections?.[0]?.InstructorName?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [courses, searchText, expandedRowKeys]);
+
+  // Convert data for table with pagination
+  const tableData: CourseTableData[] = filteredCourses.map((course, index) => ({
+    ...course,
+    key: course.key || course.ID?.toString() || `${index}`,
+    order: course.isChild ? 0 : (currentPage - 1) * pageSize + 
+           filteredCourses.filter((c, i) => i <= index && !c.isChild).length,
+  }));
+
+  // Calculate pagination
+  const totalItems = filteredCourses.filter(course => !course.isChild).length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  
+  // Get current page data
+  const currentData = (() => {
+    const nonChildItems = filteredCourses.filter(course => !course.isChild);
+    const pageItems = nonChildItems.slice(startIndex, endIndex);
+    
+    // Add child items for expanded rows
+    const result: any[] = [];
+    pageItems.forEach(item => {
+      result.push(item);
+      if (expandedRowKeys.includes(item.ID)) {
+        const childItems = filteredCourses.filter(course => 
+          course.isChild && course.ID === item.ID
+        );
+        result.push(...childItems);
+      }
+    });
+    
+    return result.map((course, index) => ({
+      ...course,
+      order: course.isChild ? 0 : startIndex + 
+             result.filter((c, i) => i <= index && !c.isChild).length,
+    }));
+  })();
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
-  /** ---------------- ตาราง ---------------- */
-  const columns: ColumnsType<any> = [
-    {
-      title: "ลำดับ",
-      key: "index",
-      width: 80,
-      render: (_text, record, index) => {
-        // ไม่ต้องแสดงลำดับสำหรับ row ลูก
-        if (record.isChild) return null;
+  // Handle page size change
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
 
-        // index ของ row หลัก (ไม่รวม row ลูก)
-        const mainIndex = getExpandedTableData()
-          .filter((r) => !r.isChild)
-          .findIndex((r) => r.ID === record.ID);
+  const getColumns = (): ColumnsType<CourseTableData> => {
+    const columns: ColumnsType<CourseTableData> = [];
 
-        return mainIndex + 1 + (currentPage - 1) * pageSize;
-      },
-    },
-    {
-      title: "รหัสวิชา",
-      key: "Code",
-      render: (_t, r) => <span>{r.Code}</span>,
-    },
-    {
-      title: "ชื่อวิชา",
-      key: "CourseName",
-      render: (_t, r) => <span>{r.CourseName}</span>,
-    },
-    {
-      title: "หน่วยกิต",
-      key: "Credit",
-      render: (_t, r) => <span>{r.Credit}</span>,
-    },
-    {
-      title: "หมวดวิชา",
-      key: "TypeOfCourse",
-      render: (_t, r) => <span>{r.TypeOfCourse}</span>,
-    },
-    {
-      title: "กลุ่มเรียน",
-      key: "Sections",
-      render: (_text, record) => {
-        if (!record.Sections?.length) return "-";
-
-        // sort Sections ตาม SectionNumber
-        const sortedSections = [...record.Sections].sort(
-          (a, b) => a.SectionNumber - b.SectionNumber
-        );
-
-        if (record.isChild) return record.Section.SectionNumber;
-
-        const firstSection = sortedSections[0];
-        const hasMore = sortedSections.length > 1;
-
-        return (
-          <div>
-            {firstSection?.SectionNumber ?? "-"}
-            {hasMore && (
-              <button
-                onClick={() => toggleExpandRow(record.ID)}
+    if (isMobile) {
+      // Mobile layout
+      columns.push(
+        {
+          title: "#",
+          key: "order",
+          width: 40,
+          align: "center",
+          render: (_text, record) => {
+            if (record.isChild) return null;
+            return (
+              <span style={{ fontWeight: "bold", fontSize: "10px" }}>
+                {record.order}
+              </span>
+            );
+          },
+        },
+        {
+          title: "รายวิชา",
+          key: "course",
+          width: 160,
+          render: (_, record: CourseTableData) => (
+            <div style={{ fontSize: "11px" }}>
+              <div
                 style={{
-                  color: "#1677ff",
-                  background: "none",
-                  border: "none",
-                  padding: 0,
-                  cursor: "pointer",
-                  marginLeft: "4px",
+                  fontWeight: "bold",
+                  color: "#1890ff",
+                  marginBottom: "2px",
                 }}
               >
-                {expandedRowKeys.includes(record.ID) ? "ซ่อน" : "ดูเพิ่มเติม"}
-              </button>
-            )}
-          </div>
+                {record.Code}
+              </div>
+              <div style={{ fontWeight: "500", marginBottom: "2px" }}>
+                {record.CourseName}
+              </div>
+              <div style={{ color: "#666", fontSize: "9px" }}>
+                {record.Credit} หน่วยกิต | {record.TypeOfCourse}
+              </div>
+              {!record.isChild && record.Sections?.length > 1 && (
+                <button
+                  onClick={() => toggleExpandRow(record.ID)}
+                  style={{
+                    color: "#1677ff",
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    fontSize: "9px",
+                  }}
+                >
+                  {expandedRowKeys.includes(record.ID) ? "ซ่อน" : "ดูเพิ่มเติม"}
+                </button>
+              )}
+            </div>
+          ),
+        },
+        {
+          title: "กลุ่ม/เวลา",
+          key: "section_time",
+          width: 100,
+          render: (_, record: CourseTableData) => {
+            const section = record.isChild ? record.Section : record.Sections?.[0];
+            return (
+              <div style={{ fontSize: "10px", textAlign: "center" }}>
+                <div style={{ fontWeight: "bold" }}>
+                  กลุ่ม {section?.SectionNumber || "-"}
+                </div>
+                <div>{section?.DayOfWeek || "-"}</div>
+                <div>{section?.Time || "-"}</div>
+                <div style={{ color: "#666" }}>
+                  {section?.Room || "-"}
+                </div>
+              </div>
+            );
+          },
+        }
+      );
+    } else {
+      // Desktop layout
+      columns.push(
+        {
+          title: "ลำดับ",
+          key: "order",
+          width: 60,
+          align: "center",
+          render: (_text, record) => {
+            if (record.isChild) return null;
+            return <span style={{ fontWeight: "bold" }}>{record.order}</span>;
+          },
+        },
+        {
+          title: "รหัสวิชา",
+          key: "Code",
+          width: 100,
+          render: (_t, r) => (
+            <span style={{ fontWeight: "bold", color: "#1890ff" }}>
+              {r.Code}
+            </span>
+          ),
+        },
+        {
+          title: "ชื่อวิชา",
+          key: "CourseName",
+          width: isSmallScreen ? 180 : 220,
+          render: (_t, r) => (
+            <span style={{ fontWeight: "500" }}>{r.CourseName}</span>
+          ),
+        },
+        {
+          title: "หน่วยกิต",
+          key: "Credit",
+          width: 80,
+          align: "center",
+          render: (_t, r) => (
+            <span
+              style={{
+                backgroundColor: "#e6f7ff",
+                color: "#1890ff",
+                padding: "2px 6px",
+                borderRadius: "4px",
+                fontSize: "11px",
+                fontWeight: "bold",
+                border: "1px solid #91d5ff",
+              }}
+            >
+              {r.Credit}
+            </span>
+          ),
+        },
+        {
+          title: "หมวดวิชา",
+          key: "TypeOfCourse",
+          width: 120,
+          align: "center",
+          render: (_t, r) => <span>{r.TypeOfCourse}</span>,
+        },
+        {
+          title: "กลุ่มเรียน",
+          key: "Sections",
+          width: 100,
+          align: "center",
+          render: (_text, record) => {
+            if (!record.Sections?.length) return "-";
+
+            const sortedSections = [...record.Sections].sort(
+              (a, b) => a.SectionNumber - b.SectionNumber
+            );
+
+            if (record.isChild) return record.Section.SectionNumber;
+
+            const firstSection = sortedSections[0];
+            const hasMore = sortedSections.length > 1;
+
+            return (
+              <div style={{ textAlign: "center" }}>
+                {firstSection?.SectionNumber ?? "-"}
+                {hasMore && (
+                  <button
+                    onClick={() => toggleExpandRow(record.ID)}
+                    style={{
+                      color: "#1677ff",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      marginLeft: "4px",
+                      fontSize: "11px",
+                    }}
+                  >
+                    {expandedRowKeys.includes(record.ID) ? "ซ่อน" : "ดูเพิ่มเติม"}
+                  </button>
+                )}
+              </div>
+            );
+          },
+        },
+        {
+          title: "ห้อง",
+          key: "Room",
+          width: 80,
+          align: "center",
+          render: (_t, r) =>
+            r.isChild ? r.Section.Room : r.Sections?.[0]?.Room ?? "-",
+        },
+        {
+          title: "วันที่สอน",
+          key: "DayOfWeek",
+          width: 100,
+          align: "center",
+          render: (_t, r) =>
+            r.isChild ? r.Section.DayOfWeek : r.Sections?.[0]?.DayOfWeek ?? "-",
+        },
+        {
+          title: "เวลา",
+          key: "Time",
+          width: 120,
+          align: "center",
+          render: (_t, r) =>
+            r.isChild ? r.Section.Time : r.Sections?.[0]?.Time ?? "-",
+        }
+      );
+
+      if (!isSmallScreen) {
+        columns.push(
+          {
+            title: "จำนวนกลุ่ม",
+            key: "TotalSections",
+            width: 90,
+            align: "center",
+            render: (_t, r) => r.TotalSections ?? 1,
+          },
+          {
+            title: "จำนวนนักศึกษา",
+            key: "Capacity",
+            width: 110,
+            align: "center",
+            render: (_t, r) => r.Sections?.[0]?.Capacity ?? "-",
+          },
+          {
+            title: "อาจารย์ผู้สอน",
+            key: "Teacher",
+            width: 150,
+            render: (_t, record) => {
+              const instructorName = record.isChild 
+                ? record.Section.InstructorName 
+                : record.Sections?.[0]?.InstructorName ?? "-";
+              return <span style={{ fontSize: "12px" }}>{instructorName}</span>;
+            },
+          }
         );
-      },
-    },
-    {
-      title: "ห้อง",
-      key: "Room",
-      render: (_t, r) =>
-        r.isChild ? r.Section.Room : r.Sections?.[0]?.Room ?? "-",
-    },
-    {
-      title: "วันที่สอน",
-      key: "DayOfWeek",
-      render: (_t, r) =>
-        r.isChild ? r.Section.DayOfWeek : r.Sections?.[0]?.DayOfWeek ?? "-",
-    },
-    {
-      title: "เวลา",
-      key: "Time",
-      render: (_t, r) =>
-        r.isChild ? r.Section.Time : r.Sections?.[0]?.Time ?? "-",
-    },
-    {
-      title: "จำนวนกลุ่ม",
-      key: "TotalSections",
-      render: (_t, r) => r.TotalSections ?? 1,
-    },
-    {
-      title: "จำนวนนักศึกษาต่อกลุ่มเรียน",
-      key: "Capacity",
-      render: (_t, r) => r.Sections?.[0]?.Capacity ?? "-",
-    },
-    {
-      title: "อาจารย์ผู้สอน",
-      key: "Teacher",
-      render: (_t, record) => {
-        if (record.isChild) return record.Section.InstructorName;
-        return record.Sections?.[0]?.InstructorName ?? "-";
-      },
-    },
-    {
+      }
+    }
+
+    // Add action column
+    const userID = Number(localStorage.getItem("user_id"));
+    columns.push({
       title: "จัดการ",
       key: "actions",
-      width: 160,
+      width: isMobile ? 100 : 120,
+      align: "center",
       render: (_text, record) => {
-        const userID = Number(localStorage.getItem("user_id"));
-        // ตรวจสอบว่าผู้ใช้ตรงกับ ID_user ของ section
+        if (record.isChild) return null;
+        
         const canEdit = record.Sections?.some((s: any) => s.ID_user === userID);
         if (!canEdit) return null;
 
         const isCesCourse = record.IsFixCourses === true;
         return (
-          <>
+          <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
             <Button
               size="small"
+              icon={!isMobile ? <EditOutlined /> : undefined}
               style={{
                 backgroundColor: "#F26522",
                 borderColor: "#F26522",
                 color: "white",
-                fontSize: "9px",
-                padding: "1px 4px",
-                height: "20px",
-                lineHeight: "18px",
-                marginRight: 6,
+                fontSize: isMobile ? "10px" : "11px",
+                padding: "2px 8px",
+                height: "auto",
               }}
               onClick={() => {
                 const targetPath = isCesCourse
@@ -525,35 +739,36 @@ const OfferedCoursespage: React.FC = () => {
             </Button>
             <Button
               size="small"
+              icon={!isMobile ? <DeleteOutlined /> : undefined}
               style={{
                 backgroundColor: "#ff4d4f",
                 borderColor: "#ff4d4f",
                 color: "white",
-                fontSize: "9px",
-                padding: "1px 4px",
-                height: "20px",
-                lineHeight: "18px",
+                fontSize: isMobile ? "10px" : "11px",
+                padding: "2px 8px",
+                height: "auto",
               }}
               onClick={async () => {
                 const result = await Swal.fire({
-                  title: `คุณต้องการลบรายวิชา "${record.Name}" หรือไม่?`,
+                  title: `คุณต้องการลบรายวิชา "${record.CourseName}" หรือไม่?`,
                   text: "หากลบแล้วต้องการเพิ่มรายวิชาที่เปิดสอน ให้ไปที่เมนู 'เพิ่มวิชาที่ต้องการสอน'",
                   icon: "warning",
                   showCancelButton: true,
                   confirmButtonColor: "#d33",
-                  cancelButtonColor: "#3085d6",
+                  cancelButtonColor: "#3085d6", 
                   confirmButtonText: "ตกลง",
-                  cancelButtonText: "ยกเลิก",
+                  cancelButtonText: "ยกเลิก"
                 });
+                
                 if (result.isConfirmed) {
                   const res = await deleteOfferedCourse(record.ID);
                   if (res.status === 200) {
                     setCourses((prev) =>
                       prev.filter((c) => c.ID !== record.ID)
                     );
-                    Swal.fire("ลบสำเร็จ!", "รายวิชาถูกลบแล้ว", "success");
+                    message.success("ลบรายวิชาสำเร็จ");
                   } else {
-                    Swal.fire("ผิดพลาด", "ไม่สามารถลบรายวิชาได้", "error");
+                    message.error("ไม่สามารถลบรายวิชาได้");
                   }
                 }
               }}
@@ -561,114 +776,348 @@ const OfferedCoursespage: React.FC = () => {
             >
               ลบ
             </Button>
-          </>
+          </div>
         );
       },
-    },
-  ];
+    });
+
+    return columns;
+  };
 
   return (
     <div
       style={{
         fontFamily: "Sarabun, sans-serif",
-        padding: "24px",
-        backgroundColor: "#f5f5f5",
-        minHeight: "100vh",
+        padding: 0,
+        margin: 0,
       }}
     >
-      {/* Header */}
+      {/* Page Title */}
       <div
         style={{
-          marginBottom: "24px",
-          display: "flex",
-          alignItems: "center",
-          gap: "16px",
+          marginBottom: "20px",
+          paddingBottom: "12px",
+          borderBottom: "2px solid #F26522",
         }}
       >
-        <div>
-          <h1
-            style={{
-              margin: 0,
-              color: "#333",
-              fontSize: "24px",
-              fontWeight: "bold",
-            }}
-          >
-            รายวิชาที่เปิดสอน
-          </h1>
-          <p
-            style={{
-              margin: 0,
-              color: "#666",
-              fontSize: "14px",
-            }}
-          >
-            จัดการรายวิชาที่คุณเปิดสอน
-          </p>
-        </div>
-      </div>
-
-      {/* Main Card */}
-      <Card
-        style={{
-          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-          borderRadius: "8px",
-        }}
-      >
-        {/* Controls */}
-        <div
+        <h2
           style={{
-            marginBottom: 16,
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "10px",
-            alignItems: "center",
+            margin: "0 0 8px 0",
+            color: "#333",
+            fontSize: isMobile ? "18px" : "20px",
+            fontWeight: "bold",
+            fontFamily: "Sarabun, sans-serif",
           }}
         >
-          <span
-            style={{
-              fontSize: "12px",
-              color: "#666",
-              fontFamily: "Sarabun, sans-serif",
-            }}
-          >
-            รายการที่แสดง
-          </span>
+          รายวิชาที่เปิดสอน
+        </h2>
+        <p
+          style={{
+            margin: 0,
+            color: "#666",
+            fontSize: isMobile ? "12px" : "13px",
+            fontFamily: "Sarabun, sans-serif",
+          }}
+        >
+          จัดการรายวิชาที่คุณเปิดสอน
+        </p>
+      </div>
 
-          <Select
-            value={String(pageSize)}
-            style={{ width: 70, fontFamily: "Sarabun, sans-serif" }}
-            size="small"
-            onChange={(value) => setPageSize(parseInt(value))}
-          >
-            <Option value="5">5</Option>
-            <Option value="10">10</Option>
-            <Option value="20">20</Option>
-            <Option value="50">50</Option>
-          </Select>
-
+      {/* Controls Section */}
+      <div style={{ marginBottom: "20px" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            backgroundColor: "#f8f9fa",
+            padding: isMobile ? "8px 12px" : "12px 16px",
+            borderRadius: "8px",
+            border: "1px solid #e9ecef",
+            minHeight: "48px",
+            flexWrap: isMobile ? "wrap" : "nowrap",
+            gap: isMobile ? "8px" : "12px",
+          }}
+        >
+          {/* Search */}
           <Input
-            placeholder="ค้นหา..."
+            placeholder="ค้นหารายวิชา..."
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: 220, fontFamily: "Sarabun, sans-serif" }}
+            style={{
+              width: isMobile ? "100%" : 200,
+              fontFamily: "Sarabun, sans-serif",
+            }}
+            size="small"
           />
+
+          {/* Pagination controls for desktop */}
+          {!isMobile && (
+            <>
+              <span
+                style={{
+                  whiteSpace: "nowrap",
+                  fontSize: "12px",
+                  color: "#666",
+                  fontFamily: "Sarabun, sans-serif",
+                }}
+              >
+                รายการที่แสดง
+              </span>
+              <Select
+                value={pageSize.toString()}
+                style={{
+                  width: 50,
+                  fontFamily: "Sarabun, sans-serif",
+                }}
+                size="small"
+                onChange={(value) => handlePageSizeChange(parseInt(value))}
+              >
+                <Option value="5">5</Option>
+                <Option value="10">10</Option>
+                <Option value="20">20</Option>
+                <Option value="50">50</Option>
+              </Select>
+
+              {/* Page numbers */}
+              {totalPages > 1 && (
+                <div
+                  style={{ display: "flex", gap: "4px", alignItems: "center" }}
+                >
+                  {[1, 2, 3, 4, 5].map(
+                    (page) =>
+                      page <= totalPages && (
+                        <span
+                          key={page}
+                          style={{
+                            backgroundColor:
+                              currentPage === page ? "#F26522" : "transparent",
+                            color: currentPage === page ? "white" : "#666",
+                            padding: "2px 6px",
+                            borderRadius: "3px",
+                            fontSize: "11px",
+                            fontWeight:
+                              currentPage === page ? "bold" : "normal",
+                            minWidth: "18px",
+                            textAlign: "center",
+                            cursor: "pointer",
+                            display: "inline-block",
+                            fontFamily: "Sarabun, sans-serif",
+                          }}
+                          onClick={() => handlePageChange(page)}
+                        >
+                          {page}
+                        </span>
+                      )
+                  )}
+                  {totalPages > 5 && (
+                    <span
+                      style={{
+                        color: "#666",
+                        fontSize: "11px",
+                        fontFamily: "Sarabun, sans-serif",
+                      }}
+                    >
+                      ... {totalPages}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div style={{ flex: 1 }}></div>
+            </>
+          )}
         </div>
 
-        {/* Table */}
+        {/* Mobile pagination */}
+        {isMobile && totalPages > 1 && (
+          <div
+            style={{
+              marginTop: "12px",
+              padding: "8px 12px",
+              backgroundColor: "#f8f9fa",
+              borderRadius: "6px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Select
+              value={pageSize.toString()}
+              style={{
+                width: 70,
+                fontFamily: "Sarabun, sans-serif",
+              }}
+              size="small"
+              onChange={(value) => handlePageSizeChange(parseInt(value))}
+            >
+              <Option value="5">5</Option>
+              <Option value="10">10</Option>
+              <Option value="20">20</Option>
+            </Select>
+
+            <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+              <Button
+                size="small"
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+                style={{ fontFamily: "Sarabun, sans-serif" }}
+              >
+                ←
+              </Button>
+              <span
+                style={{
+                  fontSize: "12px",
+                  padding: "0 8px",
+                  fontFamily: "Sarabun, sans-serif",
+                }}
+              >
+                {currentPage}/{totalPages}
+              </span>
+              <Button
+                size="small"
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+                style={{ fontFamily: "Sarabun, sans-serif" }}
+              >
+                →
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Main Table */}
+      <div
+        style={{
+          backgroundColor: "white",
+          border: "1px solid #d9d9d9",
+          borderRadius: "6px",
+          overflow: "hidden",
+        }}
+      >
         <Table
-          dataSource={getExpandedTableData()}
-          rowKey={(record) => record.key}
-          columns={columns}
+          columns={getColumns()}
+          dataSource={currentData}
+          pagination={false}
+          size="small"
+          bordered
+          scroll={{
+            x: isMobile ? 400 : isSmallScreen ? 900 : 1400,
+            y: isMobile ? 400 : 600,
+          }}
           loading={loading}
-          pagination={{
-            current: currentPage,
-            pageSize,
-            onChange: setCurrentPage,
+          style={{
+            fontSize: isMobile ? "11px" : "12px",
+            fontFamily: "Sarabun, sans-serif",
+          }}
+          className="custom-table"
+          locale={{
+            emptyText: (
+              <div
+                style={{
+                  padding: isMobile ? "20px" : "40px",
+                  textAlign: "center",
+                  color: "#999",
+                  fontFamily: "Sarabun, sans-serif",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: isMobile ? "32px" : "48px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  📚
+                </div>
+                <div
+                  style={{
+                    fontSize: isMobile ? "14px" : "16px",
+                    marginBottom: "8px",
+                  }}
+                >
+                  ไม่พบข้อมูลรายวิชา
+                </div>
+                <div
+                  style={{
+                    fontSize: isMobile ? "12px" : "14px",
+                    color: "#ccc",
+                  }}
+                >
+                  ยังไม่มีรายวิชาที่เปิดสอนในระบบ
+                </div>
+              </div>
+            ),
           }}
         />
-      </Card>
+      </div>
+
+      {/* Footer Info */}
+      <div
+        style={{
+          marginTop: "16px",
+          padding: isMobile ? "8px 12px" : "12px 16px",
+          backgroundColor: "#f8f9fa",
+          borderRadius: "6px",
+          border: "1px solid #e9ecef",
+          fontSize: isMobile ? "11px" : "12px",
+          color: "#666",
+          fontFamily: "Sarabun, sans-serif",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexDirection: isMobile ? "column" : "row",
+            gap: isMobile ? "8px" : "0",
+          }}
+        >
+          <div>
+            💡 <strong>หมายเหตุ:</strong>{" "}
+            ข้อมูลรายวิชาเหล่านี้ใช้สำหรับการจัดตารางเรียนและการลงทะเบียน
+          </div>
+          <div>
+            ข้อมูลล่าสุด: {new Date().toLocaleString("th-TH")} |
+            <span
+              style={{
+                marginLeft: "8px",
+                cursor: "pointer",
+                color: "#F26522",
+                fontWeight: "500",
+              }}
+              onClick={() => window.location.reload()}
+              title="รีเฟรชข้อมูล"
+            >
+              🔄 รีเฟรช
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Additional Info for Mobile */}
+      {isMobile && (
+        <div
+          style={{
+            marginTop: "12px",
+            padding: "8px 12px",
+            backgroundColor: "#fff3cd",
+            borderRadius: "6px",
+            border: "1px solid #ffeaa7",
+            fontSize: "11px",
+            color: "#856404",
+            fontFamily: "Sarabun, sans-serif",
+          }}
+        >
+          <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+            💡 เคล็ดลับการใช้งาน:
+          </div>
+          <div>• ใช้การค้นหาเพื่อหารายวิชาที่ต้องการได้เร็วขึ้น</div>
+          <div>• กดปุ่ม "ดูเพิ่มเติม" เพื่อดูกลุ่มเรียนอื่นๆ</div>
+          <div>• หมุนหน้าจอเป็นแนวนอนเพื่อดูข้อมูลเพิ่มเติม</div>
+        </div>
+      )}
     </div>
   );
 };
