@@ -55,13 +55,26 @@ async function deleteConditionsByUser(userID: string) {
 }
 
 //------------------ Schedules ------------------------------//
-async function getSchedulesBynameTable(nameTable: string, majorName: string) {
+// async function getSchedulesBynameTable(nameTable: string, majorName: string) {
+//   return await axios
+//     .get(`${apiUrl}/schedule`, {
+//       ...requestOptions,
+//       params: {
+//         nameTable,
+//         majorName,
+//       },
+//     })
+//     .then((res) => res)
+//     .catch((e) => e.response);
+// }
+async function getSchedulesBynameTable(majorName: string, year: string, term: string) {
   return await axios
-    .get(`${apiUrl}/schedule`, {
+    .get(`${apiUrl}/schedules`, {
       ...requestOptions,
       params: {
-        nameTable,
-        majorName,
+        major_name: majorName,
+        year,
+        term,
       },
     })
     .then((res) => res)

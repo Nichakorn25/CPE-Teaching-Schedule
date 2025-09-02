@@ -29,6 +29,7 @@ import Layout from "antd/es/layout/layout";
 
 import MainLayout from "./layout/MainLayout";
 import PrivateRoute from "./PrivateRoute";
+import Test from "./services/https/Test";
 
 const App: React.FC = () => {
   return (
@@ -39,6 +40,8 @@ const App: React.FC = () => {
 
         <Route path="/" element={<Layout />}/>
           <Route path="home-dash" element={<MainLayout><HomeTest /></MainLayout>} />
+
+          <Route path="testtttt" element={<MainLayout><Test /></MainLayout>} />
 
           <Route path="teacher-list" element={<MainLayout><TeacherList /></MainLayout>} />
           <Route path="assistance-list" element={<MainLayout><AssistanceList /></MainLayout>} />
