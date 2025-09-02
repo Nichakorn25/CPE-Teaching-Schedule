@@ -55,9 +55,9 @@ async function deleteConditionsByUser(userID: string) {
 }
 
 //------------------ Schedules ------------------------------//
-async function getSchedulesBynameTable(nameTable: string) {
+async function getSchedulesBynameTable(nameTable: string, majorName: string) {
   return await axios
-    .get(`${apiUrl}/schedules/${nameTable}`, requestOptions)
+    .get(`${apiUrl}/schedules/${nameTable}/${majorName}`, requestOptions)
     .then((res) => res)
     .catch((e) => e.response);
 }
