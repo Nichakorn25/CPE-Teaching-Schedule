@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Button, Table, Input, Select, message } from "antd";
-import { SearchOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  SearchOutlined,
+  EditOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import type { ColumnsType } from "antd/es/table";
@@ -226,11 +230,6 @@ function mapSchedulesToOpenCourses(rows: Schedule[]): OpenCourseInterface[] {
   return result.sort((a, b) => a.ID - b.ID);
 }
 
-/** ---------- helpers ---------- */
-function normalize(str: string) {
-  return (str ?? "").toString().trim().toLowerCase();
-}
-
 // ฟังก์ชันรวมเวลาเรียน (กลุ่มเดียวกัน + วันเดียวกัน)
 const dayOrder: Record<string, number> = {
   อาทิตย์: 0,
@@ -245,9 +244,9 @@ const dayOrder: Record<string, number> = {
 function mergeAndSortSections(sections: any[]) {
   const grouped = new Map<string, any[]>();
 
-  // จัดกลุ่มด้วย SectionNumber + DayOfWeek
+  // จัดกลุ่มด้วย SectionNumber
   for (const s of sections) {
-    const key = `${s.SectionNumber}_${s.DayOfWeek}`;
+    const key = String(s.SectionNumber);
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(s);
   }
@@ -255,40 +254,25 @@ function mergeAndSortSections(sections: any[]) {
   const merged: any[] = [];
 
   for (const [, group] of grouped) {
-    if (group.length === 1) {
-      merged.push(group[0]);
-    } else {
-      // เรียงเวลาในแต่ละกลุ่ม
-      const sorted = [...group].sort(
-        (a, b) =>
-          new Date("1970-01-01 " + a.Time.split("-")[0]).getTime() -
-          new Date("1970-01-01 " + b.Time.split("-")[0]).getTime()
-      );
-      const first = sorted[0];
-      const last = sorted[sorted.length - 1];
+    // เรียงวัน
+    const sorted = [...group].sort(
+      (a, b) => dayOrder[a.DayOfWeek] - dayOrder[b.DayOfWeek]
+    );
 
+    sorted.forEach((s, idx) => {
       merged.push({
-        ...first,
-        Time: `${first.Time.split("-")[0]} - ${last.Time.split("-")[1]}`,
+        ...s,
+        showGroupNumber: idx === 0, // แถวแรกแสดงเลขกลุ่ม
       });
-    }
+    });
   }
 
-  // เรียงวัน และ SectionNumber
+  // เรียงตาม SectionNumber และวัน
   return merged.sort((a, b) => {
-    if (a.SectionNumber !== b.SectionNumber) {
+    if (a.SectionNumber !== b.SectionNumber)
       return a.SectionNumber - b.SectionNumber;
-    } else {
-      return dayOrder[a.DayOfWeek] - dayOrder[b.DayOfWeek];
-    }
+    return dayOrder[a.DayOfWeek] - dayOrder[b.DayOfWeek];
   });
-}
-
-function processCourses(courses: any[]) {
-  return courses.map((c) => ({
-    ...c,
-    Sections: mergeAndSortSections(c.Sections ?? []),
-  }));
 }
 
 const OfferedCoursespage: React.FC = () => {
@@ -296,13 +280,16 @@ const OfferedCoursespage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [courses, setCourses] = useState<OpenCourseInterface[]>([]);
+  const [sortBy, setSortBy] = useState<"Code" | "Name" | "TypeName">("Code");
   const [loading, setLoading] = useState<boolean>(false);
   const [academicYear, setAcademicYear] = useState<number>(0);
   const [term, setTerm] = useState<number>(0);
-  const [expandedRowKeys, setExpandedRowKeys] = useState<(number | string)[]>([]);
+  const [expandedRowKeys, setExpandedRowKeys] = useState<(number | string)[]>(
+    []
+  );
   const [userMajor, setUserMajor] = useState<string | null>(null);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
-  
+
   const navigate = useNavigate();
 
   // Monitor container width for responsive behavior
@@ -379,7 +366,13 @@ const OfferedCoursespage: React.FC = () => {
   const getExpandedTableData = () => {
     const result: any[] = [];
     courses.forEach((course: any) => {
-      result.push({ ...course, isChild: false, key: course.ID });
+      // แถวหลัก
+      result.push({
+        ...course,
+        isChild: false,
+        key: course.ID,
+        SectionNumber: course.Sections?.[0]?.SectionNumber || "", //แถวหลักโชว์เลขกลุ่มแรก
+      });
 
       // ถ้ามีหลายกลุ่มและ expand แล้ว
       if (expandedRowKeys.includes(course.ID) && course.Sections?.length > 1) {
@@ -389,8 +382,9 @@ const OfferedCoursespage: React.FC = () => {
             ...course,
             isChild: true,
             isLastChild: i === extraGroups.length - 1,
-            Section: group, // เก็บแต่ละกลุ่ม
+            Section: group,
             key: `${course.ID}-extra-${i}`,
+            SectionNumber: group.SectionNumber,
           });
         });
       }
@@ -400,56 +394,74 @@ const OfferedCoursespage: React.FC = () => {
 
   // Filter courses based on search
   const filteredCourses = useMemo(() => {
-    if (!searchText) return getExpandedTableData();
-    
-    const searchLower = searchText.toLowerCase();
-    return getExpandedTableData().filter((course: any) => {
-      if (course.isChild) return true; // Always show child rows if parent matches
-      
-      return (
-        course.Code?.toLowerCase().includes(searchLower) ||
-        course.CourseName?.toLowerCase().includes(searchLower) ||
-        course.TypeOfCourse?.toLowerCase().includes(searchLower) ||
-        course.Sections?.[0]?.InstructorName?.toLowerCase().includes(searchLower)
-      );
-    });
-  }, [courses, searchText, expandedRowKeys]);
+    let data = getExpandedTableData();
 
-  // Convert data for table with pagination
-  const tableData: CourseTableData[] = filteredCourses.map((course, index) => ({
-    ...course,
-    key: course.key || course.ID?.toString() || `${index}`,
-    order: course.isChild ? 0 : (currentPage - 1) * pageSize + 
-           filteredCourses.filter((c, i) => i <= index && !c.isChild).length,
-  }));
+    // filter ตาม searchText
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      data = data.filter((course: any) => {
+        if (course.isChild) return true; // Always show child rows if parent matches
+        return (
+          course.Code?.toLowerCase().includes(searchLower) ||
+          course.CourseName?.toLowerCase().includes(searchLower) ||
+          course.TypeOfCourse?.toLowerCase().includes(searchLower) ||
+          course.Sections?.[0]?.InstructorName?.toLowerCase().includes(
+            searchLower
+          )
+        );
+      });
+    }
+
+    // sort ตาม dropdown
+    data.sort((a: any, b: any) => {
+      if (sortBy === "Code") return a.Code.localeCompare(b.Code);
+      if (sortBy === "Name") return a.CourseName.localeCompare(b.CourseName);
+      if (sortBy === "TypeName")
+        return a.TypeOfCourse.localeCompare(b.TypeOfCourse);
+      return 0;
+    });
+
+    return data;
+  }, [courses, searchText, expandedRowKeys, sortBy]);
+
+  // // Convert data for table with pagination
+  // const tableData: CourseTableData[] = filteredCourses.map((course, index) => ({
+  //   ...course,
+  //   key: course.key || course.ID?.toString() || `${index}`,
+  //   order: course.isChild
+  //     ? 0
+  //     : (currentPage - 1) * pageSize +
+  //       filteredCourses.filter((c, i) => i <= index && !c.isChild).length,
+  // }));
 
   // Calculate pagination
-  const totalItems = filteredCourses.filter(course => !course.isChild).length;
+  const totalItems = filteredCourses.filter((course) => !course.isChild).length;
   const totalPages = Math.ceil(totalItems / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  
+
   // Get current page data
   const currentData = (() => {
-    const nonChildItems = filteredCourses.filter(course => !course.isChild);
+    const nonChildItems = filteredCourses.filter((course) => !course.isChild);
     const pageItems = nonChildItems.slice(startIndex, endIndex);
-    
+
     // Add child items for expanded rows
     const result: any[] = [];
-    pageItems.forEach(item => {
+    pageItems.forEach((item) => {
       result.push(item);
       if (expandedRowKeys.includes(item.ID)) {
-        const childItems = filteredCourses.filter(course => 
-          course.isChild && course.ID === item.ID
+        const childItems = filteredCourses.filter(
+          (course) => course.isChild && course.ID === item.ID
         );
         result.push(...childItems);
       }
     });
-    
+
     return result.map((course, index) => ({
       ...course,
-      order: course.isChild ? 0 : startIndex + 
-             result.filter((c, i) => i <= index && !c.isChild).length,
+      order: course.isChild
+        ? 0
+        : startIndex + result.filter((c, i) => i <= index && !c.isChild).length,
     }));
   })();
 
@@ -528,7 +540,9 @@ const OfferedCoursespage: React.FC = () => {
           key: "section_time",
           width: 100,
           render: (_, record: CourseTableData) => {
-            const section = record.isChild ? record.Section : record.Sections?.[0];
+            const section = record.isChild
+              ? record.Section
+              : record.Sections?.[0];
             return (
               <div style={{ fontSize: "10px", textAlign: "center" }}>
                 <div style={{ fontWeight: "bold" }}>
@@ -536,9 +550,7 @@ const OfferedCoursespage: React.FC = () => {
                 </div>
                 <div>{section?.DayOfWeek || "-"}</div>
                 <div>{section?.Time || "-"}</div>
-                <div style={{ color: "#666" }}>
-                  {section?.Room || "-"}
-                </div>
+                <div style={{ color: "#666" }}>{section?.Room || "-"}</div>
               </div>
             );
           },
@@ -636,7 +648,9 @@ const OfferedCoursespage: React.FC = () => {
                       fontSize: "11px",
                     }}
                   >
-                    {expandedRowKeys.includes(record.ID) ? "ซ่อน" : "ดูเพิ่มเติม"}
+                    {expandedRowKeys.includes(record.ID)
+                      ? "ซ่อน"
+                      : "ดูเพิ่มเติม"}
                   </button>
                 )}
               </div>
@@ -690,8 +704,8 @@ const OfferedCoursespage: React.FC = () => {
             key: "Teacher",
             width: 150,
             render: (_t, record) => {
-              const instructorName = record.isChild 
-                ? record.Section.InstructorName 
+              const instructorName = record.isChild
+                ? record.Section.InstructorName
                 : record.Sections?.[0]?.InstructorName ?? "-";
               return <span style={{ fontSize: "12px" }}>{instructorName}</span>;
             },
@@ -709,13 +723,15 @@ const OfferedCoursespage: React.FC = () => {
       align: "center",
       render: (_text, record) => {
         if (record.isChild) return null;
-        
+
         const canEdit = record.Sections?.some((s: any) => s.ID_user === userID);
         if (!canEdit) return null;
 
         const isCesCourse = record.IsFixCourses === true;
         return (
-          <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
+          <div
+            style={{ display: "flex", gap: "4px", justifyContent: "center" }}
+          >
             <Button
               size="small"
               icon={!isMobile ? <EditOutlined /> : undefined}
@@ -755,11 +771,11 @@ const OfferedCoursespage: React.FC = () => {
                   icon: "warning",
                   showCancelButton: true,
                   confirmButtonColor: "#d33",
-                  cancelButtonColor: "#3085d6", 
+                  cancelButtonColor: "#3085d6",
                   confirmButtonText: "ตกลง",
-                  cancelButtonText: "ยกเลิก"
+                  cancelButtonText: "ยกเลิก",
                 });
-                
+
                 if (result.isConfirmed) {
                   const res = await deleteOfferedCourse(record.ID);
                   if (res.status === 200) {
@@ -838,9 +854,31 @@ const OfferedCoursespage: React.FC = () => {
             gap: isMobile ? "8px" : "12px",
           }}
         >
+          <Select
+            value={sortBy}
+            onChange={(v) => setSortBy(v)}
+            placeholder="เลือกการเรียงลำดับ"
+            suffixIcon={
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                height="24px"
+                viewBox="0 -960 960 960"
+                width="24px"
+                fill="#1f1f1f"
+              >
+                <path d="M120-240v-80h240v80H120Zm0-200v-80h480v80H120Zm0-200v-80h720v80H120Z" />
+              </svg>
+            }
+            style={{ width: 100 }}
+          >
+            <Option value="Code">รหัสวิชา</Option>
+            <Option value="Name">ชื่อวิชา</Option>
+            <Option value="TypeName">หมวดวิชา</Option>
+          </Select>
+
           {/* Search */}
           <Input
-            placeholder="ค้นหารายวิชา..."
+            placeholder="ค้นหา รหัส/ชื่อวิชา/ชื่ออาจารย์"
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
