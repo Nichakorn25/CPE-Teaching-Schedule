@@ -848,22 +848,33 @@ const OfferedCoursespage: React.FC = () => {
             value={sortBy}
             onChange={(v) => setSortBy(v)}
             placeholder="เลือกการเรียงลำดับ"
-            suffixIcon={
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                height="24px"
-                viewBox="0 -960 960 960"
-                width="24px"
-                fill="#1f1f1f"
-              >
-                <path d="M120-240v-80h240v80H120Zm0-200v-80h480v80H120Zm0-200v-80h720v80H120Z" />
-              </svg>
-            }
-            style={{ width: 100 }}
+            style={{
+              width: 150,
+            }}
+            // ซ่อน default suffix icon
+            suffixIcon={null}
+            optionLabelProp="children"
           >
-            <Option value="Code">รหัสวิชา</Option>
-            <Option value="Name">ชื่อวิชา</Option>
-            <Option value="TypeName">หมวดวิชา</Option>
+            {[
+              { value: "Code", label: "รหัสวิชา" },
+              { value: "Name", label: "ชื่อวิชา" },
+              { value: "TypeName", label: "หมวดวิชา" },
+            ].map((item) => (
+              <Option key={item.value} value={item.value}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    height="20"
+                    viewBox="0 -960 960 960"
+                    width="20"
+                    fill="#1f1f1f"
+                  >
+                    <path d="M120-240v-80h240v80H120Zm0-200v-80h480v80H120Zm0-200v-80h720v80H120Z" />
+                  </svg>
+                  {item.label}
+                </div>
+              </Option>
+            ))}
           </Select>
 
           {/* Search */}
