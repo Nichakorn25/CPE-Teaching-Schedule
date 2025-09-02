@@ -424,16 +424,6 @@ const OfferedCoursespage: React.FC = () => {
     return data;
   }, [courses, searchText, expandedRowKeys, sortBy]);
 
-  // // Convert data for table with pagination
-  // const tableData: CourseTableData[] = filteredCourses.map((course, index) => ({
-  //   ...course,
-  //   key: course.key || course.ID?.toString() || `${index}`,
-  //   order: course.isChild
-  //     ? 0
-  //     : (currentPage - 1) * pageSize +
-  //       filteredCourses.filter((c, i) => i <= index && !c.isChild).length,
-  // }));
-
   // Calculate pagination
   const totalItems = filteredCourses.filter((course) => !course.isChild).length;
   const totalPages = Math.ceil(totalItems / pageSize);
@@ -1041,49 +1031,19 @@ const OfferedCoursespage: React.FC = () => {
           size="small"
           bordered
           scroll={{
-            x: isMobile ? 400 : isSmallScreen ? 900 : 1400,
+            x: "max-content", // ให้ table ขยายเต็มคอนเทนเนอร์
             y: isMobile ? 400 : 600,
           }}
-          loading={loading}
           style={{
+            width: "100%", // เพิ่มให้ table ใช้เต็มความกว้าง
             fontSize: isMobile ? "11px" : "12px",
             fontFamily: "Sarabun, sans-serif",
           }}
           className="custom-table"
           locale={{
             emptyText: (
-              <div
-                style={{
-                  padding: isMobile ? "20px" : "40px",
-                  textAlign: "center",
-                  color: "#999",
-                  fontFamily: "Sarabun, sans-serif",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: isMobile ? "32px" : "48px",
-                    marginBottom: "16px",
-                  }}
-                >
-                  📚
-                </div>
-                <div
-                  style={{
-                    fontSize: isMobile ? "14px" : "16px",
-                    marginBottom: "8px",
-                  }}
-                >
-                  ไม่พบข้อมูลรายวิชา
-                </div>
-                <div
-                  style={{
-                    fontSize: isMobile ? "12px" : "14px",
-                    color: "#ccc",
-                  }}
-                >
-                  ยังไม่มีรายวิชาที่เปิดสอนในระบบ
-                </div>
+              <div style={{ padding: isMobile ? 20 : 40, textAlign: "center" }}>
+                ไม่มีข้อมูล
               </div>
             ),
           }}
