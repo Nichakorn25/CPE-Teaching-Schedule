@@ -14,12 +14,19 @@ import (
 )
 
 func GetScheduleByNameTable(c *gin.Context) {
-	nameTable := c.Param("nameTable")
-	majorName := c.Query("majorName") 
+	nameTable := c.Query("nameTable")
+	majorName := c.Query("majorName")
+
+	if nameTable == "" || majorName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "ต้องระบุ nameTable และ majorName",
+		})
+		return
+	}
 
 	var schedules []entity.Schedule
 
-	db := config.DB().Model(&entity.Schedule{}).
+	err := config.DB().
 		Preload("OfferedCourses.User").
 		Preload("OfferedCourses.Laboratory").
 		Preload("OfferedCourses.AllCourses.Curriculum").
@@ -30,17 +37,15 @@ func GetScheduleByNameTable(c *gin.Context) {
 		Preload("OfferedCourses.AllCourses.UserAllCourses").
 		Preload("OfferedCourses.AllCourses.UserAllCourses.User").
 		Preload("TimeFixedCourses").
-		// Preload("ScheduleTeachingAssistant.User").
-		Where("name_table = ?", nameTable)
-
-	db = db.Joins("JOIN offered_courses ON schedules.offered_courses_id = offered_courses.id").
+		Joins("JOIN offered_courses ON schedules.offered_courses_id = offered_courses.id").
 		Joins("JOIN all_courses ON offered_courses.all_courses_id = all_courses.id").
 		Joins("JOIN curriculums ON all_courses.curriculum_id = curriculums.id").
 		Joins("JOIN majors ON curriculums.major_id = majors.id").
-		Where("(offered_courses.is_fix_courses = ? OR (offered_courses.is_fix_courses = ? AND majors.major_name = ?))",
-			true, false, majorName)
+		Where("schedules.name_table = ?", nameTable).
+		Where("offered_courses.is_fix_courses = ? OR majors.major_name = ?", true, majorName).
+		Find(&schedules).Error
 
-	if err := db.Find(&schedules).Error; err != nil {
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "ไม่สามารถดึงตารางสอนได้",
 			"details": err.Error(),
