@@ -64,7 +64,7 @@ func main() {
 		r.POST("/offered-courses/fixed", controllers.CreateFixedCourse)
 
 		///////////////////// Schedules /////////////////////////
-		r.GET("/schedules/:nameTable/:majorName", controllers.GetScheduleByNameTable)
+		r.GET("/schedules", controllers.GetScheduleByNameTable)
 		r.POST("/auto-generate-schedule", controllers.AutoGenerateSchedule)
 		r.GET("/unique-nametables", controllers.GetNameTable)
 		r.PUT("/up-schedule/:id", controllers.UpdateScheduleTime)

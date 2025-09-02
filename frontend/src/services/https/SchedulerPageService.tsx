@@ -4,7 +4,7 @@ import {
   ScheduleIn,
 } from "../../interfaces/SchedulerIn";
 import { OpenCourseInterface } from "../../interfaces/OpenCourse";
-import {TARequestInterface} from "../../interfaces/TAIn";
+import { TARequestInterface } from "../../interfaces/TAIn";
 
 const apiUrl = "http://localhost:8080";
 const Authorization = localStorage.getItem("token");
@@ -57,7 +57,13 @@ async function deleteConditionsByUser(userID: string) {
 //------------------ Schedules ------------------------------//
 async function getSchedulesBynameTable(nameTable: string, majorName: string) {
   return await axios
-    .get(`${apiUrl}/schedules/${nameTable}/${majorName}`, requestOptions)
+    .get(`${apiUrl}/schedule`, {
+      ...requestOptions,
+      params: {
+        nameTable,
+        majorName,
+      },
+    })
     .then((res) => res)
     .catch((e) => e.response);
 }
@@ -69,7 +75,11 @@ async function getNameTable() {
     .catch((e) => e.response);
 }
 
-async function postAutoGenerateSchedule(year: number, term: number, major_name: string) {
+async function postAutoGenerateSchedule(
+  year: number,
+  term: number,
+  major_name: string
+) {
   return await axios
     .post(
       `${apiUrl}/auto-generate-schedule?year=${year}&term=${term}&major_name=${major_name}`,
@@ -108,7 +118,7 @@ async function deleteOfferedCourse(id: number) {
     .catch((e) => e.response);
 }
 
-async function postCreateTA(data: TARequestInterface) { 
+async function postCreateTA(data: TARequestInterface) {
   return await axios
     .post(`${apiUrl}/assign-ta-to-schedule`, data, requestOptions)
     .then((res) => res)
@@ -121,15 +131,12 @@ export {
   getAllConditions,
   getConditionsByUserId,
   deleteConditionsByUser,
-
   upCreateOfferedCourse, //used
   deleteOfferedCourse, //used
-
-  getSchedulesBynameTable, 
+  getSchedulesBynameTable,
   getNameTable, //used
   postAutoGenerateSchedule,
   putupdateScheduleTime,
   deleteSchedulebyNametable,
-
-  postCreateTA
+  postCreateTA,
 };
