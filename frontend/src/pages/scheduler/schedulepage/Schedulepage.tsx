@@ -426,7 +426,7 @@ const Schedulepage: React.FC = () => {
 
   // =================== REMOVED COURSES FUNCTIONS ===================
   const addToRemovedCourses = (subCell: SubCell) => {
-    // สร้าง unique identifier เพื่อตรวจสอบการซ้ำกัน
+    // สร้าง unique identifier เพื่อตรวจสอบการซ้ำกันก่อนเพิ่ม
     const uniqueKey = `${subCell.classData.subject}-${subCell.classData.courseCode}-${subCell.classData.section}-${subCell.classData.teacher}-${subCell.day}-${subCell.startTime}-${subCell.endTime}`;
     
     // ตรวจสอบว่ามีวิชานี้ใน removed courses แล้วหรือไม่
@@ -858,7 +858,7 @@ const handleCellDragOver = (e: React.DragEvent, targetRow: ExtendedScheduleData,
               <p><b>🎓 ชั้นปี:</b> {removedCourse.studentYear ? `ปีที่ ${removedCourse.studentYear}` : "ไม่ระบุ"}</p>
               <p><b>📄 หมู่เรียน:</b> {removedCourse.section || "ไม่ระบุ"}</p>
               <p><b>👩‍🏫 อาจารย์:</b> {removedCourse.teacher || "ไม่ระบุ"}</p>
-              <p><b>🏢 ห้องเรียน:</b> {removedCourse.room || "ไม่ระบุ"}</p>
+              <p><b>� ห้องเรียน:</b> {removedCourse.room || "ไม่ระบุ"}</p>
               <p><b>📅 วันเดิม:</b> {removedCourse.originalDay}</p>
               <p><b>🕐 เวลาเดิม:</b> {removedCourse.originalStartTime} - {removedCourse.originalEndTime}</p>
               <p><b>🗓️ ลบเมื่อ:</b> {removedCourse.removedAt.toLocaleString('th-TH')}</p>
@@ -985,8 +985,8 @@ const renderCourseCard = (courseCard: CourseCard) => {
             <p><b>🎓 ชั้นปี:</b> {courseCard.studentYear ? `ปีที่ ${courseCard.studentYear}` : "ไม่ระบุ"}</p>
             <p><b>📄 หมู่เรียน:</b> {courseCard.section || "ไม่ระบุ"}</p>
             <p><b>👩‍🏫 อาจารย์:</b> {courseCard.teacher || "ไม่ระบุ"}</p>
-            <p><b>🏢 ห้องเรียน:</b> {courseCard.room || "ไม่ระบุ"}</p>
-            <p><b>⏱️ ระยะเวลา:</b> {courseCard.duration} ชั่วโมง</p>
+            <p><b>� ห้องเรียน:</b> {courseCard.room || "ไม่ระบุ"}</p>
+            <p><b>ⱶ️ ระยะเวลา:</b> {courseCard.duration} ชั่วโมง</p>
             <div style={{ marginTop: "8px", fontSize: "11px", color: "#666", fontStyle: "italic" }}>
               {isScheduler 
                 ? "💡 ลากการ์ดนี้ไปวางในตารางเรียน"
@@ -1885,7 +1885,7 @@ const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, ne
     
     if (!subCellToMove) return prevData;
     
-    // คำนวดตำแหน่งใหม่
+    // คำนวณตำแหน่งใหม่
     const duration = subCellToMove.position.endSlot - subCellToMove.position.startSlot;
     const newEndSlot = newStartSlot + duration;
     
@@ -2489,9 +2489,15 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
 };
 
   // =================== API FUNCTIONS ===================
-  const getSchedules = async (nameTable: string) => {
+  // แก้ไขฟังก์ชัน getSchedules ให้เรียก API ด้วย parameters ที่ถูกต้อง
+  const getSchedules = async () => {
+    if (!major_name || !academicYear || !term) {
+      console.warn('Missing required parameters for getSchedules:', { major_name, academicYear, term });
+      return;
+    }
+
     try {
-      const res = await getSchedulesBynameTable(nameTable);
+      const res = await getSchedulesBynameTable(major_name, academicYear, term);
       if (res && Array.isArray(res.data)) {
         console.log('📊 Raw schedule data from API:', res.data);
         
@@ -2503,6 +2509,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
         
         // เก็บข้อมูลต้นฉบับและเซ็ต state
         setOriginalScheduleData(res.data);
+        const nameTable = `ปีการศึกษา ${academicYear} เทอม ${term}`;
         setCurrentTableName(nameTable);
         setIsTableFromAPI(true);
         
@@ -2529,38 +2536,18 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
   };
 
   const generateAutoSchedule = async () => {
-    if (!academicYear || !term) {
-      message.warning("กรุณาระบุปีการศึกษาและเทอม");
+    if (!academicYear || !term || !major_name) {
+      message.warning("กรุณาระบุปีการศึกษา, เทอม และสาขา");
       return;
     }
 
     try {
       const res = await postAutoGenerateSchedule(Number(academicYear), Number(term), major_name);
-      const nameTable = `ปีการศึกษา ${academicYear} เทอม ${term}`;
 
       if (res.status === 200 && res.data) {
-        const tableRes = await getSchedulesBynameTable(nameTable);
-        if (tableRes.status === 200 && tableRes.data) {
-          console.log('📊 Auto-generated schedule data:', tableRes.data);
-          
-          // Type cast เพื่อใช้ interface ที่ถูกต้อง
-          const typedSchedules = tableRes.data as ScheduleInterface[];
-          
-          const newScheduleData = transformScheduleDataWithRowSeparation(typedSchedules);
-          setScheduleData(newScheduleData);
-          
-          // เก็บข้อมูลต้นฉบับและเซ็ต state
-          setOriginalScheduleData(tableRes.data);
-          setCurrentTableName(nameTable);
-          setIsTableFromAPI(true);
-          
-          // Generate course cards from auto-generated data
-          generateCourseCardsFromAPI(typedSchedules);
-          
-          message.success("สร้างตารางอัตโนมัติสำเร็จ และโหลดตารางแล้ว");
-        } else {
-          message.warning("สร้างตารางสำเร็จ แต่โหลดข้อมูลตารางไม่สำเร็จ");
-        }
+        // หลังจากสร้างตารางอัตโนมัติแล้ว ให้โหลดตารางใหม่
+        await getSchedules();
+        message.success("สร้างตารางอัตโนมัติสำเร็จ และโหลดตารางแล้ว");
       } else {
         message.error("ไม่สามารถสร้างตารางได้");
       }
@@ -2646,9 +2633,28 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
   };
 
   // =================== MODAL HANDLERS ===================
+  // แก้ไขฟังก์ชัน handleLoadSchedule ให้ใช้ parameters ที่ถูกต้อง
   const handleLoadSchedule = async (scheduleName: string) => {
+    // แยกปีและเทอมจาก scheduleName
+    // Format: "ปีการศึกษา 2567 เทอม 1"
+    const yearMatch = scheduleName.match(/ปีการศึกษา\s+(\d+)/);
+    const termMatch = scheduleName.match(/เทอม\s+(\d+)/);
+    
+    if (!yearMatch || !termMatch) {
+      message.error("รูปแบบชื่อตารางไม่ถูกต้อง");
+      return;
+    }
+
+    const year = yearMatch[1];
+    const term = termMatch[1];
+
+    if (!major_name) {
+      message.error("ไม่พบข้อมูลสาขา กรุณาตรวจสอบการตั้งค่า");
+      return;
+    }
+
     try {
-      const res = await getSchedulesBynameTable(scheduleName);
+      const res = await getSchedulesBynameTable(major_name, year, term);
       if (res.status === 200 && res.data) {
         console.log('📊 Loaded schedule data:', res.data);
         
@@ -2835,7 +2841,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
           successCount++;
         } else {
           errorCount++;
-          console.error(`⏰ Failed to update schedule ID: ${change.id}`, result);
+          console.error(`❌ Failed to update schedule ID: ${change.id}`, result);
         }
       } catch (error) {
         errorCount++;
@@ -3551,19 +3557,19 @@ const exportScheduleToXLSX = async () => {
   };
 
   // =================== EFFECTS ===================
+  // แก้ไข useEffect สำหรับการโหลดอัตโนมัติ
   useEffect(() => {
-    if (academicYear && term) {
-      const nameTable = `ปีการศึกษา ${academicYear} เทอม ${term}`;
-      getSchedules(nameTable);
+    if (academicYear && term && major_name) {
+      getSchedules();
     }
-  }, [academicYear, term]);
+  }, [academicYear, term, major_name]);
 
   useEffect(() => {
     getAllNameTable();
   }, []);
 
   useEffect(() => {
-    // เซ็ตชื่อชื่อตารางใน modal ให้ตรงกับตารางปัจจุบัน
+    // เซ็ตชื่อตารางใน modal ให้ตรงกับตารางปัจจุบัน
     if (isTableFromAPI && currentTableName) {
       setScheduleNameToSave(currentTableName);
     }
@@ -3696,7 +3702,6 @@ const exportScheduleToXLSX = async () => {
             สร้างอัตโนมัติ
           </Button>
           )}
-          {role === "Scheduler" && (
           <Button
             type="primary"
             style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
@@ -3705,7 +3710,21 @@ const exportScheduleToXLSX = async () => {
             ส่งออก Xlsx
             {(filterTags.length > 0 || searchValue) && " (กรอง)"}
           </Button>
-          )}
+          
+          {/* Refresh Button - เพื่อโหลดข้อมูลล่าสุดจาก API */}
+          <Button
+            icon={<SearchOutlined />}
+            onClick={() => {
+              if (academicYear && term && major_name) {
+                getSchedules();
+                message.success("รีเฟรชข้อมูลจาก API สำเร็จ");
+              } else {
+                message.warning("กรุณาตรวจสอบการตั้งค่า ปีการศึกษา, เทอม และสาขา");
+              }
+            }}
+          >
+            🔄 รีเฟรช
+          </Button>
           
           {/* Sidebar Toggle Button */}
           {role === "Scheduler" && (

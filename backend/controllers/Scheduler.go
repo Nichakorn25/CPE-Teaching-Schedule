@@ -13,306 +13,306 @@ import (
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
 )
 
-func GetScheduleByNameTable(c *gin.Context) {
-	nameTable := c.Query("nameTable")
-	majorName := c.Query("majorName")
+// func GetScheduleByNameTable(c *gin.Context) {
+// 	nameTable := c.Query("nameTable")
+// 	majorName := c.Query("majorName")
 
-	if nameTable == "" || majorName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "ต้องระบุ nameTable และ majorName",
-		})
-		return
-	}
+// 	if nameTable == "" || majorName == "" {
+// 		c.JSON(http.StatusBadRequest, gin.H{
+// 			"error": "ต้องระบุ nameTable และ majorName",
+// 		})
+// 		return
+// 	}
 
-	var schedules []entity.Schedule
+// 	var schedules []entity.Schedule
 
-	err := config.DB().
-		Preload("OfferedCourses.User").
-		Preload("OfferedCourses.Laboratory").
-		Preload("OfferedCourses.AllCourses.Curriculum").
-		Preload("OfferedCourses.AllCourses.Curriculum.Major").
-		Preload("OfferedCourses.AllCourses.AcademicYear").
-		Preload("OfferedCourses.AllCourses.TypeOfCourses").
-		Preload("OfferedCourses.AllCourses.Credit").
-		Preload("OfferedCourses.AllCourses.UserAllCourses").
-		Preload("OfferedCourses.AllCourses.UserAllCourses.User").
-		Preload("TimeFixedCourses").
-		Joins("JOIN offered_courses ON schedules.offered_courses_id = offered_courses.id").
-		Joins("JOIN all_courses ON offered_courses.all_courses_id = all_courses.id").
-		Joins("JOIN curriculums ON all_courses.curriculum_id = curriculums.id").
-		Joins("JOIN majors ON curriculums.major_id = majors.id").
-		Where("schedules.name_table = ?", nameTable).
-		Where("offered_courses.is_fix_courses = ? OR majors.major_name = ?", true, majorName).
-		Find(&schedules).Error
+// 	err := config.DB().
+// 		Preload("OfferedCourses.User").
+// 		Preload("OfferedCourses.Laboratory").
+// 		Preload("OfferedCourses.AllCourses.Curriculum").
+// 		Preload("OfferedCourses.AllCourses.Curriculum.Major").
+// 		Preload("OfferedCourses.AllCourses.AcademicYear").
+// 		Preload("OfferedCourses.AllCourses.TypeOfCourses").
+// 		Preload("OfferedCourses.AllCourses.Credit").
+// 		Preload("OfferedCourses.AllCourses.UserAllCourses").
+// 		Preload("OfferedCourses.AllCourses.UserAllCourses.User").
+// 		Preload("TimeFixedCourses").
+// 		Joins("JOIN offered_courses ON schedules.offered_courses_id = offered_courses.id").
+// 		Joins("JOIN all_courses ON offered_courses.all_courses_id = all_courses.id").
+// 		Joins("JOIN curriculums ON all_courses.curriculum_id = curriculums.id").
+// 		Joins("JOIN majors ON curriculums.major_id = majors.id").
+// 		Where("schedules.name_table = ?", nameTable).
+// 		Where("offered_courses.is_fix_courses = ? OR majors.major_name = ?", true, majorName).
+// 		Find(&schedules).Error
 
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "ไม่สามารถดึงตารางสอนได้",
-			"details": err.Error(),
-		})
-		return
-	}
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{
+// 			"error":   "ไม่สามารถดึงตารางสอนได้",
+// 			"details": err.Error(),
+// 		})
+// 		return
+// 	}
 
-	c.JSON(http.StatusOK, schedules)
-}
+// 	c.JSON(http.StatusOK, schedules)
+// }
 
-// ////////////////////////////////////////////////////////// จัดตารางสอน
-func AutoGenerateSchedule(c *gin.Context) {
-	user_major := c.Query("major_name")
-	year := c.Query("year")
-	term := c.Query("term")
-	nameTable := fmt.Sprintf("ปีการศึกษา %s เทอม %s", year, term)
+// // ////////////////////////////////////////////////////////// จัดตารางสอน
+// func AutoGenerateSchedule(c *gin.Context) {
+// 	user_major := c.Query("major_name")
+// 	year := c.Query("year")
+// 	term := c.Query("term")
+// 	nameTable := fmt.Sprintf("ปีการศึกษา %s เทอม %s", year, term)
 
-	var offeredCourses []entity.OfferedCourses
-	config.DB().Where("year = ? AND term = ?", year, term).
-		Preload("User.Position").
-		Preload("User.Major").
-		Preload("AllCourses.TypeOfCourses").
-		Preload("AllCourses.Credit").
-		Preload("AllCourses.AcademicYear").
-		Preload("AllCourses.Curriculum.Major").
-		Preload("Laboratory").
-		Find(&offeredCourses)
+// 	var offeredCourses []entity.OfferedCourses
+// 	config.DB().Where("year = ? AND term = ?", year, term).
+// 		Preload("User.Position").
+// 		Preload("User.Major").
+// 		Preload("AllCourses.TypeOfCourses").
+// 		Preload("AllCourses.Credit").
+// 		Preload("AllCourses.AcademicYear").
+// 		Preload("AllCourses.Curriculum.Major").
+// 		Preload("Laboratory").
+// 		Find(&offeredCourses)
 
-	config.DB().Where("name_table = ?", nameTable).Delete(&entity.Schedule{})
+// 	config.DB().Where("name_table = ?", nameTable).Delete(&entity.Schedule{})
 
-	// [1] FIXED COURSES: วนตาม Section จริง
-	for _, course := range offeredCourses {
-		if !course.IsFixCourses {
-			continue
-		}
-		for sec := uint(1); sec <= course.Section; sec++ {
-			var fixedCourses []entity.TimeFixedCourses
-			config.DB().Where("all_courses_id = ? AND section = ? AND year = ? AND term = ?",
-				course.AllCoursesID, sec, year, term).Find(&fixedCourses)
+// 	// [1] FIXED COURSES: วนตาม Section จริง
+// 	for _, course := range offeredCourses {
+// 		if !course.IsFixCourses {
+// 			continue
+// 		}
+// 		for sec := uint(1); sec <= course.Section; sec++ {
+// 			var fixedCourses []entity.TimeFixedCourses
+// 			config.DB().Where("all_courses_id = ? AND section = ? AND year = ? AND term = ?",
+// 				course.AllCoursesID, sec, year, term).Find(&fixedCourses)
 
-			for _, fixed := range fixedCourses {
-				schedule := entity.Schedule{
-					NameTable:        nameTable,
-					SectionNumber:    fixed.Section,
-					DayOfWeek:        fixed.DayOfWeek,
-					StartTime:        fixed.StartTime,
-					EndTime:          fixed.EndTime,
-					OfferedCoursesID: course.ID,
-				}
-				if err := config.DB().Create(&schedule).Error; err != nil {
-					continue
-				}
-				config.DB().Model(&fixed).Update("schedule_id", schedule.ID)
-			}
-		}
-	}
+// 			for _, fixed := range fixedCourses {
+// 				schedule := entity.Schedule{
+// 					NameTable:        nameTable,
+// 					SectionNumber:    fixed.Section,
+// 					DayOfWeek:        fixed.DayOfWeek,
+// 					StartTime:        fixed.StartTime,
+// 					EndTime:          fixed.EndTime,
+// 					OfferedCoursesID: course.ID,
+// 				}
+// 				if err := config.DB().Create(&schedule).Error; err != nil {
+// 					continue
+// 				}
+// 				config.DB().Model(&fixed).Update("schedule_id", schedule.ID)
+// 			}
+// 		}
+// 	}
 
-	// โหลดใหม่เฉพาะวิชาที่ยังไม่ถูกจัด
-	var autoCourses []entity.OfferedCourses
-	config.DB().Where("year = ? AND term = ? AND is_fix_courses = false", year, term).
-		Preload("User.Position").
-		Preload("User.Major").
-		Preload("AllCourses.TypeOfCourses").
-		Preload("AllCourses.Credit").
-		Preload("AllCourses.AcademicYear").
-		Preload("AllCourses.Curriculum.Major").
-		Preload("Laboratory").
-		Find(&autoCourses)
+// 	// โหลดใหม่เฉพาะวิชาที่ยังไม่ถูกจัด
+// 	var autoCourses []entity.OfferedCourses
+// 	config.DB().Where("year = ? AND term = ? AND is_fix_courses = false", year, term).
+// 		Preload("User.Position").
+// 		Preload("User.Major").
+// 		Preload("AllCourses.TypeOfCourses").
+// 		Preload("AllCourses.Credit").
+// 		Preload("AllCourses.AcademicYear").
+// 		Preload("AllCourses.Curriculum.Major").
+// 		Preload("Laboratory").
+// 		Find(&autoCourses)
 
-	var filteredCourses []entity.OfferedCourses
-	for _, course := range autoCourses {
-		if course.AllCourses.Curriculum.Major.MajorName == user_major {
-			filteredCourses = append(filteredCourses, course)
-		}
-	}
+// 	var filteredCourses []entity.OfferedCourses
+// 	for _, course := range autoCourses {
+// 		if course.AllCourses.Curriculum.Major.MajorName == user_major {
+// 			filteredCourses = append(filteredCourses, course)
+// 		}
+// 	}
 
-	// แยกวิชาออกเป็นกลุ่มเพื่อจัดลำดับ
-	var coreCourses, electiveCourses []entity.OfferedCourses
-	for _, course := range filteredCourses {
-		if course.AllCourses.TypeOfCoursesID == 1 {
-			coreCourses = append(coreCourses, course)
-		} else {
-			electiveCourses = append(electiveCourses, course)
-		}
-	}
+// 	// แยกวิชาออกเป็นกลุ่มเพื่อจัดลำดับ
+// 	var coreCourses, electiveCourses []entity.OfferedCourses
+// 	for _, course := range filteredCourses {
+// 		if course.AllCourses.TypeOfCoursesID == 1 {
+// 			coreCourses = append(coreCourses, course)
+// 		} else {
+// 			electiveCourses = append(electiveCourses, course)
+// 		}
+// 	}
 
-	sortCoursesByPriority := func(courses []entity.OfferedCourses) {
-		sort.SliceStable(courses, func(i, j int) bool {
-			pi := courses[i].User.Position.Priority
-			pj := courses[j].User.Position.Priority
-			if pi == nil {
-				return false
-			}
-			if pj == nil {
-				return true
-			}
-			return *pi < *pj
-		})
-	}
+// 	sortCoursesByPriority := func(courses []entity.OfferedCourses) {
+// 		sort.SliceStable(courses, func(i, j int) bool {
+// 			pi := courses[i].User.Position.Priority
+// 			pj := courses[j].User.Position.Priority
+// 			if pi == nil {
+// 				return false
+// 			}
+// 			if pj == nil {
+// 				return true
+// 			}
+// 			return *pi < *pj
+// 		})
+// 	}
 
-	sortCoursesByPriority(coreCourses)
-	sortCoursesByPriority(electiveCourses)
+// 	sortCoursesByPriority(coreCourses)
+// 	sortCoursesByPriority(electiveCourses)
 
-	var allSchedules []entity.Schedule
-	config.DB().Where("name_table = ?", nameTable).Find(&allSchedules)
+// 	var allSchedules []entity.Schedule
+// 	config.DB().Where("name_table = ?", nameTable).Find(&allSchedules)
 
-	// [2] AUTO-GENERATE: วนทีละ Section
-	for _, group := range [][]entity.OfferedCourses{coreCourses, electiveCourses} {
-		for _, course := range group {
-			// สุ่มวัน (จันทร์-ศุกร์) และเวลาจัด
-			days := []int{0, 1, 2, 3, 4}
-			preferredHours := []int{8, 9, 10, 11, 13, 14, 15}
-			fallbackHours := []int{16, 17, 18, 19, 20}
+// 	// [2] AUTO-GENERATE: วนทีละ Section
+// 	for _, group := range [][]entity.OfferedCourses{coreCourses, electiveCourses} {
+// 		for _, course := range group {
+// 			// สุ่มวัน (จันทร์-ศุกร์) และเวลาจัด
+// 			days := []int{0, 1, 2, 3, 4}
+// 			preferredHours := []int{8, 9, 10, 11, 13, 14, 15}
+// 			fallbackHours := []int{16, 17, 18, 19, 20}
 
-			// สุ่มให้ไม่เหมือนกันในแต่ละครั้งที่เรียกใช้
-			rand.Seed(time.Now().UnixNano())
-			rand.Shuffle(len(days), func(i, j int) { days[i], days[j] = days[j], days[i] })
-			rand.Shuffle(len(preferredHours), func(i, j int) { preferredHours[i], preferredHours[j] = preferredHours[j], preferredHours[i] })
-			rand.Shuffle(len(fallbackHours), func(i, j int) { fallbackHours[i], fallbackHours[j] = fallbackHours[j], fallbackHours[i] })
+// 			// สุ่มให้ไม่เหมือนกันในแต่ละครั้งที่เรียกใช้
+// 			rand.Seed(time.Now().UnixNano())
+// 			rand.Shuffle(len(days), func(i, j int) { days[i], days[j] = days[j], days[i] })
+// 			rand.Shuffle(len(preferredHours), func(i, j int) { preferredHours[i], preferredHours[j] = preferredHours[j], preferredHours[i] })
+// 			rand.Shuffle(len(fallbackHours), func(i, j int) { fallbackHours[i], fallbackHours[j] = fallbackHours[j], fallbackHours[i] })
 
-			credit := course.AllCourses.Credit
-			lecHours, labHours := calcWeeklyHours(credit)
+// 			credit := course.AllCourses.Credit
+// 			lecHours, labHours := calcWeeklyHours(credit)
 
-			for sec := uint(1); sec <= course.Section; sec++ {
-				var conditions []entity.Condition
-				config.DB().Where("user_id = ?", course.UserID).Find(&conditions)
+// 			for sec := uint(1); sec <= course.Section; sec++ {
+// 				var conditions []entity.Condition
+// 				config.DB().Where("user_id = ?", course.UserID).Find(&conditions)
 
-				var labDayIndex = -1 // สำหรับจำวัน lab ที่ถูกจัดแล้ว
-				scheduledLecture := 0
+// 				var labDayIndex = -1 // สำหรับจำวัน lab ที่ถูกจัดแล้ว
+// 				scheduledLecture := 0
 
-				// Step 1: จัด Lab ก่อนถ้ามี
-				if labHours > 0 {
-				LAB_LOOP:
-					for _, day := range days {
-						dayName := getDayName(day)
-						for hour := 8; hour <= (21 - labHours); hour++ {
-							if hour == 12 || (hour < 12 && hour+labHours > 12) {
-								continue
-							}
-							conflict := false
-							var tempSlots []entity.Schedule
-							for i := 0; i < labHours; i++ {
-								start := time.Date(2006, 1, 2, hour+i, 0, 0, 0, time.FixedZone("Asia/Bangkok", 7*60*60))
-								end := start.Add(time.Hour)
+// 				// Step 1: จัด Lab ก่อนถ้ามี
+// 				if labHours > 0 {
+// 				LAB_LOOP:
+// 					for _, day := range days {
+// 						dayName := getDayName(day)
+// 						for hour := 8; hour <= (21 - labHours); hour++ {
+// 							if hour == 12 || (hour < 12 && hour+labHours > 12) {
+// 								continue
+// 							}
+// 							conflict := false
+// 							var tempSlots []entity.Schedule
+// 							for i := 0; i < labHours; i++ {
+// 								start := time.Date(2006, 1, 2, hour+i, 0, 0, 0, time.FixedZone("Asia/Bangkok", 7*60*60))
+// 								end := start.Add(time.Hour)
 
-								if isConflictWithConditions(dayName, start, end, conditions) ||
-									isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
-									(course.LaboratoryID != nil &&
-										isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) ||
-									!isConsecutiveSlot(allSchedules, dayName, start, course.ID, sec) {
-									conflict = true
-									break
-								}
+// 								if isConflictWithConditions(dayName, start, end, conditions) ||
+// 									isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
+// 									(course.LaboratoryID != nil &&
+// 										isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) ||
+// 									!isConsecutiveSlot(allSchedules, dayName, start, course.ID, sec) {
+// 									conflict = true
+// 									break
+// 								}
 
-								tempSlots = append(tempSlots, entity.Schedule{
-									NameTable:        nameTable,
-									SectionNumber:    sec,
-									DayOfWeek:        dayName,
-									StartTime:        start,
-									EndTime:          end,
-									OfferedCoursesID: course.ID,
-								})
-							}
+// 								tempSlots = append(tempSlots, entity.Schedule{
+// 									NameTable:        nameTable,
+// 									SectionNumber:    sec,
+// 									DayOfWeek:        dayName,
+// 									StartTime:        start,
+// 									EndTime:          end,
+// 									OfferedCoursesID: course.ID,
+// 								})
+// 							}
 
-							if !conflict {
-								for _, s := range tempSlots {
-									allSchedules = append(allSchedules, s)
-									config.DB().Create(&s)
-								}
-								labDayIndex = day
-								break LAB_LOOP
-							}
-						}
-					}
-				}
+// 							if !conflict {
+// 								for _, s := range tempSlots {
+// 									allSchedules = append(allSchedules, s)
+// 									config.DB().Create(&s)
+// 								}
+// 								labDayIndex = day
+// 								break LAB_LOOP
+// 							}
+// 						}
+// 					}
+// 				}
 
-				// Step 2: จัด Lecture (เลี่ยงวัน Lab, พยายามจัดวันก่อนหน้า)
-				for _, day := range days {
-					if day == labDayIndex {
-						continue
-					}
-					if labDayIndex != -1 && day > labDayIndex {
-						continue
-					}
+// 				// Step 2: จัด Lecture (เลี่ยงวัน Lab, พยายามจัดวันก่อนหน้า)
+// 				for _, day := range days {
+// 					if day == labDayIndex {
+// 						continue
+// 					}
+// 					if labDayIndex != -1 && day > labDayIndex {
+// 						continue
+// 					}
 
-					dayName := getDayName(day)
-					slotsToday := 0
-					maxPerDay := 2
+// 					dayName := getDayName(day)
+// 					slotsToday := 0
+// 					maxPerDay := 2
 
-					// จัด preferred slot ก่อน
-					for _, hour := range preferredHours {
-						if hour == 12 {
-							continue
-						}
+// 					// จัด preferred slot ก่อน
+// 					for _, hour := range preferredHours {
+// 						if hour == 12 {
+// 							continue
+// 						}
 
-						start := time.Date(2006, 1, 2, hour, 0, 0, 0, time.FixedZone("Asia/Bangkok", 7*60*60))
-						end := start.Add(time.Hour)
+// 						start := time.Date(2006, 1, 2, hour, 0, 0, 0, time.FixedZone("Asia/Bangkok", 7*60*60))
+// 						end := start.Add(time.Hour)
 
-						if start.Hour() < 12 && end.Hour() > 12 {
-							continue
-						}
+// 						if start.Hour() < 12 && end.Hour() > 12 {
+// 							continue
+// 						}
 
-						if isConflictWithConditions(dayName, start, end, conditions) ||
-							isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
-							isAcademicYearConflict(dayName, start, end, allSchedules, course) ||
-							(course.LaboratoryID != nil &&
-								isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) ||
-							!isConsecutiveSlot(allSchedules, dayName, start, course.ID, sec) {
-							continue
-						}
+// 						if isConflictWithConditions(dayName, start, end, conditions) ||
+// 							isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
+// 							isAcademicYearConflict(dayName, start, end, allSchedules, course) ||
+// 							(course.LaboratoryID != nil &&
+// 								isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) ||
+// 							!isConsecutiveSlot(allSchedules, dayName, start, course.ID, sec) {
+// 							continue
+// 						}
 
-						s := entity.Schedule{
-							NameTable:        nameTable,
-							SectionNumber:    sec,
-							DayOfWeek:        dayName,
-							StartTime:        start,
-							EndTime:          end,
-							OfferedCoursesID: course.ID,
-						}
-						allSchedules = append(allSchedules, s)
-						config.DB().Create(&s)
-						scheduledLecture++
-						slotsToday++
-						if scheduledLecture >= lecHours || slotsToday >= maxPerDay {
-							break
-						}
-					}
+// 						s := entity.Schedule{
+// 							NameTable:        nameTable,
+// 							SectionNumber:    sec,
+// 							DayOfWeek:        dayName,
+// 							StartTime:        start,
+// 							EndTime:          end,
+// 							OfferedCoursesID: course.ID,
+// 						}
+// 						allSchedules = append(allSchedules, s)
+// 						config.DB().Create(&s)
+// 						scheduledLecture++
+// 						slotsToday++
+// 						if scheduledLecture >= lecHours || slotsToday >= maxPerDay {
+// 							break
+// 						}
+// 					}
 
-					// fallback ช่วงเย็น
-					if scheduledLecture < lecHours && slotsToday < maxPerDay {
-						for _, hour := range fallbackHours {
-							start := time.Date(2006, 1, 2, hour, 0, 0, 0, time.FixedZone("Asia/Bangkok", 7*60*60))
-							end := start.Add(time.Hour)
+// 					// fallback ช่วงเย็น
+// 					if scheduledLecture < lecHours && slotsToday < maxPerDay {
+// 						for _, hour := range fallbackHours {
+// 							start := time.Date(2006, 1, 2, hour, 0, 0, 0, time.FixedZone("Asia/Bangkok", 7*60*60))
+// 							end := start.Add(time.Hour)
 
-							if isConflictWithConditions(dayName, start, end, conditions) ||
-								isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
-								isAcademicYearConflict(dayName, start, end, allSchedules, course) ||
-								(course.LaboratoryID != nil &&
-									isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) ||
-								!isConsecutiveSlot(allSchedules, dayName, start, course.ID, sec) {
-								continue
-							}
+// 							if isConflictWithConditions(dayName, start, end, conditions) ||
+// 								isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
+// 								isAcademicYearConflict(dayName, start, end, allSchedules, course) ||
+// 								(course.LaboratoryID != nil &&
+// 									isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) ||
+// 								!isConsecutiveSlot(allSchedules, dayName, start, course.ID, sec) {
+// 								continue
+// 							}
 
-							s := entity.Schedule{
-								NameTable:        nameTable,
-								SectionNumber:    sec,
-								DayOfWeek:        dayName,
-								StartTime:        start,
-								EndTime:          end,
-								OfferedCoursesID: course.ID,
-							}
-							allSchedules = append(allSchedules, s)
-							config.DB().Create(&s)
-							scheduledLecture++
-							slotsToday++
-							if scheduledLecture >= lecHours || slotsToday >= maxPerDay {
-								break
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+// 							s := entity.Schedule{
+// 								NameTable:        nameTable,
+// 								SectionNumber:    sec,
+// 								DayOfWeek:        dayName,
+// 								StartTime:        start,
+// 								EndTime:          end,
+// 								OfferedCoursesID: course.ID,
+// 							}
+// 							allSchedules = append(allSchedules, s)
+// 							config.DB().Create(&s)
+// 							scheduledLecture++
+// 							slotsToday++
+// 							if scheduledLecture >= lecHours || slotsToday >= maxPerDay {
+// 								break
+// 							}
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "สร้างตารางสอนอัตโนมัติสำเร็จ"})
-}
+// 	c.JSON(http.StatusOK, gin.H{"message": "สร้างตารางสอนอัตโนมัติสำเร็จ"})
+// }
 
 func getDayName(index int) string {
 	days := []string{"จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"}
@@ -388,6 +388,360 @@ func isLabConflict(day string, start, end time.Time, schedules []entity.Schedule
 		}
 	}
 	return false
+}
+
+// ========================= GetScheduleByNameTable =========================
+func GetScheduleByNameTable(c *gin.Context) {
+	majorName := c.Query("major_name")
+	year := c.Query("year")
+	term := c.Query("term")
+
+	if majorName == "" || year == "" || term == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "ต้องระบุ major_name, year และ term",
+		})
+		return
+	}
+
+	// สร้าง nameTable ให้ตรงกับ AutoGenerateSchedule
+	nameTable := fmt.Sprintf("ปีการศึกษา %s เทอม %s", year, term)
+
+	var schedules []entity.Schedule
+
+	err := config.DB().
+		Preload("OfferedCourses.User").
+		Preload("OfferedCourses.Laboratory").
+		Preload("OfferedCourses.AllCourses.Curriculum").
+		Preload("OfferedCourses.AllCourses.Curriculum.Major").
+		Preload("OfferedCourses.AllCourses.AcademicYear").
+		Preload("OfferedCourses.AllCourses.TypeOfCourses").
+		Preload("OfferedCourses.AllCourses.Credit").
+		Preload("OfferedCourses.AllCourses.UserAllCourses").
+		Preload("OfferedCourses.AllCourses.UserAllCourses.User").
+		Preload("TimeFixedCourses").
+		Joins("JOIN offered_courses ON schedules.offered_courses_id = offered_courses.id").
+		Joins("JOIN all_courses ON offered_courses.all_courses_id = all_courses.id").
+		Joins("JOIN curriculums ON all_courses.curriculum_id = curriculums.id").
+		Joins("JOIN majors ON curriculums.major_id = majors.id").
+		Where("schedules.name_table = ?", nameTable).
+		// แสดง fixed ของทุกสาขา + non-fixed เฉพาะสาขาผู้ใช้
+		Where("(offered_courses.is_fix_courses = TRUE OR majors.major_name = ?)", majorName).
+		Order(`
+			CASE schedules.day_of_week
+				WHEN 'จันทร์' THEN 1
+				WHEN 'อังคาร' THEN 2
+				WHEN 'พุธ' THEN 3
+				WHEN 'พฤหัสบดี' THEN 4
+				WHEN 'ศุกร์' THEN 5
+				WHEN 'เสาร์' THEN 6
+				WHEN 'อาทิตย์' THEN 7
+			END, schedules.start_time, schedules.end_time`).
+		Find(&schedules).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "ไม่สามารถดึงตารางสอนได้",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, schedules)
+}
+
+// ========================= AutoGenerateSchedule =========================
+func AutoGenerateSchedule(c *gin.Context) {
+	user_major := c.Query("major_name")
+	year := c.Query("year")
+	term := c.Query("term")
+	nameTable := fmt.Sprintf("ปีการศึกษา %s เทอม %s", year, term)
+
+	// โหลด OfferedCourses ทั้งเทอม (เพื่อใช้สร้าง fixed และเช็คความสัมพันธ์)
+	var offeredCourses []entity.OfferedCourses
+	if err := config.DB().
+		Where("year = ? AND term = ?", year, term).
+		Preload("User.Position").
+		Preload("User.Major").
+		Preload("AllCourses.TypeOfCourses").
+		Preload("AllCourses.Credit").
+		Preload("AllCourses.AcademicYear").
+		Preload("AllCourses.Curriculum.Major").
+		Preload("Laboratory").
+		Find(&offeredCourses).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "โหลด OfferedCourses ไม่สำเร็จ", "details": err.Error()})
+		return
+	}
+
+	// 1) ลบเฉพาะ "auto schedules" ของสาขาผู้ใช้ในเทอมนี้เท่านั้น (คง fixed schedules ทุกสาขาไว้)
+	subQuery := config.DB().
+		Table("schedules").
+		Select("schedules.id").
+		Joins("JOIN offered_courses ON schedules.offered_courses_id = offered_courses.id").
+		Joins("JOIN all_courses ON offered_courses.all_courses_id = all_courses.id").
+		Joins("JOIN curriculums ON all_courses.curriculum_id = curriculums.id").
+		Joins("JOIN majors ON curriculums.major_id = majors.id").
+		Where("schedules.name_table = ?", nameTable).
+		Where("offered_courses.is_fix_courses = ?", false).
+		Where("majors.major_name = ?", user_major)
+
+	if err := config.DB().
+		Where("id IN (?)", subQuery).
+		Delete(&entity.Schedule{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ลบ auto schedules เดิมไม่สำเร็จ", "details": err.Error()})
+		return
+	}
+
+	// 2) สร้าง/เติม fixed schedules ตาม TimeFixedCourses (idempotent: ถ้ามีอยู่แล้วจะไม่ซ้ำ)
+	for _, course := range offeredCourses {
+		if !course.IsFixCourses {
+			continue
+		}
+		for sec := uint(1); sec <= course.Section; sec++ {
+			var fixedCourses []entity.TimeFixedCourses
+			if err := config.DB().
+				Where("all_courses_id = ? AND section = ? AND year = ? AND term = ?",
+					course.AllCoursesID, sec, year, term).
+				Find(&fixedCourses).Error; err != nil {
+				continue
+			}
+
+			for _, fixed := range fixedCourses {
+				// เช็คว่ามี schedule ชุดนี้อยู่แล้วหรือยัง (ป้องกัน duplicate หากเคย generate ไปแล้ว)
+				var exists int64
+				_ = config.DB().Model(&entity.Schedule{}).
+					Where("name_table = ? AND offered_courses_id = ? AND section_number = ? AND day_of_week = ? AND start_time = ? AND end_time = ?",
+						nameTable, course.ID, fixed.Section, fixed.DayOfWeek, fixed.StartTime, fixed.EndTime).
+					Count(&exists).Error
+				if exists > 0 {
+					// bind schedule_id ถ้ายังไม่ได้ผูก
+					if fixed.ScheduleID == 0 {
+						var s entity.Schedule
+						if err := config.DB().
+							Where("name_table = ? AND offered_courses_id = ? AND section_number = ? AND day_of_week = ? AND start_time = ? AND end_time = ?",
+								nameTable, course.ID, fixed.Section, fixed.DayOfWeek, fixed.StartTime, fixed.EndTime).
+							First(&s).Error; err == nil {
+							_ = config.DB().Model(&fixed).Update("schedule_id", s.ID).Error
+						}
+					}
+					continue
+				}
+
+				schedule := entity.Schedule{
+					NameTable:        nameTable,
+					SectionNumber:    fixed.Section,
+					DayOfWeek:        fixed.DayOfWeek,
+					StartTime:        fixed.StartTime,
+					EndTime:          fixed.EndTime,
+					OfferedCoursesID: course.ID,
+				}
+				if err := config.DB().Create(&schedule).Error; err != nil {
+					continue
+				}
+				_ = config.DB().Model(&fixed).Update("schedule_id", schedule.ID).Error
+			}
+		}
+	}
+
+	// 3) โหลดตารางทั้งหมดของเทอมนี้ (ทั้ง fixed + auto ของสาขาอื่นที่อาจมีอยู่แล้ว) มาไว้ตรวจชน
+	var allSchedules []entity.Schedule
+	if err := config.DB().
+		Where("name_table = ?", nameTable).
+		Find(&allSchedules).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "โหลด schedules ทั้งหมดไม่สำเร็จ", "details": err.Error()})
+		return
+	}
+
+	// 4) เตรียมชุดวิชา auto ของ "สาขาผู้ใช้" เท่านั้น
+	var autoCourses []entity.OfferedCourses
+	if err := config.DB().
+		Where("year = ? AND term = ? AND is_fix_courses = false", year, term).
+		Preload("User.Position").
+		Preload("User.Major").
+		Preload("AllCourses.TypeOfCourses").
+		Preload("AllCourses.Credit").
+		Preload("AllCourses.AcademicYear").
+		Preload("AllCourses.Curriculum.Major").
+		Preload("Laboratory").
+		Find(&autoCourses).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "โหลด auto courses ไม่สำเร็จ", "details": err.Error()})
+		return
+	}
+
+	// filter ตามสาขาผู้ใช้
+	filtered := make([]entity.OfferedCourses, 0, len(autoCourses))
+	for _, course := range autoCourses {
+		if course.AllCourses.Curriculum.Major.MajorName == user_major {
+			filtered = append(filtered, course)
+		}
+	}
+
+	// แยก core / elective
+	var coreCourses, electiveCourses []entity.OfferedCourses
+	for _, course := range filtered {
+		if course.AllCourses.TypeOfCoursesID == 1 {
+			coreCourses = append(coreCourses, course)
+		} else {
+			electiveCourses = append(electiveCourses, course)
+		}
+	}
+
+	// เรียงตาม Priority ของผู้สอน
+	sortCoursesByPriority := func(courses []entity.OfferedCourses) {
+		sort.SliceStable(courses, func(i, j int) bool {
+			pi := courses[i].User.Position.Priority
+			pj := courses[j].User.Position.Priority
+			if pi == nil && pj == nil {
+				return false
+			}
+			if pi == nil {
+				return false
+			}
+			if pj == nil {
+				return true
+			}
+			return *pi < *pj
+		})
+	}
+	sortCoursesByPriority(coreCourses)
+	sortCoursesByPriority(electiveCourses)
+
+	// seed random แค่ครั้งเดียว
+	rand.Seed(time.Now().UnixNano())
+
+	// 5) วาง auto schedules (พิจารณาชนกับ fixed ด้วย เพราะ allSchedules มี fixed อยู่แล้ว)
+	for _, group := range [][]entity.OfferedCourses{coreCourses, electiveCourses} {
+		for _, course := range group {
+			days := []int{0, 1, 2, 3, 4} // จันทร์-ศุกร์
+			preferredHours := []int{8, 9, 10, 11, 13, 14, 15}
+			fallbackHours := []int{16, 17, 18, 19, 20}
+			rand.Shuffle(len(days), func(i, j int) { days[i], days[j] = days[j], days[i] })
+			rand.Shuffle(len(preferredHours), func(i, j int) { preferredHours[i], preferredHours[j] = preferredHours[j], preferredHours[i] })
+			rand.Shuffle(len(fallbackHours), func(i, j int) { fallbackHours[i], fallbackHours[j] = fallbackHours[j], fallbackHours[i] })
+
+			credit := course.AllCourses.Credit
+			lecHours, labHours := calcWeeklyHours(credit)
+
+			for sec := uint(1); sec <= course.Section; sec++ {
+				var conditions []entity.Condition
+				_ = config.DB().Where("user_id = ?", course.UserID).Find(&conditions).Error
+
+				labDayIndex := -1
+				scheduledLecture := 0
+
+				// --- วาง LAB ก่อน ---
+				if labHours > 0 {
+				LAB_LOOP:
+					for _, day := range days {
+						dayName := getDayName(day)
+						for hour := 8; hour <= (21 - labHours); hour++ {
+							// ข้ามช่วงเที่ยง
+							if hour == 12 || (hour < 12 && hour+labHours > 12) {
+								continue
+							}
+							conflict := false
+							var tempSlots []entity.Schedule
+							for i := 0; i < labHours; i++ {
+								start := time.Date(2006, 1, 2, hour+i, 0, 0, 0, time.FixedZone("Asia/Bangkok", 7*60*60))
+								end := start.Add(time.Hour)
+
+								if isConflictWithConditions(dayName, start, end, conditions) ||
+									isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
+									(course.LaboratoryID != nil && isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) ||
+									!isConsecutiveSlot(allSchedules, dayName, start, course.ID, sec) {
+									conflict = true
+									break
+								}
+
+								tempSlots = append(tempSlots, entity.Schedule{
+									NameTable:        nameTable,
+									SectionNumber:    sec,
+									DayOfWeek:        dayName,
+									StartTime:        start,
+									EndTime:          end,
+									OfferedCoursesID: course.ID,
+								})
+							}
+
+							if !conflict {
+								for _, s := range tempSlots {
+									allSchedules = append(allSchedules, s)
+									_ = config.DB().Create(&s).Error
+								}
+								labDayIndex = day
+								break LAB_LOOP
+							}
+						}
+					}
+				}
+
+				// --- วาง LECTURE (พยายามวางก่อนวัน LAB และไม่เกิน 2 ชม./วัน) ---
+				for _, day := range days {
+					if day == labDayIndex {
+						continue
+					}
+					if labDayIndex != -1 && day > labDayIndex {
+						continue
+					}
+
+					dayName := getDayName(day)
+					slotsToday := 0
+					maxPerDay := 2
+
+					tryPlace := func(hour int) bool {
+						if hour == 12 {
+							return false
+						}
+						start := time.Date(2006, 1, 2, hour, 0, 0, 0, time.FixedZone("Asia/Bangkok", 7*60*60))
+						end := start.Add(time.Hour)
+						// ไม่ข้ามช่วงเที่ยง
+						if start.Hour() < 12 && end.Hour() > 12 {
+							return false
+						}
+						if isConflictWithConditions(dayName, start, end, conditions) ||
+							isInstructorConflict(dayName, start, end, allSchedules, course.UserID) ||
+							isAcademicYearConflict(dayName, start, end, allSchedules, course) ||
+							(course.LaboratoryID != nil && isLabConflict(dayName, start, end, allSchedules, *course.LaboratoryID)) ||
+							!isConsecutiveSlot(allSchedules, dayName, start, course.ID, sec) {
+							return false
+						}
+
+						s := entity.Schedule{
+							NameTable:        nameTable,
+							SectionNumber:    sec,
+							DayOfWeek:        dayName,
+							StartTime:        start,
+							EndTime:          end,
+							OfferedCoursesID: course.ID,
+						}
+						allSchedules = append(allSchedules, s)
+						_ = config.DB().Create(&s).Error
+						scheduledLecture++
+						slotsToday++
+						return true
+					}
+
+					// preferred ก่อน
+					for _, h := range preferredHours {
+						if scheduledLecture >= lecHours || slotsToday >= maxPerDay {
+							break
+						}
+						_ = tryPlace(h)
+					}
+					// fallback ช่วงเย็น
+					if scheduledLecture < lecHours && slotsToday < maxPerDay {
+						for _, h := range fallbackHours {
+							if scheduledLecture >= lecHours || slotsToday >= maxPerDay {
+								break
+							}
+							_ = tryPlace(h)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "สร้างตารางสอนอัตโนมัติสำเร็จ"})
 }
 
 // ///////////////////////////////////////// ดึงตารางสอนไปแสดงตาม nametable
