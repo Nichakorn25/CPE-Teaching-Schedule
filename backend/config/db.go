@@ -430,6 +430,21 @@ func SeedDataUser() {
 			MajorID:       4,
 			RoleID:        3,
 		},
+		{
+			Username:      "AA1234",
+			Password:      hashedPassword,
+			Firstname:     "พนมศักดิ์",
+			Lastname:      "มีมนต์",
+			Image:         "",
+			Email:         "panomsak@sut.ac.th",
+			PhoneNumber:   "044224411",
+			Address:       "อาคารบริการ 1 ชั้น 4 ห้อง EE06",
+			FirstPassword: false,
+			TitleID:       3,
+			PositionID:    2,
+			MajorID:       5,
+			RoleID:        2,
+		},
 	}
 	for _, user := range users {
 		var existing entity.User
@@ -508,8 +523,9 @@ func SeedCredits() {
 		{Unit: 1, Lecture: 0, Lab: 0, Self: 0},
 		{Unit: 8, Lecture: 0, Lab: 0, Self: 0},
 		{Unit: 9, Lecture: 0, Lab: 0, Self: 0},
+		{Unit: 3, Lecture: 2, Lab: 2, Self: 5},
+		{Unit: 2, Lecture: 0, Lab: 6, Self: 0},
 	}
-
 	for _, credit := range credits {
 		var existing entity.Credit
 		if err := db.Where("unit = ? AND lecture = ? AND lab = ? AND self = ?", credit.Unit, credit.Lecture, credit.Lab, credit.Self).First(&existing).Error; errors.Is(err, gorm.ErrRecordNotFound) {
@@ -533,6 +549,7 @@ func SeedTypeOfCourses() {
 		{Type: 10, TypeName: "กลุ่มวิชาพื้นฐานทางวิศวกรรมศาสตร์"},
 		{Type: 11, TypeName: "กลุ่มวิชาเลือกทางวิศวกรรมคอมพิวเตอร์"},
 		{Type: 12, TypeName: "หมวดวิชาสหกิจศึกษา"},
+		{Type: 13, TypeName: "กลุ่มวิชาพื้นฐานทางวิทยาการคอมพิวเตอร์"},
 	}
 	for _, t := range types {
 		db.FirstOrCreate(&entity.TypeOfCourses{}, entity.TypeOfCourses{
@@ -633,6 +650,8 @@ func SeedAllCourses() {
 		credit1_0_0_0 entity.Credit
 		credit8_0_0_0 entity.Credit
 		credit9_0_0_0 entity.Credit
+		credit3_2_2_5 entity.Credit
+		credit2_0_6_0 entity.Credit
 	)
 	db.First(&curriculumComEng1, "curriculum_name = ?", "107050101650	วิศวกรรมคอมพิวเตอร์-2565")
 	db.First(&curriculumElectricalEng1, "curriculum_name = ?", "107110101600	วิศวกรรมไฟฟ้า-2560(2559)")
@@ -671,6 +690,8 @@ func SeedAllCourses() {
 	db.First(&credit1_0_0_0, "unit = ? AND lecture = ? AND lab = ? AND self = ?", 1, 0, 0, 0)
 	db.First(&credit8_0_0_0, "unit = ? AND lecture = ? AND lab = ? AND self = ?", 8, 0, 0, 0)
 	db.First(&credit9_0_0_0, "unit = ? AND lecture = ? AND lab = ? AND self = ?", 9, 0, 0, 0)
+	db.First(&credit3_2_2_5, "unit = ? AND lecture = ? AND lab = ? AND self = ?", 3, 2, 2, 5)
+	db.First(&credit2_0_6_0, "unit = ? AND lecture = ? AND lab = ? AND self = ?", 2, 0, 6, 0)
 
 	courses := []entity.AllCourses{
 		{
@@ -1763,7 +1784,66 @@ func SeedAllCourses() {
 			CreditID:        credit4_4_0_8.ID,
 			Ismain:          false,
 		},
-				
+		{
+			Code:            "1101021",
+			EnglishName:     "Software Development Foundation I",
+			ThaiName:        "พื้นฐานการพัฒนาซอฟต์แวร์ 1",
+			CurriculumID:    8,
+			AcademicYearID:  &year1.ID,
+			TypeOfCoursesID: 13,
+			CreditID:        credit3_2_2_5.ID,
+			Ismain:          false,
+		},
+		{
+			Code:            "1101022",
+			EnglishName:     "Software Development Foundation II",
+			ThaiName:        "พื้นฐานการพัฒนาซอฟต์แวร์ 2",
+			CurriculumID:    8,
+			AcademicYearID:  &year2.ID,
+			TypeOfCoursesID: 13,
+			CreditID:        credit3_2_2_5.ID,
+			Ismain:          false,
+		},
+		{
+			Code:            "1101023",
+			EnglishName:     "Project in Basic Software Development",
+			ThaiName:        "โครงการการพัฒนาซอฟต์แวร์ขั้นพื้นฐาน",
+			CurriculumID:    8,
+			AcademicYearID:  &year3.ID,
+			TypeOfCoursesID: 13,
+			CreditID:        credit2_0_6_0.ID,
+			Ismain:          false,
+		},
+		{
+			Code:            "1101031",
+			EnglishName:     "Data Science Foundation I",
+			ThaiName:        "พื้นฐานวิทยาการข้อมูล 1",
+			CurriculumID:    8,
+			AcademicYearID:  &year4.ID,
+			TypeOfCoursesID: 13,
+			CreditID:        credit3_2_2_5.ID,
+			Ismain:          false,
+		},
+		{
+			Code:            "1101032",
+			EnglishName:     "Data Science Foundation II",
+			ThaiName:        "พื้นฐานวิทยาการข้อมูล 2",
+			CurriculumID:    8,
+			AcademicYearID:  &yearAll.ID,
+			TypeOfCoursesID: 13,
+			CreditID:        credit3_2_2_5.ID,
+			Ismain:          false,
+		},
+		{
+			Code:            "1101033",
+			EnglishName:     "Project in Basic Data Science",
+			ThaiName:        "โครงการงานวิทยาการข้อมูลขั้นพื้นฐาน",
+			CurriculumID:    8,
+			AcademicYearID:  &year1.ID,
+			TypeOfCoursesID: 13,
+			CreditID:        credit2_0_6_0.ID,
+			Ismain:          false,
+		},		
 	}
 	for _, c := range courses {
 		var course entity.AllCourses
@@ -2649,8 +2729,58 @@ func SeedOfferedCourses() {
 			Section:      1,
 			Capacity:     60,
 			IsFixCourses: false,
-			UserID:       13,
-			AllCoursesID: 109,
+			UserID:       17,
+			AllCoursesID: 110,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     60,
+			IsFixCourses: false,
+			UserID:       17,
+			AllCoursesID: 111,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     60,
+			IsFixCourses: false,
+			UserID:       17,
+			AllCoursesID: 112,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     60,
+			IsFixCourses: false,
+			UserID:       17,
+			AllCoursesID: 113,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     60,
+			IsFixCourses: false,
+			UserID:       17,
+			AllCoursesID: 114,
+			LaboratoryID: nil,
+		},
+		{
+			Year:         2567,
+			Term:         1,
+			Section:      1,
+			Capacity:     60,
+			IsFixCourses: false,
+			UserID:       17,
+			AllCoursesID: 115,
 			LaboratoryID: nil,
 		},
 	}
