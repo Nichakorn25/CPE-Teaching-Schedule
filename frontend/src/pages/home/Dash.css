@@ -1,6 +1,7 @@
 .dashboard {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%);
+  background: linear-gradient(135deg, #eef2ff 0%, #f9fafb 50%, #e0f2fe 100%);
+  padding: 2rem;
 }
 
 .dashboard-content {
@@ -11,8 +12,9 @@
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 3fr 1.2fr;
   gap: 2rem;
+  align-items: start;
 }
 
 .dashboard-title {
@@ -48,19 +50,17 @@
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 1.5rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
-  padding: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-left: 4px solid #06b100;
-  transform: scale(1);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 1rem;
+  padding: 1.5rem;
   transition: all 0.3s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .stat-card:hover {
-  transform: scale(1.05);
+  transform: translateY(-5px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12);
 }
 
 .stat-card-content {
@@ -409,6 +409,11 @@
   flex: 1;
 }
 
+.schedule-item:not(.schedule-past) .schedule-day {
+  background: #22c55e;
+  color: white;
+}
+
 .schedule-subject {
   font-weight: 600;
   color: #111827;
@@ -677,7 +682,10 @@
 }
 
 .schedule-past {
-  color: gray;
-  /* หรือถ้าต้องการเปลี่ยน background: */
-  /* background-color: #f0f0f0; */
+  opacity: 0.6;
+}
+
+.schedule-past .schedule-day {
+  background: #ef4444;
+  color: white;
 }

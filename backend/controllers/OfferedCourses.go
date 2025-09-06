@@ -64,7 +64,7 @@ type (
 	}
 )
 
-func GetOffered(c *gin.Context) {
+func GetCountAllOffered(c *gin.Context) {
 	yearQ := c.Query("year")
 	termQ := c.Query("term")
 
@@ -80,6 +80,41 @@ func GetOffered(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"count": count})
+}
+
+func GetOffered(c *gin.Context) {
+	yearQ := c.Query("year")
+	termQ := c.Query("term")
+	majorName := c.Query("major_name")
+
+	var offered []entity.OfferedCourses
+	var count int64
+
+	db := config.DB().
+		Preload("AllCourses").
+		Preload("AllCourses.Curriculum").
+		Preload("AllCourses.Curriculum.Major").
+		Where("year = ? AND term = ?", yearQ, termQ).
+		Find(&offered)
+
+	if db.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "เกิดข้อผิดพลาดในการดึงข้อมูล"})
+		return
+	}
+
+	filtered := make([]entity.OfferedCourses, 0)
+	for _, o := range offered {
+		if o.AllCourses.Curriculum.Major.MajorName == majorName {
+			filtered = append(filtered, o)
+		}
+	}
+
+	count = int64(len(filtered))
+
+	c.JSON(http.StatusOK, gin.H{
+		"count":   count,
+		"results": filtered,
+	})
 }
 
 func GetOpenCourses(c *gin.Context) {
@@ -291,7 +326,7 @@ type SectionDetail struct {
 	DayOfWeek      string
 	Time           string
 	Capacity       uint
-	ID_user	       uint
+	ID_user        uint
 	InstructorName string
 }
 

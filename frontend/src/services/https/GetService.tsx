@@ -83,15 +83,28 @@ async function getAllDepartment() {
 }
 
 //------------------ Offered ------------------------------ const data = { year, term };//
-async function getOffered(params) {
+async function getOffered(params: { major_name: string; year: string; term: string }) {
+  try {
+    const res = await axios.get(`${apiUrl}/offered`, {
+      ...requestOptions,
+      params,
+    });
+    return res.data; 
+  } catch (e: any) {
+    return e.response?.data || { error: "เกิดข้อผิดพลาดไม่ทราบสาเหตุ" };
+  }
+}
+
+async function getCountOffered(params) {
   return await axios
-    .get(`${apiUrl}/offered`, {
+    .get(`${apiUrl}/all-count-offered`, {
       ...requestOptions,
       params,
     })
     .then((res) => res)
     .catch((e) => e.response);
 }
+
 ///////////////////////////////////////////////// วิชาที่เปิดสอน
 async function getOfferedCoursesByMajor(majorName: string, year: number, term: number) {
   return await axios
@@ -114,4 +127,5 @@ export {
   getOffered,
 
   getOfferedCoursesByMajor,
+  getCountOffered,
 };

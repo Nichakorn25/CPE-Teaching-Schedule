@@ -13,7 +13,7 @@ import {
   getAllTeachers,
   getAllCourses,
 } from "../../services/https/AdminPageServices";
-import { getOffered } from "../../services/https/GetService";
+import { getOffered, getCountOffered } from "../../services/https/GetService";
 import { getSchedulesBynameTable } from "../../services/https/SchedulerPageService";
 import {
   UserProfile,
@@ -43,6 +43,10 @@ const Dashboard: React.FC = () => {
   }
 
   ////////////////////////////////////////// global
+  const [majorName, setmajorName] = useState(() => {
+    return localStorage.getItem("major_name") || "";
+  });
+
   const [academicYear, setAcademicYear] = useState(() => {
     return localStorage.getItem("academicYear") || "";
   });
@@ -68,45 +72,60 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const [count, setCount] = useState<number>(0);
-
-  const getgetOffered = async (data: { year: string; term: string }) => {
-    let res = await getOffered(data);
-    if (res && typeof res.data?.count === "number") {
-      setCount(res.data.count);
-    }
+  const [allcount, setallCount] = useState<number>(0);
+  const getAllcountOffered = async (data: { year: string; term: string }) => {
+    const res = await getCountOffered(data);
+    setallCount(res.data.count);
   };
 
   useEffect(() => {
     if (academicYear && term) {
-      getgetOffered({ year: academicYear, term });
+      getAllcountOffered({ year: academicYear, term });
     }
   }, [academicYear, term]);
 
-  useEffect(() => {
-    getallinstructor();
-    getallCourses();
-    fetchUser();
-  }, []);
+  const [count, setCount] = useState<number>(0);
+  const getgetOffered = async (data: {
+    year: string;
+    term: string;
+    major_name: string;
+  }) => {
+    const res = await getOffered(data);
 
-  ////////////////////////////////////////อย่าลืมว่า USERID ด้วย
-  useEffect(() => {
-    if (academicYear && term) {
-      const nameTable = `ปีการศึกษา ${academicYear} เทอม ${term}`;
-      getSchedules(nameTable);
+    if (res && typeof res.count === "number") {
+      setCount(res.count);
     }
-  }, [academicYear, term]);
+  };
+
+  useEffect(() => {
+    if (academicYear && term && majorName) {
+      getgetOffered({
+        year: academicYear,
+        term,
+        major_name: majorName,
+      });
+    }
+  }, [academicYear, term, majorName]);
 
   const user_id = localStorage.getItem("user_id");
 
   const [allSchedule, setallSchedule] = useState<ScheduleInterface[]>([]);
-  const getSchedules = async (nameTable: string) => {
-    let res = await getSchedulesBynameTable(nameTable);
+  const getSchedules = async () => {
+    let res = await getSchedulesBynameTable(majorName, academicYear, term);
     if (res && Array.isArray(res.data)) {
       console.log("tableeee: ", res.data);
       setallSchedule(res.data);
     }
   };
+
+  useEffect(() => {
+    getallinstructor();
+    getallCourses();
+    fetchUser();
+    getSchedules();
+  }, []);
+
+  ////////////////////////////////////////อย่าลืมว่า USERID ด้วย
 
   const getThaiDayName = (): string => {
     const daysInThai = [
@@ -119,7 +138,7 @@ const Dashboard: React.FC = () => {
       "เสาร์",
     ];
     const today = new Date();
-    return daysInThai[today.getDay()];
+    return daysInThai[today.getDate()];
   };
 
   const todayName = getThaiDayName();
@@ -420,7 +439,7 @@ const Dashboard: React.FC = () => {
                 />
                 <StatCard
                   title="วิชาเปิดสอนในเทอมนี้"
-                  value={count}
+                  value={allcount}
                   icon={
                     <div className="stat-icon">
                       <Calendar />
@@ -503,7 +522,7 @@ const Dashboard: React.FC = () => {
                     <div
                       key={day}
                       className={`calendar-day ${
-                        isToday ? "today bg-blue-500 text-white" : ""
+                        isToday ? "today bg-orange-500 text-white" : ""
                       }`}
                     >
                       {day}
