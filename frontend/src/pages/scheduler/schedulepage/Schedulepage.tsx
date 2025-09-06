@@ -3098,18 +3098,46 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
   };
 
   const exportPDF = async () => {
-  const element = tableRef.current;
-  if (!element) return;
+   const node = tableRef.current;
+  if (!node) return;
 
-  const imgData = await toPng(element, { cacheBust: true });
-  const pdf = new jsPDF("l", "mm", "a4");
+  const originalHeight = node.style.height;
+  const originalOverflow = node.style.overflow;
 
-  const imgProps = pdf.getImageProperties(imgData);
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+  node.style.height = `${node.scrollHeight}px`;
+  node.style.overflow = "visible";
 
-  pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-  pdf.save("schedule.pdf");
+  try {
+    const dataUrl = await toPng(node, { cacheBust: true });
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const img = new Image();
+    img.src = dataUrl;
+    img.onload = () => {
+      const imgWidth = img.width;
+      const imgHeight = img.height;
+
+      // สเกลภาพให้พอดีกับหน้ากระดาษ
+      const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
+      const finalWidth = imgWidth * ratio;
+      const finalHeight = imgHeight * ratio;
+
+      // 🎯 คำนวณ offset ให้อยู่ตรงกลาง
+      const offsetX = (pageWidth - finalWidth) / 2;
+      const offsetY = (pageHeight - finalHeight) / 2;
+
+      pdf.addImage(dataUrl, "PNG", offsetX, offsetY, finalWidth, finalHeight);
+      pdf.save("schedule.pdf");
+    };
+  } catch (error) {
+    console.error("Export failed:", error);
+  } finally {
+    node.style.height = originalHeight;
+    node.style.overflow = originalOverflow;
+  }
 };
 
 
