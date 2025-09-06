@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Button, Table, Input, Select, message } from "antd";
+import { Button, Table, Input, Select, message, Checkbox } from "antd";
 import {
   SearchOutlined,
   EditOutlined,
@@ -276,6 +276,8 @@ function mergeAndSortSections(sections: any[]) {
 }
 
 const OfferedCoursespage: React.FC = () => {
+  const [showonlyMine, setShowonlyMine] = useState<boolean>(false);
+  const userID = Number(localStorage.getItem("user_id"));
   const [searchText, setSearchText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -412,6 +414,13 @@ const OfferedCoursespage: React.FC = () => {
       });
     }
 
+    if (showonlyMine) {
+      data = data.filter((course: any) => {
+        if (course.isChild) return true;
+        return course.Sections?.some((s: any) => s.ID_user === userID);
+      });
+    }
+
     // sort ตาม dropdown
     data.sort((a: any, b: any) => {
       if (sortBy === "Code") return a.Code.localeCompare(b.Code);
@@ -422,7 +431,7 @@ const OfferedCoursespage: React.FC = () => {
     });
 
     return data;
-  }, [courses, searchText, expandedRowKeys, sortBy]);
+  }, [courses, searchText, expandedRowKeys, sortBy,showonlyMine]);
 
   // Calculate pagination
   const totalItems = filteredCourses.filter((course) => !course.isChild).length;
@@ -851,7 +860,6 @@ const OfferedCoursespage: React.FC = () => {
             style={{
               width: 150,
             }}
-            // ซ่อน default suffix icon
             suffixIcon={null}
             optionLabelProp="children"
           >
@@ -918,7 +926,6 @@ const OfferedCoursespage: React.FC = () => {
                 <Option value="50">50</Option>
               </Select>
 
-              {/* Page numbers */}
               {totalPages > 1 && (
                 <div
                   style={{ display: "flex", gap: "4px", alignItems: "center" }}
@@ -964,6 +971,14 @@ const OfferedCoursespage: React.FC = () => {
               )}
 
               <div style={{ flex: 1 }}></div>
+
+              {/* Checkbox ขวาสุด (Desktop) */}
+              <Checkbox
+                checked={showonlyMine}
+                onChange={(e) => setShowonlyMine(e.target.checked)}
+              >
+                แสดงเฉพาะรายวิชาของฉัน
+              </Checkbox>
             </>
           )}
         </div>
@@ -979,6 +994,7 @@ const OfferedCoursespage: React.FC = () => {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
+              gap: "8px",
             }}
           >
             <Select
@@ -1022,6 +1038,14 @@ const OfferedCoursespage: React.FC = () => {
                 →
               </Button>
             </div>
+
+            {/* Checkbox ขวาสุด (Mobile) */}
+            <Checkbox
+              checked={showonlyMine}
+              onChange={(e) => setShowonlyMine(e.target.checked)}
+            >
+              แสดงเฉพาะรายวิชาของฉัน
+            </Checkbox>
           </div>
         )}
       </div>
