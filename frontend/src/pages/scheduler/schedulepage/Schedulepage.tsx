@@ -44,6 +44,9 @@ import {
   putupdateScheduleTime,
 } from "../../../services/https/SchedulerPageService";
 import * as XLSX from "xlsx";
+import { toPng } from "html-to-image";
+import jsPDF from "jspdf";
+
 
 // =================== TYPE DEFINITIONS ===================
 interface ClassInfo {
@@ -3094,6 +3097,22 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
     );
   };
 
+  const exportPDF = async () => {
+  const element = tableRef.current;
+  if (!element) return;
+
+  const imgData = await toPng(element, { cacheBust: true });
+  const pdf = new jsPDF("l", "mm", "a4");
+
+  const imgProps = pdf.getImageProperties(imgData);
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+  pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+  pdf.save("schedule.pdf");
+};
+
+
 const exportScheduleToXLSX = async () => {
   if (scheduleData.length === 0) {
     message.warning("ไม่มีข้อมูลให้ส่งออก กรุณาสร้างตารางก่อน");
@@ -3700,6 +3719,15 @@ const exportScheduleToXLSX = async () => {
             onClick={generateAutoSchedule}
           >
             สร้างอัตโนมัติ
+          </Button>
+          )}
+          {role === "Scheduler" && (
+          <Button
+            type="primary"
+            style={{ backgroundColor: "#F26522", borderColor: "#F26522" }}
+            onClick={exportPDF}
+          >
+            ส่งออก Pdf
           </Button>
           )}
           <Button
