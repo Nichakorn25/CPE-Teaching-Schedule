@@ -431,7 +431,7 @@ const OfferedCoursespage: React.FC = () => {
     });
 
     return data;
-  }, [courses, searchText, expandedRowKeys, sortBy,showonlyMine]);
+  }, [courses, searchText, expandedRowKeys, sortBy, showonlyMine]);
 
   // Calculate pagination
   const totalItems = filteredCourses.filter((course) => !course.isChild).length;
@@ -1066,15 +1066,24 @@ const OfferedCoursespage: React.FC = () => {
           size="small"
           bordered
           scroll={{
-            x: "max-content", // ให้ table ขยายเต็มคอนเทนเนอร์
+            x: "max-content",
             y: isMobile ? 400 : 600,
           }}
           style={{
-            width: "100%", // เพิ่มให้ table ใช้เต็มความกว้าง
+            width: "100%",
             fontSize: isMobile ? "11px" : "12px",
             fontFamily: "Sarabun, sans-serif",
           }}
           className="custom-table"
+          rowClassName={(record, index) => {
+            if (record.isChild) {
+              return "bg-orange-100 hover:bg-orange-200 border-l-4 border-orange-500";
+              // child row = ส้มอ่อน + ขอบซ้ายเข้ม
+            }
+            return index % 2 === 0
+              ? "bg-orange-50 hover:bg-orange-100" // แถวคู่ = ส้มอ่อน
+              : "bg-white hover:bg-orange-50"; // แถวคี่ = ขาว + hover ส้มอ่อน
+          }}
           locale={{
             emptyText: (
               <div style={{ padding: isMobile ? 20 : 40, textAlign: "center" }}>
