@@ -3141,6 +3141,8 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
 };
 
 
+// ฟังก์ชัน Export Excel แบบใหม่ - แก้ปัญหาคอลัมน์และวัน
+
 const exportScheduleToXLSX = async () => {
   if (scheduleData.length === 0) {
     message.warning("ไม่มีข้อมูลให้ส่งออก กรุณาสร้างตารางก่อน");
@@ -3150,147 +3152,286 @@ const exportScheduleToXLSX = async () => {
   try {
     const hide = message.loading("กำลังสร้าง Excel...", 0);
 
-    // สร้าง header row
-    const timeHeaders = ['วัน/เวลา', ...TIME_SLOTS];
-
-    // สร้าง body data จาก scheduleData
-    const tableData: (string | number)[][] = [];
+    // รวบรวมข้อมูลวิชาทั้งหมด
+    interface SubjectInfo {
+      subject: string;
+      courseCode: string;
+      teacher: string;
+      section: string;
+      studentYear: string;
+      room: string;
+      schedule: Map<string, Array<{startTime: string; endTime: string; room: string}>>;
+    }
     
-    // เพิ่ม header row ลงใน tableData
-    tableData.push(timeHeaders);
-    
-    // จัดกลุ่มข้อมูลตามวัน
-    const dayGroups = DAYS.map(day => {
-      const dayRows = scheduleData.filter(row => row.day === day);
-      return { day, rows: dayRows };
-    });
+    const allSubjects = new Map<string, SubjectInfo>();
 
-    dayGroups.forEach(({ day, rows }) => {
-      if (rows.length === 0) {
-        // วันที่ไม่มีเรียน - สร้างแถวว่าง
-        const emptyRow: (string | number)[] = [day];
-        TIME_SLOTS.forEach(timeSlot => {
-          if (timeSlot === "12:00-13:00") {
-            emptyRow.push("พักเที่ยง");
-          } else {
-            emptyRow.push("");
+    scheduleData.forEach(dayData => {
+      if (dayData.subCells && dayData.subCells.length > 0) {
+        dayData.subCells.forEach(subCell => {
+          const key = `${subCell.classData.courseCode || 'NO_CODE'}-${subCell.classData.section || '1'}`;
+          if (!allSubjects.has(key)) {
+            allSubjects.set(key, {
+              subject: subCell.classData.subject || "ไม่ระบุชื่อวิชา",
+              courseCode: subCell.classData.courseCode || "ไม่ระบุ",
+              teacher: subCell.classData.teacher || "ไม่ระบุ",
+              section: subCell.classData.section || "ไม่ระบุ",
+              studentYear: subCell.classData.studentYear || "1",
+              room: subCell.classData.room || "ไม่ระบุ",
+              schedule: new Map<string, Array<{startTime: string; endTime: string; room: string}>>()
+            });
+          }
+          
+          // เพิ่มข้อมูลตารางเรียน
+          const subjectData = allSubjects.get(key);
+          if (subjectData && !subjectData.schedule.has(subCell.day)) {
+            subjectData.schedule.set(subCell.day, []);
+          }
+          if (subjectData) {
+            const daySchedule = subjectData.schedule.get(subCell.day);
+            if (daySchedule) {
+              daySchedule.push({
+                startTime: subCell.startTime,
+                endTime: subCell.endTime,
+                room: subCell.classData.room || "ไม่ระบุ"
+              });
+            }
           }
         });
-        tableData.push(emptyRow);
-      } else {
-        // วันที่มีเรียน - วนลูปแต่ละ row
-        rows.forEach((row, rowIndex) => {
-          const rowData: (string | number)[] = [rowIndex === 0 ? day : ""]; // แสดงชื่อวันเฉพาะแถวแรก
-          
-          TIME_SLOTS.forEach(timeSlot => {
-            if (timeSlot === "12:00-13:00") {
-              rowData.push("พักเที่ยง");
-              return;
-            }
-
-            // หาวิชาในช่วงเวลานี้
-            const subCellsInSlot = (row.subCells || []).filter(subCell => {
-              const timeSlotIndex = timeSlotToSlotIndex(timeSlot);
-              return subCell.position.startSlot <= timeSlotIndex && 
-                     subCell.position.endSlot > timeSlotIndex;
-            });
-
-            if (subCellsInSlot.length > 0) {
-              const subCell = subCellsInSlot[0];
-              const cellTextParts = [
-                subCell.classData.subject || "ไม่ระบุชื่อวิชา",
-                `รหัส: ${subCell.classData.courseCode || "ไม่ระบุ"}`,
-                `อาจารย์: ${subCell.classData.teacher || "ไม่ระบุ"}`,
-                `ห้อง: ${subCell.classData.room || "ไม่ระบุ"}`,
-                `ปีที่: ${subCell.classData.studentYear || '1'}`,
-                `หมู่: ${subCell.classData.section || "ไม่ระบุ"}`,
-                `เวลา: ${subCell.startTime} - ${subCell.endTime}`
-              ];
-              
-              const cellText = cellTextParts.join('\n');
-              rowData.push(cellText);
-            } else {
-              rowData.push("");
-            }
-          });
-          
-          tableData.push(rowData);
-        });
       }
     });
 
-    // สร้าง workbook และ worksheet
+    // กำหนดช่วงเวลา 8-20 (13 ชั่วโมง)
+    const timeSlots = Array.from({length: 13}, (_, i) => i + 8); // [8, 9, 10, ..., 20]
+
+    // สร้าง workbook และ worksheet ก่อน (สร้างแบบ manual)
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(tableData);
+    const ws = {};
+
+    // กำหนดจำนวนคอลัมน์ทั้งหมด
+    const totalColumns = 4 + (DAYS.length * timeSlots.length); // 4 คอลัมน์ข้อมูล + วันและเวลา
+
+    // สร้าง Header Row 1 - ทีละเซลล์
+    // คอลัมน์ข้อมูลพื้นฐาน
+    ws['A1'] = { v: 'วิชา', t: 's' };
+    ws['B1'] = { v: 'จำนวนกลุ่ม', t: 's' };
+    ws['C1'] = { v: 'กลุ่มละกี่คน', t: 's' };
+    ws['D1'] = { v: 'อาจารย์ที่สอน', t: 's' };
+
+    // วันต่างๆ - วางที่ตำแหน่งเริ่มต้นของแต่ละวัน
+    let currentCol = 4; // เริ่มจากคอลัมน์ E (index 4)
+    DAYS.forEach((day, dayIndex) => {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: currentCol });
+      ws[cellRef] = { v: day, t: 's' };
+      currentCol += timeSlots.length;
+    });
+
+    // สร้าง Header Row 2
+    ws['A2'] = { v: 'รหัส/ชื่อวิชา', t: 's' };
+    ws['B2'] = { v: 'Groups', t: 's' };
+    ws['C2'] = { v: 'Students/Group', t: 's' };
+    ws['D2'] = { v: 'Instructor', t: 's' };
+
+    // เวลาต่างๆ - แสดงเป็นช่วงเวลา
+    currentCol = 4;
+    DAYS.forEach(day => {
+      timeSlots.forEach((hour, index) => {
+        const cellRef = XLSX.utils.encode_cell({ r: 1, c: currentCol });
+        const timeRange = `${hour}-${hour + 1}`; // เช่น 8-9, 9-10, 10-11
+        ws[cellRef] = { v: timeRange, t: 's' };
+        currentCol++;
+      });
+    });
+
+    // สร้างข้อมูลแต่ละวิชา
+    let rowIndex = 2; // เริ่มจากแถวที่ 3 (index 2)
+    Array.from(allSubjects.entries()).forEach(([key, subjectInfo]) => {
+      // คอลัมน์ A: รหัสและชื่อวิชา
+      const subjectDetails = `รหัส: ${subjectInfo.courseCode}\n${subjectInfo.subject}`;
+      ws[XLSX.utils.encode_cell({ r: rowIndex, c: 0 })] = { v: subjectDetails, t: 's' };
+      
+      // คอลัมน์ B: จำนวนกลุ่ม
+      ws[XLSX.utils.encode_cell({ r: rowIndex, c: 1 })] = { v: 1, t: 'n' };
+      
+      // คอลัมน์ C: กลุ่มละกี่คน
+      ws[XLSX.utils.encode_cell({ r: rowIndex, c: 2 })] = { v: '25-30', t: 's' };
+      
+      // คอลัมน์ D: อาจารย์ที่สอน
+      ws[XLSX.utils.encode_cell({ r: rowIndex, c: 3 })] = { v: subjectInfo.teacher, t: 's' };
+
+      // คอลัมน์เวลาแต่ละวัน
+      currentCol = 4;
+      DAYS.forEach(day => {
+        const daySchedule = subjectInfo.schedule.get(day);
+        
+        timeSlots.forEach(hour => {
+          let cellValue = '';
+          
+          if (daySchedule && daySchedule.length > 0) {
+            daySchedule.forEach(schedule => {
+              const startHour = parseInt(schedule.startTime.split(':')[0]);
+              const endHour = parseInt(schedule.endTime.split(':')[0]);
+              
+              if (hour >= startHour && hour < endHour) {
+                cellValue = `SEC:${subjectInfo.section}`;
+              }
+            });
+          }
+          
+          const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: currentCol });
+          ws[cellRef] = { v: cellValue, t: 's' };
+          currentCol++;
+        });
+      });
+
+      rowIndex++;
+    });
+
+    // กำหนด range ของ worksheet
+    const lastCol = XLSX.utils.encode_col(totalColumns - 1);
+    const lastRow = rowIndex - 1;
+    ws['!ref'] = `A1:${lastCol}${lastRow + 1}`;
 
     // ตั้งค่าความกว้างของคอลัมน์
-    const colWidths = [
-      { wch: 15 }, // คอลัมน์วัน
-      ...TIME_SLOTS.map(() => ({ wch: 25 })) // คอลัมน์เวลา
+    ws['!cols'] = [
+      { wch: 25 }, // วิชา
+      { wch: 8 },  // จำนวนกลุ่ม  
+      { wch: 12 }, // กลุ่มละกี่คน
+      { wch: 20 }, // อาจารย์ที่สอน
+      ...Array(DAYS.length * timeSlots.length).fill({ wch: 4 }) // เวลา
     ];
-    ws['!cols'] = colWidths;
 
     // ตั้งค่าความสูงของแถว
-    const rowHeights = tableData.map((_, index) => {
-      if (index === 0) return { hpt: 25 }; // header row
-      return { hpt: 60 }; // data rows
+    ws['!rows'] = Array(lastRow + 1).fill(null).map((_, index) => {
+      if (index === 0 || index === 1) return { hpt: 25 }; // header rows
+      return { hpt: 80 }; // data rows
     });
-    ws['!rows'] = rowHeights;
 
-    // จัดรูปแบบเซลล์ header
-    const headerRange = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-    for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
-      const headerCell = ws[XLSX.utils.encode_cell({ r: 0, c: col })];
-      if (headerCell) {
-        headerCell.s = {
-          font: { bold: true, color: { rgb: "FFFFFF" } },
+    // จัดการ merge cells สำหรับวัน
+    const merges: XLSX.Range[] = [];
+    currentCol = 4;
+    DAYS.forEach((day, dayIndex) => {
+      const startCol = currentCol;
+      const endCol = currentCol + timeSlots.length - 1;
+      
+      if (startCol < endCol) {
+        const mergeRange: XLSX.Range = {
+          s: { r: 0, c: startCol },
+          e: { r: 0, c: endCol }
+        };
+        merges.push(mergeRange);
+      }
+      
+      currentCol = endCol + 1;
+    });
+    ws['!merges'] = merges;
+
+    // จัดรูปแบบ
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    
+    // Header Row 1 - สีส้ม
+    for (let col = range.s.c; col <= range.e.c; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: col });
+      if (ws[cellRef]) {
+        ws[cellRef].s = {
+          font: { bold: true, color: { rgb: "FFFFFF" }, sz: 12 },
           fill: { fgColor: { rgb: "F26522" } },
-          alignment: { horizontal: "center", vertical: "center" }
+          alignment: { horizontal: "center", vertical: "center" },
+          border: {
+            top: { style: "medium", color: { rgb: "000000" } },
+            bottom: { style: "medium", color: { rgb: "000000" } },
+            left: { style: "medium", color: { rgb: "000000" } },
+            right: { style: "medium", color: { rgb: "000000" } }
+          }
         };
       }
     }
 
-    // จัดรูปแบบคอลัมน์วัน (คอลัมน์แรก)
-    for (let row = 1; row <= headerRange.e.r; row++) {
-      const dayCell = ws[XLSX.utils.encode_cell({ r: row, c: 0 })];
-      if (dayCell && dayCell.v) {
-        dayCell.s = {
-          font: { bold: true },
-          fill: { fgColor: { rgb: "F8F9FA" } },
-          alignment: { horizontal: "center", vertical: "center" }
+    // Header Row 2 - สีฟ้าอ่อน
+    for (let col = range.s.c; col <= range.e.c; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: 1, c: col });
+      if (ws[cellRef]) {
+        ws[cellRef].s = {
+          font: { bold: true, sz: 10 },
+          fill: { fgColor: { rgb: "E8F4FD" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "medium", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } }
+          }
         };
       }
     }
 
-    // จัดรูปแบบเซลล์พักเที่ยง
-    for (let row = 1; row <= headerRange.e.r; row++) {
-      for (let col = 1; col <= headerRange.e.c; col++) {
-        const cell = ws[XLSX.utils.encode_cell({ r: row, c: col })];
-        if (cell && cell.v === "พักเที่ยง") {
-          cell.s = {
-            font: { bold: true, color: { rgb: "666666" } },
-            fill: { fgColor: { rgb: "FFF5E5" } },
-            alignment: { horizontal: "center", vertical: "center" }
-          };
-        } else if (cell && cell.v && cell.v !== "") {
-          // เซลล์ที่มีข้อมูล
-          cell.s = {
-            alignment: { horizontal: "center", vertical: "center", wrapText: true },
-            border: {
-              top: { style: "thin", color: { rgb: "000000" } },
-              bottom: { style: "thin", color: { rgb: "000000" } },
-              left: { style: "thin", color: { rgb: "000000" } },
-              right: { style: "thin", color: { rgb: "000000" } }
+    // Data rows
+    for (let row = 2; row <= range.e.r; row++) {
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+        if (ws[cellRef]) {
+          if (col === 0) {
+            // คอลัมน์วิชา
+            ws[cellRef].s = {
+              font: { bold: true, sz: 10 },
+              fill: { fgColor: { rgb: "F8F9FA" } },
+              alignment: { horizontal: "left", vertical: "top", wrapText: true },
+              border: {
+                top: { style: "thin", color: { rgb: "000000" } },
+                bottom: { style: "thin", color: { rgb: "000000" } },
+                left: { style: "medium", color: { rgb: "000000" } },
+                right: { style: "thin", color: { rgb: "000000" } }
+              }
+            };
+          } else if (col >= 1 && col <= 3) {
+            // คอลัมน์ข้อมูลเพิ่มเติม
+            ws[cellRef].s = {
+              font: { sz: 10 },
+              fill: { fgColor: { rgb: "F0F8FF" } },
+              alignment: { horizontal: "center", vertical: "center" },
+              border: {
+                top: { style: "thin", color: { rgb: "000000" } },
+                bottom: { style: "thin", color: { rgb: "000000" } },
+                left: { style: "thin", color: { rgb: "000000" } },
+                right: { style: "thin", color: { rgb: "000000" } }
+              }
+            };
+          } else {
+            // คอลัมน์เวลา
+            const cellValue = ws[cellRef].v;
+            if (cellValue && cellValue.includes && cellValue.includes('SEC:')) {
+              // มี SEC - สีเขียว
+              ws[cellRef].s = {
+                font: { sz: 9, bold: true },
+                fill: { fgColor: { rgb: "90EE90" } },
+                alignment: { horizontal: "center", vertical: "center" },
+                border: {
+                  top: { style: "thin", color: { rgb: "000000" } },
+                  bottom: { style: "thin", color: { rgb: "000000" } },
+                  left: { style: "thin", color: { rgb: "000000" } },
+                  right: { style: "thin", color: { rgb: "000000" } }
+                }
+              };
+            } else {
+              // ไม่มี SEC - สีขาว
+              ws[cellRef].s = {
+                fill: { fgColor: { rgb: "FFFFFF" } },
+                border: {
+                  top: { style: "hair", color: { rgb: "DDDDDD" } },
+                  bottom: { style: "hair", color: { rgb: "DDDDDD" } },
+                  left: { style: "hair", color: { rgb: "DDDDDD" } },
+                  right: { style: "hair", color: { rgb: "DDDDDD" } }
+                }
+              };
             }
-          };
+          }
         }
       }
     }
 
     // เพิ่ม worksheet ลง workbook
-    let sheetName = "ตารางเรียน";
+    let sheetName = "ตารางเรียนตามวิชา";
     if (currentTableName) {
-      sheetName = currentTableName.length > 31 ? currentTableName.substring(0, 31) : currentTableName;
+      sheetName = currentTableName.length > 31 ? currentTableName.substring(0, 28) + "..." : currentTableName;
     }
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
@@ -3302,13 +3443,20 @@ const exportScheduleToXLSX = async () => {
       ];
 
       if (searchValue) {
-        filterData.push(["ค้นหา:", searchValue]);
+        filterData.push(["คำค้นหา:", searchValue]);
       }
 
       if (filterTags.length > 0) {
         filterData.push(["ตัวกรอง:", ""]);
         filterTags.forEach(tag => {
-          const filterType = tag.type === 'teacher' ? 'อาจารย์' : 'ชั้นปี';
+          const filterTypeMap = {
+            'teacher': 'อาจารย์',
+            'studentYear': 'ชั้นปี',
+            'subject': 'วิชา',
+            'courseCode': 'รหัสวิชา',
+            'room': 'ห้อง'
+          };
+          const filterType = filterTypeMap[tag.type] || tag.type;
           filterData.push([filterType, tag.value]);
         });
       }
@@ -3316,7 +3464,6 @@ const exportScheduleToXLSX = async () => {
       const filterWs = XLSX.utils.aoa_to_sheet(filterData);
       filterWs['!cols'] = [{ wch: 20 }, { wch: 30 }];
       
-      // จัดรูปแบบหัวข้อ
       const filterHeaderCell = filterWs['A1'];
       if (filterHeaderCell) {
         filterHeaderCell.s = {
@@ -3336,7 +3483,7 @@ const exportScheduleToXLSX = async () => {
       day: '2-digit'
     }).replace(/\//g, '-');
 
-    let fileName = `ตารางเรียน_${dateStr}`;
+    let fileName = `ตารางเรียนตามวิชา_${dateStr}`;
     
     if (filterTags.length > 0 || searchValue) {
       fileName += '_กรองแล้ว';
@@ -3356,7 +3503,6 @@ const exportScheduleToXLSX = async () => {
     message.error("เกิดข้อผิดพลาดในการสร้าง Excel: " + (error?.message || 'Unknown error'));
   }
 };
-
   // =================== TABLE COLUMNS WITH FIXED ROW GROUPING ===================
   const columns: ColumnsType<ExtendedScheduleData> = [
     {
