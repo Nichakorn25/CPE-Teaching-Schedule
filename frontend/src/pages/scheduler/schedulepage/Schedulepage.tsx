@@ -3154,32 +3154,45 @@ const exportScheduleToXLSX = async () => {
 
     // รวบรวมข้อมูลวิชาทั้งหมด
     interface SubjectInfo {
-      subject: string;
-      courseCode: string;
-      teacher: string;
-      section: string;
-      studentYear: string;
-      room: string;
-      schedule: Map<string, Array<{startTime: string; endTime: string; room: string}>>;
-    }
+    subject: string;
+    courseCode: string;
+    teacher: string;
+    section: string;
+    studentYear: string;
+    room: string;
+    capacity: number; // 🎯 เพิ่มบรรทัดนี้
+    schedule: Map<string, Array<{startTime: string; endTime: string; room: string}>>;
+  }
     
     const allSubjects = new Map<string, SubjectInfo>();
 
     scheduleData.forEach(dayData => {
-      if (dayData.subCells && dayData.subCells.length > 0) {
-        dayData.subCells.forEach(subCell => {
-          const key = `${subCell.classData.courseCode || 'NO_CODE'}-${subCell.classData.section || '1'}`;
-          if (!allSubjects.has(key)) {
-            allSubjects.set(key, {
-              subject: subCell.classData.subject || "ไม่ระบุชื่อวิชา",
-              courseCode: subCell.classData.courseCode || "ไม่ระบุ",
-              teacher: subCell.classData.teacher || "ไม่ระบุ",
-              section: subCell.classData.section || "ไม่ระบุ",
-              studentYear: subCell.classData.studentYear || "1",
-              room: subCell.classData.room || "ไม่ระบุ",
-              schedule: new Map<string, Array<{startTime: string; endTime: string; room: string}>>()
-            });
+  if (dayData.subCells && dayData.subCells.length > 0) {
+    dayData.subCells.forEach(subCell => {
+      const key = `${subCell.classData.courseCode || 'NO_CODE'}-${subCell.classData.section || '1'}`;
+      if (!allSubjects.has(key)) {
+        // 🎯 หา capacity จากข้อมูล API โดยใช้ scheduleId
+        let capacity = 30; // default value
+        if (subCell.scheduleId && originalScheduleData) {
+          const originalSchedule = originalScheduleData.find(
+            (schedule: any) => schedule.ID === subCell.scheduleId
+          );
+          if (originalSchedule?.OfferedCourses?.Capacity) {
+            capacity = originalSchedule.OfferedCourses.Capacity;
           }
+        }
+
+        allSubjects.set(key, {
+          subject: subCell.classData.subject || "ไม่ระบุชื่อวิชา",
+          courseCode: subCell.classData.courseCode || "ไม่ระบุ",
+          teacher: subCell.classData.teacher || "ไม่ระบุ",
+          section: subCell.classData.section || "ไม่ระบุ",
+          studentYear: subCell.classData.studentYear || "1",
+          room: subCell.classData.room || "ไม่ระบุ",
+          capacity: capacity, // 🎯 ใช้ capacity จาก API
+          schedule: new Map<string, Array<{startTime: string; endTime: string; room: string}>>()
+        });
+      }
           
           // เพิ่มข้อมูลตารางเรียน
           const subjectData = allSubjects.get(key);
@@ -3250,10 +3263,10 @@ const exportScheduleToXLSX = async () => {
       ws[XLSX.utils.encode_cell({ r: rowIndex, c: 0 })] = { v: subjectDetails, t: 's' };
       
       // คอลัมน์ B: จำนวนกลุ่ม
-      ws[XLSX.utils.encode_cell({ r: rowIndex, c: 1 })] = { v: 1, t: 'n' };
+      ws[XLSX.utils.encode_cell({ r: rowIndex, c: 1 })] = { v: subjectInfo.section, t: 'n' };
       
       // คอลัมน์ C: กลุ่มละกี่คน
-      ws[XLSX.utils.encode_cell({ r: rowIndex, c: 2 })] = { v: '25-30', t: 's' };
+      ws[XLSX.utils.encode_cell({ r: rowIndex, c: 2 })] = { v: subjectInfo.capacity, t: 's' };
       
       // คอลัมน์ D: อาจารย์ที่สอน
       ws[XLSX.utils.encode_cell({ r: rowIndex, c: 3 })] = { v: subjectInfo.teacher, t: 's' };
