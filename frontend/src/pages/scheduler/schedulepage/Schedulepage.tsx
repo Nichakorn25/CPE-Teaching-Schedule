@@ -72,6 +72,8 @@ interface SubCell {
   };
   zIndex: number;
   scheduleId?: number;
+   isTimeFixed?: boolean;     // เพิ่มบรรทัดนี้
+  timeFixedId?: number;      // เพิ่มบรรทัดนี้
 }
 
 interface ScheduleData {
@@ -557,145 +559,141 @@ const Schedulepage: React.FC = () => {
   };
 
   // =================== COURSE CARD FUNCTIONS ===================
-  const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
-    const cards: CourseCard[] = [];
-    const seenCourses = new Set<string>();
+const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
+  const cards: CourseCard[] = [];
+  const seenCourses = new Set<string>();
 
-    schedules.forEach((schedule, index) => {
-      const getRoomInfo = (schedule: ScheduleInterface): string => {
-        if (schedule.TimeFixedCourses && schedule.TimeFixedCourses.length > 0) {
-          const matchingFixedCourse = schedule.TimeFixedCourses.find(
-            tc => tc.Section === schedule.SectionNumber && 
-                 tc.ScheduleID === schedule.ID &&
-                 tc.RoomFix && tc.RoomFix.trim() !== ""
-          );
-          if (matchingFixedCourse?.RoomFix) {
-            return matchingFixedCourse.RoomFix;
-          }
+  schedules.forEach((schedule, index) => {
+    const isTimeFixed = schedule.TimeFixedCourses && 
+                       schedule.TimeFixedCourses.length > 0 && 
+                       schedule.TimeFixedCourses.some(tc => 
+                         tc.Section === schedule.SectionNumber && 
+                         tc.ScheduleID === schedule.ID &&
+                         tc.RoomFix && tc.RoomFix.trim() !== ""
+                       );
+
+    if (isTimeFixed) {
+      return;
+    }
+
+    const getRoomInfo = (schedule: ScheduleInterface): string => {
+      if (schedule.TimeFixedCourses && schedule.TimeFixedCourses.length > 0) {
+        const matchingFixedCourse = schedule.TimeFixedCourses.find(
+          tc => tc.Section === schedule.SectionNumber && 
+               tc.ScheduleID === schedule.ID &&
+               tc.RoomFix && tc.RoomFix.trim() !== ""
+        );
+        if (matchingFixedCourse?.RoomFix) {
+          return matchingFixedCourse.RoomFix;
         }
-        return "TBA";
+      }
+      return "TBA";
+    };
+
+    const getStudentYear = (schedule: ScheduleInterface): string => {
+      const academicYear = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear;
+      
+      if (academicYear?.Level && academicYear.Level !== 'เรียนได้ทุกชั้นปี') {
+        if (/^\d+$/.test(academicYear.Level)) {
+          return academicYear.Level;
+        }
+        
+        const yearMatch = academicYear.Level.match(/ปีที่\s*(\d+)/);
+        if (yearMatch) {
+          return yearMatch[1];
+        }
+      }
+      
+      const academicYearId = academicYear?.AcademicYearID;
+      if (academicYearId) {
+        switch (academicYearId) {
+          case 2: return "1";
+          case 3: return "2";
+          case 4: return "3";
+          case 1:
+            break;
+          default:
+            if (academicYearId >= 5 && academicYearId <= 10) {
+              return (academicYearId - 1).toString();
+            }
+            break;
+        }
+      }
+      
+      if (schedule.OfferedCourses?.AllCourses?.Code) {
+        const code = schedule.OfferedCourses.AllCourses.Code;
+        
+        const codeYearMatch1 = code.match(/[A-Z]{2,4}\d+\s+(\d)/);
+        if (codeYearMatch1) {
+          return codeYearMatch1[1];
+        }
+        
+        const codeYearMatch2 = code.match(/[A-Z]{2,4}(\d)/);
+        if (codeYearMatch2) {
+          return codeYearMatch2[1];
+        }
+      }
+      
+      return "1";
+    };
+
+    const subject = schedule.OfferedCourses?.AllCourses?.ThaiName ||
+                   schedule.OfferedCourses?.AllCourses?.EnglishName ||
+                   schedule.OfferedCourses?.AllCourses?.Code ||
+                   "ไม่ทราบชื่อ";
+    
+    const courseCode = schedule.OfferedCourses?.AllCourses?.Code || "";
+    const teacher = schedule.OfferedCourses?.User ? 
+                   `${schedule.OfferedCourses.User.Firstname || ""} ${schedule.OfferedCourses.User.Lastname || ""}`.trim() ||
+                   "ไม่ระบุอาจารย์" :
+                   "ไม่ระบุอาจารย์";
+    const room = getRoomInfo(schedule);
+    const section = schedule.SectionNumber?.toString() || "";
+    const studentYear = getStudentYear(schedule);
+
+    const courseKey = `${courseCode}-${section}-${studentYear}-${teacher}`;
+    
+    if (!seenCourses.has(courseKey)) {
+      seenCourses.add(courseKey);
+      
+      const getTimeString = (time: string | Date): string => {
+        if (typeof time === 'string') {
+          if (time.includes('T')) {
+            return time.substring(11, 16);
+          }
+          return time.length > 5 ? time.substring(0, 5) : time;
+        } else if (time instanceof Date) {
+          return time.toTimeString().substring(0, 5);
+        }
+        return "00:00";
       };
 
-      const getStudentYear = (schedule: ScheduleInterface): string => {
-  const academicYear = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear;
-  
-  // Method 1: ใช้ Level field ก่อน (ถ้ามีข้อมูลชัดเจน)
-  if (academicYear?.Level && academicYear.Level !== 'เรียนได้ทุกชั้นปี') {
-    // ถ้า Level เป็นตัวเลขโดยตรง (เช่น "3")
-    if (/^\d+$/.test(academicYear.Level)) {
-      return academicYear.Level;
+      const startTime = getTimeString(schedule.StartTime);
+      const endTime = getTimeString(schedule.EndTime);
+      const startSlot = timeToSlotIndex(startTime);
+      const endSlot = timeToSlotIndex(endTime);
+      const duration = endSlot - startSlot;
+
+      const card: CourseCard = {
+        id: `course-card-${index}`,
+        subject,
+        courseCode,
+        teacher,
+        room,
+        section,
+        studentYear,
+        duration: Math.max(1, duration),
+        color: getSubjectColor(subject, courseCode),
+        scheduleId: schedule.ID
+      };
+
+      cards.push(card);
     }
-    
-    // ถ้า Level เป็นรูปแบบ "ปีที่ X"
-    const yearMatch = academicYear.Level.match(/ปีที่\s*(\d+)/);
-    if (yearMatch) {
-      return yearMatch[1];
-    }
-  }
-  
-  // Method 2: Mapping AcademicYearID ตามที่คุณอธิบาย
-  const academicYearId = academicYear?.AcademicYearID;
-  if (academicYearId) {
-    switch (academicYearId) {
-      case 2: return "1"; // เรียนเฉพาะปี 1
-      case 3: return "2"; // เรียนเฉพาะปี 2
-      case 4: return "3"; // เรียนเฉพาะปี 3
-      case 1: // เรียนได้ทุกชั้นปี - ต้องหาจากที่อื่น
-        break;
-      default:
-        // สำหรับ ID อื่นๆ ที่อาจมีเพิ่มเติม (ปี 4, 5, 6...)
-        if (academicYearId >= 5 && academicYearId <= 10) {
-          return (academicYearId - 1).toString(); // ID 5 = ปี 4, ID 6 = ปี 5, etc.
-        }
-        break;
-    }
-  }
-  
-  // Method 3: ถ้า AcademicYearID = 1 (เรียนได้ทุกชั้นปี) ให้ดูจาก Course Code
-  if (schedule.OfferedCourses?.AllCourses?.Code) {
-    const code = schedule.OfferedCourses.AllCourses.Code;
-    
-    // ลองดูจากตัวเลขที่ 2 ของ course code (เช่น IST20 1002 -> "1")
-    const codeYearMatch1 = code.match(/[A-Z]{2,4}\d+\s+(\d)/);
-    if (codeYearMatch1) {
-      return codeYearMatch1[1];
-    }
-    
-    // ลองดูจากตัวเลขแรกหลัง prefix (เช่น IST21234 -> "2")  
-    const codeYearMatch2 = code.match(/[A-Z]{2,4}(\d)/);
-    if (codeYearMatch2) {
-      return codeYearMatch2[1];
-    }
-  }
-  
-  console.warn('⚠️ Cannot determine student year from:', {
-    academicYearId,
-    level: academicYear?.Level,
-    code: schedule.OfferedCourses?.AllCourses?.Code
   });
-  
-  return "1"; // fallback
+
+  setCourseCards(cards);
+  setFilteredCourseCards(cards);
 };
-
-      const subject = schedule.OfferedCourses?.AllCourses?.ThaiName ||
-                     schedule.OfferedCourses?.AllCourses?.EnglishName ||
-                     schedule.OfferedCourses?.AllCourses?.Code ||
-                     "ไม่ทราบชื่อ";
-      
-      const courseCode = schedule.OfferedCourses?.AllCourses?.Code || "";
-      const teacher = schedule.OfferedCourses?.User ? 
-                     `${schedule.OfferedCourses.User.Firstname || ""} ${schedule.OfferedCourses.User.Lastname || ""}`.trim() ||
-                     "ไม่ระบุอาจารย์" :
-                     "ไม่ระบุอาจารย์";
-      const room = getRoomInfo(schedule);
-      const section = schedule.SectionNumber?.toString() || "";
-      const studentYear = getStudentYear(schedule);
-
-      // Create unique identifier for course combinations
-      const courseKey = `${courseCode}-${section}-${studentYear}-${teacher}`;
-      
-      if (!seenCourses.has(courseKey)) {
-        seenCourses.add(courseKey);
-        
-        const getTimeString = (time: string | Date): string => {
-          if (typeof time === 'string') {
-            if (time.includes('T')) {
-              return time.substring(11, 16);
-            }
-            return time.length > 5 ? time.substring(0, 5) : time;
-          } else if (time instanceof Date) {
-            return time.toTimeString().substring(0, 5);
-          }
-          return "00:00";
-        };
-
-        // Calculate duration
-        const startTime = getTimeString(schedule.StartTime);
-        const endTime = getTimeString(schedule.EndTime);
-        const startSlot = timeToSlotIndex(startTime);
-        const endSlot = timeToSlotIndex(endTime);
-        const duration = endSlot - startSlot;
-
-        const card: CourseCard = {
-          id: `course-card-${index}`,
-          subject,
-          courseCode,
-          teacher,
-          room,
-          section,
-          studentYear,
-          duration: Math.max(1, duration),
-          color: getSubjectColor(subject, courseCode),
-          scheduleId: schedule.ID
-        };
-
-        cards.push(card);
-      }
-    });
-
-    setCourseCards(cards);
-    setFilteredCourseCards(cards); // Initialize filtered cards
-  };
 
   // =================== COURSE CARD DRAG HANDLERS ===================
 const handleCourseCardDragStart = (e: React.DragEvent, courseCard: CourseCard) => {
@@ -1659,7 +1657,9 @@ const applyFilters = () => {
     day: string, 
     startTime: string, 
     endTime: string,
-    scheduleId?: number
+    scheduleId?: number,
+    isTimeFixed: boolean = false,    // เพิ่มบรรทัดนี้
+    timeFixedId?: number            // เพิ่มบรรทัดนี้
   ): SubCell => {
     const cleanStartTime = startTime.includes('-') ? startTime.split('-')[0] : startTime;
     const cleanEndTime = endTime.includes('-') ? endTime.split('-')[1] || endTime : endTime;
@@ -1682,7 +1682,9 @@ const applyFilters = () => {
         endSlot
       },
       zIndex: 1,
-      scheduleId: scheduleId
+      scheduleId: scheduleId,
+      isTimeFixed: isTimeFixed,      // เพิ่มบรรทัดนี้
+      timeFixedId: timeFixedId       // เพิ่มบรรทัดนี้
     };
   };
 
@@ -1789,87 +1791,95 @@ const applyFilters = () => {
 };
 
   // =================== MODIFIED REMOVE SUB CELL FUNCTION ===================
-  const removeSubCell = (subCellId: string) => {
-    // ตรวจสอบ role ก่อน
-    if (role !== "Scheduler") {
-      message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลบวิชาได้");
-      return;
+const removeSubCell = (subCellId: string) => {
+  if (role !== "Scheduler") {
+    message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลบวิชาได้");
+    return;
+  }
+
+  let targetSubCell: SubCell | null = null;
+  
+  for (const dayData of scheduleData) {
+    const foundSubCell = (dayData.subCells || []).find(cell => cell.id === subCellId);
+    if (foundSubCell) {
+      targetSubCell = foundSubCell;
+      break;
     }
+  }
 
-    setScheduleData(prevData => {
-      const newData = [...prevData];
-      let removedSubCell: SubCell | null = null;
-      let wasRemoved = false;
-      
-      // หา SubCell ที่จะลบและเก็บข้อมูลไว้
-      for (const dayData of newData) {
-        const cellIndex = (dayData.subCells || []).findIndex(cell => cell.id === subCellId);
-        if (cellIndex !== -1) {
-          removedSubCell = dayData.subCells![cellIndex];
-          // ลบออกจากตารางทันที
-          dayData.subCells!.splice(cellIndex, 1);
-          wasRemoved = true;
-          break;
-        }
+  if (targetSubCell?.isTimeFixed) {
+    message.error(
+      `ไม่สามารถลบวิชา "${targetSubCell.classData.subject}" ได้ เพราะเป็น Time Fixed Course`,
+      3
+    );
+    return;
+  }
+
+  setScheduleData(prevData => {
+    const newData = [...prevData];
+    let removedSubCell: SubCell | null = null;
+    let wasRemoved = false;
+    
+    for (const dayData of newData) {
+      const cellIndex = (dayData.subCells || []).findIndex(cell => cell.id === subCellId);
+      if (cellIndex !== -1) {
+        removedSubCell = dayData.subCells![cellIndex];
+        dayData.subCells!.splice(cellIndex, 1);
+        wasRemoved = true;
+        break;
       }
+    }
+    
+    if (removedSubCell && wasRemoved) {
+      const uniqueKey = `${removedSubCell.classData.subject}-${removedSubCell.classData.courseCode}-${removedSubCell.classData.section}-${removedSubCell.classData.teacher}-${removedSubCell.day}-${removedSubCell.startTime}-${removedSubCell.endTime}`;
       
-      // เพิ่มไปยัง removed courses เฉพาะเมื่อเจอและลบได้จริง
-      if (removedSubCell && wasRemoved) {
-        // ตรวจสอบการซ้ำกันก่อนเพิ่ม
-        const uniqueKey = `${removedSubCell.classData.subject}-${removedSubCell.classData.courseCode}-${removedSubCell.classData.section}-${removedSubCell.classData.teacher}-${removedSubCell.day}-${removedSubCell.startTime}-${removedSubCell.endTime}`;
-        
-        const isDuplicate = removedCourses.some(existing => {
-          const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
-          return existingKey === uniqueKey;
-        });
+      const isDuplicate = removedCourses.some(existing => {
+        const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
+        return existingKey === uniqueKey;
+      });
 
-        if (!isDuplicate) {
-          const removedCourse: RemovedCourse = {
-            id: `removed-${Date.now()}-${Math.random()}`,
-            subject: removedSubCell.classData.subject,
-            courseCode: removedSubCell.classData.courseCode || "",
-            teacher: removedSubCell.classData.teacher,
-            room: removedSubCell.classData.room,
-            section: removedSubCell.classData.section || "",
-            studentYear: removedSubCell.classData.studentYear || "",
-            duration: removedSubCell.position.endSlot - removedSubCell.position.startSlot,
-            color: removedSubCell.classData.color || getSubjectColor(removedSubCell.classData.subject),
-            scheduleId: removedSubCell.scheduleId,
-            removedAt: new Date(),
-            originalDay: removedSubCell.day,
-            originalStartTime: removedSubCell.startTime,
-            originalEndTime: removedSubCell.endTime
-          };
+      if (!isDuplicate) {
+        const removedCourse: RemovedCourse = {
+          id: `removed-${Date.now()}-${Math.random()}`,
+          subject: removedSubCell.classData.subject,
+          courseCode: removedSubCell.classData.courseCode || "",
+          teacher: removedSubCell.classData.teacher,
+          room: removedSubCell.classData.room,
+          section: removedSubCell.classData.section || "",
+          studentYear: removedSubCell.classData.studentYear || "",
+          duration: removedSubCell.position.endSlot - removedSubCell.position.startSlot,
+          color: removedSubCell.classData.color || getSubjectColor(removedSubCell.classData.subject),
+          scheduleId: removedSubCell.scheduleId,
+          removedAt: new Date(),
+          originalDay: removedSubCell.day,
+          originalStartTime: removedSubCell.startTime,
+          originalEndTime: removedSubCell.endTime
+        };
 
-          // ใช้ setTimeout เพื่อให้ state update เสร็จก่อน
-          setTimeout(() => {
-            setRemovedCourses(prev => {
-              // ตรวจสอบอีกครั้งก่อนเพิ่ม (double check)
-              const stillNotDuplicate = !prev.some(existing => {
-                const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
-                return existingKey === uniqueKey;
-              });
-              
-              if (stillNotDuplicate) {
-                console.log('✅ Added to removed courses:', removedCourse.subject);
-                return [removedCourse, ...prev];
-              } else {
-                console.warn('🚫 Duplicate detected in final check, not adding');
-                return prev;
-              }
+        setTimeout(() => {
+          setRemovedCourses(prev => {
+            const stillNotDuplicate = !prev.some(existing => {
+              const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
+              return existingKey === uniqueKey;
             });
-          }, 50);
-          
-          message.success("ลบวิชาออกจากตารางแล้ว (ย้ายไปยังรายการวิชาที่ลบ)");
-        } else {
-          console.warn('🚫 Duplicate course detected, not adding to removed courses:', uniqueKey);
-          message.success("ลบวิชาออกจากตารางแล้ว");
-        }
+            
+            if (stillNotDuplicate) {
+              return [removedCourse, ...prev];
+            } else {
+              return prev;
+            }
+          });
+        }, 50);
+        
+        message.success("ลบวิชาออกจากตารางแล้ว (ย้ายไปยังรายการวิชาที่ลบ)");
+      } else {
+        message.success("ลบวิชาออกจากตารางแล้ว");
       }
-      
-      return newData;
-    });
-  };
+    }
+    
+    return newData;
+  });
+};
 
 const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, newStartSlot: number) => {
   setScheduleData(prevData => {
@@ -1949,10 +1959,18 @@ const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, ne
 
   // =================== DRAG & DROP HANDLERS ===================
 const handleSubCellDragStart = (e: React.DragEvent, subCell: SubCell) => {
-  // ตรวจสอบ role ก่อน
   if (role !== "Scheduler") {
     e.preventDefault();
     message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถย้ายตารางเรียนได้");
+    return;
+  }
+
+  if (subCell.isTimeFixed) {
+    e.preventDefault();
+    message.warning(
+      `วิชา "${subCell.classData.subject}" เป็น Time Fixed Course ไม่สามารถย้ายได้`,
+      3
+    );
     return;
   }
 
@@ -1982,19 +2000,22 @@ const renderSubCell = (subCell: SubCell) => {
   const duration = subCell.position.endSlot - subCell.position.startSlot;
   const shouldSpan = duration > 1;
   const isScheduler = role === "Scheduler";
+  const isTimeFixed = subCell.isTimeFixed;
 
   return (
     <div
       key={subCell.id}
-      draggable={isScheduler} // เฉพาะ Scheduler เท่านั้นที่ drag ได้
-      onDragStart={isScheduler ? (e) => handleSubCellDragStart(e, subCell) : undefined}
-      onDragEnd={isScheduler ? handleSubCellDragEnd : undefined}
+      draggable={isScheduler && !isTimeFixed}
+      onDragStart={isScheduler && !isTimeFixed ? (e) => handleSubCellDragStart(e, subCell) : undefined}
+      onDragEnd={isScheduler && !isTimeFixed ? handleSubCellDragEnd : undefined}
       style={{
         backgroundColor: subCell.classData.color,
-        border: "2px solid rgba(0,0,0,0.2)",
+        border: isTimeFixed 
+          ? "3px solid #ff4d4f"
+          : "2px solid rgba(0,0,0,0.2)",
         borderRadius: "6px",
         padding: "6px 8px",
-        cursor: isScheduler ? "grab" : "default", // เปลี่ยน cursor ตาม role
+        cursor: isScheduler && !isTimeFixed ? "grab" : isTimeFixed ? "not-allowed" : "default",
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
@@ -2012,11 +2033,12 @@ const renderSubCell = (subCell: SubCell) => {
         top: "0px",
         zIndex: shouldSpan ? 10 : 5,
         fontWeight: shouldSpan ? "bold" : "normal",
-        boxShadow: shouldSpan ? 
-          "0 4px 12px rgba(242, 101, 34, 0.4)" : 
-          "0 3px 6px rgba(0,0,0,0.15)",
-        // เพิ่ม visual indicator สำหรับ non-scheduler
-        opacity: !isScheduler ? 0.8 : 1,
+        boxShadow: isTimeFixed 
+          ? "0 4px 12px rgba(255, 77, 79, 0.4)"
+          : shouldSpan 
+          ? "0 4px 12px rgba(242, 101, 34, 0.4)" 
+          : "0 3px 6px rgba(0,0,0,0.15)",
+        opacity: !isScheduler ? 0.8 : isTimeFixed ? 0.95 : 1,
       }}
     >
       <Tooltip
@@ -2031,8 +2053,8 @@ const renderSubCell = (subCell: SubCell) => {
               borderRadius: "6px",
             }}
           >
-            <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "6px", color: "#F26522" }}>
-              📚 รายละเอียดวิชา
+            <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "6px", color: isTimeFixed ? "#ff4d4f" : "#F26522" }}>
+              {isTimeFixed ? "🔒 Time Fixed Course" : "📚 รายละเอียดวิชา"}
             </div>
             <p><b>🏷️ รหัสวิชา:</b> {subCell.classData.courseCode || "ไม่ระบุ"}</p>
             <p><b>📖 ชื่อวิชา:</b> {subCell.classData.subject || "ไม่ระบุ"}</p>
@@ -2042,6 +2064,11 @@ const renderSubCell = (subCell: SubCell) => {
             <p><b>🏢 ห้องเรียน:</b> {subCell.classData.room || "ไม่ระบุ"}</p>
             <p><b>📅 วัน:</b> {subCell.day}</p>
             <p><b>🕐 เวลา:</b> {subCell.startTime} - {subCell.endTime}</p>
+            {isTimeFixed && (
+              <p style={{ color: "#ff4d4f", fontSize: "12px", marginTop: "8px", fontWeight: "bold" }}>
+                🔒 วิชานี้ถูกล็อกไว้ ไม่สามารถย้ายหรือลบได้
+              </p>
+            )}
             {!isScheduler && (
               <p style={{ color: "#ff4d4f", fontSize: "12px", marginTop: "8px" }}>
                 ⚠️ ต้องเป็น Scheduler เท่านั้นถึงจะย้ายได้
@@ -2105,8 +2132,32 @@ const renderSubCell = (subCell: SubCell) => {
         </div>
       </Tooltip>
 
-      {/* Delete Button - เฉพาะ Scheduler เท่านั้น */}
-      {isScheduler && (
+      {isTimeFixed && (
+        <div
+          style={{
+            position: "absolute",
+            top: "4px",
+            left: "4px",
+            width: duration > 2 ? "22px" : shouldSpan ? "20px" : "18px",
+            height: duration > 2 ? "22px" : shouldSpan ? "20px" : "18px",
+            backgroundColor: "rgba(255,77,79,0.9)",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: duration > 2 ? "12px" : shouldSpan ? "11px" : "10px",
+            color: "white",
+            fontWeight: "bold",
+            border: "2px solid white",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.3)"
+          }}
+          title="Time Fixed Course - ไม่สามารถย้ายได้"
+        >
+          🔒
+        </div>
+      )}
+
+      {isScheduler && !isTimeFixed && (
         <div
           style={{
             position: "absolute",
@@ -2142,23 +2193,50 @@ const renderSubCell = (subCell: SubCell) => {
         </div>
       )}
 
-      {/* Duration Indicator */}
+      {isTimeFixed && (
+        <div
+          style={{
+            position: "absolute",
+            top: "4px",
+            right: "4px",
+            width: duration > 2 ? "20px" : shouldSpan ? "18px" : "16px",
+            height: duration > 2 ? "20px" : shouldSpan ? "18px" : "16px",
+            backgroundColor: "rgba(128,128,128,0.6)",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: duration > 2 ? "11px" : shouldSpan ? "10px" : "9px",
+            color: "white",
+            cursor: "not-allowed",
+            fontWeight: "bold",
+            border: "1px solid rgba(255,255,255,0.5)"
+          }}
+          title="Time Fixed Course - ไม่สามารถลบได้"
+          onClick={(e) => {
+            e.stopPropagation();
+            message.warning(`ไม่สามารถลบ "${subCell.classData.subject}" ได้ เพราะเป็น Time Fixed Course`);
+          }}
+        >
+          🚫
+        </div>
+      )}
+
       <div style={{
         position: "absolute",
         bottom: "4px",
         left: "4px",
         fontSize: duration > 2 ? "10px" : "9px",
-        color: "#F26522",
+        color: isTimeFixed ? "#ff4d4f" : "#F26522",
         fontWeight: "bold",
         backgroundColor: "rgba(255,255,255,0.95)",
         borderRadius: "4px",
         padding: duration > 1 ? "2px 6px" : "1px 4px",
-        border: "1px solid rgba(242, 101, 34, 0.4)"
+        border: `1px solid rgba(${isTimeFixed ? '255, 77, 79' : '242, 101, 34'}, 0.4)`
       }}>
         {duration}คาบ
       </div>
 
-      {/* Role indicator for non-scheduler */}
       {!isScheduler && (
         <div style={{
           position: "absolute",
@@ -2175,30 +2253,28 @@ const renderSubCell = (subCell: SubCell) => {
         </div>
       )}
 
-      {/* Proportional Height Indicator */}
       <div style={{
         position: "absolute",
         left: "0",
         bottom: "0",
         right: "0",
         height: duration > 2 ? "6px" : shouldSpan ? "5px" : "4px",
-        backgroundColor: `rgba(242, 101, 34, ${0.3 + (duration * 0.1)})`,
+        backgroundColor: `rgba(${isTimeFixed ? '255, 77, 79' : '242, 101, 34'}, ${0.3 + (duration * 0.1)})`,
         borderRadius: "0 0 6px 6px"
       }} />
       
-      {/* Visual Scale Indicator */}
       {duration > 1 && (
         <div style={{
           position: "absolute",
           right: "4px",
           bottom: "4px",
           fontSize: "8px",
-          color: "#F26522",
+          color: isTimeFixed ? "#ff4d4f" : "#F26522",
           fontWeight: "bold",
           backgroundColor: "rgba(255,255,255,0.9)",
           borderRadius: "3px",
           padding: "1px 4px",
-          border: "1px solid rgba(242, 101, 34, 0.3)"
+          border: `1px solid rgba(${isTimeFixed ? '255, 77, 79' : '242, 101, 34'}, 0.3)`
         }}>
           {duration}ช่วง
         </div>
@@ -2241,21 +2317,35 @@ const createEmptyDayRow = (day: string, dayIndex: number, rowIndex: number, tota
 
 // ปรับปรุงการเรียกใช้ใน transformScheduleDataWithRowSeparation (ลบการ merge)
 const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[]): ExtendedScheduleData[] => {
-  
   const result: ExtendedScheduleData[] = [];
   
   DAYS.forEach((day, dayIndex) => {
     const daySchedules = rawSchedules.filter(item => item.DayOfWeek === day);
     
     if (daySchedules.length === 0) {
-      // สร้างแถวว่างสำหรับวันที่ไม่มีเรียน
       const firstRow = createEmptyDayRow(day, dayIndex, 0, 2);
       const secondRow = createEmptyDayRow(day, dayIndex, 1, 2);
       secondRow.isFirstRowOfDay = false;
       result.push(firstRow, secondRow);
     } else {
-      // ไม่ merge offered courses ที่ซ้ำกัน - สร้าง SubCells แยกทุกตัว
       const subCells: SubCell[] = daySchedules.map((item: ScheduleInterface, index: number) => {
+        // ตรวจสอบว่าเป็น TimeFixedCourse หรือไม่
+        const isTimeFixed = item.TimeFixedCourses && 
+                           item.TimeFixedCourses.length > 0 && 
+                           item.TimeFixedCourses.some(tc => 
+                             tc.Section === item.SectionNumber && 
+                             tc.ScheduleID === item.ID &&
+                             tc.RoomFix && tc.RoomFix.trim() !== ""
+                           );
+
+        // หา TimeFixed ID ถ้ามี
+        const timeFixedCourse = isTimeFixed ? 
+          item.TimeFixedCourses?.find(tc => 
+            tc.Section === item.SectionNumber && 
+            tc.ScheduleID === item.ID &&
+            tc.RoomFix && tc.RoomFix.trim() !== ""
+          ) : undefined;
+
         const getRoomInfo = (schedule: ScheduleInterface): string => {
           if (schedule.TimeFixedCourses && schedule.TimeFixedCourses.length > 0) {
             const matchingFixedCourse = schedule.TimeFixedCourses.find(
@@ -2271,65 +2361,51 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
         };
 
         const getStudentYear = (schedule: ScheduleInterface): string => {
-  const academicYear = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear;
-  
-  // Method 1: ใช้ Level field ก่อน (ถ้ามีข้อมูลชัดเจน)
-  if (academicYear?.Level && academicYear.Level !== 'เรียนได้ทุกชั้นปี') {
-    // ถ้า Level เป็นตัวเลขโดยตรง (เช่น "3")
-    if (/^\d+$/.test(academicYear.Level)) {
-      return academicYear.Level;
-    }
-    
-    // ถ้า Level เป็นรูปแบบ "ปีที่ X"
-    const yearMatch = academicYear.Level.match(/ปีที่\s*(\d+)/);
-    if (yearMatch) {
-      return yearMatch[1];
-    }
-  }
-  
-  // Method 2: Mapping AcademicYearID ตามที่คุณอธิบาย
-  const academicYearId = academicYear?.AcademicYearID;
-  if (academicYearId) {
-    switch (academicYearId) {
-      case 2: return "1"; // เรียนเฉพาะปี 1
-      case 3: return "2"; // เรียนเฉพาะปี 2
-      case 4: return "3"; // เรียนเฉพาะปี 3
-      case 1: // เรียนได้ทุกชั้นปี - ต้องหาจากที่อื่น
-        break;
-      default:
-        // สำหรับ ID อื่นๆ ที่อาจมีเพิ่มเติม (ปี 4, 5, 6...)
-        if (academicYearId >= 5 && academicYearId <= 10) {
-          return (academicYearId - 1).toString(); // ID 5 = ปี 4, ID 6 = ปี 5, etc.
-        }
-        break;
-    }
-  }
-  
-  // Method 3: ถ้า AcademicYearID = 1 (เรียนได้ทุกชั้นปี) ให้ดูจาก Course Code
-  if (schedule.OfferedCourses?.AllCourses?.Code) {
-    const code = schedule.OfferedCourses.AllCourses.Code;
-    
-    // ลองดูจากตัวเลขที่ 2 ของ course code (เช่น IST20 1002 -> "1")
-    const codeYearMatch1 = code.match(/[A-Z]{2,4}\d+\s+(\d)/);
-    if (codeYearMatch1) {
-      return codeYearMatch1[1];
-    }
-    
-    // ลองดูจากตัวเลขแรกหลัง prefix (เช่น IST21234 -> "2")  
-    const codeYearMatch2 = code.match(/[A-Z]{2,4}(\d)/);
-    if (codeYearMatch2) {
-      return codeYearMatch2[1];
-    }
-  }
-  
-  console.warn('⚠️ Cannot determine student year from:', {
-    academicYearId,
-    level: academicYear?.Level,
-    code: schedule.OfferedCourses?.AllCourses?.Code
-  });
-  
-  return "1"; // fallback
-};
+          const academicYear = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear;
+          
+          if (academicYear?.Level && academicYear.Level !== 'เรียนได้ทุกชั้นปี') {
+            if (/^\d+$/.test(academicYear.Level)) {
+              return academicYear.Level;
+            }
+            
+            const yearMatch = academicYear.Level.match(/ปีที่\s*(\d+)/);
+            if (yearMatch) {
+              return yearMatch[1];
+            }
+          }
+          
+          const academicYearId = academicYear?.AcademicYearID;
+          if (academicYearId) {
+            switch (academicYearId) {
+              case 2: return "1";
+              case 3: return "2";
+              case 4: return "3";
+              case 1:
+                break;
+              default:
+                if (academicYearId >= 5 && academicYearId <= 10) {
+                  return (academicYearId - 1).toString();
+                }
+                break;
+            }
+          }
+          
+          if (schedule.OfferedCourses?.AllCourses?.Code) {
+            const code = schedule.OfferedCourses.AllCourses.Code;
+            
+            const codeYearMatch1 = code.match(/[A-Z]{2,4}\d+\s+(\d)/);
+            if (codeYearMatch1) {
+              return codeYearMatch1[1];
+            }
+            
+            const codeYearMatch2 = code.match(/[A-Z]{2,4}(\d)/);
+            if (codeYearMatch2) {
+              return codeYearMatch2[1];
+            }
+          }
+          
+          return "1";
+        };
 
         const classInfo: ClassInfo = {
           subject: item.OfferedCourses?.AllCourses?.ThaiName ||
@@ -2362,12 +2438,18 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
         const startTime = getTimeString(item.StartTime);
         const endTime = getTimeString(item.EndTime);
         
-        return createSubCell(classInfo, day, startTime, endTime, item.ID);
+        return createSubCell(
+          classInfo, 
+          day, 
+          startTime, 
+          endTime, 
+          item.ID,
+          isTimeFixed,
+          timeFixedCourse?.ID
+        );
       });
 
-      // แยกการทับซ้อน
       const rowGroups = separateOverlappingSubCells(subCells);
-      
       const totalRowsForThisDay = rowGroups.length + 1;
       
       rowGroups.forEach((rowSubCells, rowIndex) => {
@@ -2381,7 +2463,6 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
           subCells: rowSubCells
         };
 
-        // เติม time slots
         TIME_SLOTS.forEach((time) => {
           const matched = rowSubCells.filter(subCell => 
             isTimeInSlot(subCell.startTime, subCell.endTime, time)
@@ -2414,7 +2495,6 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
         result.push(dayData);
       });
 
-      // เพิ่ม empty row
       const emptyRowIndex = rowGroups.length;
       const emptyRow = createEmptyDayRow(day, dayIndex, emptyRowIndex, totalRowsForThisDay);
       emptyRow.isFirstRowOfDay = false;
