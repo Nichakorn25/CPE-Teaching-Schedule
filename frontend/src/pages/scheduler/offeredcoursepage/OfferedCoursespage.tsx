@@ -11,95 +11,15 @@ import type { ColumnsType } from "antd/es/table";
 import { deleteOfferedCourse } from "../../../services/https/SchedulerPageService";
 import { OpenCourseInterface } from "../../../interfaces/Adminpage";
 import { getOfferedCoursesByMajor } from "../../../services/https/GetService";
+import {
+  Schedule,
+  CourseTableData,
+  TimeFixedCourse,
+  CreditInAllCourses,
+} from '../../../interfaces/OfferedInterface';
 
 const { Option } = Select;
 
-/** ---------------- types จาก payload ---------------- */
-type CreditInAllCourses = {
-  ID: number;
-  CreatedAt: string;
-  UpdatedAt: string;
-  DeletedAt: string | null;
-  Unit: number;
-  Lecture: number;
-  Lab: number;
-  Self: number;
-  AllCourses: null;
-};
-
-type TimeFixedCourse = {
-  ID: number;
-  Year: number;
-  Term: number;
-  DayOfWeek: string;
-  StartTime: string;
-  EndTime: string;
-  RoomFix: string;
-  Section: number;
-};
-
-interface Schedule {
-  ID: number;
-  NameTable: string;
-  SectionNumber: number;
-  DayOfWeek: string;
-  StartTime: string;
-  EndTime: string;
-  OfferedCoursesID: number;
-  OfferedCourses: {
-    ID: number;
-    Year: number;
-    Term: number;
-    Section: number;
-    Capacity: number;
-    IsFixCourses: boolean;
-    UserID: number;
-    User: {
-      ID: number;
-      Firstname: string;
-      Lastname: string;
-      Title?: { Title: string } | null;
-    };
-    Laboratory?: {
-      ID: number;
-      Room?: string;
-      Building?: string;
-      Capacity?: string;
-    } | null;
-    AllCoursesID: number;
-    AllCourses: {
-      Code: string;
-      EnglishName?: string;
-      ThaiName?: string;
-      Curriculum: {
-        Major?: { MajorName: string } | null;
-      };
-      AcademicYear: { ID: number; Level: string };
-      TypeOfCourses: { ID: number; Type: number; TypeName: string };
-      CreditID: number;
-      Credit: CreditInAllCourses;
-    };
-  };
-  TimeFixedCourses?: TimeFixedCourse[];
-}
-
-interface CourseTableData {
-  key: string;
-  order: number;
-  ID: number;
-  Code: string;
-  CourseName: string;
-  Credit: string;
-  TypeOfCourse: string;
-  Sections: any[];
-  TotalSections: number;
-  IsFixCourses: boolean;
-  isChild?: boolean;
-  isLastChild?: boolean;
-  Section?: any;
-}
-
-/** ---------------- helpers: format ---------------- */
 const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
 function toTimeSpan(startISO: string, endISO: string) {
