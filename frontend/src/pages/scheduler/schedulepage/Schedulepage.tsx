@@ -46,6 +46,7 @@ import {
 import * as XLSX from "xlsx";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
+import Swal from "sweetalert2";
 
 
 // =================== TYPE DEFINITIONS ===================
@@ -165,6 +166,24 @@ interface RemovedCourse {
   originalDay: string;
   originalStartTime: string;
   originalEndTime: string;
+}
+
+// Interface สำหรับข้อมูลขัดแย้ง
+interface ConflictInfo {
+  hasConflict: boolean;
+  conflictType: 'time' | 'room' | 'teacher' | 'multiple';
+  conflictDetails: {
+    time?: boolean;
+    room?: {
+      conflictingSubCell: SubCell;
+      room: string;
+    };
+    teacher?: {
+      conflictingSubCell: SubCell;
+      teacher: string;
+    };
+  };
+  conflictingSubCells: SubCell[];
 }
 
 // =================== CONSTANTS ===================
@@ -749,7 +768,7 @@ const handleCellDragOver = (e: React.DragEvent, targetRow: ExtendedScheduleData,
 };
 
   // Modified drop handler to handle both subcells and course cards
-  const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, timeSlot: string) => {
+const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, timeSlot: string) => {
   e.preventDefault();
   
   // ตรวจสอบ role ก่อน
@@ -780,18 +799,18 @@ const handleCellDragOver = (e: React.DragEvent, targetRow: ExtendedScheduleData,
     
     const newSubCell = createSubCell(classInfo, targetRow.day, startTime, endTime, draggedCourseCard.scheduleId);
     
-    // Check for conflicts
-    const hasConflict = (targetRow.subCells || []).some(existingSubCell => 
-      doSubCellsOverlap(newSubCell, existingSubCell)
-    );
+    // ใช้การตรวจสอบขัดแย้งแบบครอบคลุม
+    const conflictInfo = checkConflictsAcrossAllRows(newSubCell, scheduleData);
     
-    if (hasConflict) {
-      message.warning("ไม่สามารถวางที่ตำแหน่งนี้ได้ เนื่องจากมีการซ้อนทับเวลา");
+    if (conflictInfo.hasConflict) {
+      // แสดง Modal แจ้งเตือนที่ละเอียด
+      showConflictModal(conflictInfo, newSubCell);
       setDraggedCourseCard(null);
       setDragPreview(null);
       return;
     }
     
+    // ถ้าไม่มีขัดแย้ง ให้เพิ่ม SubCell
     addSubCellToDay(targetRow.day, newSubCell);
     setDraggedCourseCard(null);
     setDragPreview(null);
@@ -800,23 +819,36 @@ const handleCellDragOver = (e: React.DragEvent, targetRow: ExtendedScheduleData,
   } else if (draggedSubCell) {
     // Handle existing subcell move
     const duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
-    const tempSubCell = {
-      ...draggedSubCell,
-      position: { startSlot: slotIndex, endSlot: slotIndex + duration }
-    };
+    const newStartTime = slotIndexToTime(slotIndex);
+    const newEndTime = slotIndexToTime(slotIndex + duration);
     
-    const hasConflict = (targetRow.subCells || []).some(existingSubCell => 
-      existingSubCell.id !== draggedSubCell.id && doSubCellsOverlap(tempSubCell, existingSubCell)
+    // สร้าง SubCell ชั่วคราวเพื่อตรวจสอบ
+    const tempSubCell = createSubCell(
+      draggedSubCell.classData,
+      targetRow.day,
+      newStartTime,
+      newEndTime,
+      draggedSubCell.scheduleId,
+      draggedSubCell.isTimeFixed,
+      draggedSubCell.timeFixedId
     );
     
-    if (hasConflict) {
-      message.warning("ไม่สามารถวางที่ตำแหน่งนี้ได้ เนื่องจากมีการซ้อนทับเวลา");
+    // ใช้การตรวจสอบขัดแย้งแบบครอบคลุม (ยกเว้น SubCell ตัวเอง)
+    const conflictInfo = checkConflictsAcrossAllRows(tempSubCell, scheduleData, draggedSubCell.id);
+    
+    if (conflictInfo.hasConflict) {
+      // แสดง Modal แจ้งเตือนที่ละเอียด
+      showConflictModal(conflictInfo, tempSubCell);
+      setDraggedSubCell(null);
+      setDragPreview(null);
       return;
     }
     
+    // ถ้าไม่มีขัดแย้ง ให้ย้าย SubCell
     moveSubCellToRow(draggedSubCell.id, targetRow, slotIndex);
     setDraggedSubCell(null);
     setDragPreview(null);
+    message.success(`ย้ายวิชา ${draggedSubCell.classData.subject} สำเร็จ`);
   }
 };
 
@@ -1651,6 +1683,255 @@ const applyFilters = () => {
     extractFilterOptions(scheduleData);
   }, [scheduleData]);
 
+  // =================== CONFLICT DETECTION FUNCTIONS ===================
+
+// ฟังก์ชันตรวจสอบขัดแย้งแบบครอบคลุม
+const checkAllConflicts = (
+  newSubCell: SubCell, 
+  existingSubCells: SubCell[], 
+  excludeSubCellId?: string
+): ConflictInfo => {
+  const conflictInfo: ConflictInfo = {
+    hasConflict: false,
+    conflictType: 'time',
+    conflictDetails: {},
+    conflictingSubCells: []
+  };
+
+  const conflicts: ('time' | 'room' | 'teacher')[] = [];
+
+  for (const existingSubCell of existingSubCells) {
+    // ข้าม SubCell ที่เป็นตัวเดียวกัน
+    if (excludeSubCellId && existingSubCell.id === excludeSubCellId) {
+      continue;
+    }
+
+    // ตรวจสอบการทับซ้อนของเวลาก่อน
+    const timeOverlap = doSubCellsOverlap(newSubCell, existingSubCell);
+    
+    if (timeOverlap) {
+      // ตรวจสอบว่าเป็นวิชาเดียวกัน + อาจารย์เดียวกัน + ห้องเดียวกัน หรือไม่
+      const isSameSubject = newSubCell.classData.subject === existingSubCell.classData.subject;
+      const isSameTeacher = newSubCell.classData.teacher && existingSubCell.classData.teacher &&
+                           newSubCell.classData.teacher.trim() !== "" && existingSubCell.classData.teacher.trim() !== "" &&
+                           newSubCell.classData.teacher === existingSubCell.classData.teacher;
+      const isSameRoom = newSubCell.classData.room && existingSubCell.classData.room &&
+                        newSubCell.classData.room.trim() !== "" && existingSubCell.classData.room.trim() !== "" &&
+                        newSubCell.classData.room === existingSubCell.classData.room;
+      const isSameCourseCode = newSubCell.classData.courseCode && existingSubCell.classData.courseCode &&
+                              newSubCell.classData.courseCode === existingSubCell.classData.courseCode;
+
+      // หากเป็นวิชาเดียวกัน + อาจารย์เดียวกัน + ห้องเดียวกัน = ไม่ขัดแย้ง (เป็น section ต่างกัน)
+      if (isSameSubject && isSameTeacher && isSameRoom && isSameCourseCode) {
+        console.log('✅ ไม่ขัดแย้ง: วิชาเดียวกัน section ต่างกัน', {
+          subject: newSubCell.classData.subject,
+          teacher: newSubCell.classData.teacher,
+          room: newSubCell.classData.room,
+          newSection: newSubCell.classData.section,
+          existingSection: existingSubCell.classData.section
+        });
+        continue; // ไม่ถือว่าขัดแย้ง
+      }
+
+      // เพิ่มในรายการขัดแย้ง
+      conflictInfo.conflictingSubCells.push(existingSubCell);
+      
+      // ถ้าเวลาทับซ้อน ให้ตรวจสอบห้องและอาจารย์
+      if (!conflictInfo.conflictDetails.time) {
+        conflictInfo.conflictDetails.time = true;
+        conflicts.push('time');
+      }
+
+      // ตรวจสอบห้องเดียวกัน (แต่ไม่ใช่วิชาเดียวกัน)
+      if (isSameRoom && !isSameSubject) {
+        conflictInfo.conflictDetails.room = {
+          conflictingSubCell: existingSubCell,
+          room: existingSubCell.classData.room
+        };
+        if (!conflicts.includes('room')) conflicts.push('room');
+      }
+
+      // ตรวจสอบอาจารย์เดียวกัน (แต่ไม่ใช่วิชาเดียวกัน)
+      if (isSameTeacher && !isSameSubject) {
+        conflictInfo.conflictDetails.teacher = {
+          conflictingSubCell: existingSubCell,
+          teacher: existingSubCell.classData.teacher
+        };
+        if (!conflicts.includes('teacher')) conflicts.push('teacher');
+      }
+
+      // กรณีพิเศษ: วิชาต่างกัน + อาจารย์เดียวกัน + ห้องเดียวกัน = ขัดแย้งทั้งคู่
+      if (!isSameSubject && isSameTeacher && isSameRoom) {
+        if (!conflictInfo.conflictDetails.room) {
+          conflictInfo.conflictDetails.room = {
+            conflictingSubCell: existingSubCell,
+            room: existingSubCell.classData.room
+          };
+          if (!conflicts.includes('room')) conflicts.push('room');
+        }
+        if (!conflictInfo.conflictDetails.teacher) {
+          conflictInfo.conflictDetails.teacher = {
+            conflictingSubCell: existingSubCell,
+            teacher: existingSubCell.classData.teacher
+          };
+          if (!conflicts.includes('teacher')) conflicts.push('teacher');
+        }
+      }
+    }
+  }
+
+  // กำหนดประเภทขัดแย้ง
+  if (conflicts.length > 0) {
+    conflictInfo.hasConflict = true;
+    if (conflicts.length === 1) {
+      conflictInfo.conflictType = conflicts[0];
+    } else {
+      conflictInfo.conflictType = 'multiple';
+    }
+  }
+
+  return conflictInfo;
+};
+
+const showConflictModal = (conflictInfo: ConflictInfo, newSubCell: SubCell) => {
+  console.log('🚨 showConflictModal called!', conflictInfo);
+  
+  let title = '';
+  let htmlContent = '';
+  let conflictDetails: string[] = [];
+
+  // สร้างข้อความตามประเภทขัดแย้ง
+  if (conflictInfo.conflictDetails.room) {
+    const roomConflict = conflictInfo.conflictDetails.room;
+    conflictDetails.push(`🏢 ห้อง "${roomConflict.room}" ถูกใช้โดยวิชาอื่นในเวลาดังกล่าว`);
+  }
+
+  if (conflictInfo.conflictDetails.teacher) {
+    const teacherConflict = conflictInfo.conflictDetails.teacher;
+    conflictDetails.push(`👩‍🏫 อาจารย์ "${teacherConflict.teacher}" มีการสอนวิชาอื่นในเวลาดังกล่าวแล้ว`);
+  }
+
+  // กำหนด title และเนื้อหาตามประเภทขัดแย้ง
+  if (conflictInfo.conflictType === 'multiple') {
+    title = '⚠️ พบการขัดแย้งหลายประการ';
+    htmlContent = `<div style="text-align: left; font-family: Sarabun, sans-serif;">
+      <p>ไม่สามารถวางวิชา <strong>"${newSubCell.classData.subject}"</strong> ได้ เนื่องจาก:</p>
+      <ul style="margin: 10px 0; padding-left: 20px;">
+        ${conflictDetails.map(detail => `<li>${detail}</li>`).join('')}
+      </ul>
+    </div>`;
+  } else if (conflictInfo.conflictType === 'room') {
+    title = '🏢 ห้องเรียนขัดแย้ง';
+    htmlContent = `<div style="text-align: left; font-family: Sarabun, sans-serif;">
+      <p>ไม่สามารถวางวิชา <strong>"${newSubCell.classData.subject}"</strong> ได้</p>
+      <p>ห้อง "${conflictInfo.conflictDetails.room?.room}" กำลังถูกใช้โดยวิชาอื่นในช่วงเวลานี้</p>
+    </div>`;
+  } else if (conflictInfo.conflictType === 'teacher') {
+    title = '👩‍🏫 อาจารย์ขัดแย้ง';
+    htmlContent = `<div style="text-align: left; font-family: Sarabun, sans-serif;">
+      <p>ไม่สามารถวางวิชา <strong>"${newSubCell.classData.subject}"</strong> ได้</p>
+      <p>อาจารย์ "${conflictInfo.conflictDetails.teacher?.teacher}" กำลังสอนวิชาอื่นในช่วงเวลานี้</p>
+    </div>`;
+  } else {
+    title = '⏰ เวลาขัดแย้ง';
+    htmlContent = `<div style="text-align: left; font-family: Sarabun, sans-serif;">
+      <p>ไม่สามารถวางวิชา <strong>"${newSubCell.classData.subject}"</strong> ได้ เนื่องจากมีการขัดแย้งเกี่ยวกับเวลา</p>
+    </div>`;
+  }
+
+  // เพิ่มข้อมูลรายละเอียดวิชาที่ขัดแย้ง
+  if (conflictInfo.conflictingSubCells.length > 0) {
+    htmlContent += `<div style="margin-top: 15px;">
+      <h4 style="color: #1890ff; margin-bottom: 10px;">📚 วิชาที่ขัดแย้ง:</h4>
+      <div style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">`;
+    
+    conflictInfo.conflictingSubCells.forEach((subCell, index) => {
+      htmlContent += `<div style="margin-bottom: 8px; padding: 8px; background-color: white; border-radius: 4px; border-left: 3px solid #ff4d4f;">
+        <strong>${index + 1}. ${subCell.classData.subject}</strong>`;
+      
+      if (subCell.classData.courseCode) {
+        htmlContent += ` <span style="color: #666;">(${subCell.classData.courseCode})</span>`;
+      }
+      
+      htmlContent += `<br>
+        <span style="font-size: 12px; color: #666;">
+          👩‍🏫 ${subCell.classData.teacher}<br>
+          🕐 ${subCell.startTime} - ${subCell.endTime}`;
+      
+      if (subCell.classData.room) {
+        htmlContent += ` | 🏢 ${subCell.classData.room}`;
+      }
+      
+      if (subCell.classData.section) {
+        htmlContent += ` | กลุ่ม ${subCell.classData.section}`;
+      }
+      
+      htmlContent += `</span></div>`;
+    });
+    
+    htmlContent += `</div></div>`;
+  }
+
+  // สร้างคำแนะนำ
+  let suggestions = '';
+  if (conflictInfo.conflictType === 'room') {
+    suggestions = 'ลองเปลี่ยนห้องเรียน หรือเลือกเวลาอื่น';
+  } else if (conflictInfo.conflictType === 'teacher') {
+    suggestions = 'ลองเลือกเวลาอื่น หรือตรวจสอบตารางสอนของอาจารย์';
+  } else if (conflictInfo.conflictType === 'multiple') {
+    suggestions = 'ลองเลือกเวลาอื่น หรือเปลี่ยนห้องเรียน หรือตรวจสอบตารางอาจารย์';
+  } else {
+    suggestions = 'ลองเลือกช่วงเวลาที่ไม่ทับซ้อนกัน';
+  }
+
+  // เพิ่มคำแนะนำและหมายเหตุ
+  htmlContent += `
+    <div style="margin-top: 15px; padding: 12px; background-color: #fff2e8; border-radius: 6px; border: 1px solid #ffec3d;">
+      <strong style="color: #d46b08;">💡 คำแนะนำ:</strong> 
+      <span style="color: #d46b08; font-size: 12px;">${suggestions}</span>
+    </div>
+    <div style="margin-top: 8px; padding: 12px; background-color: #e6f7ff; border-radius: 6px; border: 1px solid #91d5ff;">
+      <strong style="color: #1890ff;">ℹ️ หมายเหตุ:</strong> 
+      <span style="color: #1890ff; font-size: 11px;">วิชาเดียวกัน + อาจารย์เดียวกัน + ห้องเดียวกัน + เวลาเดียวกัน = สามารถวางได้ (กลุ่มต่างกัน)</span>
+    </div>
+  `;
+
+  // แสดง SweetAlert
+  Swal.fire({
+    title: title,
+    html: htmlContent,
+    icon: 'error',
+    confirmButtonText: 'เข้าใจแล้ว',
+    confirmButtonColor: '#ff4d4f',
+    width: '600px',
+    padding: '20px',
+    customClass: {
+      popup: 'swal-custom-popup',
+      title: 'swal-custom-title'
+    }
+  });
+};
+
+// ฟังก์ชันตรวจสอบขัดแย้งสำหรับทั้งแถว (ครอบคลุมทุกแถวในวันเดียวกัน)
+const checkConflictsAcrossAllRows = (
+  newSubCell: SubCell, 
+  dayData: ExtendedScheduleData[],
+  excludeSubCellId?: string
+): ConflictInfo => {
+  // รวบรวม SubCell ทั้งหมดในวันเดียวกัน
+  const allSubCellsInDay: SubCell[] = [];
+  
+  dayData
+    .filter(row => row.day === newSubCell.day)
+    .forEach(row => {
+      if (row.subCells) {
+        allSubCellsInDay.push(...row.subCells);
+      }
+    });
+
+  return checkAllConflicts(newSubCell, allSubCellsInDay, excludeSubCellId);
+};
+
   // =================== SUB-CELL FUNCTIONS ===================
   const createSubCell = (
     classData: ClassInfo, 
@@ -1688,19 +1969,27 @@ const applyFilters = () => {
     };
   };
 
- const addSubCellToDay = (day: string, subCell: SubCell) => {
+const addSubCellToDay = (day: string, subCell: SubCell) => {
   setScheduleData(prevData => {
+    // ตรวจสอบขัดแย้งก่อนเพิ่ม
+    const conflictInfo = checkConflictsAcrossAllRows(subCell, prevData);
+    
+    if (conflictInfo.hasConflict) {
+      showConflictModal(conflictInfo, subCell);
+      return prevData; // ไม่เพิ่มถ้ามีขัดแย้ง
+    }
+    
     // หาแถวของวันที่เหมาะสม (ไม่มีการซ้อนทับเวลา)
     const dayRows = prevData.filter(row => row.day === day);
     
     let targetRowIndex = -1;
     for (let i = 0; i < dayRows.length; i++) {
       const row = dayRows[i];
-      const hasConflict = (row.subCells || []).some(existingSubCell => 
+      const hasTimeOverlap = (row.subCells || []).some(existingSubCell => 
         doSubCellsOverlap(subCell, existingSubCell)
       );
       
-      if (!hasConflict) {
+      if (!hasTimeOverlap) {
         targetRowIndex = prevData.findIndex(r => r.key === row.key);
         break;
       }
@@ -1717,7 +2006,7 @@ const applyFilters = () => {
       
       // เช็คว่าเพิ่มลงในแถวสุดท้ายของวันหรือไม่
       const isLastRowOfDay = targetRowIndex === dayRows.length - 1;
-      const isEmptyRow = (newData[targetRowIndex].subCells || []).length === 1; // มี subcell แค่ตัวเดียวที่เพิ่งเพิ่ม
+      const isEmptyRow = (newData[targetRowIndex].subCells || []).length === 1;
       
       if (isLastRowOfDay && !isEmptyRow) {
         // สร้าง empty row ใหม่หลังจากแถวสุดท้าย
@@ -1919,6 +2208,25 @@ const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, ne
         endSlot: newEndSlot
       }
     };
+    
+    // ตรวจสอบขัดแย้งก่อนเพิ่มลงในแถวเป้าหมาย
+    const conflictInfo = checkConflictsAcrossAllRows(movedSubCell, newData, subCellId);
+    
+    if (conflictInfo.hasConflict) {
+      // แสดง Modal แจ้งเตือน
+      showConflictModal(conflictInfo, movedSubCell);
+      
+      // ใส่ SubCell กลับไปที่เดิม (rollback)
+      for (const dayData of newData) {
+        if (dayData.day === subCellToMove.day) {
+          if (!dayData.subCells) dayData.subCells = [];
+          dayData.subCells.push(subCellToMove);
+          break;
+        }
+      }
+      
+      return newData;
+    }
     
     // เพิ่มลงในแถวเป้าหมาย
     const targetRowIndex = newData.findIndex(r => r.key === targetRow.key);

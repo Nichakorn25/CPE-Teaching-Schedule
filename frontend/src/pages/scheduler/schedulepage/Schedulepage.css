@@ -6,6 +6,14 @@
     font-family: 'Sarabun', sans-serif;
 }
 
+.swal-custom-popup {
+  font-family: 'Sarabun', sans-serif !important;
+}
+
+.swal-custom-title {
+  font-family: 'Sarabun', sans-serif !important;
+  font-size: 18px !important;
+}
 /* Background Layer */
 .schedule-background {
     position: fixed;
