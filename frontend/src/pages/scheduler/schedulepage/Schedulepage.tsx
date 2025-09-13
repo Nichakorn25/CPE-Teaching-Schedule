@@ -583,15 +583,16 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
   const seenCourses = new Set<string>();
 
   schedules.forEach((schedule, index) => {
-    const isTimeFixed = schedule.TimeFixedCourses && 
-                       schedule.TimeFixedCourses.length > 0 && 
-                       schedule.TimeFixedCourses.some(tc => 
-                         tc.Section === schedule.SectionNumber && 
-                         tc.ScheduleID === schedule.ID &&
-                         tc.RoomFix && tc.RoomFix.trim() !== ""
-                       );
+    // ใช้ฟังก์ชันใหม่ที่แก้ไข TypeScript error แล้ว
+    const isTimeFixed = isTimeFixedCourse(schedule);
 
     if (isTimeFixed) {
+      console.log('⏭️ Skipping TimeFixed course from cards:', {
+        courseCode: schedule.OfferedCourses?.AllCourses?.Code,
+        courseName: schedule.OfferedCourses?.AllCourses?.ThaiName,
+        timeFixedCoursesCount: schedule.TimeFixedCourses?.length ?? 0,
+        scheduleID: schedule.ID
+      });
       return;
     }
 
@@ -713,7 +714,6 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
   setCourseCards(cards);
   setFilteredCourseCards(cards);
 };
-
   // =================== COURSE CARD DRAG HANDLERS ===================
 const handleCourseCardDragStart = (e: React.DragEvent, courseCard: CourseCard) => {
   // ตรวจสอบ role ก่อน
@@ -1683,6 +1683,27 @@ const applyFilters = () => {
     extractFilterOptions(scheduleData);
   }, [scheduleData]);
 
+// =================== TIME FIXED COURSE CHECK FUNCTION ===================
+const isTimeFixedCourse = (schedule: ScheduleInterface): boolean => {
+  try {
+    const isFixed = schedule?.OfferedCourses?.IsFixCourses === true;
+
+    if (isFixed) {
+      console.log('🔒 Fixed Course Detected:', {
+        courseCode: schedule.OfferedCourses?.AllCourses?.Code,
+        courseName: schedule.OfferedCourses?.AllCourses?.ThaiName,
+        teacher: `${schedule.OfferedCourses?.User?.Firstname || ''} ${schedule.OfferedCourses?.User?.Lastname || ''}`.trim(),
+        scheduleID: schedule.ID
+      });
+    }
+
+    return isFixed;
+  } catch (error) {
+    console.error('Error checking Fixed course:', error);
+    return false;
+  }
+};
+
   // =================== CONFLICT DETECTION FUNCTIONS ===================
 
 // ฟังก์ชันตรวจสอบขัดแย้งแบบครอบคลุม
@@ -2637,21 +2658,14 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
       result.push(firstRow, secondRow);
     } else {
       const subCells: SubCell[] = daySchedules.map((item: ScheduleInterface, index: number) => {
-        // ตรวจสอบว่าเป็น TimeFixedCourse หรือไม่
-        const isTimeFixed = item.TimeFixedCourses && 
-                           item.TimeFixedCourses.length > 0 && 
-                           item.TimeFixedCourses.some(tc => 
-                             tc.Section === item.SectionNumber && 
-                             tc.ScheduleID === item.ID &&
-                             tc.RoomFix && tc.RoomFix.trim() !== ""
-                           );
+        // ใช้ฟังก์ชันใหม่ที่แก้ไข TypeScript error แล้ว
+        const isTimeFixed = isTimeFixedCourse(item);
 
         // หา TimeFixed ID ถ้ามี
-        const timeFixedCourse = isTimeFixed ? 
-          item.TimeFixedCourses?.find(tc => 
+        const timeFixedCourse = item.TimeFixedCourses && item.TimeFixedCourses.length > 0 ? 
+          item.TimeFixedCourses.find(tc => 
             tc.Section === item.SectionNumber && 
-            tc.ScheduleID === item.ID &&
-            tc.RoomFix && tc.RoomFix.trim() !== ""
+            tc.ScheduleID === item.ID
           ) : undefined;
 
         const getRoomInfo = (schedule: ScheduleInterface): string => {
@@ -2811,7 +2825,6 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
   });
   return result;
 };
-
   const separateOverlappingSubCells = (subCells: SubCell[]): SubCell[][] => {
     if (subCells.length === 0) return [[]];
     
