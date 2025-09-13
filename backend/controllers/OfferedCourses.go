@@ -320,14 +320,14 @@ func DeleteOfferedCourse(c *gin.Context) {
 
 // /////////////////////////// final-offerated
 type SectionDetail struct {
-	ID             uint
-	SectionNumber  uint
-	Room           string
-	DayOfWeek      string
-	Time           string
-	Capacity       uint
-	ID_user        uint
-	InstructorName string
+	ID              uint
+	SectionNumber   uint
+	Room            string
+	DayOfWeek       string
+	Time            string
+	Capacity        uint
+	ID_user         uint
+	InstructorNames []string
 }
 
 type OfferedCoursesDetail struct {
@@ -350,8 +350,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 		Preload("AllCourses.Credit").
 		Preload("AllCourses.TypeOfCourses").
 		Preload("AllCourses.Curriculum.Major").
-		Preload("User").
-		Preload("User.Title").
+		Preload("AllCourses.UserAllCourses.User.Title").
 		Preload("Schedule.TimeFixedCourses").
 		Preload("Laboratory").
 		Where("year = ? AND term = ?", year, term).
@@ -386,7 +385,11 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 			}
 		}
 
-		instructor := oc.User.Title.Title + " " + oc.User.Firstname + " " + oc.User.Lastname
+		instructors := []string{}
+		for _, uac := range oc.AllCourses.UserAllCourses {
+			instructorName := uac.User.Title.Title + " " + uac.User.Firstname + " " + uac.User.Lastname
+			instructors = append(instructors, instructorName)
+		}
 
 		sectionMap := make(map[string]SectionDetail)
 
@@ -402,8 +405,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 						DayOfWeek:      tf.DayOfWeek,
 						Time:           tf.StartTime.Format("15:04") + " - " + tf.EndTime.Format("15:04"),
 						Capacity:       tf.Capacity,
-						ID_user:        oc.User.ID,
-						InstructorName: instructor,
+						InstructorNames: instructors,
 					}
 				}
 			}
@@ -422,8 +424,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 					DayOfWeek:      sch.DayOfWeek,
 					Time:           sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
 					Capacity:       oc.Capacity,
-					ID_user:        oc.User.ID,
-					InstructorName: instructor,
+					InstructorNames: instructors,
 				}
 			}
 		}

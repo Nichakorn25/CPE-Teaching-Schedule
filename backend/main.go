@@ -86,7 +86,7 @@ func main() {
 		r.GET("/all-laboratory", controllers.GetLaboratory)
 		r.GET("/all-department", controllers.GetAllDepartment)
 
-		r.GET("/offered-courses-schedule", controllers.GetOfferedCoursesAndSchedule) //offered-courses-schedule?majorID=1
+		r.GET("/offered-courses-schedule", controllers.GetOfferedCoursesAndSchedule) 
 
 	}
 

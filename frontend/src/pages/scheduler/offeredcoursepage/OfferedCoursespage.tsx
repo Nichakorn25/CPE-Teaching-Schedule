@@ -14,7 +14,6 @@ import { getOfferedCoursesByMajor } from "../../../services/https/GetService";
 import {
   Schedule,
   CourseTableData,
-  TimeFixedCourse,
   CreditInAllCourses,
 } from '../../../interfaces/OfferedInterface';
 
