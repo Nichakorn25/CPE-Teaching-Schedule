@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { IoMenu, IoClose } from "react-icons/io5";
 import { useNavigate, useLocation } from "react-router-dom";
 import { MenuItem } from "../../interfaces/Adminpage";
-import Header from "../header/Header";
+
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();

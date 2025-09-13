@@ -3,6 +3,7 @@ import { FaUserCircle } from "react-icons/fa";
 
 const Header: React.FC = () => {
   const [sidebarWidth, setSidebarWidth] = useState(280);
+  const title = localStorage.getItem("title") || "คำนำหน้า";
   const first_name = localStorage.getItem("first_name") || "ชื่อ";
   const last_name = localStorage.getItem("last_name") || "นามสกุล";
 
@@ -48,7 +49,7 @@ const Header: React.FC = () => {
           fontSize: '14px',
           fontFamily: 'Sarabun, sans-serif'
         }}>
-          {first_name} {last_name}
+          {title} {first_name} {last_name}
         </span>
         <FaUserCircle size={28} style={{ color: '#5d7285' }} />
       </div>
