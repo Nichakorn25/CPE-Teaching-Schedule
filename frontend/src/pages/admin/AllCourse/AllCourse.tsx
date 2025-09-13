@@ -390,7 +390,7 @@ const AllCourse: React.FC = () => {
   }
 
   // Add action column only if admin
-  if (userRole === "admin") {
+  if (userRole === "Admin") {
     columns.push({
       title: "จัดการ",
       key: "action",
