@@ -211,6 +211,9 @@ const OfferedCoursespage: React.FC = () => {
   );
   const [userMajor, setUserMajor] = useState<string | null>(null);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
+  
+  // เพิ่ม state สำหรับ hover
+  const [hoveredRowKey, setHoveredRowKey] = useState<string | number | null>(null);
 
   const navigate = useNavigate();
 
@@ -287,7 +290,6 @@ const OfferedCoursespage: React.FC = () => {
   /** ทำ flat rows สำหรับแสดง/ซ่อนกลุ่มเพิ่มเติม */
   const getExpandedTableData = () => {
     const result: any[] = [];
-    console.log("tyjik",result)
     courses.forEach((course: any) => {
       // แถวหลัก
       result.push({
@@ -314,7 +316,6 @@ const OfferedCoursespage: React.FC = () => {
     });
     
     return result;
-    
   };
 
   // Filter courses based on search
@@ -364,59 +365,92 @@ const OfferedCoursespage: React.FC = () => {
 
   // Get current page data
   const currentData = (() => {
-  const nonChildItems = filteredCourses.filter((course) => !course.isChild);
-  const pageItems = nonChildItems.slice(startIndex, endIndex);
+    const nonChildItems = filteredCourses.filter((course) => !course.isChild);
+    const pageItems = nonChildItems.slice(startIndex, endIndex);
 
-  const result: any[] = [];
+    const result: any[] = [];
 
-  pageItems.forEach((item) => {
-    result.push(item); // แถวหลัก
+    pageItems.forEach((item) => {
+      result.push(item); // แถวหลัก
 
-    if (expandedRowKeys.includes(item.ID)) {
-      const childItems = filteredCourses.filter(
-        (course) => course.isChild && course.ID === item.ID
-      );
+      if (expandedRowKeys.includes(item.ID)) {
+        const childItems = filteredCourses.filter(
+          (course) => course.isChild && course.ID === item.ID
+        );
 
-      // เพิ่ม index สำหรับ child rows
-      childItems.forEach((child, idx) => {
-        result.push({
-          ...child,
-          __childIndex: idx, // ✅ ใช้สลับสี
+        // เพิ่ม index สำหรับ child rows
+        childItems.forEach((child, idx) => {
+          result.push({
+            ...child,
+            __childIndex: idx, // ใช้สลับสี
+          });
         });
-      });
-    }
-  });
+      }
+    });
 
-  return result.map((course, index) => ({
-    ...course,
-    order: course.isChild
-      ? 0
-      : startIndex +
-        result.filter((c, i) => i <= index && !c.isChild).length,
-  }));
-})();
+    return result.map((course, index) => ({
+      ...course,
+      order: course.isChild
+        ? 0
+        : startIndex +
+          result.filter((c, i) => i <= index && !c.isChild).length,
+    }));
+  })();
 
-// ก่อนใช้ใน render ให้สร้าง SectionColorMap ตรงนี้ก่อน
-const sectionColorMap = new Map<string, string>();
+  // ระบบสี 10 สีใหม่
+  const colorPalettes = [
+    { lightBg: '#fed7aa', darkBg: '#ea580c', lightBorder: '#fb923c', darkBorder: '#9a3412' }, // Orange
+    { lightBg: '#dbeafe', darkBg: '#2563eb', lightBorder: '#60a5fa', darkBorder: '#1e40af' }, // Blue  
+    { lightBg: '#dcfce7', darkBg: '#16a34a', lightBorder: '#4ade80', darkBorder: '#166534' }, // Green
+    { lightBg: '#f3e8ff', darkBg: '#9333ea', lightBorder: '#a855f7', darkBorder: '#6b21a8' }, // Purple
+    { lightBg: '#fce7f3', darkBg: '#db2777', lightBorder: '#f472b6', darkBorder: '#be185d' }, // Pink
+    { lightBg: '#fef3c7', darkBg: '#ca8a04', lightBorder: '#facc15', darkBorder: '#92400e' }, // Yellow
+    { lightBg: '#e0e7ff', darkBg: '#4f46e5', lightBorder: '#818cf8', darkBorder: '#3730a3' }, // Indigo
+    { lightBg: '#fee2e2', darkBg: '#dc2626', lightBorder: '#f87171', darkBorder: '#991b1b' }, // Red
+    { lightBg: '#ccfbf1', darkBg: '#0d9488', lightBorder: '#2dd4bf', darkBorder: '#115e59' }, // Teal
+    { lightBg: '#cffafe', darkBg: '#0891b2', lightBorder: '#22d3ee', darkBorder: '#155e75' }  // Cyan
+  ];
 
-const currentDataWithColor = currentData.map((record) => {
-  if (record.isChild && record.SectionNumber != null) {
-    const key = `${record.ID}-${record.SectionNumber}`;
-    if (!sectionColorMap.has(key)) {
-      // สลับสี: ถ้ามีจำนวนที่เคยใช้แล้วเป็นเลขคี่ -> สีอ่อน, เลขคู่ -> สีเข้ม
-      const usedCount = sectionColorMap.size;
-      const colorClass =
-        usedCount % 2 === 0
-          ? "bg-orange-600 hover:bg-orange-700 border-l-4 border-orange-800" // เข้ม
-          : "bg-orange-100 hover:bg-orange-200 border-l-4 border-orange-400"; // อ่อน
-      sectionColorMap.set(key, colorClass);
-    }
-    return { ...record, _rowColor: sectionColorMap.get(key) };
-  }
-  return record;
-});
+  // ใช้ useMemo เพื่อให้มั่นใจว่าสีจะ stable
+  const courseColorMap = useMemo(() => {
+    const map = new Map<number, number>();
+    
+    // สร้างลำดับสีตาม expandedRowKeys โดยเรียงเฉพาะ numeric IDs
+    const numericExpandedKeys = expandedRowKeys
+      .filter((key): key is number => typeof key === 'number')
+      .slice(); // copy array เพื่อไม่ให้กระทบ original
+    
+    console.log('Expanded course IDs:', numericExpandedKeys);
+    
+    numericExpandedKeys.forEach((courseId, index) => {
+      map.set(courseId, index % colorPalettes.length);
+      console.log(`Course ${courseId} gets color index ${index % colorPalettes.length}`);
+    });
+    
+    return map;
+  }, [expandedRowKeys, colorPalettes.length]);
 
-
+  const currentDataWithColor = useMemo(() => {
+    return currentData.map((record) => {
+      if (record.isChild && record.SectionNumber != null) {
+        const colorIndex = courseColorMap.get(record.ID) ?? 0;
+        const palette = colorPalettes[colorIndex];
+        
+        // section เลขคี่ = สีเข้ม, section เลขคู่ = สีอ่อน
+        const isOddSection = record.SectionNumber % 2 === 1;
+        
+        console.log(`Section ${record.SectionNumber} of course ${record.ID}: isOdd=${isOddSection}, colorIndex=${colorIndex}`);
+        
+        return { 
+          ...record, 
+          _colorIndex: colorIndex,
+          _isOddSection: isOddSection,
+          _palette: palette
+        };
+      }
+      return record;
+    });
+  }, [currentData, courseColorMap, colorPalettes]);
 
   // Handle page change
   const handlePageChange = (page: number) => {
@@ -427,6 +461,67 @@ const currentDataWithColor = currentData.map((record) => {
   const handlePageSizeChange = (size: number) => {
     setPageSize(size);
     setCurrentPage(1);
+  };
+
+  // ฟังก์ชันสำหรับกำหนดสี row พร้อม hover
+  const getRowClassName = (record: any) => {
+    const isHovered = hoveredRowKey === record.key;
+    
+    if (record.isChild) {
+      const isOdd = record._isOddSection;
+      const baseClass = isOdd ? 'child-row-dark' : 'child-row-light';
+      return `${baseClass} ${isHovered ? 'row-hovered' : ''}`;
+    }
+
+    // ✅ แก้ไขสำหรับ parent row ที่ expand แล้ว
+    if (expandedRowKeys.includes(record.ID)) {
+      // ใช้สีเดียวกับ Section 1 ของ course นี้
+      const colorIndex = courseColorMap.get(record.ID) ?? 0;
+      const palette = colorPalettes[colorIndex];
+      
+      // Section 1 เป็นเลขคี่ = สีเข้ม
+      return `expanded-row-with-color ${isHovered ? 'row-hovered-expanded' : ''}`;
+    }
+
+    return `normal-row ${isHovered ? 'row-hovered-normal' : ''}`;
+  };
+
+  // ฟังก์ชันสำหรับกำหนด inline styles
+  const getRowStyle = (record: any) => {
+    // ✅ เพิ่มการจัดการสำหรับ parent row ที่ expand
+    if (expandedRowKeys.includes(record.ID) && !record.isChild) {
+      const colorIndex = courseColorMap.get(record.ID) ?? 0;
+      const palette = colorPalettes[colorIndex];
+      
+      // Parent row ที่ expand แสดง Section 1 (เลขคี่ = สีเข้ม)
+      return {
+        backgroundColor: palette.darkBg,
+        borderLeft: `4px solid ${palette.darkBorder}`,
+        color: 'white'
+      };
+    }
+    
+    if (record.isChild && record._palette) {
+      const isOdd = record._isOddSection;
+      const palette = record._palette;
+      
+      if (isOdd) {
+        // Section เลขคี่ = สีเข้ม
+        return {
+          backgroundColor: palette.darkBg,
+          borderLeft: `4px solid ${palette.darkBorder}`,
+          color: 'white'
+        };
+      } else {
+        // Section เลขคู่ = สีอ่อน  
+        return {
+          backgroundColor: palette.lightBg,
+          borderLeft: `4px solid ${palette.lightBorder}`,
+          color: 'black'
+        };
+      }
+    }
+    return {};
   };
 
   const getColumns = (): ColumnsType<CourseTableData> => {
@@ -761,6 +856,64 @@ const currentDataWithColor = currentData.map((record) => {
         margin: 0,
       }}
     >
+      {/* Custom CSS */}
+      <style>
+        {`
+          .custom-table .ant-table-tbody > tr.normal-row {
+            background-color: #ffffff !important;
+            transition: background-color 0.2s ease;
+          }
+          
+          .custom-table .ant-table-tbody > tr.normal-row:hover,
+          .custom-table .ant-table-tbody > tr.normal-row.row-hovered-normal {
+            background-color: #6b7280 !important; /* สีเทาเข้ม */
+            color: white !important;
+          }
+          
+          .custom-table .ant-table-tbody > tr.expanded-row-with-color {
+            transition: background-color 0.2s ease;
+          }
+          
+          .custom-table .ant-table-tbody > tr.expanded-row-with-color:hover,
+          .custom-table .ant-table-tbody > tr.expanded-row-with-color.row-hovered-expanded {
+            background-color: #6b7280 !important; /* สีเทาเข้ม */
+            color: white !important;
+          }
+          
+          /* Child rows จะใช้ inline styles แทน */
+          .custom-table .ant-table-tbody > tr.child-row-light,
+          .custom-table .ant-table-tbody > tr.child-row-dark {
+            transition: background-color 0.2s ease;
+          }
+          
+          .custom-table .ant-table-tbody > tr.child-row-light:hover,
+          .custom-table .ant-table-tbody > tr.child-row-light.row-hovered,
+          .custom-table .ant-table-tbody > tr.child-row-dark:hover,
+          .custom-table .ant-table-tbody > tr.child-row-dark.row-hovered {
+            background-color: #6b7280 !important; /* สีเทาเข้ม */
+            color: white !important;
+          }
+
+          /* Override Antd's default hover */
+          .custom-table .ant-table-tbody > tr:hover > td {
+            background-color: transparent !important;
+          }
+
+          /* เพิ่ม rule สำหรับ expanded row แบบเก่า */
+          .custom-table .ant-table-tbody > tr.expanded-row {
+            background-color: #ea580c !important;
+            color: white !important;
+            transition: background-color 0.2s ease;
+          }
+          
+          .custom-table .ant-table-tbody > tr.expanded-row:hover,
+          .custom-table .ant-table-tbody > tr.expanded-row.row-hovered-expanded {
+            background-color: #6b7280 !important; /* สีเทาเข้ม */
+            color: white !important;
+          }
+        `}
+      </style>
+
       {/* Page Title */}
       <div
         style={{
@@ -1015,46 +1168,50 @@ const currentDataWithColor = currentData.map((record) => {
       >
         
       <Table
-  columns={getColumns()}
-  dataSource={currentDataWithColor}
-  pagination={false}
-  size="small"
-  bordered
-  scroll={{
-    x: "max-content",
-    y: isMobile ? 400 : 600,
-  }}
-  style={{
-    width: "100%",
-    fontSize: isMobile ? "11px" : "12px",
-    fontFamily: "Sarabun, sans-serif",
-  }}
-  className="custom-table"
-  rowClassName={(record) => {
-    // ✅ แถวลูก
-    if (record.isChild) {
-      const childIndex = record.__childIndex ?? 0;
-      return childIndex % 2 === 0
-        ? "bg-orange-100 hover:bg-orange-200 border-l-4 border-orange-400" // คู่
-        : "bg-orange-600 hover:bg-orange-700 border-l-4 border-orange-800"; // คี่
-    }
-
-    // ✅ แถวหลักที่ถูก expand
-    if (expandedRowKeys.includes(record.ID)) {
-      return "bg-orange-600 hover:bg-orange-700";
-    }
-
-    // ✅ แถวหลักปกติ
-    return "bg-white hover:bg-gray-100";
-  }}
-  locale={{
-    emptyText: (
-      <div style={{ padding: isMobile ? 20 : 40, textAlign: "center" }}>
-        ไม่มีข้อมูล
-      </div>
-    ),
-  }}
-/>
+        columns={getColumns()}
+        dataSource={currentDataWithColor}
+        pagination={false}
+        size="small"
+        bordered
+        scroll={{
+          x: "max-content",
+          y: isMobile ? 400 : 600,
+        }}
+        style={{
+          width: "100%",
+          fontSize: isMobile ? "11px" : "12px",
+          fontFamily: "Sarabun, sans-serif",
+        }}
+        className="custom-table"
+        rowClassName={getRowClassName}
+        onRow={(record) => ({
+          onMouseEnter: () => setHoveredRowKey(record.key),
+          onMouseLeave: () => setHoveredRowKey(null),
+        })}
+        components={{
+          body: {
+            row: ({ children, ...props }) => {
+              const record = props['data-row-key'] ? 
+                currentDataWithColor.find(item => item.key === props['data-row-key']) : 
+                null;
+              const customStyle = record ? getRowStyle(record) : {};
+              
+              return (
+                <tr {...props} style={{ ...props.style, ...customStyle }}>
+                  {children}
+                </tr>
+              );
+            },
+          },
+        }}
+        locale={{
+          emptyText: (
+            <div style={{ padding: isMobile ? 20 : 40, textAlign: "center" }}>
+              ไม่มีข้อมูล
+            </div>
+          ),
+        }}
+      />
 
       </div>
 
