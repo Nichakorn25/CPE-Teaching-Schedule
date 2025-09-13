@@ -14,6 +14,90 @@ interface LocationState {
   existingConditions: ConditionInterface[];
 }
 
+// Custom Time Input Component
+const CustomTimeInput: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  label: string;
+}> = ({ value, onChange, disabled = false, label }) => {
+  const [hour, setHour] = useState(value.split(":")[0] || "00");
+  const [minute, setMinute] = useState(value.split(":")[1] || "00");
+
+  useEffect(() => {
+    if (value) {
+      const [h, m] = value.split(":");
+      setHour(h || "00");
+      setMinute(m || "00");
+    }
+  }, [value]);
+
+  const handleHourChange = (newHour: string) => {
+    const paddedHour = newHour.padStart(2, "0");
+    setHour(paddedHour);
+    onChange(`${paddedHour}:${minute}`);
+  };
+
+  const handleMinuteChange = (newMinute: string) => {
+    const paddedMinute = newMinute.padStart(2, "0");
+    setMinute(paddedMinute);
+    onChange(`${hour}:${paddedMinute}`);
+  };
+
+  return (
+    <div className="time-input-group">
+      <label className="time-input-label">{label}</label>
+      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+        <select
+          value={hour}
+          onChange={(e) => handleHourChange(e.target.value)}
+          disabled={disabled}
+          style={{
+            padding: "6px 8px",
+            border: "1px solid #d9d9d9",
+            borderRadius: "4px",
+            fontSize: "14px",
+            minWidth: "60px",
+            textAlign: "center",
+          }}
+        >
+          {Array.from({ length: 24 }, (_, i) => {
+            const h = i.toString().padStart(2, "0");
+            return (
+              <option key={h} value={h}>
+                {h}
+              </option>
+            );
+          })}
+        </select>
+        <span style={{ fontSize: "16px", fontWeight: "bold" }}>:</span>
+        <select
+          value={minute}
+          onChange={(e) => handleMinuteChange(e.target.value)}
+          disabled={disabled}
+          style={{
+            padding: "6px 8px",
+            border: "1px solid #d9d9d9",
+            borderRadius: "4px",
+            fontSize: "14px",
+            minWidth: "60px",
+            textAlign: "center",
+          }}
+        >
+          {Array.from({ length: 60 }, (_, i) => {
+            const m = i.toString().padStart(2, "0");
+            return (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            );
+          })}
+        </select>
+      </div>
+    </div>
+  );
+};
+
 const EditConditionpage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,8 +147,8 @@ const EditConditionpage: React.FC = () => {
       const newSlot: ConditionInterface = {
         ID: Date.now() + Math.random(),
         DayOfWeek: days[dayIndex],
-        Start: "",
-        End: "",
+        Start: "00:00",
+        End: "01:00",
       };
       return { ...prev, [dayIndex]: [...existing, newSlot] };
     });
@@ -98,11 +182,19 @@ const EditConditionpage: React.FC = () => {
     for (const [dayIndex, slots] of Object.entries(timeSlotsByDay)) {
       for (const slot of slots) {
         if (!slot.Start || !slot.End) {
-          message.error(`กรุณากำหนดเวลาให้ครบถ้วนสำหรับวัน ${days[parseInt(dayIndex)]}`);
+          Swal.fire({
+            icon: "warning",
+            title: "ข้อมูลไม่ครบถ้วน",
+            text: `กรุณากำหนดเวลาให้ครบถ้วนสำหรับวัน ${days[parseInt(dayIndex)]}`,
+          });
           return false;
         }
         if (slot.Start >= slot.End) {
-          message.error(`เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุดสำหรับวัน ${days[parseInt(dayIndex)]}`);
+          Swal.fire({
+            icon: "error",
+            title: "ช่วงเวลาไม่ถูกต้อง",
+            text: `เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุดสำหรับวัน ${days[parseInt(dayIndex)]}`,
+          });
           return false;
         }
       }
@@ -147,18 +239,30 @@ const EditConditionpage: React.FC = () => {
       const result = await putUpdateConditions(payload);
 
       if (result && (result.status === 200 || result.status === 201)) {
-        message.success(`เงื่อนไขเวลาที่ไม่สะดวกของ ${fullname} ถูกอัปเดตเรียบร้อยแล้ว`);
+        Swal.fire({
+          icon: "success",
+          title: "บันทึกสำเร็จ",
+          text: `เงื่อนไขเวลาที่ไม่สะดวกของ ${fullname} ถูกอัปเดตเรียบร้อยแล้ว`,
+        });
         
         setTimeout(() => {
           navigate("/condition-page");
         }, 1000);
       } else {
         console.error("API Error:", result);
-        message.error(result?.data?.error || "ไม่สามารถอัปเดตข้อมูลได้");
+        Swal.fire({
+          icon: "error",
+          title: "เกิดข้อผิดพลาด",
+          text: result?.data?.error || "ไม่สามารถอัปเดตข้อมูลได้",
+        });
       }
     } catch (error) {
       console.error("Error updating conditions:", error);
-      message.error("เกิดข้อผิดพลาดในการอัปเดตข้อมูล กรุณาลองใหม่อีกครั้ง");
+      Swal.fire({
+        icon: "error",
+        title: "ข้อผิดพลาด",
+        text: "เกิดข้อผิดพลาดในการอัปเดตข้อมูล กรุณาลองใหม่อีกครั้ง",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -193,17 +297,29 @@ const EditConditionpage: React.FC = () => {
         const deleteResult = await deleteConditionsByUser(userID.toString());
         
         if (deleteResult && (deleteResult.status === 200 || deleteResult.status === 204)) {
-          message.success(`ลบเงื่อนไขทั้งหมดของ ${fullname} เรียบร้อยแล้ว`);
+          Swal.fire({
+            icon: "success",
+            title: "ลบสำเร็จ",
+            text: `ลบเงื่อนไขทั้งหมดของ ${fullname} เรียบร้อยแล้ว`,
+          });
           
           setTimeout(() => {
             navigate("/condition-page");
           }, 1000);
         } else {
-          message.error("ไม่สามารถลบเงื่อนไขได้");
+          Swal.fire({
+            icon: "error",
+            title: "เกิดข้อผิดพลาด",
+            text: "ไม่สามารถลบเงื่อนไขได้",
+          });
         }
       } catch (error) {
         console.error("Error deleting conditions:", error);
-        message.error("เกิดข้อผิดพลาดในการลบเงื่อนไข");
+        Swal.fire({
+          icon: "error",
+          title: "ข้อผิดพลาด",
+          text: "เกิดข้อผิดพลาดในการลบเงื่อนไข",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -231,7 +347,7 @@ const EditConditionpage: React.FC = () => {
           color: '#666',
           fontSize: '14px'
         }}>
-          แก้ไขช่วงเวลาที่ไม่สะดวกสำหรับการจัดตารางเรียน
+          แก้ไขช่วงเวลาที่ไม่สะดวกสำหรับการจัดตารางเรียน (รูปแบบ 24 ชั่วโมง: 00:00 - 23:59)
         </p>
       </div>
 
@@ -275,7 +391,7 @@ const EditConditionpage: React.FC = () => {
               <tr>
                 <th style={{ width: '80px' }}>ลำดับที่</th>
                 <th style={{ width: '120px' }}>วันที่ไม่สะดวก</th>
-                <th>เวลาที่ไม่สะดวก</th>
+                <th>เวลาที่ไม่สะดวก (24 ชั่วโมง)</th>
               </tr>
             </thead>
             <tbody>
@@ -307,42 +423,25 @@ const EditConditionpage: React.FC = () => {
                             {i + 1}
                           </div>
 
-                          <div className="time-input-group">
-                            <label className="time-input-label">
-                              เวลาเริ่มต้น
-                            </label>
-                            <input
-                              type="time"
-                              className="time-input"
-                              value={slot.Start}
-                              onChange={(e) =>
-                                updateTime(
-                                  index,
-                                  slot.ID,
-                                  "Start",
-                                  e.target.value
-                                )
-                              }
-                              disabled={isLoading}
-                            />
-                          </div>
+                          <CustomTimeInput
+                            label="เวลาเริ่มต้น"
+                            value={slot.Start}
+                            onChange={(value) =>
+                              updateTime(index, slot.ID, "Start", value)
+                            }
+                            disabled={isLoading}
+                          />
 
                           <span className="time-separator">-</span>
 
-                          <div className="time-input-group">
-                            <label className="time-input-label">
-                              เวลาสิ้นสุด
-                            </label>
-                            <input
-                              type="time"
-                              className="time-input"
-                              value={slot.End}
-                              onChange={(e) =>
-                                updateTime(index, slot.ID, "End", e.target.value)
-                              }
-                              disabled={isLoading}
-                            />
-                          </div>
+                          <CustomTimeInput
+                            label="เวลาสิ้นสุด"
+                            value={slot.End}
+                            onChange={(value) =>
+                              updateTime(index, slot.ID, "End", value)
+                            }
+                            disabled={isLoading}
+                          />
 
                           <button
                             className="remove-time-button"
@@ -458,8 +557,14 @@ const EditConditionpage: React.FC = () => {
             fontSize: '13px',
             lineHeight: '1.6'
           }}>
+            <li>คลิก "เพิ่มช่วงเวลาไม่สะดวก" เพื่อเพิ่มช่วงเวลาที่ไม่สะดวกในแต่ละวัน</li>
+            <li>สามารถเพิ่มหลายช่วงเวลาในวันเดียวกันได้</li>
+            <li>คลิก "ลบ" เพื่อลบช่วงเวลาที่ไม่ต้องการ</li>
+            <li>เลือกชั่วโมงจาก 00-23 และนาทีจาก 00-59</li>
+            <li>ช่วงเวลาเริ่มต้นจะถูกตั้งค่าเป็น 00:00 - 01:00</li>
+            <li>กำหนดเวลาเริ่มต้นและเวลาสิ้นสุดให้ครบถ้วน</li>
+            <li>เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุด</li>
             <li>แก้ไขเวลาที่ต้องการเปลี่ยนแปลง</li>
-            <li>เพิ่มช่วงเวลาใหม่หรือลบช่วงเวลาที่ไม่ต้องการ</li>
             <li>คลิก "อัปเดตข้อมูล" เพื่อบันทึกการเปลี่ยนแปลง</li>
             <li>คลิก "ลบทั้งหมด" เพื่อลบเงื่อนไขทั้งหมดของผู้ใช้นี้</li>
             <li>คลิก "ยกเลิก" เพื่อกลับไปหน้าเงื่อนไขโดยไม่บันทึก</li>
