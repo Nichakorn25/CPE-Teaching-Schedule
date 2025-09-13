@@ -14,7 +14,6 @@ import { getOfferedCoursesByMajor } from "../../../services/https/GetService";
 import {
   Schedule,
   CourseTableData,
-  TimeFixedCourse,
   CreditInAllCourses,
 } from '../../../interfaces/OfferedInterface';
 
@@ -127,7 +126,7 @@ function mapSchedulesToOpenCourses(rows: Schedule[]): OpenCourseInterface[] {
       Year: oc.Year,
       Term: oc.Term,
       Code: ac.Code,
-      Name: name,
+      CourseName: name,
       Credit: creditStr,
       TypeName: ac.TypeOfCourses.TypeName,
       TeacherID: oc.UserID,

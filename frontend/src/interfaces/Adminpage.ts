@@ -104,7 +104,7 @@ export interface OpenCourseInterface {
   Year: number;
   Term: number;
   Code: string;
-  Name: string;
+  CourseName: string;
   Credit: string;
   TypeName: string;
   TeacherID: number;

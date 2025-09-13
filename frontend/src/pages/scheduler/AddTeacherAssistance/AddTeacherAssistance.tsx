@@ -6,13 +6,13 @@ import { MinusCircleOutlined } from "@ant-design/icons";
 
 import {
   getAllTeachers,
-  getOpenCourses,
   getAllTeachingAssistants,
 } from "../../../services/https/AdminPageServices";
 
 import { postCreateTA } from "../../../services/https/SchedulerPageService";
 import { TeachingAssistantInterface } from "../../../interfaces/TeachingAssistant";
 import { OpenCourseInterface } from "../../../interfaces/Adminpage";
+import { getOfferedCoursesByMajor } from "../../../services/https/GetService";
 
 const { Option } = Select;
 
@@ -21,7 +21,7 @@ type GroupDayRow = {
   group: number | string;
   day: string;
   timesLabel: string; // เช่น "13:00-15:00"
-  roomLabel: string;  // เช่น "A101, A102"
+  roomLabel: string; // เช่น "A101, A102"
 };
 
 /** ---------- helper: รวมช่วงเวลาของวันเดียวกัน ---------- */
@@ -34,7 +34,8 @@ const buildGroupDayRows = (gis: any[]): GroupDayRow[] => {
     const norm = clean.replace(/\./g, ":");
     const [hh, mm = "00"] = norm.split(":");
     if (!/^\d+$/.test(hh) || !/^\d+$/.test(mm)) return NaN;
-    const h = Number(hh), m = Number(mm);
+    const h = Number(hh),
+      m = Number(mm);
     return h * 60 + m;
   };
 
@@ -61,9 +62,15 @@ const buildGroupDayRows = (gis: any[]): GroupDayRow[] => {
   };
 
   const fmt = (m: number) =>
-    `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+    `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(
+      2,
+      "0"
+    )}`;
 
-  const normalizeDay = (d: string) => String(d ?? "").replace(/^วัน/, "").trim();
+  const normalizeDay = (d: string) =>
+    String(d ?? "")
+      .replace(/^วัน/, "")
+      .trim();
 
   type Row = {
     group: any;
@@ -80,7 +87,13 @@ const buildGroupDayRows = (gis: any[]): GroupDayRow[] => {
     const day = normalizeDay(g?.Day);
     const key = `${group}||${day}`;
     if (!map.has(key)) {
-      map.set(key, { group, day, roomSet: new Set(), ranges: [], rawTimes: new Set() });
+      map.set(key, {
+        group,
+        day,
+        roomSet: new Set(),
+        ranges: [],
+        rawTimes: new Set(),
+      });
     }
     const row = map.get(key)!;
 
@@ -93,11 +106,19 @@ const buildGroupDayRows = (gis: any[]): GroupDayRow[] => {
     else if (span) row.rawTimes.add(span);
   });
 
-  const dayOrder = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"];
+  const dayOrder = [
+    "จันทร์",
+    "อังคาร",
+    "พุธ",
+    "พฤหัสบดี",
+    "ศุกร์",
+    "เสาร์",
+    "อาทิตย์",
+  ];
   const order = (d: string) => {
     const i = dayOrder.findIndex((x) => d.includes(x));
     return i === -1 ? 99 : i;
-    };
+  };
 
   return Array.from(map.values())
     .map((row) => {
@@ -123,19 +144,29 @@ const buildGroupDayRows = (gis: any[]): GroupDayRow[] => {
 /** ---------- helpers สำหรับฟิลเตอร์ ---------- */
 const normalize = (s?: string | null) => (s ?? "").trim().toLowerCase();
 const isTimeFixed = (c: any) =>
-  c?.IsFixCourses === true || c?.is_fix_courses === true || c?.TimeFixCourse === true || c?.timefixcourse === true;
+  c?.IsFixCourses === true ||
+  c?.is_fix_courses === true ||
+  c?.TimeFixCourse === true ||
+  c?.timefixcourse === true;
 
 const AddTeachingAssistant: React.FC = () => {
   const [form] = Form.useForm();
   const [courses, setCourses] = useState<OpenCourseInterface[]>([]);
-  const [assistants, setAssistants] = useState<TeachingAssistantInterface[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState<OpenCourseInterface | null>(null);
+  const [assistants, setAssistants] = useState<TeachingAssistantInterface[]>(
+    []
+  );
+  const [selectedCourse, setSelectedCourse] =
+    useState<OpenCourseInterface | null>(null);
 
   const [userMajor, setUserMajor] = useState<string>("");
 
   // ปี/เทอมสำหรับ name_table
-  const [academicYear, setAcademicYear] = useState<string>(() => localStorage.getItem("academicYear") || "");
-  const [term, setTerm] = useState<string>(() => localStorage.getItem("term") || "");
+  const [academicYear, setAcademicYear] = useState<string>(
+    () => localStorage.getItem("academicYear") || ""
+  );
+  const [term, setTerm] = useState<string>(
+    () => localStorage.getItem("term") || ""
+  );
 
   useEffect(() => {
     const onStorage = () => {
@@ -158,31 +189,41 @@ const AddTeachingAssistant: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const courseRes = await getOpenCourses();
-        if (courseRes.status === 200) {
-          const raw: OpenCourseInterface[] =
-            Array.isArray(courseRes.data?.data) ? courseRes.data.data : (courseRes.data ?? []);
-          const major = localStorage.getItem("major_name") || "";
+        const major = localStorage.getItem("major_name") || "";
+        const academicYear = Number(localStorage.getItem("academicYear") || 0);
+        const term = Number(localStorage.getItem("term") || 0);
 
-          // เงื่อนไข: time-fixed และ สาขาตรงกับผู้ใช้
+        // เรียก 3 arguments แยกกัน
+        const courseRes = await getOfferedCoursesByMajor(
+          major,
+          academicYear,
+          term
+        );
+
+        console.log("esdrui:", courseRes);
+
+        if (courseRes.status === 200) {
+          const raw: OpenCourseInterface[] = Array.isArray(courseRes.data?.data)
+            ? courseRes.data.data
+            : courseRes.data ?? [];
+
           const filtered = (raw || []).filter((c: any) => {
-            const okTimeFixed = isTimeFixed(c);
-            const okMajor = normalize(c?.Major) === normalize(major);
-            return okTimeFixed && okMajor;
+            // แสดงเฉพาะวิชาที่เวลา **ไม่ถูก fix**
+            return c.IsFixCourses === false;
           });
 
-          // Debug เล็กน้อย
           console.groupCollapsed("[TA] Courses filter");
           console.log("raw:", raw?.length ?? 0, "userMajor:", major);
           console.log("filtered:", filtered.length);
           console.table(
-            filtered.slice(0, 20).map((x: any) => ({
-              id: x.ID,
-              code: x.Code,
-              name: x.Name,
-              major: x.Major,
-              IsFixCourses: x.IsFixCourses,
-            }))
+           filtered.slice(0, 20).map((x: any) => ({
+  id: x.ID,
+  code: x.Code,
+  name: x.CourseName, // <-- แก้ตรงนี้
+  major: x.Major,
+  IsFixCourses: x.IsFixCourses,
+}))
+
           );
           console.groupEnd();
 
@@ -194,11 +235,14 @@ const AddTeachingAssistant: React.FC = () => {
           setAssistants(assistantRes.data);
         }
 
-        // (อาจไม่จำเป็น แต่คงไว้เพื่อความเข้ากันได้)
         await getAllTeachers().catch(() => {});
       } catch (e) {
         console.error("Load TA page data failed:", e);
-        Swal.fire({ icon: "error", title: "โหลดข้อมูลไม่สำเร็จ", confirmButtonText: "ตกลง" });
+        Swal.fire({
+          icon: "error",
+          title: "โหลดข้อมูลไม่สำเร็จ",
+          confirmButtonText: "ตกลง",
+        });
       }
     };
     fetchData();
@@ -206,7 +250,10 @@ const AddTeachingAssistant: React.FC = () => {
 
   // แปลง GroupInfos → แถวแสดงผล
   const groupDayRows = useMemo<GroupDayRow[]>(
-    () => (selectedCourse ? buildGroupDayRows((selectedCourse as any).GroupInfos || []) : []),
+    () =>
+      selectedCourse
+        ? buildGroupDayRows((selectedCourse as any).GroupInfos || [])
+        : [],
     [selectedCourse]
   );
 
@@ -229,7 +276,11 @@ const AddTeachingAssistant: React.FC = () => {
 
   const handleSubmit = async (values: any) => {
     if (!selectedCourse) {
-      Swal.fire({ icon: "warning", title: "กรุณาเลือกรายวิชา", confirmButtonText: "ตกลง" });
+      Swal.fire({
+        icon: "warning",
+        title: "กรุณาเลือกรายวิชา",
+        confirmButtonText: "ตกลง",
+      });
       return;
     }
 
@@ -243,11 +294,17 @@ const AddTeachingAssistant: React.FC = () => {
       return;
     }
 
-    const list = Array.isArray(values.assistantsPerGroup) ? values.assistantsPerGroup : [];
+    const list = Array.isArray(values.assistantsPerGroup)
+      ? values.assistantsPerGroup
+      : [];
 
     // รวม TA จากทุกกลุ่มให้เหลือ unique
     const teachingAssistantIDs: number[] = Array.from(
-      new Set(list.flatMap((g: any) => (Array.isArray(g?.assistantIDs) ? g.assistantIDs : [])))
+      new Set(
+        list.flatMap((g: any) =>
+          Array.isArray(g?.assistantIDs) ? g.assistantIDs : []
+        )
+      )
     ).map((id: any) => Number(id));
 
     if (teachingAssistantIDs.length === 0) {
@@ -270,7 +327,12 @@ const AddTeachingAssistant: React.FC = () => {
 
     const res = await postCreateTA(payload);
     if (res?.status === 200 || res?.status === 201) {
-      Swal.fire({ icon: "success", title: "บันทึกข้อมูลสำเร็จ", showConfirmButton: false, timer: 1500 });
+      Swal.fire({
+        icon: "success",
+        title: "บันทึกข้อมูลสำเร็จ",
+        showConfirmButton: false,
+        timer: 1500,
+      });
       form.resetFields();
       setSelectedCourse(null);
     } else {
@@ -285,8 +347,18 @@ const AddTeachingAssistant: React.FC = () => {
 
   return (
     <>
-      <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: "2px solid #F26522" }}>
-        <h2 style={{ margin: 0, color: "#333", fontSize: 24, fontWeight: "bold" }}>เพิ่มผู้ช่วยสอน</h2>
+      <div
+        style={{
+          marginBottom: 24,
+          paddingBottom: 16,
+          borderBottom: "2px solid #F26522",
+        }}
+      >
+        <h2
+          style={{ margin: 0, color: "#333", fontSize: 24, fontWeight: "bold" }}
+        >
+          เพิ่มผู้ช่วยสอน
+        </h2>
         <p style={{ margin: "8px 0 0 0", color: "#666", fontSize: 14 }}>
           เลือกรายวิชา ระบบจะใช้ชื่อตารางตามปี/เทอมปัจจุบันให้อัตโนมัติ
         </p>
@@ -316,10 +388,16 @@ const AddTeachingAssistant: React.FC = () => {
           <Card
             title="เลือกรายวิชา"
             style={{ marginBottom: 24 }}
-            styles={{ header: { backgroundColor: "#f8f9fa", fontWeight: "bold" } }}
+            styles={{
+              header: { backgroundColor: "#f8f9fa", fontWeight: "bold" },
+            }}
           >
             <Form.Item
-              label={<span style={{ color: "#F26522", fontWeight: "bold" }}>รายวิชา</span>}
+              label={
+                <span style={{ color: "#F26522", fontWeight: "bold" }}>
+                  รายวิชา
+                </span>
+              }
               name="courseID"
               rules={[{ required: true, message: "กรุณาเลือกรายวิชา" }]}
             >
@@ -330,12 +408,14 @@ const AddTeachingAssistant: React.FC = () => {
                 showSearch
                 optionFilterProp="children"
                 filterOption={(input, option) =>
-                  String(option?.children).toLowerCase().includes(input.toLowerCase())
+                  String(option?.children)
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
                 }
               >
                 {courses.map((c) => (
                   <Option key={c.ID} value={c.ID}>
-                    {c.Code} - {c.Name}
+                    {c.Code} - {c.CourseName}
                   </Option>
                 ))}
               </Select>
@@ -347,7 +427,9 @@ const AddTeachingAssistant: React.FC = () => {
               <Card
                 title="อาจารย์ผู้สอน"
                 style={{ marginBottom: 24 }}
-                styles={{ header: { backgroundColor: "#f8f9fa", fontWeight: "bold" } }}
+                styles={{
+                  header: { backgroundColor: "#f8f9fa", fontWeight: "bold" },
+                }}
               >
                 {selectedCourse.Teachers?.length ? (
                   <ul style={{ margin: 0, paddingLeft: 18 }}>
@@ -364,34 +446,66 @@ const AddTeachingAssistant: React.FC = () => {
 
               <Card
                 title="ข้อมูลผู้ช่วยสอนแยกตามกลุ่มเรียน"
-                styles={{ header: { backgroundColor: "#f8f9fa", fontWeight: "bold" } }}
+                styles={{
+                  header: { backgroundColor: "#f8f9fa", fontWeight: "bold" },
+                }}
               >
                 {groupDayRows.map((row, rowIdx) => (
                   <div
                     key={`${row.group}-${row.day}-${rowIdx}`}
-                    style={{ marginBottom: 24, borderBottom: "1px solid #eee", paddingBottom: 16 }}
+                    style={{
+                      marginBottom: 24,
+                      borderBottom: "1px solid #eee",
+                      paddingBottom: 16,
+                    }}
                   >
-                    <p style={{ fontWeight: "bold", color: "#F26522", marginBottom: 12 }}>
+                    <p
+                      style={{
+                        fontWeight: "bold",
+                        color: "#F26522",
+                        marginBottom: 12,
+                      }}
+                    >
                       กลุ่ม {row.group} - {row.day} {row.timesLabel}
                       {row.roomLabel ? ` ห้อง ${row.roomLabel}` : ""}
                     </p>
 
                     {/* เก็บค่ากลุ่ม/วันไว้ (กัน undefined) */}
-                    <Form.Item name={["assistantsPerGroup", rowIdx, "group"]} hidden>
+                    <Form.Item
+                      name={["assistantsPerGroup", rowIdx, "group"]}
+                      hidden
+                    >
                       <input />
                     </Form.Item>
-                    <Form.Item name={["assistantsPerGroup", rowIdx, "day"]} hidden>
+                    <Form.Item
+                      name={["assistantsPerGroup", rowIdx, "day"]}
+                      hidden
+                    >
                       <input />
                     </Form.Item>
 
-                    <Form.List name={["assistantsPerGroup", rowIdx, "assistantIDs"]}>
+                    <Form.List
+                      name={["assistantsPerGroup", rowIdx, "assistantIDs"]}
+                    >
                       {(assistantFields, { add, remove }) => (
                         <>
                           {assistantFields.map((field) => (
-                            <div key={field.key} style={{ display: "flex", marginBottom: 8, gap: 8 }}>
+                            <div
+                              key={field.key}
+                              style={{
+                                display: "flex",
+                                marginBottom: 8,
+                                gap: 8,
+                              }}
+                            >
                               <Form.Item
                                 name={[field.name]}
-                                rules={[{ required: true, message: "กรุณาเลือกผู้ช่วยสอน" }]}
+                                rules={[
+                                  {
+                                    required: true,
+                                    message: "กรุณาเลือกผู้ช่วยสอน",
+                                  },
+                                ]}
                                 style={{ flex: 1, marginBottom: 0 }}
                               >
                                 <Select
@@ -400,12 +514,15 @@ const AddTeachingAssistant: React.FC = () => {
                                   showSearch
                                   optionFilterProp="children"
                                   filterOption={(input, option) =>
-                                    String(option?.children).toLowerCase().includes(input.toLowerCase())
+                                    String(option?.children)
+                                      .toLowerCase()
+                                      .includes(input.toLowerCase())
                                   }
                                 >
                                   {assistants.map((a) => (
                                     <Option key={a.ID} value={a.ID}>
-                                      {a.Title?.Title} {a.Firstname} {a.Lastname}
+                                      {a.Title?.Title} {a.Firstname}{" "}
+                                      {a.Lastname}
                                     </Option>
                                   ))}
                                 </Select>
