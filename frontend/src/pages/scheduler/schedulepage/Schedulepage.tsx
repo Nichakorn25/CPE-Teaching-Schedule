@@ -142,6 +142,7 @@ interface CourseCard {
   subject: string;
   courseCode: string;
   teacher: string;
+  teacherIds?: number[]; // <-- เพิ่มบรรทัดนี้
   room: string;
   section: string;
   studentYear: string;
@@ -577,13 +578,12 @@ const Schedulepage: React.FC = () => {
     });
   };
 
-  // =================== COURSE CARD FUNCTIONS ===================
+  // =================== COURSE CARD FUNCTIONS ==================
 const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
   const cards: CourseCard[] = [];
   const seenCourses = new Set<string>();
 
   schedules.forEach((schedule, index) => {
-    // ใช้ฟังก์ชันใหม่ที่แก้ไข TypeScript error แล้ว
     const isTimeFixed = isTimeFixedCourse(schedule);
 
     if (isTimeFixed) {
@@ -599,9 +599,11 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
     const getRoomInfo = (schedule: ScheduleInterface): string => {
       if (schedule.TimeFixedCourses && schedule.TimeFixedCourses.length > 0) {
         const matchingFixedCourse = schedule.TimeFixedCourses.find(
-          tc => tc.Section === schedule.SectionNumber && 
-               tc.ScheduleID === schedule.ID &&
-               tc.RoomFix && tc.RoomFix.trim() !== ""
+          (tc: any) =>
+            tc.Section === schedule.SectionNumber &&
+            tc.ScheduleID === schedule.ID &&
+            tc.RoomFix &&
+            tc.RoomFix.trim() !== ""
         );
         if (matchingFixedCourse?.RoomFix) {
           return matchingFixedCourse.RoomFix;
@@ -612,75 +614,100 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
 
     const getStudentYear = (schedule: ScheduleInterface): string => {
       const academicYear = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear;
-      
+
       if (academicYear?.Level && academicYear.Level !== 'เรียนได้ทุกชั้นปี') {
-        if (/^\d+$/.test(academicYear.Level)) {
-          return academicYear.Level;
-        }
-        
+        if (/^\d+$/.test(academicYear.Level)) return academicYear.Level;
         const yearMatch = academicYear.Level.match(/ปีที่\s*(\d+)/);
-        if (yearMatch) {
-          return yearMatch[1];
-        }
+        if (yearMatch) return yearMatch[1];
       }
-      
+
       const academicYearId = academicYear?.AcademicYearID;
       if (academicYearId) {
         switch (academicYearId) {
           case 2: return "1";
           case 3: return "2";
           case 4: return "3";
-          case 1:
-            break;
           default:
-            if (academicYearId >= 5 && academicYearId <= 10) {
-              return (academicYearId - 1).toString();
-            }
-            break;
+            if (academicYearId >= 5 && academicYearId <= 10) return (academicYearId - 1).toString();
         }
       }
-      
+
       if (schedule.OfferedCourses?.AllCourses?.Code) {
         const code = schedule.OfferedCourses.AllCourses.Code;
-        
         const codeYearMatch1 = code.match(/[A-Z]{2,4}\d+\s+(\d)/);
-        if (codeYearMatch1) {
-          return codeYearMatch1[1];
-        }
-        
+        if (codeYearMatch1) return codeYearMatch1[1];
         const codeYearMatch2 = code.match(/[A-Z]{2,4}(\d)/);
-        if (codeYearMatch2) {
-          return codeYearMatch2[1];
-        }
+        if (codeYearMatch2) return codeYearMatch2[1];
       }
-      
       return "1";
     };
 
     const subject = schedule.OfferedCourses?.AllCourses?.ThaiName ||
-                   schedule.OfferedCourses?.AllCourses?.EnglishName ||
-                   schedule.OfferedCourses?.AllCourses?.Code ||
-                   "ไม่ทราบชื่อ";
-    
+                    schedule.OfferedCourses?.AllCourses?.EnglishName ||
+                    schedule.OfferedCourses?.AllCourses?.Code ||
+                    "ไม่ทราบชื่อ";
+
     const courseCode = schedule.OfferedCourses?.AllCourses?.Code || "";
-    const teacher = schedule.OfferedCourses?.User ? 
-                   `${schedule.OfferedCourses.User.Firstname || ""} ${schedule.OfferedCourses.User.Lastname || ""}`.trim() ||
-                   "ไม่ระบุอาจารย์" :
-                   "ไม่ระบุอาจารย์";
+
+    // --------- minimal, robust teacher extraction (รองรับทั้งสองตำแหน่ง) ----------
+    const getTeacherInfo = (schedule: ScheduleInterface) => {
+      // cast เป็น any เฉพาะตรงนี้เพื่อหลีกเลี่ยงปัญหา type ที่ยังไม่ได้แก้
+      const offeredAny = schedule.OfferedCourses as any;
+
+      const uaFromAll = offeredAny?.AllCourses?.UserAllCourses;
+      const uaFromOffered = offeredAny?.UserAllCourses;
+
+      const combined = [
+        ...(Array.isArray(uaFromAll) ? uaFromAll : []),
+        ...(Array.isArray(uaFromOffered) ? uaFromOffered : []),
+      ];
+
+      if (combined.length > 0) {
+        const infos = combined
+          .map((entry: any) => {
+            const userObj = entry?.User;
+            const id = userObj?.ID ?? entry?.UserID ?? undefined;
+            const name = userObj
+              ? `${userObj.Firstname || ""} ${userObj.Lastname || ""}`.trim()
+              : (entry?.Username || "");
+            return { id, name: name || undefined };
+          })
+          .filter((x: any) => x.name);
+
+        const uniqueNames = Array.from(new Set(infos.map((i: any) => i.name)));
+        const ids = infos.map((i: any) => i.id).filter(Boolean) as number[];
+
+        return { namesJoined: uniqueNames.join(", "), ids };
+      }
+
+      // fallback: OfferedCourses.User (เดิม)
+      const offeredUser = offeredAny?.User;
+      if (offeredUser) {
+        const id = offeredUser.ID ?? offeredAny?.UserID ?? undefined;
+        const name = `${offeredUser.Firstname || ""} ${offeredUser.Lastname || ""}`.trim() || "ไม่ระบุอาจารย์";
+        return { namesJoined: name, ids: id ? [id] : [] as number[] };
+      }
+
+      return { namesJoined: "ไม่ระบุอาจารย์", ids: [] as number[] };
+    };
+
+    const teacherInfo = getTeacherInfo(schedule);
+    const teacher = teacherInfo.namesJoined;
+    const teacherIds = teacherInfo.ids;
+
     const room = getRoomInfo(schedule);
     const section = schedule.SectionNumber?.toString() || "";
     const studentYear = getStudentYear(schedule);
 
-    const courseKey = `${courseCode}-${section}-${studentYear}-${teacher}`;
-    
+    const teacherKeyPart = teacherIds.length > 0 ? teacherIds.join("-") : teacher;
+    const courseKey = `${courseCode}-${section}-${studentYear}-${teacherKeyPart}`;
+
     if (!seenCourses.has(courseKey)) {
       seenCourses.add(courseKey);
-      
+
       const getTimeString = (time: string | Date): string => {
         if (typeof time === 'string') {
-          if (time.includes('T')) {
-            return time.substring(11, 16);
-          }
+          if (time.includes('T')) return time.substring(11, 16);
           return time.length > 5 ? time.substring(0, 5) : time;
         } else if (time instanceof Date) {
           return time.toTimeString().substring(0, 5);
@@ -714,6 +741,7 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
   setCourseCards(cards);
   setFilteredCourseCards(cards);
 };
+
   // =================== COURSE CARD DRAG HANDLERS ===================
 const handleCourseCardDragStart = (e: React.DragEvent, courseCard: CourseCard) => {
   // ตรวจสอบ role ก่อน
@@ -2647,10 +2675,54 @@ const createEmptyDayRow = (day: string, dayIndex: number, rowIndex: number, tota
 // ปรับปรุงการเรียกใช้ใน transformScheduleDataWithRowSeparation (ลบการ merge)
 const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[]): ExtendedScheduleData[] => {
   const result: ExtendedScheduleData[] = [];
-  
+
+  // helper: อ่านชื่ออาจารย์ (รองรับหลายตำแหน่งของ UserAllCourses)
+  const getTeacherInfoFromSchedule = (schedule: ScheduleInterface) => {
+    const offeredAny = (schedule.OfferedCourses as any) ?? {};
+
+    // 1) UserAllCourses อาจอยู่ใน AllCourses
+    const uaFromAll = offeredAny?.AllCourses?.UserAllCourses;
+    // 2) หรืออาจอยู่ตรง OfferedCourses
+    const uaFromOffered = offeredAny?.UserAllCourses;
+
+    // รวมทั้งสองที่ (ถ้ามี)
+    const combined = [
+      ...(Array.isArray(uaFromAll) ? uaFromAll : []),
+      ...(Array.isArray(uaFromOffered) ? uaFromOffered : []),
+    ];
+
+    if (combined.length > 0) {
+      const infos = combined
+        .map((entry: any) => {
+          const userObj = entry?.User;
+          const id = userObj?.ID ?? entry?.UserID ?? undefined;
+          const name = userObj
+            ? `${userObj.Firstname || ""} ${userObj.Lastname || ""}`.trim()
+            : (entry?.Username || "");
+          return { id, name: name || undefined };
+        })
+        .filter((x: any) => x.name);
+
+      const uniqueNames = Array.from(new Set(infos.map((i: any) => i.name)));
+      const ids = infos.map((i: any) => i.id).filter(Boolean) as number[];
+
+      return { namesJoined: uniqueNames.join(", "), ids };
+    }
+
+    // fallback: ถ้ามี OfferedCourses.User (structure เก่า)
+    const offeredUser = offeredAny?.User;
+    if (offeredUser) {
+      const id = offeredUser.ID ?? offeredAny?.UserID ?? undefined;
+      const name = `${offeredUser.Firstname || ""} ${offeredUser.Lastname || ""}`.trim() || "ไม่ระบุอาจารย์";
+      return { namesJoined: name, ids: id ? [id] : [] as number[] };
+    }
+
+    return { namesJoined: "ไม่ระบุอาจารย์", ids: [] as number[] };
+  };
+
   DAYS.forEach((day, dayIndex) => {
     const daySchedules = rawSchedules.filter(item => item.DayOfWeek === day);
-    
+
     if (daySchedules.length === 0) {
       const firstRow = createEmptyDayRow(day, dayIndex, 0, 2);
       const secondRow = createEmptyDayRow(day, dayIndex, 1, 2);
@@ -2658,22 +2730,21 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
       result.push(firstRow, secondRow);
     } else {
       const subCells: SubCell[] = daySchedules.map((item: ScheduleInterface, index: number) => {
-        // ใช้ฟังก์ชันใหม่ที่แก้ไข TypeScript error แล้ว
+        // แยกเวลา fixed
         const isTimeFixed = isTimeFixedCourse(item);
 
-        // หา TimeFixed ID ถ้ามี
-        const timeFixedCourse = item.TimeFixedCourses && item.TimeFixedCourses.length > 0 ? 
-          item.TimeFixedCourses.find(tc => 
-            tc.Section === item.SectionNumber && 
+        const timeFixedCourse = item.TimeFixedCourses && item.TimeFixedCourses.length > 0 ?
+          item.TimeFixedCourses.find(tc =>
+            tc.Section === item.SectionNumber &&
             tc.ScheduleID === item.ID
           ) : undefined;
 
         const getRoomInfo = (schedule: ScheduleInterface): string => {
           if (schedule.TimeFixedCourses && schedule.TimeFixedCourses.length > 0) {
             const matchingFixedCourse = schedule.TimeFixedCourses.find(
-              tc => tc.Section === schedule.SectionNumber && 
-                   tc.ScheduleID === schedule.ID &&
-                   tc.RoomFix && tc.RoomFix.trim() !== ""
+              (tc: any) => tc.Section === schedule.SectionNumber &&
+                tc.ScheduleID === schedule.ID &&
+                tc.RoomFix && tc.RoomFix.trim() !== ""
             );
             if (matchingFixedCourse?.RoomFix) {
               return matchingFixedCourse.RoomFix;
@@ -2684,18 +2755,18 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
 
         const getStudentYear = (schedule: ScheduleInterface): string => {
           const academicYear = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear;
-          
+
           if (academicYear?.Level && academicYear.Level !== 'เรียนได้ทุกชั้นปี') {
             if (/^\d+$/.test(academicYear.Level)) {
               return academicYear.Level;
             }
-            
+
             const yearMatch = academicYear.Level.match(/ปีที่\s*(\d+)/);
             if (yearMatch) {
               return yearMatch[1];
             }
           }
-          
+
           const academicYearId = academicYear?.AcademicYearID;
           if (academicYearId) {
             switch (academicYearId) {
@@ -2711,33 +2782,34 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
                 break;
             }
           }
-          
+
           if (schedule.OfferedCourses?.AllCourses?.Code) {
             const code = schedule.OfferedCourses.AllCourses.Code;
-            
+
             const codeYearMatch1 = code.match(/[A-Z]{2,4}\d+\s+(\d)/);
             if (codeYearMatch1) {
               return codeYearMatch1[1];
             }
-            
+
             const codeYearMatch2 = code.match(/[A-Z]{2,4}(\d)/);
             if (codeYearMatch2) {
               return codeYearMatch2[1];
             }
           }
-          
+
           return "1";
         };
 
+        // ดึงชื่ออาจารย์จากตำแหน่งที่ถูกต้อง
+        const teacherInfo = getTeacherInfoFromSchedule(item);
+        const teacherName = teacherInfo.namesJoined;
+
         const classInfo: ClassInfo = {
           subject: item.OfferedCourses?.AllCourses?.ThaiName ||
-                   item.OfferedCourses?.AllCourses?.EnglishName ||
-                   item.OfferedCourses?.AllCourses?.Code ||
-                   "ไม่ทราบชื่อ",
-          teacher: item.OfferedCourses?.User ? 
-                   `${item.OfferedCourses.User.Firstname || ""} ${item.OfferedCourses.User.Lastname || ""}`.trim() ||
-                   "ไม่ระบุอาจารย์" :
-                   "ไม่ระบุอาจารย์",
+            item.OfferedCourses?.AllCourses?.EnglishName ||
+            item.OfferedCourses?.AllCourses?.Code ||
+            "ไม่ทราบชื่อ",
+          teacher: teacherName,
           room: getRoomInfo(item),
           section: item.SectionNumber?.toString() || "",
           courseCode: item.OfferedCourses?.AllCourses?.Code || "",
@@ -2759,12 +2831,12 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
 
         const startTime = getTimeString(item.StartTime);
         const endTime = getTimeString(item.EndTime);
-        
+
         return createSubCell(
-          classInfo, 
-          day, 
-          startTime, 
-          endTime, 
+          classInfo,
+          day,
+          startTime,
+          endTime,
           item.ID,
           isTimeFixed,
           timeFixedCourse?.ID
@@ -2773,7 +2845,7 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
 
       const rowGroups = separateOverlappingSubCells(subCells);
       const totalRowsForThisDay = rowGroups.length + 1;
-      
+
       rowGroups.forEach((rowSubCells, rowIndex) => {
         const dayData: ExtendedScheduleData = {
           key: `day-${dayIndex}-row-${rowIndex}`,
@@ -2786,7 +2858,7 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
         };
 
         TIME_SLOTS.forEach((time) => {
-          const matched = rowSubCells.filter(subCell => 
+          const matched = rowSubCells.filter(subCell =>
             isTimeInSlot(subCell.startTime, subCell.endTime, time)
           );
 
@@ -2823,8 +2895,10 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
       result.push(emptyRow);
     }
   });
+
   return result;
 };
+
   const separateOverlappingSubCells = (subCells: SubCell[]): SubCell[][] => {
     if (subCells.length === 0) return [[]];
     
@@ -4325,21 +4399,6 @@ const exportScheduleToXLSX = async () => {
           >
             ส่งออก Xlsx
             {(filterTags.length > 0 || searchValue) && " (กรอง)"}
-          </Button>
-          
-          {/* Refresh Button - เพื่อโหลดข้อมูลล่าสุดจาก API */}
-          <Button
-            icon={<SearchOutlined />}
-            onClick={() => {
-              if (academicYear && term && major_name) {
-                getSchedules();
-                message.success("รีเฟรชข้อมูลจาก API สำเร็จ");
-              } else {
-                message.warning("กรุณาตรวจสอบการตั้งค่า ปีการศึกษา, เทอม และสาขา");
-              }
-            }}
-          >
-            🔄 รีเฟรช
           </Button>
           
           {/* Sidebar Toggle Button */}
