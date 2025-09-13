@@ -127,7 +127,7 @@ function mapSchedulesToOpenCourses(rows: Schedule[]): OpenCourseInterface[] {
       Year: oc.Year,
       Term: oc.Term,
       Code: ac.Code,
-      Name: name,
+      CourseName: name,
       Credit: creditStr,
       TypeName: ac.TypeOfCourses.TypeName,
       TeacherID: oc.UserID,
