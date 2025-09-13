@@ -968,7 +968,7 @@ func SeedAllCourses() {
 			AcademicYearID:  &year2.ID,
 			TypeOfCoursesID: 2,
 			CreditID:        credit2_2_0_4.ID,
-			Ismain:          true,
+			Ismain:          false,
 		},
 		{
 			Code:            "ENG25 1010",
@@ -1073,7 +1073,7 @@ func SeedAllCourses() {
 		{
 			Code:            "ENG23 3051",
 			EnglishName:     "Formal Methods and Computability",
-			ThaiName:        "วิธีฟอร์มลและภาวะคำนวณได้",
+			ThaiName:        "วิธีฟอร์มอลและภาวะคำนวณได้",
 			CurriculumID:    curriculumComEng1.ID,
 			AcademicYearID:  &year3.ID,
 			TypeOfCoursesID: 3,
@@ -1873,102 +1873,121 @@ func SeedUserAllCourses() {
 		h1234  entity.User
 		i1234  entity.User
 
-		ist201001 entity.AllCourses
-		ist201002 entity.AllCourses
-		ist201003 entity.AllCourses
-		ist201004 entity.AllCourses
-		ist202001 entity.AllCourses
-		ist202002 entity.AllCourses
-		ist301101 entity.AllCourses
-		ist301102 entity.AllCourses
-		ist301103 entity.AllCourses
-		ist301104 entity.AllCourses
-		ist301105 entity.AllCourses
-		dgt000140 entity.AllCourses
-		eng201110 entity.AllCourses
-		eng511901 entity.AllCourses
-		iph034013 entity.AllCourses
-		ist201501 entity.AllCourses
-		ist201502 entity.AllCourses
-		ist201503 entity.AllCourses
-		ist201504 entity.AllCourses
-		ist202501 entity.AllCourses
-		ist202502 entity.AllCourses
-		ist202503 entity.AllCourses
-		ist202504 entity.AllCourses
-		ist202505 entity.AllCourses
-		eng201010 entity.AllCourses
-		eng231001 entity.AllCourses
-		eng232001 entity.AllCourses
-		eng233001 entity.AllCourses
-		eng251010 entity.AllCourses
-		eng311001 entity.AllCourses
-		eng232003 entity.AllCourses
-		eng232011 entity.AllCourses
-		eng234080 entity.AllCourses
-		eng232031 entity.AllCourses
-		eng232032 entity.AllCourses
-		eng233031 entity.AllCourses
-		eng233032 entity.AllCourses
-		eng232051 entity.AllCourses
-		eng233051 entity.AllCourses
-		eng233052 entity.AllCourses
-		eng233053 entity.AllCourses
-		eng233054 entity.AllCourses
-		eng232071 entity.AllCourses
-		eng232072 entity.AllCourses
-		eng232073 entity.AllCourses
-		eng232074 entity.AllCourses
-		eng232075 entity.AllCourses
-		eng232076 entity.AllCourses
-		eng232077 entity.AllCourses
-		eng233012 entity.AllCourses
-		eng233013 entity.AllCourses
-		eng233014 entity.AllCourses
-		eng233015 entity.AllCourses
-		eng233016 entity.AllCourses
-		eng233033 entity.AllCourses
-		eng233055 entity.AllCourses
-		eng233072 entity.AllCourses
-		eng233073 entity.AllCourses
-		eng233074 entity.AllCourses
-		eng233075 entity.AllCourses
-		eng234011 entity.AllCourses
-		eng234013 entity.AllCourses
-		eng234014 entity.AllCourses
-		eng234015 entity.AllCourses
-		eng234016 entity.AllCourses
-		eng234017 entity.AllCourses
-		eng234018 entity.AllCourses
-		eng234019 entity.AllCourses
-		eng234033 entity.AllCourses
-		eng234035 entity.AllCourses
-		eng234041 entity.AllCourses
-		eng234042 entity.AllCourses
-		eng234031 entity.AllCourses
-		eng234032 entity.AllCourses
-		eng234034 entity.AllCourses
-		eng234053 entity.AllCourses
-		eng234060 entity.AllCourses
-		eng234071 entity.AllCourses
-		eng234072 entity.AllCourses
-		eng234073 entity.AllCourses
-		eng234074 entity.AllCourses
-		eng234081 entity.AllCourses
-		eng234082 entity.AllCourses
-		eng234097 entity.AllCourses
-		eng234098 entity.AllCourses
-		eng234099 entity.AllCourses
-		eng234090 entity.AllCourses
-		eng234091 entity.AllCourses
-		eng234092 entity.AllCourses
-		eng234094 entity.AllCourses
-		eng202010 entity.AllCourses
-		eng203010 entity.AllCourses
-		eng204010 entity.AllCourses
-		eng202020 entity.AllCourses
-		eng203020 entity.AllCourses
-		eng204020 entity.AllCourses
+		ist201001 entity.AllCourses 
+		ist201002 entity.AllCourses 
+		ist201003 entity.AllCourses 
+		ist201004 entity.AllCourses 
+		ist202001 entity.AllCourses 
+		ist202002 entity.AllCourses 
+		ist301101 entity.AllCourses 
+		ist301102 entity.AllCourses 
+		ist301103 entity.AllCourses 
+		ist301104 entity.AllCourses 
+		ist301105 entity.AllCourses 
+		dgt000140 entity.AllCourses 
+		eng201110 entity.AllCourses 
+		eng511901 entity.AllCourses 
+		iph034013 entity.AllCourses 
+		ist201501 entity.AllCourses 
+		ist201502 entity.AllCourses 
+		ist201503 entity.AllCourses 
+		ist201504 entity.AllCourses 
+		ist202501 entity.AllCourses 
+		ist202502 entity.AllCourses 
+		ist202503 entity.AllCourses 
+		ist202504 entity.AllCourses 
+		ist202505 entity.AllCourses 
+		eng201010 entity.AllCourses 
+		eng231001 entity.AllCourses 
+		eng232001 entity.AllCourses 
+		eng233001 entity.AllCourses 
+		eng251010 entity.AllCourses 
+		eng311001 entity.AllCourses 
+		eng232003 entity.AllCourses 
+		eng232011 entity.AllCourses 
+		eng234080 entity.AllCourses 
+		eng232031 entity.AllCourses 
+		eng232032 entity.AllCourses 
+		eng233031 entity.AllCourses 
+		eng233032 entity.AllCourses 
+		eng232051 entity.AllCourses 
+		eng233051 entity.AllCourses 
+		eng233052 entity.AllCourses 
+		eng233053 entity.AllCourses 
+		eng233054 entity.AllCourses 
+		eng232071 entity.AllCourses 
+		eng232072 entity.AllCourses 
+		eng232073 entity.AllCourses 
+		eng232074 entity.AllCourses 
+		eng232075 entity.AllCourses 
+		eng232076 entity.AllCourses 
+		eng232077 entity.AllCourses 
+		eng233012 entity.AllCourses 
+		eng233013 entity.AllCourses 
+		eng233014 entity.AllCourses 
+		eng233015 entity.AllCourses 
+		eng233016 entity.AllCourses 
+		eng233033 entity.AllCourses 
+		eng233055 entity.AllCourses 
+		eng233072 entity.AllCourses 
+		eng233073 entity.AllCourses 
+		eng233074 entity.AllCourses 
+		eng233075 entity.AllCourses 
+		eng234011 entity.AllCourses 
+		eng234013 entity.AllCourses 
+		eng234014 entity.AllCourses 
+		eng234015 entity.AllCourses 
+		eng234016 entity.AllCourses 
+		eng234017 entity.AllCourses 
+		eng234018 entity.AllCourses 
+		eng234019 entity.AllCourses 
+		eng234033 entity.AllCourses 
+		eng234035 entity.AllCourses 
+		eng234041 entity.AllCourses 
+		eng234042 entity.AllCourses 
+		eng234031 entity.AllCourses 
+		eng234032 entity.AllCourses 
+		eng234053 entity.AllCourses 
+		eng234034 entity.AllCourses 
+		eng234060 entity.AllCourses 
+		eng234071 entity.AllCourses 
+		eng234072 entity.AllCourses 
+		eng234073 entity.AllCourses 
+		eng234074 entity.AllCourses 
+		eng234081 entity.AllCourses 
+		eng234082 entity.AllCourses 
+		eng234097 entity.AllCourses 
+		eng234098 entity.AllCourses 
+		eng234099 entity.AllCourses 
+		eng234090 entity.AllCourses 
+		eng234091 entity.AllCourses 
+		eng234092 entity.AllCourses 
+		eng234094 entity.AllCourses 
+		eng202010 entity.AllCourses 
+		eng203010 entity.AllCourses 
+		eng204010 entity.AllCourses 
+		eng202020 entity.AllCourses 
+		eng203020 entity.AllCourses 
+		eng204020 entity.AllCourses 
+		eng292001 entity.AllCourses 
+		eng292111 entity.AllCourses 
+		eng292113 entity.AllCourses 
+		eng292115 entity.AllCourses 
+		eng292141 entity.AllCourses 
+		eng292142 entity.AllCourses 
+		eng292131 entity.AllCourses 
+		eng293131 entity.AllCourses 
+		eng293132 entity.AllCourses 
+		eng293151 entity.AllCourses 
+		eng293152 entity.AllCourses 
+		eng293153 entity.AllCourses 
+		eng293154 entity.AllCourses 
+		a1101021 entity.AllCourses 
+		a1101022 entity.AllCourses 
+		a1101023 entity.AllCourses 
+		a1101031 entity.AllCourses 
+		a1101032 entity.AllCourses 
+		a1101033 entity.AllCourses 
 	)
 
 	db.First(&admin, "username = ?", "admin")
@@ -2057,8 +2076,8 @@ func SeedUserAllCourses() {
 	db.First(&eng234042, "code = ?", "ENG23 4042")
 	db.First(&eng234031, "code = ?", "ENG23 4031")
 	db.First(&eng234032, "code = ?", "ENG23 4032")
-	db.First(&eng234034, "code = ?", "ENG23 4034")
 	db.First(&eng234053, "code = ?", "ENG23 4053")
+	db.First(&eng234034, "code = ?", "ENG23 4034")
 	db.First(&eng234060, "code = ?", "ENG23 4060")
 	db.First(&eng234071, "code = ?", "ENG23 4071")
 	db.First(&eng234072, "code = ?", "ENG23 4072")
@@ -2079,112 +2098,161 @@ func SeedUserAllCourses() {
 	db.First(&eng202020, "code = ?", "ENG20 2020")
 	db.First(&eng203020, "code = ?", "ENG20 3020")
 	db.First(&eng204020, "code = ?", "ENG20 4020")
+	db.First(&eng292001, "code = ?", "ENG29 2001")
+	db.First(&eng292111, "code = ?", "ENG29 2111")
+	db.First(&eng292113, "code = ?", "ENG29 2113")
+	db.First(&eng292115, "code = ?", "ENG29 2115")
+	db.First(&eng292141, "code = ?", "ENG29 2141")
+	db.First(&eng292142, "code = ?", "ENG29 2142")
+	db.First(&eng292131, "code = ?", "ENG29 2131")
+	db.First(&eng293131, "code = ?", "ENG29 3131")
+	db.First(&eng293132, "code = ?", "ENG29 3132")
+	db.First(&eng293151, "code = ?", "ENG29 3151")
+	db.First(&eng293152, "code = ?", "ENG29 3152")
+	db.First(&eng293153, "code = ?", "ENG29 3153")
+	db.First(&eng293154, "code = ?", "ENG29 3154")
+	db.First(&a1101021, "code = ?", "1101021")
+	db.First(&a1101022, "code = ?", "1101022")
+	db.First(&a1101023, "code = ?", "1101023")
+	db.First(&a1101031, "code = ?", "1101031")
+	db.First(&a1101032, "code = ?", "1101032")
+	db.First(&a1101033, "code = ?", "1101033")
 
 	enrollments := []entity.UserAllCourses{
-		{UserID: admin.ID, AllCoursesID: ist201001.ID},
-		{UserID: admin.ID, AllCoursesID: ist201002.ID},
-		{UserID: admin.ID, AllCoursesID: ist201003.ID},
-		{UserID: admin.ID, AllCoursesID: ist201004.ID},
-		{UserID: admin.ID, AllCoursesID: ist202001.ID},
-		{UserID: admin.ID, AllCoursesID: ist202002.ID},
-		{UserID: admin.ID, AllCoursesID: ist301101.ID},
-		{UserID: admin.ID, AllCoursesID: ist301102.ID},
-		{UserID: admin.ID, AllCoursesID: ist301103.ID},
-		{UserID: admin.ID, AllCoursesID: ist301104.ID},
-		{UserID: admin.ID, AllCoursesID: ist301105.ID},
-		{UserID: admin.ID, AllCoursesID: dgt000140.ID},
-		{UserID: admin.ID, AllCoursesID: eng201110.ID},
-		{UserID: admin.ID, AllCoursesID: eng511901.ID},
-		{UserID: admin.ID, AllCoursesID: iph034013.ID},
-		{UserID: admin.ID, AllCoursesID: ist201501.ID},
-		{UserID: admin.ID, AllCoursesID: ist201502.ID},
-		{UserID: admin.ID, AllCoursesID: ist201503.ID},
-		{UserID: admin.ID, AllCoursesID: ist201504.ID},
-		{UserID: admin.ID, AllCoursesID: ist202501.ID},
-		{UserID: admin.ID, AllCoursesID: ist202502.ID},
-		{UserID: admin.ID, AllCoursesID: ist202503.ID},
-		{UserID: admin.ID, AllCoursesID: ist202504.ID},
-		{UserID: admin.ID, AllCoursesID: ist202505.ID},
-		{UserID: admin.ID, AllCoursesID: eng201010.ID},
-		{UserID: admin.ID, AllCoursesID: eng231001.ID},
-		{UserID: admin.ID, AllCoursesID: eng232001.ID},
-		{UserID: admin.ID, AllCoursesID: eng233001.ID},
-		{UserID: admin.ID, AllCoursesID: eng251010.ID},
-		{UserID: admin.ID, AllCoursesID: eng311001.ID},
+	
+	{UserID: c1234.ID, AllCoursesID: eng231001.ID},
+	{UserID: c1234.ID, AllCoursesID: eng232001.ID},
+	{UserID: i1234.ID, AllCoursesID: eng233001.ID},
 
-		{UserID: a1234.ID, AllCoursesID: eng232003.ID},
-		{UserID: ss1234.ID, AllCoursesID: eng232011.ID},
-		{UserID: a1234.ID, AllCoursesID: eng232011.ID},
-		{UserID: i1234.ID, AllCoursesID: eng234080.ID},
-		{UserID: i1234.ID, AllCoursesID: eng232031.ID},
-		{UserID: a1234.ID, AllCoursesID: eng232032.ID},
-		{UserID: e1234.ID, AllCoursesID: eng233031.ID},
-		{UserID: e1234.ID, AllCoursesID: eng233031.ID},
-		{UserID: e1234.ID, AllCoursesID: eng233032.ID},
-		{UserID: f1234.ID, AllCoursesID: eng232051.ID},
-		{UserID: d1234.ID, AllCoursesID: eng233051.ID},
-		{UserID: g1234.ID, AllCoursesID: eng233052.ID},
-		{UserID: h1234.ID, AllCoursesID: eng233053.ID},
-		{UserID: ss1234.ID, AllCoursesID: eng233054.ID},
-		{UserID: a1234.ID, AllCoursesID: eng233054.ID},
-		{UserID: b1234.ID, AllCoursesID: eng232071.ID},
-		{UserID: g1234.ID, AllCoursesID: eng232071.ID},
-		{UserID: b1234.ID, AllCoursesID: eng232072.ID},
-		{UserID: g1234.ID, AllCoursesID: eng232072.ID},
-		{UserID: g1234.ID, AllCoursesID: eng234053.ID},
-		{UserID: b1234.ID, AllCoursesID: eng232073.ID},
-		{UserID: b1234.ID, AllCoursesID: eng232074.ID},
-		{UserID: ss1234.ID, AllCoursesID: eng232075.ID},
-		{UserID: i1234.ID, AllCoursesID: eng232075.ID},
-		{UserID: i1234.ID, AllCoursesID: eng232076.ID},
-		{UserID: b1234.ID, AllCoursesID: eng232077.ID},
+	{UserID: a1234.ID, AllCoursesID: eng232003.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng232011.ID},
+	{UserID: a1234.ID, AllCoursesID: eng232011.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng234080.ID},
+	{UserID: a1234.ID, AllCoursesID: eng234080.ID},
+	{UserID: b1234.ID, AllCoursesID: eng234080.ID},
+	{UserID: c1234.ID, AllCoursesID: eng234080.ID},
+	{UserID: d1234.ID, AllCoursesID: eng234080.ID},
+	{UserID: e1234.ID, AllCoursesID: eng234080.ID},
+	{UserID: f1234.ID, AllCoursesID: eng234080.ID},
+	{UserID: g1234.ID, AllCoursesID: eng234080.ID},
+	{UserID: h1234.ID, AllCoursesID: eng234080.ID},
+	{UserID: i1234.ID, AllCoursesID: eng234080.ID},
+	{UserID: i1234.ID, AllCoursesID: eng232031.ID},
+	{UserID: e1234.ID, AllCoursesID: eng232032.ID},
+	{UserID: e1234.ID, AllCoursesID: eng233031.ID},
+	{UserID: e1234.ID, AllCoursesID: eng233032.ID},
+	{UserID: f1234.ID, AllCoursesID: eng232051.ID},
+	{UserID: d1234.ID, AllCoursesID: eng233051.ID},
+	{UserID: g1234.ID, AllCoursesID: eng233052.ID},
+	{UserID: h1234.ID, AllCoursesID: eng233053.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng233054.ID},
+	{UserID: a1234.ID, AllCoursesID: eng233054.ID},
+	{UserID: b1234.ID, AllCoursesID: eng232071.ID},
+	{UserID: g1234.ID, AllCoursesID: eng232071.ID},
+	{UserID: b1234.ID, AllCoursesID: eng232072.ID},
+	{UserID: g1234.ID, AllCoursesID: eng232072.ID},
+	{UserID: b1234.ID, AllCoursesID: eng232073.ID},
+	{UserID: b1234.ID, AllCoursesID: eng232074.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng232075.ID},
+	{UserID: i1234.ID, AllCoursesID: eng232076.ID},
+	{UserID: b1234.ID, AllCoursesID: eng232077.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng233012.ID},
+	{UserID: c1234.ID, AllCoursesID: eng233013.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng233014.ID},
+	{UserID: d1234.ID, AllCoursesID: eng233015.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng233016.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng233033.ID},
+	{UserID: h1234.ID, AllCoursesID: eng233055.ID},
+	{UserID: b1234.ID, AllCoursesID: eng233072.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng233073.ID},
+	{UserID: a1234.ID, AllCoursesID: eng233074.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng233075.ID},
+	{UserID: d1234.ID, AllCoursesID: eng234011.ID},
+	{UserID: g1234.ID, AllCoursesID: eng234013.ID},
+	{UserID: i1234.ID, AllCoursesID: eng234014.ID},
+	{UserID: c1234.ID, AllCoursesID: eng234015.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng234016.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng234017.ID},
+	{UserID: i1234.ID, AllCoursesID: eng234018.ID},
+	{UserID: a1234.ID, AllCoursesID: eng234019.ID},
+	{UserID: e1234.ID, AllCoursesID: eng234033.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng234035.ID},
+	{UserID: h1234.ID, AllCoursesID: eng234041.ID},
+	{UserID: h1234.ID, AllCoursesID: eng234042.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng234031.ID},
+	{UserID: b1234.ID, AllCoursesID: eng234032.ID},
+	{UserID: g1234.ID, AllCoursesID: eng234032.ID},
+	{UserID: g1234.ID, AllCoursesID: eng234053.ID},
+	{UserID: h1234.ID, AllCoursesID: eng234034.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng234060.ID},
+	{UserID: e1234.ID, AllCoursesID: eng234071.ID},
+	{UserID: g1234.ID, AllCoursesID: eng234072.ID},
+	{UserID: b1234.ID, AllCoursesID: eng234073.ID},
+	{UserID: b1234.ID, AllCoursesID: eng234074.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng234081.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng234082.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng234097.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng234098.ID},
+	{UserID: ss1234.ID, AllCoursesID: eng234099.ID},
 
-		{UserID: admin.ID, AllCoursesID: eng233012.ID},
-		{UserID: admin.ID, AllCoursesID: eng233013.ID},
-		{UserID: admin.ID, AllCoursesID: eng233014.ID},
-		{UserID: admin.ID, AllCoursesID: eng233015.ID},
-		{UserID: admin.ID, AllCoursesID: eng233016.ID},
-		{UserID: admin.ID, AllCoursesID: eng233033.ID},
-		{UserID: admin.ID, AllCoursesID: eng233055.ID},
-		{UserID: admin.ID, AllCoursesID: eng233072.ID},
-		{UserID: admin.ID, AllCoursesID: eng233073.ID},
-		{UserID: admin.ID, AllCoursesID: eng233074.ID},
-		{UserID: admin.ID, AllCoursesID: eng233075.ID},
-		{UserID: admin.ID, AllCoursesID: eng234011.ID},
-		{UserID: admin.ID, AllCoursesID: eng234013.ID},
-		{UserID: admin.ID, AllCoursesID: eng234014.ID},
-		{UserID: admin.ID, AllCoursesID: eng234015.ID},
-		{UserID: admin.ID, AllCoursesID: eng234016.ID},
-		{UserID: admin.ID, AllCoursesID: eng234017.ID},
-		{UserID: admin.ID, AllCoursesID: eng234018.ID},
-		{UserID: admin.ID, AllCoursesID: eng234019.ID},
-		{UserID: admin.ID, AllCoursesID: eng234033.ID},
-		{UserID: admin.ID, AllCoursesID: eng234035.ID},
-		{UserID: admin.ID, AllCoursesID: eng234041.ID},
-		{UserID: admin.ID, AllCoursesID: eng234042.ID},
-		{UserID: admin.ID, AllCoursesID: eng234031.ID},
-		{UserID: admin.ID, AllCoursesID: eng234032.ID},
-		{UserID: admin.ID, AllCoursesID: eng234034.ID},
-		{UserID: admin.ID, AllCoursesID: eng234060.ID},
-		{UserID: admin.ID, AllCoursesID: eng234071.ID},
-		{UserID: admin.ID, AllCoursesID: eng234072.ID},
-		{UserID: admin.ID, AllCoursesID: eng234073.ID},
-		{UserID: admin.ID, AllCoursesID: eng234074.ID},
-		{UserID: admin.ID, AllCoursesID: eng234081.ID},
-		{UserID: admin.ID, AllCoursesID: eng234082.ID},
-		{UserID: admin.ID, AllCoursesID: eng234097.ID},
-		{UserID: admin.ID, AllCoursesID: eng234098.ID},
-		{UserID: admin.ID, AllCoursesID: eng234099.ID},
-		{UserID: admin.ID, AllCoursesID: eng234090.ID},
-		{UserID: admin.ID, AllCoursesID: eng234091.ID},
-		{UserID: admin.ID, AllCoursesID: eng234092.ID},
-		{UserID: admin.ID, AllCoursesID: eng234094.ID},
-		{UserID: admin.ID, AllCoursesID: eng202010.ID},
-		{UserID: admin.ID, AllCoursesID: eng203010.ID},
-		{UserID: admin.ID, AllCoursesID: eng204010.ID},
-		{UserID: admin.ID, AllCoursesID: eng202020.ID},
-		{UserID: admin.ID, AllCoursesID: eng203020.ID},
-		{UserID: admin.ID, AllCoursesID: eng204020.ID},
+	{UserID: admin.ID, AllCoursesID: ist201001.ID},
+	{UserID: admin.ID, AllCoursesID: ist201002.ID},
+	{UserID: admin.ID, AllCoursesID: ist201003.ID},
+	{UserID: admin.ID, AllCoursesID: ist201004.ID},
+	{UserID: admin.ID, AllCoursesID: ist202001.ID},
+	{UserID: admin.ID, AllCoursesID: ist202002.ID},
+	{UserID: admin.ID, AllCoursesID: ist301101.ID},
+	{UserID: admin.ID, AllCoursesID: ist301102.ID},
+	{UserID: admin.ID, AllCoursesID: ist301103.ID},
+	{UserID: admin.ID, AllCoursesID: ist301104.ID},
+	{UserID: admin.ID, AllCoursesID: ist301105.ID},
+	{UserID: admin.ID, AllCoursesID: dgt000140.ID},
+	{UserID: admin.ID, AllCoursesID: eng201110.ID},
+	{UserID: admin.ID, AllCoursesID: eng511901.ID},
+	{UserID: admin.ID, AllCoursesID: iph034013.ID},
+	{UserID: admin.ID, AllCoursesID: ist201501.ID},
+	{UserID: admin.ID, AllCoursesID: ist201502.ID},
+	{UserID: admin.ID, AllCoursesID: ist201503.ID},
+	{UserID: admin.ID, AllCoursesID: ist201504.ID},
+	{UserID: admin.ID, AllCoursesID: ist202501.ID},
+	{UserID: admin.ID, AllCoursesID: ist202502.ID},
+	{UserID: admin.ID, AllCoursesID: ist202503.ID},
+	{UserID: admin.ID, AllCoursesID: ist202504.ID},
+	{UserID: admin.ID, AllCoursesID: ist202505.ID},
+	{UserID: admin.ID, AllCoursesID: eng201010.ID},
+
+	{UserID: admin.ID, AllCoursesID: eng251010.ID},
+	{UserID: admin.ID, AllCoursesID: eng311001.ID},
+	{UserID: admin.ID, AllCoursesID: eng234090.ID},
+	{UserID: admin.ID, AllCoursesID: eng234091.ID},
+	{UserID: admin.ID, AllCoursesID: eng234092.ID},
+	{UserID: admin.ID, AllCoursesID: eng234094.ID},
+	{UserID: admin.ID, AllCoursesID: eng202010.ID},
+	{UserID: admin.ID, AllCoursesID: eng203010.ID},
+	{UserID: admin.ID, AllCoursesID: eng204010.ID},
+	{UserID: admin.ID, AllCoursesID: eng202020.ID},
+	{UserID: admin.ID, AllCoursesID: eng203020.ID},
+	{UserID: admin.ID, AllCoursesID: eng204020.ID},
+	{UserID: admin.ID, AllCoursesID: eng292001.ID},
+	{UserID: admin.ID, AllCoursesID: eng292111.ID},
+	{UserID: admin.ID, AllCoursesID: eng292113.ID},
+	{UserID: admin.ID, AllCoursesID: eng292115.ID},
+	{UserID: admin.ID, AllCoursesID: eng292141.ID},
+	{UserID: admin.ID, AllCoursesID: eng292142.ID},
+	{UserID: admin.ID, AllCoursesID: eng292131.ID},
+	{UserID: admin.ID, AllCoursesID: eng293131.ID},
+	{UserID: admin.ID, AllCoursesID: eng293132.ID},
+	{UserID: admin.ID, AllCoursesID: eng293151.ID},
+	{UserID: admin.ID, AllCoursesID: eng293152.ID},
+	{UserID: admin.ID, AllCoursesID: eng293153.ID},
+	{UserID: admin.ID, AllCoursesID: eng293154.ID},
+	{UserID: admin.ID, AllCoursesID: a1101021.ID},
+	{UserID: admin.ID, AllCoursesID: a1101022.ID},
+	{UserID: admin.ID, AllCoursesID: a1101023.ID},
+	{UserID: admin.ID, AllCoursesID: a1101031.ID},
+	{UserID: admin.ID, AllCoursesID: a1101032.ID},
+	{UserID: admin.ID, AllCoursesID: a1101033.ID},
+
 	}
 	for _, enroll := range enrollments {
 		db.Where("user_id = ? AND all_courses_id = ?", enroll.UserID, enroll.AllCoursesID).FirstOrCreate(&enroll)
