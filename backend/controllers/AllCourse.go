@@ -17,16 +17,16 @@ func GetAllCourseByID(c *gin.Context) {
 
 	var course entity.AllCourses
 	if err := config.DB().
-		Preload("Curriculum").
-		Preload("Curriculum.Major").
-		Preload("Curriculum.Major.Department").
-		Preload("AcademicYear").
-		Preload("TypeOfCourses").
-		Preload("Credit").
-		Preload("UserAllCourses").
-		Preload("UserAllCourses.User").
-		Preload("OfferedCourses").
-		Preload("TimeFixedCourses").
+		Preload("Curriculum"). //
+		Preload("Curriculum.Major"). //
+		Preload("Curriculum.Major.Department"). //
+		Preload("AcademicYear"). //
+		Preload("TypeOfCourses").//
+		Preload("Credit"). //
+		Preload("UserAllCourses"). //
+		Preload("UserAllCourses.User"). //
+		Preload("OfferedCourses"). //
+		Preload("TimeFixedCourses"). //
 		First(&course, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบข้อมูลวิชา"})
 		return
@@ -70,6 +70,7 @@ func GetAllCourses(c *gin.Context) {
 			"Instructor": teachers,
 			"CurriculumID": course.CurriculumID,
 			"MajorName":    course.Curriculum.Major,
+			"Ismain": course.Ismain,
 		})
 	}
 

@@ -36,6 +36,7 @@ export interface AllCourseinOpenCourseInterface {
   CourseType: string;
   Credit: string;
   Instructor: string;
+  Ismain:boolean;
   CurriculumID: number;
 }
 

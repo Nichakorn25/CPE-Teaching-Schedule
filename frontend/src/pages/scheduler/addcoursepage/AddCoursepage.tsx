@@ -160,10 +160,11 @@ const AddCoursepage: React.FC = () => {
   const handleCurriculumChange = async (value: number) => {
     setSelectedCurriculumID(value);
     const response = await getAllCourses();
+    console.log("dfghjk",response)
     if (response.status === 200) {
       const filtered = response.data.filter(
         (course: AllCourseinOpenCourseInterface) =>
-          course.CurriculumID === value
+          course.CurriculumID === value && course.Ismain === false
       );
       setCourses(filtered);
       // เคลียร์รหัสวิชาที่เลือกไว้ก่อนหน้า
@@ -177,6 +178,7 @@ const AddCoursepage: React.FC = () => {
     if (!selectedCourse) return;
 
     const response = await getCoursebyid(courseId);
+    console.log("Subject now: ",response)
     if (response.status === 200) {
       const course = response.data;
       form.setFieldsValue({
