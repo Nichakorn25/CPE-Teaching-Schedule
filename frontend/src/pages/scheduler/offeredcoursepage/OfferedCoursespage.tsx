@@ -15,7 +15,7 @@ import {
   Schedule,
   CourseTableData,
   CreditInAllCourses,
-} from '../../../interfaces/OfferedInterface';
+} from "../../../interfaces/OfferedInterface";
 
 const { Option } = Select;
 
@@ -210,9 +210,11 @@ const OfferedCoursespage: React.FC = () => {
   );
   const [userMajor, setUserMajor] = useState<string | null>(null);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
-  
+
   // เพิ่ม state สำหรับ hover
-  const [hoveredRowKey, setHoveredRowKey] = useState<string | number | null>(null);
+  const [hoveredRowKey, setHoveredRowKey] = useState<string | number | null>(
+    null
+  );
 
   const navigate = useNavigate();
 
@@ -268,6 +270,7 @@ const OfferedCoursespage: React.FC = () => {
           academicYear,
           term
         );
+        console.log("rfhjhiudo:", response);
         const rawCourses = Array.isArray(response?.data) ? response.data : [];
         const mergedCourses = rawCourses.map((c: any) => ({
           ...c,
@@ -313,7 +316,7 @@ const OfferedCoursespage: React.FC = () => {
         });
       }
     });
-    
+
     return result;
   };
 
@@ -337,12 +340,43 @@ const OfferedCoursespage: React.FC = () => {
       });
     }
 
-    if (showonlyMine) {
-      data = data.filter((course: any) => {
-        if (course.isChild) return true;
-        return course.Sections?.some((s: any) => s.ID_user === userID);
-      });
-    }
+function normalizeName(name: string) {
+  return name
+    .replace(/\s+/g, "") // ลบช่องว่างทั้งหมด
+    .replace(/\./g, "")  // ลบจุด
+    .toLowerCase();
+}
+
+// ดึงชื่อเต็มของผู้ใช้ปัจจุบัน
+const title = localStorage.getItem("title") || "";
+const firstName = localStorage.getItem("first_name") || "";
+const lastName = localStorage.getItem("last_name") || "";
+const fullName = `${title}${firstName} ${lastName}`.trim();
+
+if (showonlyMine) {
+  data = data.filter((course: any) => {
+    if (course.isChild) return true;
+
+    return course.Sections?.some((s: any) =>
+      Array.isArray(s.InstructorNames) &&
+      s.InstructorNames.some((instructor: string) => {
+        const match =
+          normalizeName(instructor) === normalizeName(fullName);
+
+        if (match) {
+          console.log("เจอ match:", instructor, "==>", fullName);
+        } else {
+          console.log("ไม่ match:", instructor, "!==", fullName);
+        }
+
+        return match;
+      })
+    );
+  });
+
+  console.log("Data หลัง filter:", data);
+}
+
 
     // sort ตาม dropdown
     data.sort((a: any, b: any) => {
@@ -391,41 +425,92 @@ const OfferedCoursespage: React.FC = () => {
       ...course,
       order: course.isChild
         ? 0
-        : startIndex +
-          result.filter((c, i) => i <= index && !c.isChild).length,
+        : startIndex + result.filter((c, i) => i <= index && !c.isChild).length,
     }));
   })();
 
   // ระบบสี 10 สีใหม่
   const colorPalettes = [
-    { lightBg: '#fed7aa', darkBg: '#ea580c', lightBorder: '#fb923c', darkBorder: '#9a3412' }, // Orange
-    { lightBg: '#dbeafe', darkBg: '#2563eb', lightBorder: '#60a5fa', darkBorder: '#1e40af' }, // Blue  
-    { lightBg: '#dcfce7', darkBg: '#16a34a', lightBorder: '#4ade80', darkBorder: '#166534' }, // Green
-    { lightBg: '#f3e8ff', darkBg: '#9333ea', lightBorder: '#a855f7', darkBorder: '#6b21a8' }, // Purple
-    { lightBg: '#fce7f3', darkBg: '#db2777', lightBorder: '#f472b6', darkBorder: '#be185d' }, // Pink
-    { lightBg: '#fef3c7', darkBg: '#ca8a04', lightBorder: '#facc15', darkBorder: '#92400e' }, // Yellow
-    { lightBg: '#e0e7ff', darkBg: '#4f46e5', lightBorder: '#818cf8', darkBorder: '#3730a3' }, // Indigo
-    { lightBg: '#fee2e2', darkBg: '#dc2626', lightBorder: '#f87171', darkBorder: '#991b1b' }, // Red
-    { lightBg: '#ccfbf1', darkBg: '#0d9488', lightBorder: '#2dd4bf', darkBorder: '#115e59' }, // Teal
-    { lightBg: '#cffafe', darkBg: '#0891b2', lightBorder: '#22d3ee', darkBorder: '#155e75' }  // Cyan
+    {
+      lightBg: "#fed7aa",
+      darkBg: "#ea580c",
+      lightBorder: "#fb923c",
+      darkBorder: "#9a3412",
+    }, // Orange
+    {
+      lightBg: "#dbeafe",
+      darkBg: "#2563eb",
+      lightBorder: "#60a5fa",
+      darkBorder: "#1e40af",
+    }, // Blue
+    {
+      lightBg: "#dcfce7",
+      darkBg: "#16a34a",
+      lightBorder: "#4ade80",
+      darkBorder: "#166534",
+    }, // Green
+    {
+      lightBg: "#f3e8ff",
+      darkBg: "#9333ea",
+      lightBorder: "#a855f7",
+      darkBorder: "#6b21a8",
+    }, // Purple
+    {
+      lightBg: "#fce7f3",
+      darkBg: "#db2777",
+      lightBorder: "#f472b6",
+      darkBorder: "#be185d",
+    }, // Pink
+    {
+      lightBg: "#fef3c7",
+      darkBg: "#ca8a04",
+      lightBorder: "#facc15",
+      darkBorder: "#92400e",
+    }, // Yellow
+    {
+      lightBg: "#e0e7ff",
+      darkBg: "#4f46e5",
+      lightBorder: "#818cf8",
+      darkBorder: "#3730a3",
+    }, // Indigo
+    {
+      lightBg: "#fee2e2",
+      darkBg: "#dc2626",
+      lightBorder: "#f87171",
+      darkBorder: "#991b1b",
+    }, // Red
+    {
+      lightBg: "#ccfbf1",
+      darkBg: "#0d9488",
+      lightBorder: "#2dd4bf",
+      darkBorder: "#115e59",
+    }, // Teal
+    {
+      lightBg: "#cffafe",
+      darkBg: "#0891b2",
+      lightBorder: "#22d3ee",
+      darkBorder: "#155e75",
+    }, // Cyan
   ];
 
   // ใช้ useMemo เพื่อให้มั่นใจว่าสีจะ stable
   const courseColorMap = useMemo(() => {
     const map = new Map<number, number>();
-    
+
     // สร้างลำดับสีตาม expandedRowKeys โดยเรียงเฉพาะ numeric IDs
     const numericExpandedKeys = expandedRowKeys
-      .filter((key): key is number => typeof key === 'number')
+      .filter((key): key is number => typeof key === "number")
       .slice(); // copy array เพื่อไม่ให้กระทบ original
-    
-    console.log('Expanded course IDs:', numericExpandedKeys);
-    
+
+    console.log("Expanded course IDs:", numericExpandedKeys);
+
     numericExpandedKeys.forEach((courseId, index) => {
       map.set(courseId, index % colorPalettes.length);
-      console.log(`Course ${courseId} gets color index ${index % colorPalettes.length}`);
+      console.log(
+        `Course ${courseId} gets color index ${index % colorPalettes.length}`
+      );
     });
-    
+
     return map;
   }, [expandedRowKeys, colorPalettes.length]);
 
@@ -434,17 +519,19 @@ const OfferedCoursespage: React.FC = () => {
       if (record.isChild && record.SectionNumber != null) {
         const colorIndex = courseColorMap.get(record.ID) ?? 0;
         const palette = colorPalettes[colorIndex];
-        
+
         // section เลขคี่ = สีเข้ม, section เลขคู่ = สีอ่อน
         const isOddSection = record.SectionNumber % 2 === 1;
-        
-        console.log(`Section ${record.SectionNumber} of course ${record.ID}: isOdd=${isOddSection}, colorIndex=${colorIndex}`);
-        
-        return { 
-          ...record, 
+
+        console.log(
+          `Section ${record.SectionNumber} of course ${record.ID}: isOdd=${isOddSection}, colorIndex=${colorIndex}`
+        );
+
+        return {
+          ...record,
           _colorIndex: colorIndex,
           _isOddSection: isOddSection,
-          _palette: palette
+          _palette: palette,
         };
       }
       return record;
@@ -465,11 +552,11 @@ const OfferedCoursespage: React.FC = () => {
   // ฟังก์ชันสำหรับกำหนดสี row พร้อม hover
   const getRowClassName = (record: any) => {
     const isHovered = hoveredRowKey === record.key;
-    
+
     if (record.isChild) {
       const isOdd = record._isOddSection;
-      const baseClass = isOdd ? 'child-row-dark' : 'child-row-light';
-      return `${baseClass} ${isHovered ? 'row-hovered' : ''}`;
+      const baseClass = isOdd ? "child-row-dark" : "child-row-light";
+      return `${baseClass} ${isHovered ? "row-hovered" : ""}`;
     }
 
     // ✅ แก้ไขสำหรับ parent row ที่ expand แล้ว
@@ -477,12 +564,14 @@ const OfferedCoursespage: React.FC = () => {
       // ใช้สีเดียวกับ Section 1 ของ course นี้
       const colorIndex = courseColorMap.get(record.ID) ?? 0;
       const palette = colorPalettes[colorIndex];
-      
+
       // Section 1 เป็นเลขคี่ = สีเข้ม
-      return `expanded-row-with-color ${isHovered ? 'row-hovered-expanded' : ''}`;
+      return `expanded-row-with-color ${
+        isHovered ? "row-hovered-expanded" : ""
+      }`;
     }
 
-    return `normal-row ${isHovered ? 'row-hovered-normal' : ''}`;
+    return `normal-row ${isHovered ? "row-hovered-normal" : ""}`;
   };
 
   // ฟังก์ชันสำหรับกำหนด inline styles
@@ -491,32 +580,32 @@ const OfferedCoursespage: React.FC = () => {
     if (expandedRowKeys.includes(record.ID) && !record.isChild) {
       const colorIndex = courseColorMap.get(record.ID) ?? 0;
       const palette = colorPalettes[colorIndex];
-      
+
       // Parent row ที่ expand แสดง Section 1 (เลขคี่ = สีเข้ม)
       return {
         backgroundColor: palette.darkBg,
         borderLeft: `4px solid ${palette.darkBorder}`,
-        color: 'white'
+        color: "white",
       };
     }
-    
+
     if (record.isChild && record._palette) {
       const isOdd = record._isOddSection;
       const palette = record._palette;
-      
+
       if (isOdd) {
         // Section เลขคี่ = สีเข้ม
         return {
           backgroundColor: palette.darkBg,
           borderLeft: `4px solid ${palette.darkBorder}`,
-          color: 'white'
+          color: "white",
         };
       } else {
-        // Section เลขคู่ = สีอ่อน  
+        // Section เลขคู่ = สีอ่อน
         return {
           backgroundColor: palette.lightBg,
           borderLeft: `4px solid ${palette.lightBorder}`,
-          color: 'black'
+          color: "black",
         };
       }
     }
@@ -751,18 +840,39 @@ const OfferedCoursespage: React.FC = () => {
             key: "Teacher",
             width: 150,
             render: (_t, record) => {
+              // ถ้าเป็น child ใช้ InstructorName เดียว
               const instructorName = record.isChild
-                ? record.Section.InstructorName
-                : record.Sections?.[0]?.InstructorName ?? "-";
-              return <span style={{ fontSize: "12px" }}>{instructorName}</span>;
+                ? record.Section?.InstructorName
+                : record.Sections?.[0]?.InstructorNames ?? [];
+
+              // ถ้าเป็น array → map ใส่ <div> ให้ขึ้นบรรทัดใหม่
+              return (
+                <div style={{ fontSize: "12px", whiteSpace: "pre-line" }}>
+                  {Array.isArray(instructorName)
+                    ? instructorName.map((name: string, idx: number) => (
+                        <div key={idx}>{name}</div>
+                      ))
+                    : instructorName || "-"}
+                </div>
+              );
             },
           }
         );
       }
     }
+    function normalizeName(name: string) {
+      return name
+        .replace(/\s+/g, "") // ลบช่องว่างทั้งหมด
+        .replace(/\./g, "") // ลบจุด
+        .toLowerCase(); // ตัวเล็กหมด
+    }
 
-    // Add action column
-    const userID = Number(localStorage.getItem("user_id"));
+    // ดึงชื่อเต็มของผู้ใช้ปัจจุบัน
+    const title = localStorage.getItem("title") || "";
+    const firstName = localStorage.getItem("first_name") || "";
+    const lastName = localStorage.getItem("last_name") || "";
+    const fullName = `${title}${firstName} ${lastName}`.trim();
+
     columns.push({
       title: "จัดการ",
       key: "actions",
@@ -771,10 +881,29 @@ const OfferedCoursespage: React.FC = () => {
       render: (_text, record) => {
         if (record.isChild) return null;
 
-        const canEdit = record.Sections?.some((s: any) => s.ID_user === userID);
+        // ตรวจว่ามีชื่อใน InstructorNames ตรงกับ fullName ไหม
+        const canEdit = record.Sections?.some(
+          (s: any) =>
+            Array.isArray(s.InstructorNames) &&
+            s.InstructorNames.some(
+              (instructor: string) =>
+                normalizeName(instructor) === normalizeName(fullName)
+            )
+        );
+
+        // console.log(
+        //   "ตรวจชื่อ:",
+        //   fullName,
+        //   "ใน",
+        //   record.Sections,
+        //   "=>",
+        //   canEdit
+        // );
+
         if (!canEdit) return null;
 
         const isCesCourse = record.IsFixCourses === true;
+
         return (
           <div
             style={{ display: "flex", gap: "4px", justifyContent: "center" }}
@@ -1165,53 +1294,53 @@ const OfferedCoursespage: React.FC = () => {
           overflow: "hidden",
         }}
       >
-        
-      <Table
-        columns={getColumns()}
-        dataSource={currentDataWithColor}
-        pagination={false}
-        size="small"
-        bordered
-        scroll={{
-          x: "max-content",
-          y: isMobile ? 400 : 600,
-        }}
-        style={{
-          width: "100%",
-          fontSize: isMobile ? "11px" : "12px",
-          fontFamily: "Sarabun, sans-serif",
-        }}
-        className="custom-table"
-        rowClassName={getRowClassName}
-        onRow={(record) => ({
-          onMouseEnter: () => setHoveredRowKey(record.key),
-          onMouseLeave: () => setHoveredRowKey(null),
-        })}
-        components={{
-          body: {
-            row: ({ children, ...props }) => {
-              const record = props['data-row-key'] ? 
-                currentDataWithColor.find(item => item.key === props['data-row-key']) : 
-                null;
-              const customStyle = record ? getRowStyle(record) : {};
-              
-              return (
-                <tr {...props} style={{ ...props.style, ...customStyle }}>
-                  {children}
-                </tr>
-              );
-            },
-          },
-        }}
-        locale={{
-          emptyText: (
-            <div style={{ padding: isMobile ? 20 : 40, textAlign: "center" }}>
-              ไม่มีข้อมูล
-            </div>
-          ),
-        }}
-      />
+        <Table
+          columns={getColumns()}
+          dataSource={currentDataWithColor}
+          pagination={false}
+          size="small"
+          bordered
+          scroll={{
+            x: "max-content",
+            y: isMobile ? 400 : 600,
+          }}
+          style={{
+            width: "100%",
+            fontSize: isMobile ? "11px" : "12px",
+            fontFamily: "Sarabun, sans-serif",
+          }}
+          className="custom-table"
+          rowClassName={getRowClassName}
+          onRow={(record) => ({
+            onMouseEnter: () => setHoveredRowKey(record.key),
+            onMouseLeave: () => setHoveredRowKey(null),
+          })}
+          components={{
+            body: {
+              row: ({ children, ...props }) => {
+                const record = props["data-row-key"]
+                  ? currentDataWithColor.find(
+                      (item) => item.key === props["data-row-key"]
+                    )
+                  : null;
+                const customStyle = record ? getRowStyle(record) : {};
 
+                return (
+                  <tr {...props} style={{ ...props.style, ...customStyle }}>
+                    {children}
+                  </tr>
+                );
+              },
+            },
+          }}
+          locale={{
+            emptyText: (
+              <div style={{ padding: isMobile ? 20 : 40, textAlign: "center" }}>
+                ไม่มีข้อมูล
+              </div>
+            ),
+          }}
+        />
       </div>
 
       {/* Footer Info */}
