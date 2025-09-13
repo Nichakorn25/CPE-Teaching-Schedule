@@ -1686,25 +1686,20 @@ const applyFilters = () => {
 // =================== TIME FIXED COURSE CHECK FUNCTION ===================
 const isTimeFixedCourse = (schedule: ScheduleInterface): boolean => {
   try {
-    // เช็ค undefined และ null ก่อน แล้วค่อยเช็ค length
-    const hasTimeFixedCourses = schedule.TimeFixedCourses != null && 
-                               Array.isArray(schedule.TimeFixedCourses) &&
-                               schedule.TimeFixedCourses.length > 0;
-    
-    // Debug log เพื่อตรวจสอบ
-    if (hasTimeFixedCourses) {
-      console.log('🔒 TimeFixed Course Detected:', {
+    const isFixed = schedule?.OfferedCourses?.IsFixCourses === true;
+
+    if (isFixed) {
+      console.log('🔒 Fixed Course Detected:', {
         courseCode: schedule.OfferedCourses?.AllCourses?.Code,
         courseName: schedule.OfferedCourses?.AllCourses?.ThaiName,
         teacher: `${schedule.OfferedCourses?.User?.Firstname || ''} ${schedule.OfferedCourses?.User?.Lastname || ''}`.trim(),
-        timeFixedCoursesCount: schedule.TimeFixedCourses?.length || 0,
         scheduleID: schedule.ID
       });
     }
-    
-    return hasTimeFixedCourses;
+
+    return isFixed;
   } catch (error) {
-    console.error('Error checking TimeFixed course:', error);
+    console.error('Error checking Fixed course:', error);
     return false;
   }
 };
