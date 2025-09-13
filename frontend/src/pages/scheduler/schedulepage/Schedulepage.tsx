@@ -319,16 +319,6 @@ const Schedulepage: React.FC = () => {
   const [isTableFromAPI, setIsTableFromAPI] = useState(false);
   const [originalScheduleData, setOriginalScheduleData] = useState<any[]>([]);
 
-<<<<<<< HEAD
-  // เพิ่ม state ใหม่
-// เพิ่มใน state section
-const [availableCourses, setAvailableCourses] = useState<CourseCard[]>([]);
-const [filteredAvailableCourses, setFilteredAvailableCourses] = useState<CourseCard[]>([]);
-const [offeredCourses, setOfferedCourses] = useState<OpenCourseInterface[]>([]);
-const [usedCourseIds, setUsedCourseIds] = useState<Set<string>>(new Set());
-const [isLoadingOffered, setIsLoadingOffered] = useState(false);
-=======
->>>>>>> parent of a73324e (...)
   // =================== FILTER STATES ===================
   const [filterTags, setFilterTags] = useState<FilterTag[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
@@ -409,194 +399,55 @@ const [isLoadingOffered, setIsLoadingOffered] = useState(false);
     setSidebarSearchValue("");
   };
 
-const applySidebarFilters = () => {
-  if (sidebarFilterTags.length === 0 && !sidebarSearchValue) {
-    setFilteredAvailableCourses(availableCourses);
-    return;
-  }
-
-  const filtered = availableCourses.filter(courseCard => {
-    // Apply tag filters
-    const tagMatch = sidebarFilterTags.length === 0 || sidebarFilterTags.every(tag => {
-      switch (tag.type) {
-        case 'teacher':
-          return courseCard.teacher.toLowerCase().includes(tag.value.toLowerCase());
-        case 'studentYear':
-          return courseCard.studentYear === tag.value;
-        case 'subject':
-          return courseCard.subject.toLowerCase().includes(tag.value.toLowerCase());
-        case 'courseCode':
-          return courseCard.courseCode.toLowerCase().includes(tag.value.toLowerCase());
-        case 'room':
-          return courseCard.room.toLowerCase().includes(tag.value.toLowerCase());
-        default:
-          return true;
-      }
-    });
-
-    // Apply search filter
-    const searchMatch = !sidebarSearchValue || 
-      courseCard.teacher.toLowerCase().includes(sidebarSearchValue.toLowerCase()) ||
-      courseCard.subject.toLowerCase().includes(sidebarSearchValue.toLowerCase()) ||
-      courseCard.courseCode.toLowerCase().includes(sidebarSearchValue.toLowerCase());
-
-    return tagMatch && searchMatch;
-  });
-
-  setFilteredAvailableCourses(filtered);
-};  
-
-  // Apply sidebar filters whenever sidebarFilterTags or sidebarSearchValue changes
-<<<<<<< HEAD
- useEffect(() => {
-  applySidebarFilters();
-}, [sidebarFilterTags, sidebarSearchValue, availableCourses]);
-
-  
-  // เพิ่ม function ใหม่ใน component
-const fetchAllTeachers = async () => {
-  try {
-    const response = await getAllTeachers();
-    if (response && response.data) {
-      setAllTeachers(response.data);
-      console.log('📚 Teachers loaded:', response.data);
+  const applySidebarFilters = () => {
+    if (sidebarFilterTags.length === 0 && !sidebarSearchValue) {
+      setFilteredCourseCards(courseCards);
+      return;
     }
-  } catch (error) {
-    console.error("Error loading teachers:", error);
-    message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลอาจารย์");
-  }
-};
-useEffect(() => {
-  fetchAllTeachers();
-}, []);
 
-// Function สำหรับดึงข้อมูล offered courses จาก API
-// =================== OFFERED COURSES MANAGEMENT ===================
-const fetchOfferedCourses = async () => {
-  if (!major_name || !academicYear || !term) {
-    console.warn('Missing required parameters for fetchOfferedCourses:', { 
-      major_name, academicYear, term 
-    });
-    setOfferedCourses([]);
-    setCourseCards([]);
-    setFilteredCourseCards([]);
-    return;
-  }
-
-  setIsLoadingOffered(true);
-  
-  try {
-    const response = await getOfferedCoursesByMajor(
-      major_name, 
-      parseInt(academicYear), 
-      parseInt(term)
-    );
-    
-    if (response && response.status === 200 && Array.isArray(response.data)) {
-      console.log('📚 Offered courses loaded:', response.data);
-      setOfferedCourses(response.data);
-      generateCourseCardsFromOffered(response.data);
-      message.success(`โหลดข้อมูลวิชา ${response.data.length} รายการสำเร็จ`);
-    } else {
-      console.error('Invalid response from getOfferedCoursesByMajor:', response);
-      setOfferedCourses([]);
-      setCourseCards([]);
-      setFilteredCourseCards([]);
-      message.warning("ไม่พบข้อมูลวิชาที่เปิดสอนสำหรับ " + major_name);
-    }
-  } catch (error) {
-    console.error("Error loading offered courses:", error);
-    message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลวิชาที่เปิดสอน");
-    setOfferedCourses([]);
-    setCourseCards([]);
-    setFilteredCourseCards([]);
-  } finally {
-    setIsLoadingOffered(false);
-  }
-};
-
-// Function แปลงข้อมูลจาก OpenCourseInterface เป็น CourseCard
-const generateCourseCardsFromOffered = (offeredList: OpenCourseInterface[]) => {
-  const cards: CourseCard[] = [];
-  const seenCourses = new Set<string>();
-
-  offeredList.forEach((offered, index) => {
-    if (offered.GroupInfos && offered.GroupInfos.length > 0) {
-      offered.GroupInfos.forEach((groupInfo, groupIndex) => {
-        const courseKey = `${offered.Code}-${groupInfo.Group}-${offered.Year}-${offered.Term}`;
-        
-        if (!seenCourses.has(courseKey)) {
-          seenCourses.add(courseKey);
-
-          const teacherNames = offered.Teachers.map(teacher => {
-            const title = teacher.Title || '';
-            const name = `${teacher.Firstname || ''} ${teacher.Lastname || ''}`.trim();
-            return `${title}${name}`.trim();
-          }).filter(name => name !== '').join(", ");
-
-          let duration = 1;
-          if (groupInfo.TimeSpan && groupInfo.TimeSpan.includes('-')) {
-            try {
-              const [startTime, endTime] = groupInfo.TimeSpan.split('-');
-              const startHour = parseInt(startTime.split(':')[0]);
-              const endHour = parseInt(endTime.split(':')[0]);
-              duration = Math.max(1, endHour - startHour);
-            } catch (e) {
-              duration = 1;
-            }
-          }
-
-          const card: CourseCard = {
-            id: `course-${offered.ID}-${groupIndex}-${Date.now()}`,
-            subject: offered.CourseName || "ไม่ระบุชื่อวิชา",
-            courseCode: offered.Code || "",
-            teacher: teacherNames || "ไม่ระบุอาจารย์",
-            room: groupInfo.Room || "TBA",
-            section: groupInfo.Group || "1",
-            studentYear: getStudentYearFromCourse(offered),
-            duration: duration,
-            color: getSubjectColor(offered.CourseName || offered.Code, offered.Code),
-            scheduleId: offered.ID
-          };
-
-          cards.push(card);
+    const filtered = courseCards.filter(courseCard => {
+      // Apply tag filters
+      const tagMatch = sidebarFilterTags.length === 0 || sidebarFilterTags.every(tag => {
+        switch (tag.type) {
+          case 'teacher':
+            return courseCard.teacher
+              .toLowerCase()
+              .includes(tag.value.toLowerCase());
+          case 'studentYear':
+            return courseCard.studentYear === tag.value;
+          case 'subject':
+            return courseCard.subject
+              .toLowerCase()
+              .includes(tag.value.toLowerCase());
+          case 'courseCode':
+            return courseCard.courseCode
+              .toLowerCase()
+              .includes(tag.value.toLowerCase());
+          case 'room':
+            return courseCard.room
+              .toLowerCase()
+              .includes(tag.value.toLowerCase());
+          default:
+            return true;
         }
       });
-    } else {
-      const courseKey = `${offered.Code}-1-${offered.Year}-${offered.Term}`;
-      
-      if (!seenCourses.has(courseKey)) {
-        seenCourses.add(courseKey);
-        // สร้าง card แบบเดียวกัน...
-      }
-    }
-  });
 
-  console.log(`Generated ${cards.length} course cards`);
-  
-  // ไม่ต้อง filter อะไรเลย เก็บ cards ทั้งหมดใน sidebar
-  setAvailableCourses(cards);
-  setFilteredAvailableCourses(cards);
-};
-// Helper function สำหรับหาชั้นปีจาก offered course
-const getStudentYearFromCourse = (offered: OpenCourseInterface): string => {
-  // ลองดึงจาก course code ก่อน
-  if (offered.Code) {
-    const yearMatch = offered.Code.match(/[A-Z]{2,4}(\d)/);
-    if (yearMatch && yearMatch[1]) {
-      return yearMatch[1];
-    }
-  }
-  
-  // ถ้าไม่มีให้ใช้ default
-  return "1";
-};
+      // Apply search filter
+      const searchMatch = !sidebarSearchValue || 
+        courseCard.teacher.toLowerCase().includes(sidebarSearchValue.toLowerCase()) ||
+        courseCard.subject.toLowerCase().includes(sidebarSearchValue.toLowerCase()) ||
+        courseCard.courseCode.toLowerCase().includes(sidebarSearchValue.toLowerCase());
 
-=======
+      return tagMatch && searchMatch;
+    });
+
+    setFilteredCourseCards(filtered);
+  };
+
+  // Apply sidebar filters whenever sidebarFilterTags or sidebarSearchValue changes
   useEffect(() => {
     applySidebarFilters();
   }, [sidebarFilterTags, sidebarSearchValue, courseCards]);
->>>>>>> parent of a73324e (...)
 
   // =================== REMOVED COURSES FUNCTIONS ===================
   const addToRemovedCourses = (subCell: SubCell) => {
@@ -976,10 +827,7 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     
     const newSubCell = createSubCell(classInfo, targetRow.day, startTime, endTime, draggedCourseCard.scheduleId);
     
-<<<<<<< HEAD
-=======
     // ใช้การตรวจสอบขัดแย้งแบบครอบคลุม
->>>>>>> parent of a73324e (...)
     const conflictInfo = checkConflictsAcrossAllRows(newSubCell, scheduleData);
     
     if (conflictInfo.hasConflict) {
@@ -990,28 +838,11 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
       return;
     }
     
-<<<<<<< HEAD
-    // **หัวใจสำคัญ**: ลบออกจาก sidebar และเพิ่มเข้าตาราง
-    
-    // 1. ลบออกจาก sidebar array
-    setAvailableCourses(prev => prev.filter(card => card.id !== draggedCourseCard.id));
-    setFilteredAvailableCourses(prev => prev.filter(card => card.id !== draggedCourseCard.id));
-    
-    // 2. เพิ่มเข้าตาราง
-    addSubCellToDay(targetRow.day, newSubCell);
-    
-    setDraggedCourseCard(null);
-    setDragPreview(null);
-    message.success(`เพิ่มวิชา "${draggedCourseCard.subject}" ลงในตารางแล้ว`);
-    
-    console.log('Course moved from sidebar to schedule');
-=======
     // ถ้าไม่มีขัดแย้ง ให้เพิ่ม SubCell
     addSubCellToDay(targetRow.day, newSubCell);
     setDraggedCourseCard(null);
     setDragPreview(null);
     message.success(`เพิ่มวิชา ${draggedCourseCard.subject} ลงในตารางแล้ว`);
->>>>>>> parent of a73324e (...)
     
   } else if (draggedSubCell) {
     // Handle existing subcell move
@@ -1049,121 +880,6 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
   }
 };
 
-<<<<<<< HEAD
-// ปรับปรุง removeSubCell เพื่อคืนวิชากลับไป sidebar
-const removeSubCell = (subCellId: string) => {
-  if (role !== "Scheduler") {
-    message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลบวิชาได้");
-    return;
-  }
-
-  let targetSubCell: SubCell | null = null;
-  
-  // หา SubCell ที่จะลบ
-  for (const dayData of scheduleData) {
-    const foundSubCell = (dayData.subCells || []).find(cell => cell.id === subCellId);
-    if (foundSubCell) {
-      targetSubCell = foundSubCell;
-      break;
-    }
-  }
-
-  if (!targetSubCell) {
-    message.error("ไม่พบวิชาที่ต้องการลบ");
-    return;
-  }
-
-  if (targetSubCell.isTimeFixed) {
-    message.error(`ไม่สามารถลบวิชา "${targetSubCell.classData.subject}" ได้ เพราะเป็น Time Fixed Course`, 3);
-    return;
-  }
-
-  setScheduleData(prevData => {
-    const newData = [...prevData];
-    let removedSubCell: SubCell | null = null;
-    
-    // ลบออกจากตาราง
-    for (const dayData of newData) {
-      const cellIndex = (dayData.subCells || []).findIndex(cell => cell.id === subCellId);
-      if (cellIndex !== -1) {
-        removedSubCell = dayData.subCells![cellIndex];
-        dayData.subCells!.splice(cellIndex, 1);
-        break;
-      }
-    }
-    
-    if (removedSubCell) {
-      // **หัวใจสำคัญ**: สร้าง CourseCard กลับและเพิ่มเข้า sidebar
-      
-      const restoredCourseCard: CourseCard = {
-        id: `restored-${Date.now()}-${Math.random()}`,
-        subject: removedSubCell.classData.subject,
-        courseCode: removedSubCell.classData.courseCode || "",
-        teacher: removedSubCell.classData.teacher,
-        room: removedSubCell.classData.room,
-        section: removedSubCell.classData.section || "1",
-        studentYear: removedSubCell.classData.studentYear || "1",
-        duration: removedSubCell.position.endSlot - removedSubCell.position.startSlot,
-        color: removedSubCell.classData.color || getSubjectColor(removedSubCell.classData.subject),
-        scheduleId: removedSubCell.scheduleId
-      };
-      
-      // เพิ่มกลับเข้า sidebar
-      setAvailableCourses(prev => [...prev, restoredCourseCard]);
-      setFilteredAvailableCourses(prev => [...prev, restoredCourseCard]);
-      
-      // เพิ่มลงใน removed courses tab สำหรับ tracking
-      const removedCourse: RemovedCourse = {
-        id: `removed-${Date.now()}-${Math.random()}`,
-        subject: removedSubCell.classData.subject,
-        courseCode: removedSubCell.classData.courseCode || "",
-        teacher: removedSubCell.classData.teacher,
-        room: removedSubCell.classData.room,
-        section: removedSubCell.classData.section || "",
-        studentYear: removedSubCell.classData.studentYear || "",
-        duration: removedSubCell.position.endSlot - removedSubCell.position.startSlot,
-        color: removedSubCell.classData.color || getSubjectColor(removedSubCell.classData.subject),
-        scheduleId: removedSubCell.scheduleId,
-        removedAt: new Date(),
-        originalDay: removedSubCell.day,
-        originalStartTime: removedSubCell.startTime,
-        originalEndTime: removedSubCell.endTime
-      };
-      
-      setRemovedCourses(prev => [removedCourse, ...prev]);
-      
-      message.success(`ลบวิชา "${removedSubCell.classData.subject}" ออกจากตารางแล้ว (วิชากลับมาปรากฏใน sidebar)`);
-      
-      console.log('Course moved from schedule back to sidebar');
-    }
-    
-    return newData;
-  });
-};
-
-// ปรับปรุง handleCourseCardDragStart เพื่อรองรับ offered courses
-const handleCourseCardDragStart = (e: React.DragEvent, courseCard: CourseCard) => {
-  if (role !== "Scheduler") {
-    e.preventDefault();
-    message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลากวิชาไปใส่ในตารางเรียนได้");
-    return;
-  }
-
-  setDraggedCourseCard(courseCard);
-  e.dataTransfer.effectAllowed = "copy";
-  
-  if (e.currentTarget instanceof HTMLElement) {
-    e.currentTarget.style.opacity = "0.5";
-  }
-  
-  console.log('🎯 Started dragging course card:', {
-    subject: courseCard.subject,
-    section: courseCard.section,
-    duration: courseCard.duration
-  });
-};
-=======
->>>>>>> parent of a73324e (...)
   // =================== RENDER REMOVED COURSE ===================
   const renderRemovedCourse = (removedCourse: RemovedCourse) => {
     const isScheduler = role === "Scheduler";
@@ -1490,52 +1206,220 @@ const renderCourseCard = (courseCard: CourseCard) => {
 
   // =================== RENDER AVAILABLE COURSES TAB ===================
   const renderAvailableCourses = () => {
-  return (
-    <div style={{ height: "100%" }}>
-      {/* Header และ Filter Section เหมือนเดิม */}
-      
-      {/* Course Cards Count */}
-      <div style={{ 
-        backgroundColor: "#e6f7ff", 
-        padding: "8px 12px", 
-        borderRadius: "6px",
-        marginBottom: "16px",
-        border: "1px solid #91d5ff"
-      }}>
-        <div style={{ fontSize: "12px", color: "#1890ff" }}>
-          📊 แสดงวิชา: <strong>{filteredAvailableCourses.length}</strong> จาก <strong>{availableCourses.length}</strong> รายการ
-        </div>
-        <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>
-          💡 ลากการ์ดวิชาไปวางในตารางเรียนได้เลย
-        </div>
-      </div>
-
-      {/* Course Cards List */}
-      <div style={{ maxHeight: "calc(100vh - 500px)", overflowY: "auto" }}>
-        {filteredAvailableCourses.length === 0 ? (
+    return (
+      <div style={{ height: "100%" }}>
+        {/* Available Courses Filter Section */}
+        <div style={{ 
+          backgroundColor: "#f5f5f5", 
+          padding: "12px", 
+          borderRadius: "6px", 
+          border: "1px solid #e8e8e8",
+          marginBottom: "16px" 
+        }}>
+          {/* Filter Header */}
           <div style={{ 
-            textAlign: "center", 
-            padding: "40px 20px", 
-            color: "#999",
-            backgroundColor: "#f9f9f9",
-            borderRadius: "8px",
-            border: "2px dashed #ddd"
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center", 
+            marginBottom: "8px" 
           }}>
-            <BookOutlined style={{ fontSize: "32px", marginBottom: "8px", color: "#ccc" }} />
-            <div>
-              {availableCourses.length === 0 
-                ? "ไม่มีวิชาในกล่อง" 
-                : "ไม่มีวิชาที่ตรงกับการกรอง"
-              }
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <FilterOutlined style={{ color: "#1890ff", fontSize: "12px" }} />
+              <span style={{ fontWeight: "bold", color: "#333", fontSize: "12px" }}>
+                กรองวิชา ({filteredCourseCards.length}/{courseCards.length})
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: "4px" }}>
+              <Button
+                size="small"
+                icon={<SearchOutlined />}
+                type={sidebarFilterVisible ? "primary" : "default"}
+                onClick={() => setSidebarFilterVisible(!sidebarFilterVisible)}
+                style={{ fontSize: "10px", height: "24px" }}
+              >
+                {sidebarFilterVisible ? "ซ่อน" : "แสดง"}
+              </Button>
+              {(sidebarFilterTags.length > 0 || sidebarSearchValue) && (
+                <Button
+                  size="small"
+                  icon={<ClearOutlined />}
+                  onClick={clearAllSidebarFilters}
+                  danger
+                  style={{ fontSize: "10px", height: "24px" }}
+                >
+                  ล้าง
+                </Button>
+              )}
             </div>
           </div>
-        ) : (
-          filteredAvailableCourses.map(courseCard => renderCourseCard(courseCard))
-        )}
+
+          {/* Search Bar */}
+          <div style={{ marginBottom: "8px" }}>
+            <Input
+              placeholder="ค้นหาวิชา, อาจารย์, รหัส..."
+              prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+              value={sidebarSearchValue}
+              onChange={(e) => setSidebarSearchValue(e.target.value)}
+              allowClear
+              size="small"
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          {/* Filter Tags Display */}
+          {sidebarFilterTags.length > 0 && (
+            <div style={{ marginBottom: "8px" }}>
+              <div style={{ fontSize: "10px", color: "#666", marginBottom: "4px" }}>
+                ตัวกรอง:
+              </div>
+              <Space wrap size="small">
+                {sidebarFilterTags.map(tag => (
+                  <Tag
+                    key={tag.id}
+                    color={tag.color}
+                    closable
+                    onClose={() => removeSidebarFilterTag(tag.id)}
+                    style={{ marginBottom: "2px", fontSize: "10px" }}
+                  >
+                    {tag.label}
+                  </Tag>
+                ))}
+              </Space>
+            </div>
+          )}
+
+          {/* Filter Controls */}
+          {sidebarFilterVisible && (
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: "1fr 1fr", 
+              gap: "8px",
+              borderTop: "1px solid #e8e8e8",
+              paddingTop: "8px"
+            }}>
+              {/* Teacher Filter */}
+              <div>
+                <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                  อาจารย์:
+                </label>
+                <AutoComplete
+                  placeholder="เลือกอาจารย์"
+                  options={filterOptions.teachers.map(teacher => ({ value: teacher }))}
+                  onSelect={(value) => addSidebarFilterTag('teacher', value)}
+                  style={{ width: "100%" }}
+                  size="small"
+                  filterOption={(inputValue, option) =>
+                    option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                  }
+                />
+              </div>
+
+              {/* Student Year Filter */}
+              <div>
+                <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                  ชั้นปี:
+                </label>
+                <Select
+                  placeholder="เลือกชั้นปี"
+                  onSelect={(value) => addSidebarFilterTag('studentYear', value)}
+                  style={{ width: "100%" }}
+                  size="small"
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={filterOptions.studentYears.map(year => ({ 
+                    label: `ปีที่ ${year}`, 
+                    value: year 
+                  }))}
+                />
+              </div>
+
+              {/* Subject Filter */}
+              <div>
+                <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                  วิชา:
+                </label>
+                <AutoComplete
+                  placeholder="เลือกวิชา"
+                  options={filterOptions.subjects.map(subject => ({ value: subject }))}
+                  onSelect={(value) => addSidebarFilterTag('subject', value)}
+                  style={{ width: "100%" }}
+                  size="small"
+                  filterOption={(inputValue, option) =>
+                    option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                  }
+                />
+              </div>
+
+              {/* Course Code Filter */}
+              <div>
+                <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                  รหัสวิชา:
+                </label>
+                <AutoComplete
+                  placeholder="เลือกรหัสวิชา"
+                  options={filterOptions.courseCodes.map(code => ({ value: code }))}
+                  onSelect={(value) => addSidebarFilterTag('courseCode', value)}
+                  style={{ width: "100%" }}
+                  size="small"
+                  filterOption={(inputValue, option) =>
+                    option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                  }
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Course Cards Count */}
+        <div style={{ 
+          backgroundColor: "#e6f7ff", 
+          padding: "8px 12px", 
+          borderRadius: "6px",
+          marginBottom: "16px",
+          border: "1px solid #91d5ff"
+        }}>
+          <div style={{ fontSize: "12px", color: "#1890ff" }}>
+            📊 แสดงวิชา: <strong>{filteredCourseCards.length}</strong> จาก <strong>{courseCards.length}</strong> รายการ
+          </div>
+          <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>
+            💡 ลากการ์ดวิชาไปวางในตารางเรียนได้เลย
+          </div>
+        </div>
+
+        {/* Course Cards List */}
+        <div style={{ maxHeight: "calc(100vh - 500px)", overflowY: "auto" }}>
+          {filteredCourseCards.length === 0 ? (
+            <div style={{ 
+              textAlign: "center", 
+              padding: "40px 20px", 
+              color: "#999",
+              backgroundColor: "#f9f9f9",
+              borderRadius: "8px",
+              border: "2px dashed #ddd"
+            }}>
+              <BookOutlined style={{ fontSize: "32px", marginBottom: "8px", color: "#ccc" }} />
+              <div>
+                {courseCards.length === 0 
+                  ? "ไม่มีวิชาในกล่อง" 
+                  : "ไม่มีวิชาที่ตรงกับการกรอง"
+                }
+              </div>
+              <div style={{ fontSize: "11px", marginTop: "4px" }}>
+                {courseCards.length === 0 
+                  ? "กรุณาโหลดตารางจาก API ก่อน"
+                  : "ลองปรับเงื่อนไขการกรอง"
+                }
+              </div>
+            </div>
+          ) : (
+            filteredCourseCards.map(courseCard => renderCourseCard(courseCard))
+          )}
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
   // =================== RENDER REMOVED COURSES TAB ===================
   const renderRemovedCourses = () => {
@@ -3444,139 +3328,6 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
     }
   };
 
-<<<<<<< HEAD
-// =================== UPDATED USEEFFECT HOOKS ===================
-
-// useEffect หลักสำหรับดึงข้อมูล offered courses เมื่อ parameters เปลี่ยน
-useEffect(() => {
-  if (academicYear && term && major_name) {
-    fetchOfferedCourses();
-  }
-}, [academicYear, term, major_name]);
-
-// ปรับปรุง useEffect สำหรับ sidebar filters
-useEffect(() => {
-  applySidebarFilters();
-}, [sidebarFilterTags, sidebarSearchValue, courseCards]);
-
-// =================== UPDATED HANDLEREST FUNCTION ===================
-
-const handleReset = () => {
-  console.log('🔄 Starting reset process...');
-  
-  // เก็บเฉพาะ TimeFixed Courses ไว้
-  const newScheduleData: ExtendedScheduleData[] = [];
-  
-  DAYS.forEach((day, dayIndex) => {
-    const timeFixedSubCells: SubCell[] = [];
-    
-    // รวบรวม TimeFixed courses ในวันนี้
-    scheduleData.forEach(dayData => {
-      if (dayData.day === day && dayData.subCells) {
-        dayData.subCells.forEach(subCell => {
-          if (subCell.isTimeFixed === true) {
-            timeFixedSubCells.push(subCell);
-          }
-        });
-      }
-    });
-
-    if (timeFixedSubCells.length > 0) {
-      // สร้างแถวสำหรับ TimeFixed courses
-      const rowGroups = separateOverlappingSubCells(timeFixedSubCells);
-      const totalRowsForThisDay = rowGroups.length + 1;
-
-      rowGroups.forEach((rowSubCells, rowIndex) => {
-        const dayData: ExtendedScheduleData = {
-          key: `day-${dayIndex}-row-${rowIndex}`,
-          day: day,
-          dayIndex: dayIndex,
-          rowIndex: rowIndex,
-          isFirstRowOfDay: rowIndex === 0,
-          totalRowsInDay: totalRowsForThisDay,
-          subCells: rowSubCells
-        };
-
-        TIME_SLOTS.forEach((time) => {
-          const matched = rowSubCells.filter(subCell =>
-            isTimeInSlot(subCell.startTime, subCell.endTime, time)
-          );
-
-          if (matched.length > 0) {
-            dayData[time] = {
-              backgroundColor: getSubjectColor(matched[0].classData.subject, matched[0].classData.courseCode),
-              classes: matched.map(subCell => ({
-                subject: subCell.classData.subject,
-                teacher: subCell.classData.teacher,
-                room: subCell.classData.room,
-              })),
-            };
-          } else if (time === "12:00-13:00") {
-            dayData[time] = {
-              content: "พักเที่ยง",
-              backgroundColor: "#FFF5E5",
-              isBreak: true,
-            };
-          } else {
-            dayData[time] = {
-              content: "",
-              backgroundColor: "#f9f9f9",
-              classes: [],
-            };
-          }
-        });
-
-        newScheduleData.push(dayData);
-      });
-
-      const emptyRowIndex = rowGroups.length;
-      const emptyRow = createEmptyDayRow(day, dayIndex, emptyRowIndex, totalRowsForThisDay);
-      emptyRow.isFirstRowOfDay = false;
-      newScheduleData.push(emptyRow);
-    } else {
-      // สร้าง empty rows สำหรับวันที่ไม่มี TimeFixed courses
-      const firstRow = createEmptyDayRow(day, dayIndex, 0, 2);
-      const secondRow = createEmptyDayRow(day, dayIndex, 1, 2);
-      secondRow.isFirstRowOfDay = false;
-      newScheduleData.push(firstRow, secondRow);
-    }
-  });
-
-  // อัปเดต schedule data
-  setScheduleData(newScheduleData);
-  
-  // ล้างข้อมูล API-related states (เก็บไว้เพื่อไม่ให้ต้องโหลดใหม่)
-  setCurrentTableName("");
-  setIsTableFromAPI(false);
-  setOriginalScheduleData([]);
-  
- 
-  // Refresh course cards เพื่อให้วิชาทั้งหมดกลับมา
-  
-  // ล้าง removed courses
-  setRemovedCourses([]);
-  setFilteredRemovedCourses([]);
-  setRemovedSearchValue("");
-  
-  // ล้าง filters
-  clearAllFilters();
-  clearAllSidebarFilters();
-  
-  // นับ TimeFixed courses
-  const timeFixedCount = newScheduleData.reduce((count, dayData) => 
-    count + (dayData.subCells?.filter(subCell => subCell.isTimeFixed).length || 0), 0
-  );
-  
-  const availableCourseCount = courseCards.length;
-  
-  if (timeFixedCount > 0 && availableCourseCount > 0) {
-    message.success(`รีเซตตารางสำเร็จ (เก็บ TimeFixed ${timeFixedCount} วิชา, คืน ${availableCourseCount} วิชาไปยัง sidebar)`);
-  } else if (timeFixedCount > 0) {
-    message.success(`รีเซตตารางสำเร็จ (เก็บ TimeFixed ${timeFixedCount} วิชา)`);
-  } else if (availableCourseCount > 0) {
-    message.success(`รีเซตตารางสำเร็จ (คืน ${availableCourseCount} วิชาไปยัง sidebar)`);
-  } else {
-=======
   // =================== RESET FUNCTION ===================
   const handleReset = () => {
     setScheduleData([]);
@@ -3595,7 +3346,6 @@ const handleReset = () => {
     subjectColorMap.clear();
     colorIndex = 0;
     
->>>>>>> parent of a73324e (...)
     message.success("รีเซตตารางสำเร็จ");
   };
 
