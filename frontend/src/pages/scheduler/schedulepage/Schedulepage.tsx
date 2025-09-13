@@ -43,6 +43,10 @@ import {
   deleteSchedulebyNametable,
   putupdateScheduleTime,
 } from "../../../services/https/SchedulerPageService";
+import { AllTeacher } from "../../../interfaces/Adminpage";
+import { getAllTeachers } from "../../../services/https/AdminPageServices";
+import { OpenCourseInterface } from "../../../interfaces/Adminpage";
+import { getOfferedCoursesByMajor } from "../../../services/https/GetService";
 import * as XLSX from "xlsx";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
@@ -318,7 +322,13 @@ const Schedulepage: React.FC = () => {
   const [currentTableName, setCurrentTableName] = useState("");
   const [isTableFromAPI, setIsTableFromAPI] = useState(false);
   const [originalScheduleData, setOriginalScheduleData] = useState<any[]>([]);
+  const [allTeachers, setAllTeachers] = useState<AllTeacher[]>([]);
 
+  // เพิ่ม state ใหม่
+// เพิ่มใน state section
+const [offeredCourses, setOfferedCourses] = useState<OpenCourseInterface[]>([]);
+const [usedCourseIds, setUsedCourseIds] = useState<Set<string>>(new Set());
+const [isLoadingOffered, setIsLoadingOffered] = useState(false);
   // =================== FILTER STATES ===================
   const [filterTags, setFilterTags] = useState<FilterTag[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
@@ -448,6 +458,237 @@ const Schedulepage: React.FC = () => {
   useEffect(() => {
     applySidebarFilters();
   }, [sidebarFilterTags, sidebarSearchValue, courseCards]);
+  
+  // เพิ่ม function ใหม่ใน component
+const fetchAllTeachers = async () => {
+  try {
+    const response = await getAllTeachers();
+    if (response && response.data) {
+      setAllTeachers(response.data);
+      console.log('📚 Teachers loaded:', response.data);
+    }
+  } catch (error) {
+    console.error("Error loading teachers:", error);
+    message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลอาจารย์");
+  }
+};
+useEffect(() => {
+  fetchAllTeachers();
+}, []);
+
+// Function สำหรับดึงข้อมูล offered courses จาก API
+// =================== OFFERED COURSES MANAGEMENT ===================
+
+// Function สำหรับดึงข้อมูล offered courses จาก API
+const fetchOfferedCourses = async () => {
+  if (!major_name || !academicYear || !term) {
+    console.warn('Missing required parameters for fetchOfferedCourses:', { 
+      major_name, academicYear, term 
+    });
+    setOfferedCourses([]);
+    setCourseCards([]);
+    setFilteredCourseCards([]);
+    return;
+  }
+
+  setIsLoadingOffered(true);
+  
+  try {
+    const response = await getOfferedCoursesByMajor(
+      major_name, 
+      parseInt(academicYear), 
+      parseInt(term)
+    );
+    
+    if (response && response.status === 200 && Array.isArray(response.data)) {
+      console.log('📚 Offered courses loaded:', response.data);
+      setOfferedCourses(response.data);
+      generateCourseCardsFromOffered(response.data);
+      message.success(`โหลดข้อมูลวิชา ${response.data.length} รายการสำเร็จ`);
+    } else {
+      console.error('Invalid response from getOfferedCoursesByMajor:', response);
+      setOfferedCourses([]);
+      setCourseCards([]);
+      setFilteredCourseCards([]);
+      message.warning("ไม่พบข้อมูลวิชาที่เปิดสอนสำหรับ " + major_name);
+    }
+  } catch (error) {
+    console.error("Error loading offered courses:", error);
+    message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลวิชาที่เปิดสอน");
+    setOfferedCourses([]);
+    setCourseCards([]);
+    setFilteredCourseCards([]);
+  } finally {
+    setIsLoadingOffered(false);
+  }
+};
+
+// Function แปลงข้อมูลจาก OpenCourseInterface เป็น CourseCard
+const generateCourseCardsFromOffered = (offeredList: OpenCourseInterface[]) => {
+  const cards: CourseCard[] = [];
+  const seenCourses = new Set<string>();
+
+  offeredList.forEach((offered, index) => {
+    // สร้างการ์ดสำหรับแต่ละ GroupInfo (section)
+    if (offered.GroupInfos && offered.GroupInfos.length > 0) {
+      offered.GroupInfos.forEach((groupInfo, groupIndex) => {
+        const courseKey = `${offered.Code}-${groupInfo.Group}-${offered.Year}-${offered.Term}`;
+        
+        // ตรวจสอบว่าเคยสร้าง card นี้แล้วหรือไม่
+        if (!seenCourses.has(courseKey)) {
+          seenCourses.add(courseKey);
+
+          // รวมชื่ออาจารย์
+          const teacherNames = offered.Teachers.map(teacher => {
+            const title = teacher.Title || '';
+            const name = `${teacher.Firstname || ''} ${teacher.Lastname || ''}`.trim();
+            return `${title}${name}`.trim();
+          }).filter(name => name !== '').join(", ");
+
+          // คำนวณระยะเวลาจาก TimeSpan
+          let duration = 1; // default
+          if (groupInfo.TimeSpan && groupInfo.TimeSpan.includes('-')) {
+            try {
+              const [startTime, endTime] = groupInfo.TimeSpan.split('-');
+              const startHour = parseInt(startTime.split(':')[0]);
+              const endHour = parseInt(endTime.split(':')[0]);
+              duration = Math.max(1, endHour - startHour);
+            } catch (e) {
+              console.warn('Could not parse TimeSpan:', groupInfo.TimeSpan);
+              duration = 1;
+            }
+          }
+
+          // สร้าง CourseCard
+          const card: CourseCard = {
+            id: `offered-card-${offered.ID}-${groupIndex}-${Date.now()}`,
+            subject: offered.CourseName || "ไม่ระบุชื่อวิชา",
+            courseCode: offered.Code || "",
+            teacher: teacherNames || "ไม่ระบุอาจารย์",
+            room: groupInfo.Room || "TBA",
+            section: groupInfo.Group || "1",
+            studentYear: getStudentYearFromCourse(offered),
+            duration: duration,
+            color: getSubjectColor(offered.CourseName || offered.Code, offered.Code),
+            scheduleId: offered.ID // ใช้ ID ของ offered course
+          };
+
+          cards.push(card);
+        }
+      });
+    } else {
+      // ถ้าไม่มี GroupInfos สร้าง card เดียว
+      const courseKey = `${offered.Code}-1-${offered.Year}-${offered.Term}`;
+      
+      if (!seenCourses.has(courseKey)) {
+        seenCourses.add(courseKey);
+
+        const teacherNames = offered.Teachers.map(teacher => {
+          const title = teacher.Title || '';
+          const name = `${teacher.Firstname || ''} ${teacher.Lastname || ''}`.trim();
+          return `${title}${name}`.trim();
+        }).filter(name => name !== '').join(", ");
+
+        const card: CourseCard = {
+          id: `offered-card-${offered.ID}-single-${Date.now()}`,
+          subject: offered.CourseName || "ไม่ระบุชื่อวิชา",
+          courseCode: offered.Code || "",
+          teacher: teacherNames || "ไม่ระบุอาจารย์",
+          room: "TBA",
+          section: "1",
+          studentYear: getStudentYearFromCourse(offered),
+          duration: 1,
+          color: getSubjectColor(offered.CourseName || offered.Code, offered.Code),
+          scheduleId: offered.ID
+        };
+
+        cards.push(card);
+      }
+    }
+  });
+
+  console.log(`✅ Generated ${cards.length} course cards from ${offeredList.length} offered courses`);
+  
+  // กรองออกวิชาที่ถูกใช้แล้ว
+  const availableCards = cards.filter(card => {
+    const courseKey = `${card.courseCode}-${card.section}-${academicYear}-${term}`;
+    return !usedCourseIds.has(courseKey);
+  });
+
+  setCourseCards(availableCards);
+  setFilteredCourseCards(availableCards);
+};
+
+// Helper function สำหรับหาชั้นปีจาก offered course
+const getStudentYearFromCourse = (offered: OpenCourseInterface): string => {
+  // ลองดึงจาก course code ก่อน
+  if (offered.Code) {
+    const yearMatch = offered.Code.match(/[A-Z]{2,4}(\d)/);
+    if (yearMatch && yearMatch[1]) {
+      return yearMatch[1];
+    }
+  }
+  
+  // ถ้าไม่มีให้ใช้ default
+  return "1";
+};
+
+// =================== USED COURSES MANAGEMENT ===================
+
+// Function สำหรับทำเครื่องหมายว่าใช้วิชาแล้ว
+const markCourseAsUsed = (courseCard: CourseCard) => {
+  const courseKey = `${courseCard.courseCode}-${courseCard.section}-${academicYear}-${term}`;
+  setUsedCourseIds(prev => {
+    const newSet = new Set(prev);
+    newSet.add(courseKey);
+    console.log(`📌 Marked course as used: ${courseKey}`);
+    return newSet;
+  });
+};
+
+// Function สำหรับทำเครื่องหมายว่าวิชาไม่ได้ใช้แล้ว (คืนกลับมา)
+const markCourseAsUnused = (subCell: SubCell) => {
+  const courseKey = `${subCell.classData.courseCode}-${subCell.classData.section}-${academicYear}-${term}`;
+  setUsedCourseIds(prev => {
+    const newSet = new Set(prev);
+    const wasDeleted = newSet.delete(courseKey);
+    if (wasDeleted) {
+      console.log(`🔄 Marked course as unused: ${courseKey}`);
+    }
+    return newSet;
+  });
+};
+
+// Function สำหรับ refresh course cards (กรองออกวิชาที่ใช้แล้ว)
+const refreshAvailableCourseCards = () => {
+  if (offeredCourses.length === 0) return;
+  
+  generateCourseCardsFromOffered(offeredCourses);
+};
+
+// Function สำหรับ sync กับตาราง (ตรวจสอบวิชาใดบ้างที่อยู่ในตาราง)
+const syncUsedCoursesWithSchedule = () => {
+  const newUsedCourseIds = new Set<string>();
+  
+  scheduleData.forEach(dayData => {
+    dayData.subCells?.forEach(subCell => {
+      if (subCell.classData.courseCode && subCell.classData.section && !subCell.isTimeFixed) {
+        const courseKey = `${subCell.classData.courseCode}-${subCell.classData.section}-${academicYear}-${term}`;
+        newUsedCourseIds.add(courseKey);
+      }
+    });
+  });
+  
+  setUsedCourseIds(newUsedCourseIds);
+  console.log(`🔄 Synced used courses: ${newUsedCourseIds.size} courses in schedule`);
+};
+
+// Function สำหรับรีเซ็ต used courses
+const resetUsedCourses = () => {
+  setUsedCourseIds(new Set());
+  console.log('🆕 Reset all used courses');
+};
+
 
   // =================== REMOVED COURSES FUNCTIONS ===================
   const addToRemovedCourses = (subCell: SubCell) => {
@@ -743,21 +984,6 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
 };
 
   // =================== COURSE CARD DRAG HANDLERS ===================
-const handleCourseCardDragStart = (e: React.DragEvent, courseCard: CourseCard) => {
-  // ตรวจสอบ role ก่อน
-  if (role !== "Scheduler") {
-    e.preventDefault();
-    message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลากวิชาไปใส่ในตารางได้");
-    return;
-  }
-
-  setDraggedCourseCard(courseCard);
-  e.dataTransfer.effectAllowed = "copy";
-  
-  if (e.currentTarget instanceof HTMLElement) {
-    e.currentTarget.style.opacity = "0.5";
-  }
-};
 
   const handleCourseCardDragEnd = (e: React.DragEvent) => {
     setDraggedCourseCard(null);
@@ -795,7 +1021,9 @@ const handleCellDragOver = (e: React.DragEvent, targetRow: ExtendedScheduleData,
   });
 };
 
-  // Modified drop handler to handle both subcells and course cards
+// =================== UPDATED DRAG & DROP HANDLERS ===================
+
+// ปรับปรุง handleCellDrop เพื่อจัดการ offered course cards
 const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, timeSlot: string) => {
   e.preventDefault();
   
@@ -811,7 +1039,7 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
   const slotIndex = timeToSlotIndex(timeSlot.split('-')[0]);
   
   if (draggedCourseCard) {
-    // Handle course card drop
+    // Handle course card drop from sidebar
     const startTime = slotIndexToTime(slotIndex);
     const endTime = slotIndexToTime(slotIndex + draggedCourseCard.duration);
     
@@ -825,32 +1053,52 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
       color: draggedCourseCard.color
     };
     
-    const newSubCell = createSubCell(classInfo, targetRow.day, startTime, endTime, draggedCourseCard.scheduleId);
+    const newSubCell = createSubCell(
+      classInfo, 
+      targetRow.day, 
+      startTime, 
+      endTime, 
+      draggedCourseCard.scheduleId
+    );
     
-    // ใช้การตรวจสอบขัดแย้งแบบครอบคลุม
+    // ตรวจสอบขัดแยง่งแบบครอบคลุม
     const conflictInfo = checkConflictsAcrossAllRows(newSubCell, scheduleData);
     
     if (conflictInfo.hasConflict) {
-      // แสดง Modal แจ้งเตือนที่ละเอียด
       showConflictModal(conflictInfo, newSubCell);
       setDraggedCourseCard(null);
       setDragPreview(null);
       return;
     }
     
-    // ถ้าไม่มีขัดแย้ง ให้เพิ่ม SubCell
+    // ไม่มีขัดแยง - เพิ่ม SubCell ลงในตาราง
     addSubCellToDay(targetRow.day, newSubCell);
+    
+    // ทำเครื่องหมายว่าใช้วิชานี้แล้ว (หายจาก sidebar)
+    markCourseAsUsed(draggedCourseCard);
+    
+    // Refresh course cards เพื่อให้ sidebar อัปเดต
+    setTimeout(() => {
+      refreshAvailableCourseCards();
+    }, 100);
+    
     setDraggedCourseCard(null);
     setDragPreview(null);
-    message.success(`เพิ่มวิชา ${draggedCourseCard.subject} ลงในตารางแล้ว`);
+    message.success(`เพิ่มวิชา "${draggedCourseCard.subject}" ลงในตารางแล้ว`);
+    
+    console.log('✅ Course card dropped successfully:', {
+      course: draggedCourseCard.subject,
+      section: draggedCourseCard.section,
+      day: targetRow.day,
+      time: `${startTime}-${endTime}`
+    });
     
   } else if (draggedSubCell) {
-    // Handle existing subcell move
+    // Handle existing subcell move (คงเดิม)
     const duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
     const newStartTime = slotIndexToTime(slotIndex);
     const newEndTime = slotIndexToTime(slotIndex + duration);
     
-    // สร้าง SubCell ชั่วคราวเพื่อตรวจสอบ
     const tempSubCell = createSubCell(
       draggedSubCell.classData,
       targetRow.day,
@@ -861,25 +1109,151 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
       draggedSubCell.timeFixedId
     );
     
-    // ใช้การตรวจสอบขัดแย้งแบบครอบคลุม (ยกเว้น SubCell ตัวเอง)
     const conflictInfo = checkConflictsAcrossAllRows(tempSubCell, scheduleData, draggedSubCell.id);
     
     if (conflictInfo.hasConflict) {
-      // แสดง Modal แจ้งเตือนที่ละเอียด
       showConflictModal(conflictInfo, tempSubCell);
       setDraggedSubCell(null);
       setDragPreview(null);
       return;
     }
     
-    // ถ้าไม่มีขัดแย้ง ให้ย้าย SubCell
     moveSubCellToRow(draggedSubCell.id, targetRow, slotIndex);
     setDraggedSubCell(null);
     setDragPreview(null);
-    message.success(`ย้ายวิชา ${draggedSubCell.classData.subject} สำเร็จ`);
+    message.success(`ย้ายวิชา "${draggedSubCell.classData.subject}" สำเร็จ`);
   }
 };
 
+// ปรับปรุง removeSubCell เพื่อคืนวิชากลับไป sidebar
+const removeSubCell = (subCellId: string) => {
+  if (role !== "Scheduler") {
+    message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลบวิชาได้");
+    return;
+  }
+
+  let targetSubCell: SubCell | null = null;
+  
+  // หา SubCell ที่จะลบ
+  for (const dayData of scheduleData) {
+    const foundSubCell = (dayData.subCells || []).find(cell => cell.id === subCellId);
+    if (foundSubCell) {
+      targetSubCell = foundSubCell;
+      break;
+    }
+  }
+
+  if (!targetSubCell) {
+    message.error("ไม่พบวิชาที่ต้องการลบ");
+    return;
+  }
+
+  // ตรวจสอบว่าเป็น TimeFixed Course หรือไม่
+  if (targetSubCell.isTimeFixed) {
+    message.error(
+      `ไม่สามารถลบวิชา "${targetSubCell.classData.subject}" ได้ เพราะเป็น Time Fixed Course`,
+      3
+    );
+    return;
+  }
+
+  setScheduleData(prevData => {
+    const newData = [...prevData];
+    let removedSubCell: SubCell | null = null;
+    let wasRemoved = false;
+    
+    // ลบ SubCell ออกจากตาราง
+    for (const dayData of newData) {
+      const cellIndex = (dayData.subCells || []).findIndex(cell => cell.id === subCellId);
+      if (cellIndex !== -1) {
+        removedSubCell = dayData.subCells![cellIndex];
+        dayData.subCells!.splice(cellIndex, 1);
+        wasRemoved = true;
+        break;
+      }
+    }
+    
+    if (removedSubCell && wasRemoved) {
+      // คืนวิชากลับไปที่ sidebar (ทำเครื่องหมายว่าไม่ได้ใช้แล้ว)
+      markCourseAsUnused(removedSubCell);
+      
+      // Refresh course cards เพื่อให้วิชากลับมาปรากฏใน sidebar
+      setTimeout(() => {
+        refreshAvailableCourseCards();
+      }, 100);
+
+      // เพิ่มลงใน removed courses tab (สำหรับ tracking)
+      const uniqueKey = `${removedSubCell.classData.subject}-${removedSubCell.classData.courseCode}-${removedSubCell.classData.section}-${removedSubCell.classData.teacher}-${removedSubCell.day}-${removedSubCell.startTime}-${removedSubCell.endTime}`;
+      
+      const isDuplicate = removedCourses.some(existing => {
+        const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
+        return existingKey === uniqueKey;
+      });
+
+      if (!isDuplicate) {
+        const removedCourse: RemovedCourse = {
+          id: `removed-${Date.now()}-${Math.random()}`,
+          subject: removedSubCell.classData.subject,
+          courseCode: removedSubCell.classData.courseCode || "",
+          teacher: removedSubCell.classData.teacher,
+          room: removedSubCell.classData.room,
+          section: removedSubCell.classData.section || "",
+          studentYear: removedSubCell.classData.studentYear || "",
+          duration: removedSubCell.position.endSlot - removedSubCell.position.startSlot,
+          color: removedSubCell.classData.color || getSubjectColor(removedSubCell.classData.subject),
+          scheduleId: removedSubCell.scheduleId,
+          removedAt: new Date(),
+          originalDay: removedSubCell.day,
+          originalStartTime: removedSubCell.startTime,
+          originalEndTime: removedSubCell.endTime
+        };
+
+        setTimeout(() => {
+          setRemovedCourses(prev => {
+            const stillNotDuplicate = !prev.some(existing => {
+              const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
+              return existingKey === uniqueKey;
+            });
+            
+            return stillNotDuplicate ? [removedCourse, ...prev] : prev;
+          });
+        }, 50);
+      }
+      
+      message.success(`ลบวิชา "${removedSubCell.classData.subject}" ออกจากตารางแล้ว (วิชากลับมาปรากฏใน sidebar)`);
+      
+      console.log('✅ Course removed and returned to sidebar:', {
+        course: removedSubCell.classData.subject,
+        section: removedSubCell.classData.section,
+        courseCode: removedSubCell.classData.courseCode
+      });
+    }
+    
+    return newData;
+  });
+};
+
+// ปรับปรุง handleCourseCardDragStart เพื่อรองรับ offered courses
+const handleCourseCardDragStart = (e: React.DragEvent, courseCard: CourseCard) => {
+  if (role !== "Scheduler") {
+    e.preventDefault();
+    message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลากวิชาไปใส่ในตารางเรียนได้");
+    return;
+  }
+
+  setDraggedCourseCard(courseCard);
+  e.dataTransfer.effectAllowed = "copy";
+  
+  if (e.currentTarget instanceof HTMLElement) {
+    e.currentTarget.style.opacity = "0.5";
+  }
+  
+  console.log('🎯 Started dragging course card:', {
+    subject: courseCard.subject,
+    section: courseCard.section,
+    duration: courseCard.duration
+  });
+};
   // =================== RENDER REMOVED COURSE ===================
   const renderRemovedCourse = (removedCourse: RemovedCourse) => {
     const isScheduler = role === "Scheduler";
@@ -1520,68 +1894,94 @@ const renderCourseCard = (courseCard: CourseCard) => {
   };
 
   // =================== FILTER FUNCTIONS ===================
-  const extractFilterOptions = (data: ExtendedScheduleData[]) => {
-    const teachers = new Set<string>();
-    const studentYears = new Set<string>();
-    const subjects = new Set<string>();
-    const courseCodes = new Set<string>();
-    const rooms = new Set<string>();
+  // ปรับปรุง extractFilterOptions function
+const extractFilterOptions = (data: ExtendedScheduleData[]) => {
+  const teachers = new Set<string>();
+  const studentYears = new Set<string>();
+  const subjects = new Set<string>();
+  const courseCodes = new Set<string>();
+  const rooms = new Set<string>();
 
-    data.forEach(dayData => {
-      dayData.subCells?.forEach(subCell => {
-        if (subCell.classData.teacher) teachers.add(subCell.classData.teacher);
-        if (subCell.classData.studentYear) {
-          studentYears.add(subCell.classData.studentYear);
-        }
-        if (subCell.classData.subject) {
-          subjects.add(subCell.classData.subject);
-        }
-        if (subCell.classData.courseCode) {
-          courseCodes.add(subCell.classData.courseCode);
-        }
-        if (subCell.classData.room) {
-          rooms.add(subCell.classData.room);
-        }
-      });
+  // เพิ่มข้อมูลอาจารย์จาก API
+  allTeachers.forEach(teacher => {
+    const fullName = `${teacher.Firstname} ${teacher.Lastname}`.trim();
+    if (fullName && fullName !== '') {
+      teachers.add(fullName);
+    }
+  });
+
+  // เพิ่มข้อมูลจาก schedule data เช่นเดิม
+  data.forEach(dayData => {
+    dayData.subCells?.forEach(subCell => {
+      // เพิ่มอาจารย์จาก subCell ด้วย (เผื่อมีอาจารย์ที่ไม่อยู่ใน API)
+      if (subCell.classData.teacher) {
+        // แยกอาจารย์หลายคนที่คั่นด้วย comma
+        const teacherNames = subCell.classData.teacher.split(',').map(name => name.trim());
+        teacherNames.forEach(name => {
+          if (name && name !== '') {
+            teachers.add(name);
+          }
+        });
+      }
+      
+      if (subCell.classData.studentYear) {
+        studentYears.add(subCell.classData.studentYear);
+      }
+      if (subCell.classData.subject) {
+        subjects.add(subCell.classData.subject);
+      }
+      if (subCell.classData.courseCode) {
+        courseCodes.add(subCell.classData.courseCode);
+      }
+      if (subCell.classData.room) {
+        rooms.add(subCell.classData.room);
+      }
     });
+  });
 
-    // Extract student years from original API data เท่านั้น (ไม่ hardcode)
-    if (originalScheduleData && originalScheduleData.length > 0) {
-      originalScheduleData.forEach((schedule: any) => {
-        if (schedule.OfferedCourses?.AllCourses?.AcademicYear?.AcademicYearID) {
-          const academicYearId = schedule.OfferedCourses.AllCourses.AcademicYear.AcademicYearID;
-          studentYears.add(academicYearId.toString());
-        }
-        
-        if (schedule.OfferedCourses?.AllCourses?.AcademicYear?.Level) {
-          const level = schedule.OfferedCourses.AllCourses.AcademicYear.Level;
-          if (level && level !== 'เรียนได้ทุกชั้นปี') {
-            const yearMatch = level.match(/ปีที่\s*(\d+)/);
-            if (yearMatch) {
-              studentYears.add(yearMatch[1]);
-            } else if (!level.includes('ปีที่')) {
-              studentYears.add(level);
-            }
+  // Extract student years from original API data เช่นเดิม
+  if (originalScheduleData && originalScheduleData.length > 0) {
+    originalScheduleData.forEach((schedule: any) => {
+      if (schedule.OfferedCourses?.AllCourses?.AcademicYear?.AcademicYearID) {
+        const academicYearId = schedule.OfferedCourses.AllCourses.AcademicYear.AcademicYearID;
+        studentYears.add(academicYearId.toString());
+      }
+      
+      if (schedule.OfferedCourses?.AllCourses?.AcademicYear?.Level) {
+        const level = schedule.OfferedCourses.AllCourses.AcademicYear.Level;
+        if (level && level !== 'เรียนได้ทุกชั้นปี') {
+          const yearMatch = level.match(/ปีที่\s*(\d+)/);
+          if (yearMatch) {
+            studentYears.add(yearMatch[1]);
+          } else if (!level.includes('ปีที่')) {
+            studentYears.add(level);
           }
         }
-      });
-    }
-    
-    // กรองเฉพาะตัวเลข 1-9 (เผื่อมีปีอื่นๆ ในอนาคต)
-    const validYears = Array.from(studentYears).filter(year => {
-      const num = parseInt(year);
-      return !isNaN(num) && num >= 1 && num <= 9;
+      }
     });
+  }
+  
+  // กรองเฉพาะตัวเลข 1-9 (เผื่อมีปีอื่นๆ ในอนาคต)
+  const validYears = Array.from(studentYears).filter(year => {
+    const num = parseInt(year);
+    return !isNaN(num) && num >= 1 && num <= 9;
+  });
 
-    setFilterOptions({
-      teachers: Array.from(teachers).filter(Boolean).sort(),
-      studentYears: validYears.sort((a, b) => parseInt(a) - parseInt(b)),
-      subjects: Array.from(subjects).filter(Boolean).sort(),
-      courseCodes: Array.from(courseCodes).filter(Boolean).sort(),
-      rooms: Array.from(rooms).filter(Boolean).sort()
-    });
+  setFilterOptions({
+    teachers: Array.from(teachers).filter(Boolean).sort(),
+    studentYears: validYears.sort((a, b) => parseInt(a) - parseInt(b)),
+    subjects: Array.from(subjects).filter(Boolean).sort(),
+    courseCodes: Array.from(courseCodes).filter(Boolean).sort(),
+    rooms: Array.from(rooms).filter(Boolean).sort()
+  });
 
-  };
+  console.log('🎯 Filter options updated:', {
+    teachersCount: Array.from(teachers).length,
+    fromAPI: allTeachers.length,
+    fromSchedule: data.length
+  });
+};
+
 
   const addFilterTag = (type: FilterTag['type'], value: string) => {
     if (!value || filterTags.some(tag => tag.type === type && tag.value === value)) {
@@ -1619,6 +2019,7 @@ const renderCourseCard = (courseCard: CourseCard) => {
     }
   };
 
+// ปรับปรุง applyFilters function
 const applyFilters = () => {
   if (filterTags.length === 0 && !searchValue) {
     setFilteredScheduleData(scheduleData);
@@ -1631,9 +2032,20 @@ const applyFilters = () => {
       const tagMatch = filterTags.length === 0 || filterTags.every(tag => {
         switch (tag.type) {
           case 'teacher':
-            return subCell.classData.teacher
-              .toLowerCase()
-              .includes(tag.value.toLowerCase());
+            // ปรับปรุงการค้นหาอาจารย์เพื่อรองรับหลายคน
+            if (!subCell.classData.teacher) return false;
+            
+            // แยกชื่ออาจารย์หลายคนที่คั่นด้วย comma หรือ /
+            const teacherNames = subCell.classData.teacher
+              .split(/[,\/]/)
+              .map(name => name.trim())
+              .filter(name => name !== '');
+            
+            // ตรวจสอบว่าชื่ออาจารย์ที่ต้องการค้นหาอยู่ในรายชื่อหรือไม่
+            return teacherNames.some(teacherName => 
+              teacherName.toLowerCase().includes(tag.value.toLowerCase())
+            );
+
           case 'studentYear':
             const scheduleFromOriginal = originalScheduleData.find(
               (original: any) => original.ID === subCell.scheduleId
@@ -1683,11 +2095,19 @@ const applyFilters = () => {
       });
 
       // Apply search filter (search in teacher name only)
-      const searchMatch =
-        !searchValue ||
-        subCell.classData.teacher
-          .toLowerCase()
-          .includes(searchValue.toLowerCase());
+      const searchMatch = !searchValue || (() => {
+        if (!subCell.classData.teacher) return false;
+        
+        // ปรับปรุงการค้นหาด้วย search value เพื่อรองรับอาจารย์หลายคน
+        const teacherNames = subCell.classData.teacher
+          .split(/[,\/]/)
+          .map(name => name.trim())
+          .filter(name => name !== '');
+        
+        return teacherNames.some(teacherName => 
+          teacherName.toLowerCase().includes(searchValue.toLowerCase())
+        );
+      })();
 
       return tagMatch && searchMatch;
     }) || [];
@@ -1699,6 +2119,17 @@ const applyFilters = () => {
   });
 
   setFilteredScheduleData(filtered);
+
+  // Log การ filter เพื่อ debug
+  const totalOriginal = scheduleData.reduce((acc, day) => acc + (day.subCells?.length || 0), 0);
+  const totalFiltered = filtered.reduce((acc, day) => acc + (day.subCells?.length || 0), 0);
+  
+  console.log('🔍 Filter applied:', {
+    original: totalOriginal,
+    filtered: totalFiltered,
+    tags: filterTags.length,
+    search: searchValue ? 'yes' : 'no'
+  });
 };
 
   // Apply filters whenever filterTags or searchValue changes
@@ -1708,8 +2139,8 @@ const applyFilters = () => {
 
   // Extract filter options whenever scheduleData changes
   useEffect(() => {
-    extractFilterOptions(scheduleData);
-  }, [scheduleData]);
+  extractFilterOptions(scheduleData);
+}, [scheduleData, allTeachers]); // เพิ่ม allTeachers เป็น dependency
 
 // =================== TIME FIXED COURSE CHECK FUNCTION ===================
 const isTimeFixedCourse = (schedule: ScheduleInterface): boolean => {
@@ -2129,95 +2560,95 @@ const addSubCellToDay = (day: string, subCell: SubCell) => {
 };
 
   // =================== MODIFIED REMOVE SUB CELL FUNCTION ===================
-const removeSubCell = (subCellId: string) => {
-  if (role !== "Scheduler") {
-    message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลบวิชาได้");
-    return;
-  }
+// const removeSubCell = (subCellId: string) => {
+//   if (role !== "Scheduler") {
+//     message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลบวิชาได้");
+//     return;
+//   }
 
-  let targetSubCell: SubCell | null = null;
+//   let targetSubCell: SubCell | null = null;
   
-  for (const dayData of scheduleData) {
-    const foundSubCell = (dayData.subCells || []).find(cell => cell.id === subCellId);
-    if (foundSubCell) {
-      targetSubCell = foundSubCell;
-      break;
-    }
-  }
+//   for (const dayData of scheduleData) {
+//     const foundSubCell = (dayData.subCells || []).find(cell => cell.id === subCellId);
+//     if (foundSubCell) {
+//       targetSubCell = foundSubCell;
+//       break;
+//     }
+//   }
 
-  if (targetSubCell?.isTimeFixed) {
-    message.error(
-      `ไม่สามารถลบวิชา "${targetSubCell.classData.subject}" ได้ เพราะเป็น Time Fixed Course`,
-      3
-    );
-    return;
-  }
+//   if (targetSubCell?.isTimeFixed) {
+//     message.error(
+//       `ไม่สามารถลบวิชา "${targetSubCell.classData.subject}" ได้ เพราะเป็น Time Fixed Course`,
+//       3
+//     );
+//     return;
+//   }
 
-  setScheduleData(prevData => {
-    const newData = [...prevData];
-    let removedSubCell: SubCell | null = null;
-    let wasRemoved = false;
+//   setScheduleData(prevData => {
+//     const newData = [...prevData];
+//     let removedSubCell: SubCell | null = null;
+//     let wasRemoved = false;
     
-    for (const dayData of newData) {
-      const cellIndex = (dayData.subCells || []).findIndex(cell => cell.id === subCellId);
-      if (cellIndex !== -1) {
-        removedSubCell = dayData.subCells![cellIndex];
-        dayData.subCells!.splice(cellIndex, 1);
-        wasRemoved = true;
-        break;
-      }
-    }
+//     for (const dayData of newData) {
+//       const cellIndex = (dayData.subCells || []).findIndex(cell => cell.id === subCellId);
+//       if (cellIndex !== -1) {
+//         removedSubCell = dayData.subCells![cellIndex];
+//         dayData.subCells!.splice(cellIndex, 1);
+//         wasRemoved = true;
+//         break;
+//       }
+//     }
     
-    if (removedSubCell && wasRemoved) {
-      const uniqueKey = `${removedSubCell.classData.subject}-${removedSubCell.classData.courseCode}-${removedSubCell.classData.section}-${removedSubCell.classData.teacher}-${removedSubCell.day}-${removedSubCell.startTime}-${removedSubCell.endTime}`;
+//     if (removedSubCell && wasRemoved) {
+//       const uniqueKey = `${removedSubCell.classData.subject}-${removedSubCell.classData.courseCode}-${removedSubCell.classData.section}-${removedSubCell.classData.teacher}-${removedSubCell.day}-${removedSubCell.startTime}-${removedSubCell.endTime}`;
       
-      const isDuplicate = removedCourses.some(existing => {
-        const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
-        return existingKey === uniqueKey;
-      });
+//       const isDuplicate = removedCourses.some(existing => {
+//         const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
+//         return existingKey === uniqueKey;
+//       });
 
-      if (!isDuplicate) {
-        const removedCourse: RemovedCourse = {
-          id: `removed-${Date.now()}-${Math.random()}`,
-          subject: removedSubCell.classData.subject,
-          courseCode: removedSubCell.classData.courseCode || "",
-          teacher: removedSubCell.classData.teacher,
-          room: removedSubCell.classData.room,
-          section: removedSubCell.classData.section || "",
-          studentYear: removedSubCell.classData.studentYear || "",
-          duration: removedSubCell.position.endSlot - removedSubCell.position.startSlot,
-          color: removedSubCell.classData.color || getSubjectColor(removedSubCell.classData.subject),
-          scheduleId: removedSubCell.scheduleId,
-          removedAt: new Date(),
-          originalDay: removedSubCell.day,
-          originalStartTime: removedSubCell.startTime,
-          originalEndTime: removedSubCell.endTime
-        };
+//       if (!isDuplicate) {
+//         const removedCourse: RemovedCourse = {
+//           id: `removed-${Date.now()}-${Math.random()}`,
+//           subject: removedSubCell.classData.subject,
+//           courseCode: removedSubCell.classData.courseCode || "",
+//           teacher: removedSubCell.classData.teacher,
+//           room: removedSubCell.classData.room,
+//           section: removedSubCell.classData.section || "",
+//           studentYear: removedSubCell.classData.studentYear || "",
+//           duration: removedSubCell.position.endSlot - removedSubCell.position.startSlot,
+//           color: removedSubCell.classData.color || getSubjectColor(removedSubCell.classData.subject),
+//           scheduleId: removedSubCell.scheduleId,
+//           removedAt: new Date(),
+//           originalDay: removedSubCell.day,
+//           originalStartTime: removedSubCell.startTime,
+//           originalEndTime: removedSubCell.endTime
+//         };
 
-        setTimeout(() => {
-          setRemovedCourses(prev => {
-            const stillNotDuplicate = !prev.some(existing => {
-              const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
-              return existingKey === uniqueKey;
-            });
+//         setTimeout(() => {
+//           setRemovedCourses(prev => {
+//             const stillNotDuplicate = !prev.some(existing => {
+//               const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
+//               return existingKey === uniqueKey;
+//             });
             
-            if (stillNotDuplicate) {
-              return [removedCourse, ...prev];
-            } else {
-              return prev;
-            }
-          });
-        }, 50);
+//             if (stillNotDuplicate) {
+//               return [removedCourse, ...prev];
+//             } else {
+//               return prev;
+//             }
+//           });
+//         }, 50);
         
-        message.success("ลบวิชาออกจากตารางแล้ว (ย้ายไปยังรายการวิชาที่ลบ)");
-      } else {
-        message.success("ลบวิชาออกจากตารางแล้ว");
-      }
-    }
+//         message.success("ลบวิชาออกจากตารางแล้ว (ย้ายไปยังรายการวิชาที่ลบ)");
+//       } else {
+//         message.success("ลบวิชาออกจากตารางแล้ว");
+//       }
+//     }
     
-    return newData;
-  });
-};
+//     return newData;
+//   });
+// };
 
 const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, newStartSlot: number) => {
   setScheduleData(prevData => {
@@ -2677,48 +3108,60 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
   const result: ExtendedScheduleData[] = [];
 
   // helper: อ่านชื่ออาจารย์ (รองรับหลายตำแหน่งของ UserAllCourses)
-  const getTeacherInfoFromSchedule = (schedule: ScheduleInterface) => {
-    const offeredAny = (schedule.OfferedCourses as any) ?? {};
+  // ปรับปรุงส่วน getTeacherInfoFromSchedule ใน generateCourseCardsFromAPI
+const getTeacherInfo = (schedule: ScheduleInterface) => {
+  const offeredAny = (schedule.OfferedCourses as any) ?? {};
 
-    // 1) UserAllCourses อาจอยู่ใน AllCourses
-    const uaFromAll = offeredAny?.AllCourses?.UserAllCourses;
-    // 2) หรืออาจอยู่ตรง OfferedCourses
-    const uaFromOffered = offeredAny?.UserAllCourses;
+  // 1) UserAllCourses อาจอยู่ใน AllCourses
+  const uaFromAll = offeredAny?.AllCourses?.UserAllCourses;
+  // 2) หรืออาจอยู่ตรง OfferedCourses
+  const uaFromOffered = offeredAny?.UserAllCourses;
 
-    // รวมทั้งสองที่ (ถ้ามี)
-    const combined = [
-      ...(Array.isArray(uaFromAll) ? uaFromAll : []),
-      ...(Array.isArray(uaFromOffered) ? uaFromOffered : []),
-    ];
+  // รวมทั้งสองที่ (ถ้ามี)
+  const combined = [
+    ...(Array.isArray(uaFromAll) ? uaFromAll : []),
+    ...(Array.isArray(uaFromOffered) ? uaFromOffered : []),
+  ];
 
-    if (combined.length > 0) {
-      const infos = combined
-        .map((entry: any) => {
-          const userObj = entry?.User;
-          const id = userObj?.ID ?? entry?.UserID ?? undefined;
-          const name = userObj
-            ? `${userObj.Firstname || ""} ${userObj.Lastname || ""}`.trim()
-            : (entry?.Username || "");
-          return { id, name: name || undefined };
-        })
-        .filter((x: any) => x.name);
+  if (combined.length > 0) {
+    const infos = combined
+      .map((entry: any) => {
+        const userObj = entry?.User;
+        const id = userObj?.ID ?? entry?.UserID ?? undefined;
+        const name = userObj
+          ? `${userObj.Firstname || ""} ${userObj.Lastname || ""}`.trim()
+          : (entry?.Username || "");
+        return { id, name: name || undefined };
+      })
+      .filter((x: any) => x.name);
 
-      const uniqueNames = Array.from(new Set(infos.map((i: any) => i.name)));
-      const ids = infos.map((i: any) => i.id).filter(Boolean) as number[];
+    const uniqueNames = Array.from(new Set(infos.map((i: any) => i.name)));
+    const ids = infos.map((i: any) => i.id).filter(Boolean) as number[];
 
-      return { namesJoined: uniqueNames.join(", "), ids };
-    }
+    return { namesJoined: uniqueNames.join(", "), ids };
+  }
 
-    // fallback: ถ้ามี OfferedCourses.User (structure เก่า)
-    const offeredUser = offeredAny?.User;
-    if (offeredUser) {
-      const id = offeredUser.ID ?? offeredAny?.UserID ?? undefined;
-      const name = `${offeredUser.Firstname || ""} ${offeredUser.Lastname || ""}`.trim() || "ไม่ระบุอาจารย์";
-      return { namesJoined: name, ids: id ? [id] : [] as number[] };
-    }
+  // fallback: ถ้ามี OfferedCourses.User (structure เก่า)
+  const offeredUser = offeredAny?.User;
+  if (offeredUser) {
+    const id = offeredUser.ID ?? offeredAny?.UserID ?? undefined;
+    const name = `${offeredUser.Firstname || ""} ${offeredUser.Lastname || ""}`.trim() || "ไม่ระบุอาจารย์";
+    return { namesJoined: name, ids: id ? [id] : [] as number[] };
+  }
 
-    return { namesJoined: "ไม่ระบุอาจารย์", ids: [] as number[] };
-  };
+  // ถ้าไม่มีข้อมูลใน schedule ลองหาจาก allTeachers API
+  const fallbackTeacher = allTeachers.find(teacher => {
+    // ใช้เงื่อนไขต่างๆ เพื่อจับคู่อาจารย์ เช่น ID หรือชื่อ
+    return teacher.ID === schedule.OfferedCourses?.UserID;
+  });
+
+  if (fallbackTeacher) {
+    const name = `${fallbackTeacher.Firstname} ${fallbackTeacher.Lastname}`.trim();
+    return { namesJoined: name, ids: [fallbackTeacher.ID] };
+  }
+
+  return { namesJoined: "ไม่ระบุอาจารย์", ids: [] as number[] };
+};
 
   DAYS.forEach((day, dayIndex) => {
     const daySchedules = rawSchedules.filter(item => item.DayOfWeek === day);
@@ -2801,7 +3244,7 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
         };
 
         // ดึงชื่ออาจารย์จากตำแหน่งที่ถูกต้อง
-        const teacherInfo = getTeacherInfoFromSchedule(item);
+        const teacherInfo = getTeacherInfo(item);
         const teacherName = teacherInfo.namesJoined;
 
         const classInfo: ClassInfo = {
@@ -3328,27 +3771,204 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
     }
   };
 
-  // =================== RESET FUNCTION ===================
-  const handleReset = () => {
-    setScheduleData([]);
-    setCurrentTableName("");
-    setIsTableFromAPI(false);
-    setOriginalScheduleData([]);
+// =================== UPDATED USEEFFECT HOOKS ===================
+
+// useEffect หลักสำหรับดึงข้อมูล offered courses เมื่อ parameters เปลี่ยน
+useEffect(() => {
+  // ดึงข้อมูล offered courses ทันทีเมื่อมี parameters ครบ
+  if (academicYear && term && major_name) {
+    console.log('📋 Fetching offered courses for:', { academicYear, term, major_name });
+    fetchOfferedCourses();
+  } else {
+    // ถ้าไม่มี parameters ให้ล้าง data ทั้งหมด
+    console.log('🧹 Clearing offered courses data due to missing parameters');
+    setOfferedCourses([]);
     setCourseCards([]);
     setFilteredCourseCards([]);
-    setRemovedCourses([]);
-    setFilteredRemovedCourses([]);
-    setRemovedSearchValue("");
-    clearAllFilters();
-    clearAllSidebarFilters(); // Clear sidebar filters too
-    
-    // รีเซ็ต color mapping
-    subjectColorMap.clear();
-    colorIndex = 0;
-    
-    message.success("รีเซตตารางสำเร็จ");
-  };
+    setUsedCourseIds(new Set());
+  }
+}, [academicYear, term, major_name]);
 
+// useEffect สำหรับ sync used courses เมื่อตารางมีการเปลี่ยนแปลง  
+useEffect(() => {
+  if (scheduleData.length > 0 && academicYear && term) {
+    console.log('🔄 Syncing used courses with current schedule');
+    syncUsedCoursesWithSchedule();
+  }
+}, [scheduleData, academicYear, term]);
+
+// useEffect สำหรับ refresh course cards เมื่อ usedCourseIds เปลี่ยน
+useEffect(() => {
+  if (offeredCourses.length > 0) {
+    console.log('📱 Refreshing available course cards');
+    refreshAvailableCourseCards();
+  }
+}, [usedCourseIds]);
+
+// ปรับปรุง useEffect สำหรับ sidebar filters
+useEffect(() => {
+  applySidebarFilters();
+}, [sidebarFilterTags, sidebarSearchValue, courseCards]);
+
+// =================== UPDATED HANDLEREST FUNCTION ===================
+
+const handleReset = () => {
+  console.log('🔄 Starting reset process...');
+  
+  // เก็บเฉพาะ TimeFixed Courses ไว้
+  const newScheduleData: ExtendedScheduleData[] = [];
+  
+  DAYS.forEach((day, dayIndex) => {
+    const timeFixedSubCells: SubCell[] = [];
+    
+    // รวบรวม TimeFixed courses ในวันนี้
+    scheduleData.forEach(dayData => {
+      if (dayData.day === day && dayData.subCells) {
+        dayData.subCells.forEach(subCell => {
+          if (subCell.isTimeFixed === true) {
+            timeFixedSubCells.push(subCell);
+          }
+        });
+      }
+    });
+
+    if (timeFixedSubCells.length > 0) {
+      // สร้างแถวสำหรับ TimeFixed courses
+      const rowGroups = separateOverlappingSubCells(timeFixedSubCells);
+      const totalRowsForThisDay = rowGroups.length + 1;
+
+      rowGroups.forEach((rowSubCells, rowIndex) => {
+        const dayData: ExtendedScheduleData = {
+          key: `day-${dayIndex}-row-${rowIndex}`,
+          day: day,
+          dayIndex: dayIndex,
+          rowIndex: rowIndex,
+          isFirstRowOfDay: rowIndex === 0,
+          totalRowsInDay: totalRowsForThisDay,
+          subCells: rowSubCells
+        };
+
+        TIME_SLOTS.forEach((time) => {
+          const matched = rowSubCells.filter(subCell =>
+            isTimeInSlot(subCell.startTime, subCell.endTime, time)
+          );
+
+          if (matched.length > 0) {
+            dayData[time] = {
+              backgroundColor: getSubjectColor(matched[0].classData.subject, matched[0].classData.courseCode),
+              classes: matched.map(subCell => ({
+                subject: subCell.classData.subject,
+                teacher: subCell.classData.teacher,
+                room: subCell.classData.room,
+              })),
+            };
+          } else if (time === "12:00-13:00") {
+            dayData[time] = {
+              content: "พักเที่ยง",
+              backgroundColor: "#FFF5E5",
+              isBreak: true,
+            };
+          } else {
+            dayData[time] = {
+              content: "",
+              backgroundColor: "#f9f9f9",
+              classes: [],
+            };
+          }
+        });
+
+        newScheduleData.push(dayData);
+      });
+
+      const emptyRowIndex = rowGroups.length;
+      const emptyRow = createEmptyDayRow(day, dayIndex, emptyRowIndex, totalRowsForThisDay);
+      emptyRow.isFirstRowOfDay = false;
+      newScheduleData.push(emptyRow);
+    } else {
+      // สร้าง empty rows สำหรับวันที่ไม่มี TimeFixed courses
+      const firstRow = createEmptyDayRow(day, dayIndex, 0, 2);
+      const secondRow = createEmptyDayRow(day, dayIndex, 1, 2);
+      secondRow.isFirstRowOfDay = false;
+      newScheduleData.push(firstRow, secondRow);
+    }
+  });
+
+  // อัปเดต schedule data
+  setScheduleData(newScheduleData);
+  
+  // ล้างข้อมูล API-related states (เก็บไว้เพื่อไม่ให้ต้องโหลดใหม่)
+  setCurrentTableName("");
+  setIsTableFromAPI(false);
+  setOriginalScheduleData([]);
+  
+  // รีเซ็ต used courses - วิชาทั้งหมดกลับไปที่ sidebar
+  resetUsedCourses();
+  
+  // Refresh course cards เพื่อให้วิชาทั้งหมดกลับมา
+  setTimeout(() => {
+    if (offeredCourses.length > 0) {
+      refreshAvailableCourseCards();
+    }
+  }, 100);
+  
+  // ล้าง removed courses
+  setRemovedCourses([]);
+  setFilteredRemovedCourses([]);
+  setRemovedSearchValue("");
+  
+  // ล้าง filters
+  clearAllFilters();
+  clearAllSidebarFilters();
+  
+  // นับ TimeFixed courses
+  const timeFixedCount = newScheduleData.reduce((count, dayData) => 
+    count + (dayData.subCells?.filter(subCell => subCell.isTimeFixed).length || 0), 0
+  );
+  
+  const availableCourseCount = courseCards.length;
+  
+  if (timeFixedCount > 0 && availableCourseCount > 0) {
+    message.success(`รีเซตตารางสำเร็จ (เก็บ TimeFixed ${timeFixedCount} วิชา, คืน ${availableCourseCount} วิชาไปยัง sidebar)`);
+  } else if (timeFixedCount > 0) {
+    message.success(`รีเซตตารางสำเร็จ (เก็บ TimeFixed ${timeFixedCount} วิชา)`);
+  } else if (availableCourseCount > 0) {
+    message.success(`รีเซตตารางสำเร็จ (คืน ${availableCourseCount} วิชาไปยัง sidebar)`);
+  } else {
+    message.success("รีเซตตารางสำเร็จ");
+  }
+
+  console.log(`✅ Reset completed:`, {
+    timeFixedPreserved: timeFixedCount,
+    coursesReturnedToSidebar: availableCourseCount,
+    totalOfferedCourses: offeredCourses.length
+  });
+};
+
+// =================== HELPER FUNCTIONS FOR SIDEBAR STATUS ===================
+
+// Function สำหรับแสดงสถานะ sidebar
+const getSidebarStatus = () => {
+  const totalOffered = offeredCourses.length;
+  const totalUsed = usedCourseIds.size;
+  const totalAvailable = courseCards.length;
+  const totalFiltered = filteredCourseCards.length;
+
+  return {
+    totalOffered,
+    totalUsed,
+    totalAvailable,
+    totalFiltered,
+    hasFilters: sidebarFilterTags.length > 0 || sidebarSearchValue.length > 0
+  };
+};
+
+// Function สำหรับ refresh ทั้งระบบ (เมื่อต้องการโหลดใหม่)
+const refreshEntireSystem = () => {
+  if (academicYear && term && major_name) {
+    console.log('🔄 Refreshing entire system...');
+    fetchOfferedCourses();
+  }
+};
   // =================== RENDER TABLE STATUS ===================
   const renderTableStatus = () => {
     if (!isTableFromAPI || !currentTableName) {
