@@ -466,8 +466,10 @@ useEffect(() => {
 
   // Apply sidebar filters whenever sidebarFilterTags or sidebarSearchValue changes
   useEffect(() => {
-    applySidebarFilters();
-  }, [sidebarFilterTags, sidebarSearchValue, courseCards]);
+  applySidebarFilters();
+}, [sidebarFilterTags, sidebarSearchValue, courseCards, scheduleData]); // เพิ่ม scheduleData
+
+
 
   // =================== REMOVED COURSES FUNCTIONS ===================
   const addToRemovedCourses = (subCell: SubCell) => {
@@ -775,12 +777,37 @@ const getTeacherInfo = (schedule: ScheduleInterface) => {
   setFilteredCourseCards(cards);
 };
 
+// =================== CHECK IF COURSE CARD IS USED ===================
+const isCourseCardUsed = (courseCard: CourseCard): boolean => {
+  return scheduleData.some(dayData =>
+    dayData.subCells?.some(subCell => {
+      // ตรวจสอบตาม scheduleId ก่อน (แม่นยำที่สุด)
+      if (courseCard.scheduleId && subCell.scheduleId) {
+        return subCell.scheduleId === courseCard.scheduleId;
+      }
+      
+      // ตรวจสอบตามข้อมูลสำคัญ (fallback)
+      return subCell.classData.subject === courseCard.subject &&
+             subCell.classData.courseCode === courseCard.courseCode &&
+             subCell.classData.section === courseCard.section &&
+             subCell.classData.teacher === courseCard.teacher;
+    })
+  );
+};
+
   // =================== COURSE CARD DRAG HANDLERS ===================
 const handleCourseCardDragStart = (e: React.DragEvent, courseCard: CourseCard) => {
   // ตรวจสอบ role ก่อน
   if (role !== "Scheduler") {
     e.preventDefault();
     message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลากวิชาไปใส่ในตารางได้");
+    return;
+  }
+
+  // ตรวจสอบว่าวิชาถูกใช้แล้วหรือไม่
+  if (isCourseCardUsed(courseCard)) {
+    e.preventDefault();
+    message.warning(`วิชา "${courseCard.subject}" ถูกใช้ในตารางแล้ว`);
     return;
   }
 
@@ -1031,33 +1058,38 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
   // =================== RENDER COURSE CARD ===================
 const renderCourseCard = (courseCard: CourseCard) => {
   const isScheduler = role === "Scheduler";
+  const isUsed = isCourseCardUsed(courseCard);
+  const canDrag = isScheduler && !isUsed;
 
   return (
     <div
       key={courseCard.id}
-      draggable={isScheduler} // เฉพาะ Scheduler เท่านั้นที่ drag ได้
-      onDragStart={isScheduler ? (e) => handleCourseCardDragStart(e, courseCard) : undefined}
-      onDragEnd={isScheduler ? handleCourseCardDragEnd : undefined}
+      draggable={canDrag}
+      onDragStart={canDrag ? (e) => handleCourseCardDragStart(e, courseCard) : undefined}
+      onDragEnd={canDrag ? handleCourseCardDragEnd : undefined}
       style={{
-        backgroundColor: courseCard.color,
-        border: "2px solid rgba(0,0,0,0.1)",
+        backgroundColor: isUsed ? "#f5f5f5" : courseCard.color,
+        border: isUsed 
+          ? "2px solid #d9d9d9" 
+          : "2px solid rgba(0,0,0,0.1)",
         borderRadius: "8px",
         padding: "12px",
         margin: "8px 0",
-        cursor: isScheduler ? "grab" : "default", // เปลี่ยน cursor ตาม role
+        cursor: canDrag ? "grab" : isUsed ? "not-allowed" : "default",
         transition: "all 0.2s ease",
         fontSize: "11px",
         lineHeight: "1.3",
-        opacity: !isScheduler ? 0.7 : 1, // ลด opacity สำหรับ non-scheduler
+        opacity: isUsed ? 0.6 : (!isScheduler ? 0.7 : 1),
+        position: "relative"
       }}
       onMouseEnter={(e) => {
-        if (isScheduler) {
+        if (canDrag) {
           e.currentTarget.style.transform = "translateY(-2px)";
           e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
         }
       }}
       onMouseLeave={(e) => {
-        if (isScheduler) {
+        if (canDrag) {
           e.currentTarget.style.transform = "translateY(0px)";
           e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
         }
@@ -1065,26 +1097,30 @@ const renderCourseCard = (courseCard: CourseCard) => {
       onClick={() => {
         if (!isScheduler) {
           message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลากวิชาไปใส่ในตารางได้");
+        } else if (isUsed) {
+          message.info(`วิชา "${courseCard.subject}" ถูกใช้ในตารางแล้ว`);
         }
       }}
     >
       <Tooltip
         title={
           <div style={{ fontFamily: "Sarabun, sans-serif", minWidth: "250px" }}>
-            <div style={{ fontWeight: "bold", fontSize: "13px", marginBottom: "6px", color: "#F26522" }}>
-              📚 รายละเอียดวิชา
+            <div style={{ fontWeight: "bold", fontSize: "13px", marginBottom: "6px", color: isUsed ? "#999" : "#F26522" }}>
+              {isUsed ? "🔒 วิชาที่ใช้ในตารางแล้ว" : "📚 รายละเอียดวิชา"}
             </div>
             <p><b>🏷️ รหัสวิชา:</b> {courseCard.courseCode || "ไม่ระบุ"}</p>
             <p><b>📖 ชื่อวิชา:</b> {courseCard.subject || "ไม่ระบุ"}</p>
             <p><b>🎓 ชั้นปี:</b> {courseCard.studentYear ? `ปีที่ ${courseCard.studentYear}` : "ไม่ระบุ"}</p>
             <p><b>📄 หมู่เรียน:</b> {courseCard.section || "ไม่ระบุ"}</p>
             <p><b>👩‍🏫 อาจารย์:</b> {courseCard.teacher || "ไม่ระบุ"}</p>
-            <p><b>� ห้องเรียน:</b> {courseCard.room || "ไม่ระบุ"}</p>
-            <p><b>ⱶ️ ระยะเวลา:</b> {courseCard.duration} ชั่วโมง</p>
+            <p><b>🏢 ห้องเรียน:</b> {courseCard.room || "ไม่ระบุ"}</p>
+            <p><b>⏱️ ระยะเวลา:</b> {courseCard.duration} ชั่วโมง</p>
             <div style={{ marginTop: "8px", fontSize: "11px", color: "#666", fontStyle: "italic" }}>
-              {isScheduler 
-                ? "💡 ลากการ์ดนี้ไปวางในตารางเรียน"
-                : "🔒 ต้องเป็น Scheduler เท่านั้นถึงจะลากได้"
+              {isUsed 
+                ? "🔒 วิชานี้ถูกใช้ในตารางแล้ว ไม่สามารถลากได้อีก"
+                : !isScheduler 
+                ? "🔐 ต้องเป็น Scheduler เท่านั้นถึงจะลากได้"
+                : "💡 ลากการ์ดนี้ไปวางในตารางเรียน"
               }
             </div>
           </div>
@@ -1093,366 +1129,354 @@ const renderCourseCard = (courseCard: CourseCard) => {
         overlayStyle={{ maxWidth: "350px" }}
       >
         <div>
-          <div style={{ fontWeight: "bold", fontSize: "12px", marginBottom: "4px", color: "#333" }}>
+          <div style={{ fontWeight: "bold", fontSize: "12px", marginBottom: "4px", color: isUsed ? "#999" : "#333" }}>
             {courseCard.subject}
-            {!isScheduler && (
+            {isUsed && (
               <span style={{ marginLeft: "8px", fontSize: "10px" }}>🔒</span>
             )}
+            {!isScheduler && (
+              <span style={{ marginLeft: "8px", fontSize: "10px" }}>🔐</span>
+            )}
           </div>
-          <div style={{ fontSize: "9px", color: "#666", marginBottom: "2px" }}>
+          <div style={{ fontSize: "9px", color: isUsed ? "#aaa" : "#666", marginBottom: "2px" }}>
             รหัส: {courseCard.courseCode}
           </div>
-          <div style={{ fontSize: "10px", color: "#555", marginBottom: "2px" }}>
+          <div style={{ fontSize: "10px", color: isUsed ? "#aaa" : "#555", marginBottom: "2px" }}>
             อาจารย์: {courseCard.teacher}
           </div>
-          <div style={{ fontSize: "9px", color: "#777", marginBottom: "2px" }}>
+          <div style={{ fontSize: "9px", color: isUsed ? "#bbb" : "#777", marginBottom: "2px" }}>
             ห้อง: {courseCard.room}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
-            <span style={{ fontSize: "9px", color: "#888" }}>
+            <span style={{ fontSize: "9px", color: isUsed ? "#bbb" : "#888" }}>
               ปี {courseCard.studentYear} หมู่ {courseCard.section}
             </span>
-            <span style={{ fontSize: "10px", fontWeight: "bold", color: "#F26522" }}>
+            <span style={{ fontSize: "10px", fontWeight: "bold", color: isUsed ? "#aaa" : "#F26522" }}>
               {courseCard.duration}ชม.
             </span>
           </div>
+          
+          {/* Used indicator overlay */}
+          {isUsed && (
+            <div
+              style={{
+                position: "absolute",
+                top: "8px",
+                right: "8px",
+                backgroundColor: "rgba(153, 153, 153, 0.9)",
+                color: "white",
+                borderRadius: "12px",
+                padding: "4px 8px",
+                fontSize: "10px",
+                fontWeight: "bold",
+                border: "1px solid rgba(255,255,255,0.5)"
+              }}
+            >
+              ใช้แล้ว
+            </div>
+          )}
         </div>
       </Tooltip>
     </div>
   );
 };
-
   // =================== RENDER SIDEBAR ===================
   const renderSidebar = () => {
-    if (role !== "Scheduler" || !sidebarVisible) return null;
-    
-    const tabItems = [
-      {
-        key: 'available',
-        label: (
-          <span>
-            📚 วิชาพร้อมใช้ 
-            <Badge count={filteredCourseCards.length} style={{ marginLeft: '8px' }} />
-          </span>
-        ),
-        children: renderAvailableCourses()
-      },
-      {
-        key: 'removed',
-        label: (
-          <span>
-            🗑️ วิชาที่ลบแล้ว 
-            <Badge 
-              count={filteredRemovedCourses.length} 
-              style={{ marginLeft: '8px', backgroundColor: '#ff4d4f' }} 
-            />
-          </span>
-        ),
-        children: renderRemovedCourses()
-      }
-    ];
-    
-    return (
-      <div
-        style={{
-          width: `${sidebarWidth}px`,
-          backgroundColor: "#fafafa",
-          borderLeft: "1px solid #d9d9d9",
-          height: "100vh",
-          minHeight: "100vh",
-          maxHeight: "100vh",
-          position: "fixed",
-          right: 0,
-          top: 0,
-          bottom: 0,
-          zIndex: 1000,
-          boxShadow: "-2px 0 8px rgba(0,0,0,0.1)",
-          transition: "right 0.3s ease",
-          display: "flex",
-          flexDirection: "column"
-        }}
-      >
-        {/* Sidebar Header */}
+  if (role !== "Scheduler" || !sidebarVisible) return null;
+  
+  return (
+    <div
+      style={{
+        width: `${sidebarWidth}px`,
+        backgroundColor: "#fafafa",
+        borderLeft: "1px solid #d9d9d9",
+        height: "100vh",
+        minHeight: "100vh",
+        maxHeight: "100vh",
+        position: "fixed",
+        right: 0,
+        top: 0,
+        bottom: 0,
+        zIndex: 1000,
+        boxShadow: "-2px 0 8px rgba(0,0,0,0.1)",
+        transition: "right 0.3s ease",
+        display: "flex",
+        flexDirection: "column"
+      }}
+    >
+      {/* Sidebar Header */}
+      <div style={{ 
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "center",
+        padding: "16px",
+        paddingBottom: "12px",
+        borderBottom: "2px solid #F26522",
+        flexShrink: 0
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <BookOutlined style={{ color: "#F26522", fontSize: "18px" }} />
+          <h3 style={{ margin: 0, color: "#333", fontSize: "16px" }}>
+            กล่องวิชา
+          </h3>
+        </div>
+        <Button
+          type="text"
+          icon={<CloseOutlined />}
+          onClick={() => setSidebarVisible(false)}
+          size="small"
+        />
+      </div>
+
+      {/* Available Courses Content */}
+      <div style={{ 
+        flex: 1,
+        padding: "0 16px 16px 16px",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column"
+      }}>
+        {renderAvailableCourses()}
+      </div>
+
+      {/* Sidebar Footer */}
+      <div style={{ 
+        padding: "12px 16px",
+        borderTop: "1px solid #e8e8e8",
+        fontSize: "10px",
+        color: "#999",
+        textAlign: "center",
+        flexShrink: 0,
+        backgroundColor: "#f0f0f0"
+      }}>
+        🔧 ใช้ปุ่มข้างบนเพื่อปิด sidebar
+      </div>
+    </div>
+  );
+};
+
+// =================== RENDER AVAILABLE COURSES TAB ===================
+const renderAvailableCourses = () => {
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* Available Courses Filter Section */}
+      <div style={{ 
+        backgroundColor: "#f5f5f5", 
+        padding: "12px", 
+        borderRadius: "6px", 
+        border: "1px solid #e8e8e8",
+        marginBottom: "16px",
+        flexShrink: 0  // ป้องกันไม่ให้ส่วนนี้ถูกบีบ
+      }}>
+        {/* Filter Header */}
         <div style={{ 
           display: "flex", 
           justifyContent: "space-between", 
-          alignItems: "center",
-          padding: "16px",
-          paddingBottom: "12px",
-          borderBottom: "2px solid #F26522",
-          flexShrink: 0
+          alignItems: "center", 
+          marginBottom: "8px" 
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <BookOutlined style={{ color: "#F26522", fontSize: "18px" }} />
-            <h3 style={{ margin: 0, color: "#333", fontSize: "16px" }}>
-              กล่องวิชา
-            </h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <FilterOutlined style={{ color: "#1890ff", fontSize: "12px" }} />
+            <span style={{ fontWeight: "bold", color: "#333", fontSize: "12px" }}>
+              กรองวิชา ({filteredCourseCards.length}/{courseCards.length})
+            </span>
           </div>
-          <Button
-            type="text"
-            icon={<CloseOutlined />}
-            onClick={() => setSidebarVisible(false)}
-            size="small"
-          />
-        </div>
-
-        {/* Tabs for Available and Removed Courses */}
-        <div style={{ 
-          flex: 1,
-          padding: "0 16px 16px 16px",
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column"
-        }}>
-          <Tabs 
-            activeKey={activeTab}
-            onChange={setActiveTab}
-            items={tabItems}
-            size="small"
-            style={{ 
-              height: "100%",
-              display: "flex",
-              flexDirection: "column"
-            }}
-            tabBarStyle={{ 
-              marginBottom: "16px",
-              flexShrink: 0
-            }}
-          />
-        </div>
-
-        {/* Sidebar Footer */}
-        <div style={{ 
-          padding: "12px 16px",
-          borderTop: "1px solid #e8e8e8",
-          fontSize: "10px",
-          color: "#999",
-          textAlign: "center",
-          flexShrink: 0,
-          backgroundColor: "#f0f0f0"
-        }}>
-          🔧 ใช้ปุ่มข้างบนเพื่อปิด sidebar
-        </div>
-      </div>
-    );
-  };
-
-  // =================== RENDER AVAILABLE COURSES TAB ===================
-  const renderAvailableCourses = () => {
-    return (
-      <div style={{ height: "100%" }}>
-        {/* Available Courses Filter Section */}
-        <div style={{ 
-          backgroundColor: "#f5f5f5", 
-          padding: "12px", 
-          borderRadius: "6px", 
-          border: "1px solid #e8e8e8",
-          marginBottom: "16px" 
-        }}>
-          {/* Filter Header */}
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center", 
-            marginBottom: "8px" 
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <FilterOutlined style={{ color: "#1890ff", fontSize: "12px" }} />
-              <span style={{ fontWeight: "bold", color: "#333", fontSize: "12px" }}>
-                กรองวิชา ({filteredCourseCards.length}/{courseCards.length})
-              </span>
-            </div>
-            <div style={{ display: "flex", gap: "4px" }}>
+          <div style={{ display: "flex", gap: "4px" }}>
+            <Button
+              size="small"
+              icon={<SearchOutlined />}
+              type={sidebarFilterVisible ? "primary" : "default"}
+              onClick={() => setSidebarFilterVisible(!sidebarFilterVisible)}
+              style={{ fontSize: "10px", height: "24px" }}
+            >
+              {sidebarFilterVisible ? "ซ่อน" : "แสดง"}
+            </Button>
+            {(sidebarFilterTags.length > 0 || sidebarSearchValue) && (
               <Button
                 size="small"
-                icon={<SearchOutlined />}
-                type={sidebarFilterVisible ? "primary" : "default"}
-                onClick={() => setSidebarFilterVisible(!sidebarFilterVisible)}
+                icon={<ClearOutlined />}
+                onClick={clearAllSidebarFilters}
+                danger
                 style={{ fontSize: "10px", height: "24px" }}
               >
-                {sidebarFilterVisible ? "ซ่อน" : "แสดง"}
+                ล้าง
               </Button>
-              {(sidebarFilterTags.length > 0 || sidebarSearchValue) && (
-                <Button
-                  size="small"
-                  icon={<ClearOutlined />}
-                  onClick={clearAllSidebarFilters}
-                  danger
-                  style={{ fontSize: "10px", height: "24px" }}
-                >
-                  ล้าง
-                </Button>
-              )}
-            </div>
+            )}
           </div>
+        </div>
 
-          {/* Search Bar */}
+        {/* Search Bar */}
+        <div style={{ marginBottom: "8px" }}>
+          <Input
+            placeholder="ค้นหาวิชา, อาจารย์, รหัส..."
+            prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+            value={sidebarSearchValue}
+            onChange={(e) => setSidebarSearchValue(e.target.value)}
+            allowClear
+            size="small"
+            style={{ width: "100%" }}
+          />
+        </div>
+
+        {/* Filter Tags Display */}
+        {sidebarFilterTags.length > 0 && (
           <div style={{ marginBottom: "8px" }}>
-            <Input
-              placeholder="ค้นหาวิชา, อาจารย์, รหัส..."
-              prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
-              value={sidebarSearchValue}
-              onChange={(e) => setSidebarSearchValue(e.target.value)}
-              allowClear
-              size="small"
-              style={{ width: "100%" }}
-            />
-          </div>
-
-          {/* Filter Tags Display */}
-          {sidebarFilterTags.length > 0 && (
-            <div style={{ marginBottom: "8px" }}>
-              <div style={{ fontSize: "10px", color: "#666", marginBottom: "4px" }}>
-                ตัวกรอง:
-              </div>
-              <Space wrap size="small">
-                {sidebarFilterTags.map(tag => (
-                  <Tag
-                    key={tag.id}
-                    color={tag.color}
-                    closable
-                    onClose={() => removeSidebarFilterTag(tag.id)}
-                    style={{ marginBottom: "2px", fontSize: "10px" }}
-                  >
-                    {tag.label}
-                  </Tag>
-                ))}
-              </Space>
+            <div style={{ fontSize: "10px", color: "#666", marginBottom: "4px" }}>
+              ตัวกรอง:
             </div>
-          )}
-
-          {/* Filter Controls */}
-          {sidebarFilterVisible && (
-            <div style={{ 
-              display: "grid", 
-              gridTemplateColumns: "1fr 1fr", 
-              gap: "8px",
-              borderTop: "1px solid #e8e8e8",
-              paddingTop: "8px"
-            }}>
-              {/* Teacher Filter */}
-              <div>
-                <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
-                  อาจารย์:
-                </label>
-                <AutoComplete
-                  placeholder="เลือกอาจารย์"
-                  options={filterOptions.teachers.map(teacher => ({ value: teacher }))}
-                  onSelect={(value) => addSidebarFilterTag('teacher', value)}
-                  style={{ width: "100%" }}
-                  size="small"
-                  filterOption={(inputValue, option) =>
-                    option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
-                  }
-                />
-              </div>
-
-              {/* Student Year Filter */}
-              <div>
-                <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
-                  ชั้นปี:
-                </label>
-                <Select
-                  placeholder="เลือกชั้นปี"
-                  onSelect={(value) => addSidebarFilterTag('studentYear', value)}
-                  style={{ width: "100%" }}
-                  size="small"
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                  }
-                  options={filterOptions.studentYears.map(year => ({ 
-                    label: `ปีที่ ${year}`, 
-                    value: year 
-                  }))}
-                />
-              </div>
-
-              {/* Subject Filter */}
-              <div>
-                <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
-                  วิชา:
-                </label>
-                <AutoComplete
-                  placeholder="เลือกวิชา"
-                  options={filterOptions.subjects.map(subject => ({ value: subject }))}
-                  onSelect={(value) => addSidebarFilterTag('subject', value)}
-                  style={{ width: "100%" }}
-                  size="small"
-                  filterOption={(inputValue, option) =>
-                    option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
-                  }
-                />
-              </div>
-
-              {/* Course Code Filter */}
-              <div>
-                <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
-                  รหัสวิชา:
-                </label>
-                <AutoComplete
-                  placeholder="เลือกรหัสวิชา"
-                  options={filterOptions.courseCodes.map(code => ({ value: code }))}
-                  onSelect={(value) => addSidebarFilterTag('courseCode', value)}
-                  style={{ width: "100%" }}
-                  size="small"
-                  filterOption={(inputValue, option) =>
-                    option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
-                  }
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Course Cards Count */}
-        <div style={{ 
-          backgroundColor: "#e6f7ff", 
-          padding: "8px 12px", 
-          borderRadius: "6px",
-          marginBottom: "16px",
-          border: "1px solid #91d5ff"
-        }}>
-          <div style={{ fontSize: "12px", color: "#1890ff" }}>
-            📊 แสดงวิชา: <strong>{filteredCourseCards.length}</strong> จาก <strong>{courseCards.length}</strong> รายการ
+            <Space wrap size="small">
+              {sidebarFilterTags.map(tag => (
+                <Tag
+                  key={tag.id}
+                  color={tag.color}
+                  closable
+                  onClose={() => removeSidebarFilterTag(tag.id)}
+                  style={{ marginBottom: "2px", fontSize: "10px" }}
+                >
+                  {tag.label}
+                </Tag>
+              ))}
+            </Space>
           </div>
-          <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>
-            💡 ลากการ์ดวิชาไปวางในตารางเรียนได้เลย
-          </div>
-        </div>
+        )}
 
-        {/* Course Cards List */}
-        <div style={{ maxHeight: "calc(100vh - 500px)", overflowY: "auto" }}>
-          {filteredCourseCards.length === 0 ? (
-            <div style={{ 
-              textAlign: "center", 
-              padding: "40px 20px", 
-              color: "#999",
-              backgroundColor: "#f9f9f9",
-              borderRadius: "8px",
-              border: "2px dashed #ddd"
-            }}>
-              <BookOutlined style={{ fontSize: "32px", marginBottom: "8px", color: "#ccc" }} />
-              <div>
-                {courseCards.length === 0 
-                  ? "ไม่มีวิชาในกล่อง" 
-                  : "ไม่มีวิชาที่ตรงกับการกรอง"
+        {/* Filter Controls */}
+        {sidebarFilterVisible && (
+          <div style={{ 
+            display: "grid", 
+            gridTemplateColumns: "1fr 1fr", 
+            gap: "8px",
+            borderTop: "1px solid #e8e8e8",
+            paddingTop: "8px"
+          }}>
+            {/* Teacher Filter */}
+            <div>
+              <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                อาจารย์:
+              </label>
+              <AutoComplete
+                placeholder="เลือกอาจารย์"
+                options={filterOptions.teachers.map(teacher => ({ value: teacher }))}
+                onSelect={(value) => addSidebarFilterTag('teacher', value)}
+                style={{ width: "100%" }}
+                size="small"
+                filterOption={(inputValue, option) =>
+                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
                 }
-              </div>
-              <div style={{ fontSize: "11px", marginTop: "4px" }}>
-                {courseCards.length === 0 
-                  ? "กรุณาโหลดตารางจาก API ก่อน"
-                  : "ลองปรับเงื่อนไขการกรอง"
-                }
-              </div>
+              />
             </div>
-          ) : (
-            filteredCourseCards.map(courseCard => renderCourseCard(courseCard))
-          )}
+
+            {/* Student Year Filter */}
+            <div>
+              <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                ชั้นปี:
+              </label>
+              <Select
+                placeholder="เลือกชั้นปี"
+                onSelect={(value) => addSidebarFilterTag('studentYear', value)}
+                style={{ width: "100%" }}
+                size="small"
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+                options={filterOptions.studentYears.map(year => ({ 
+                  label: `ปีที่ ${year}`, 
+                  value: year 
+                }))}
+              />
+            </div>
+
+            {/* Subject Filter */}
+            <div>
+              <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                วิชา:
+              </label>
+              <AutoComplete
+                placeholder="เลือกวิชา"
+                options={filterOptions.subjects.map(subject => ({ value: subject }))}
+                onSelect={(value) => addSidebarFilterTag('subject', value)}
+                style={{ width: "100%" }}
+                size="small"
+                filterOption={(inputValue, option) =>
+                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                }
+              />
+            </div>
+
+            {/* Course Code Filter */}
+            <div>
+              <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                รหัสวิชา:
+              </label>
+              <AutoComplete
+                placeholder="เลือกรหัสวิชา"
+                options={filterOptions.courseCodes.map(code => ({ value: code }))}
+                onSelect={(value) => addSidebarFilterTag('courseCode', value)}
+                style={{ width: "100%" }}
+                size="small"
+                filterOption={(inputValue, option) =>
+                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                }
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Course Cards Count */}
+      <div style={{ 
+        backgroundColor: "#e6f7ff", 
+        padding: "8px 12px", 
+        borderRadius: "6px",
+        marginBottom: "16px",
+        border: "1px solid #91d5ff",
+        flexShrink: 0
+      }}>
+        <div style={{ fontSize: "12px", color: "#1890ff" }}>
+          📊 แสดงวิชา: <strong>{filteredCourseCards.length}</strong> จาก <strong>{courseCards.length}</strong> รายการ
+        </div>
+        <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>
+          💡 ลากการ์ดวิชาไปวางในตารางเรียนได้เลย
         </div>
       </div>
-    );
-  };
+
+      {/* Course Cards List */}
+      <div style={{ 
+        flex: 1, // ใช้พื้นที่ที่เหลือทั้งหมด
+        overflowY: "auto",
+        paddingRight: "4px" // เพิ่ม padding เล็กน้อยสำหรับ scrollbar
+      }}>
+        {filteredCourseCards.length === 0 ? (
+          <div style={{ 
+            textAlign: "center", 
+            padding: "40px 20px", 
+            color: "#999",
+            backgroundColor: "#f9f9f9",
+            borderRadius: "8px",
+            border: "2px dashed #ddd"
+          }}>
+            <BookOutlined style={{ fontSize: "32px", marginBottom: "8px", color: "#ccc" }} />
+            <div>
+              {courseCards.length === 0 
+                ? "ไม่มีวิชาในกล่อง" 
+                : "ไม่มีวิชาที่ตรงกับการกรอง"
+              }
+            </div>
+            <div style={{ fontSize: "11px", marginTop: "4px" }}>
+              {courseCards.length === 0 
+                ? "กรุณาโหลดตารางจาก API ก่อน"
+                : "ลองปรับเงื่อนไขการกรอง"
+              }
+            </div>
+          </div>
+        ) : (
+          filteredCourseCards.map(courseCard => renderCourseCard(courseCard))
+        )}
+      </div>
+    </div>
+  );
+};
 
   // =================== RENDER REMOVED COURSES TAB ===================
   const renderRemovedCourses = () => {
@@ -1851,7 +1875,6 @@ const checkAllConflicts = (
     const timeOverlap = doSubCellsOverlap(newSubCell, existingSubCell);
     
     if (timeOverlap) {
-      // ตรวจสอบว่าเป็นวิชาเดียวกัน + อาจารย์เดียวกัน + ห้องเดียวกัน หรือไม่
       const isSameSubject = newSubCell.classData.subject === existingSubCell.classData.subject;
       const isSameTeacher = newSubCell.classData.teacher && existingSubCell.classData.teacher &&
                            newSubCell.classData.teacher.trim() !== "" && existingSubCell.classData.teacher.trim() !== "" &&
@@ -1862,53 +1885,67 @@ const checkAllConflicts = (
       const isSameCourseCode = newSubCell.classData.courseCode && existingSubCell.classData.courseCode &&
                               newSubCell.classData.courseCode === existingSubCell.classData.courseCode;
 
-      // หากเป็นวิชาเดียวกัน + อาจารย์เดียวกัน + ห้องเดียวกัน = ไม่ขัดแย้ง (เป็น section ต่างกัน)
-      if (isSameSubject && isSameTeacher && isSameRoom && isSameCourseCode) {
+      // เงื่อนไข 1: ถ้าเป็นวิชาเดียวกัน + รหัสเดียวกัน = ไม่ขัดแย้ง (คนละ section)
+      if (isSameSubject && isSameCourseCode) {
         console.log('✅ ไม่ขัดแย้ง: วิชาเดียวกัน section ต่างกัน', {
           subject: newSubCell.classData.subject,
-          teacher: newSubCell.classData.teacher,
-          room: newSubCell.classData.room,
+          courseCode: newSubCell.classData.courseCode,
           newSection: newSubCell.classData.section,
           existingSection: existingSubCell.classData.section
         });
-        continue; // ไม่ถือว่าขัดแย้ง
+        continue;
       }
 
-      // เพิ่มในรายการขัดแย้ง
-      conflictInfo.conflictingSubCells.push(existingSubCell);
-      
-      // ถ้าเวลาทับซ้อน ให้ตรวจสอบห้องและอาจารย์
-      if (!conflictInfo.conflictDetails.time) {
-        conflictInfo.conflictDetails.time = true;
-        conflicts.push('time');
-      }
-
-      // ตรวจสอบห้องเดียวกัน (แต่ไม่ใช่วิชาเดียวกัน)
+      // เงื่อนไข 2: ตรวจสอบห้องขัดแย้ง
       if (isSameRoom && !isSameSubject) {
-        conflictInfo.conflictDetails.room = {
-          conflictingSubCell: existingSubCell,
-          room: existingSubCell.classData.room
-        };
-        if (!conflicts.includes('room')) conflicts.push('room');
-      }
-
-      // ตรวจสอบอาจารย์เดียวกัน (แต่ไม่ใช่วิชาเดียวกัน)
-      if (isSameTeacher && !isSameSubject) {
-        conflictInfo.conflictDetails.teacher = {
-          conflictingSubCell: existingSubCell,
-          teacher: existingSubCell.classData.teacher
-        };
-        if (!conflicts.includes('teacher')) conflicts.push('teacher');
-      }
-
-      // กรณีพิเศษ: วิชาต่างกัน + อาจารย์เดียวกัน + ห้องเดียวกัน = ขัดแย้งทั้งคู่
-      if (!isSameSubject && isSameTeacher && isSameRoom) {
-        if (!conflictInfo.conflictDetails.room) {
+        // ถ้าห้อง TBA ไม่ขัดแย้ง
+        if (newSubCell.classData.room === "TBA" || existingSubCell.classData.room === "TBA") {
+          console.log('✅ ไม่ขัดแย้ง: ห้อง TBA');
+        } else {
+          // ห้องเดียวกัน + วิชาต่างกัน = ขัดแย้ง
+          conflictInfo.conflictingSubCells.push(existingSubCell);
           conflictInfo.conflictDetails.room = {
             conflictingSubCell: existingSubCell,
             room: existingSubCell.classData.room
           };
           if (!conflicts.includes('room')) conflicts.push('room');
+          console.log('❌ ขัดแย้ง: ห้องเดียวกัน วิชาต่างกัน', {
+            room: newSubCell.classData.room,
+            newSubject: newSubCell.classData.subject,
+            existingSubject: existingSubCell.classData.subject
+          });
+        }
+      }
+
+      // เงื่อนไข 3: ตรวจสอบอาจารย์ขัดแย้ง
+      if (isSameTeacher && !isSameSubject) {
+        // อาจารย์เดียวกัน + วิชาต่างกัน = ขัดแย้ง
+        if (!conflictInfo.conflictingSubCells.includes(existingSubCell)) {
+          conflictInfo.conflictingSubCells.push(existingSubCell);
+        }
+        conflictInfo.conflictDetails.teacher = {
+          conflictingSubCell: existingSubCell,
+          teacher: existingSubCell.classData.teacher
+        };
+        if (!conflicts.includes('teacher')) conflicts.push('teacher');
+        console.log('❌ ขัดแย้ง: อาจารย์เดียวกัน วิชาต่างกัน', {
+          teacher: newSubCell.classData.teacher,
+          newSubject: newSubCell.classData.subject,
+          existingSubject: existingSubCell.classData.subject
+        });
+      }
+
+      // เงื่อนไข 4: ถ้าทั้งห้องและอาจารย์เดียวกัน แต่วิชาต่างกัน
+      if (isSameRoom && isSameTeacher && !isSameSubject) {
+        // ถ้าห้อง TBA ให้ขัดแย้งเฉพาะอาจารย์
+        if (newSubCell.classData.room !== "TBA" && existingSubCell.classData.room !== "TBA") {
+          if (!conflictInfo.conflictDetails.room) {
+            conflictInfo.conflictDetails.room = {
+              conflictingSubCell: existingSubCell,
+              room: existingSubCell.classData.room
+            };
+            if (!conflicts.includes('room')) conflicts.push('room');
+          }
         }
         if (!conflictInfo.conflictDetails.teacher) {
           conflictInfo.conflictDetails.teacher = {
@@ -2247,64 +2284,19 @@ const removeSubCell = (subCellId: string) => {
 
   setScheduleData(prevData => {
     const newData = [...prevData];
-    let removedSubCell: SubCell | null = null;
     let wasRemoved = false;
     
     for (const dayData of newData) {
       const cellIndex = (dayData.subCells || []).findIndex(cell => cell.id === subCellId);
       if (cellIndex !== -1) {
-        removedSubCell = dayData.subCells![cellIndex];
         dayData.subCells!.splice(cellIndex, 1);
         wasRemoved = true;
         break;
       }
     }
     
-    if (removedSubCell && wasRemoved) {
-      const uniqueKey = `${removedSubCell.classData.subject}-${removedSubCell.classData.courseCode}-${removedSubCell.classData.section}-${removedSubCell.classData.teacher}-${removedSubCell.day}-${removedSubCell.startTime}-${removedSubCell.endTime}`;
-      
-      const isDuplicate = removedCourses.some(existing => {
-        const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
-        return existingKey === uniqueKey;
-      });
-
-      if (!isDuplicate) {
-        const removedCourse: RemovedCourse = {
-          id: `removed-${Date.now()}-${Math.random()}`,
-          subject: removedSubCell.classData.subject,
-          courseCode: removedSubCell.classData.courseCode || "",
-          teacher: removedSubCell.classData.teacher,
-          room: removedSubCell.classData.room,
-          section: removedSubCell.classData.section || "",
-          studentYear: removedSubCell.classData.studentYear || "",
-          duration: removedSubCell.position.endSlot - removedSubCell.position.startSlot,
-          color: removedSubCell.classData.color || getSubjectColor(removedSubCell.classData.subject),
-          scheduleId: removedSubCell.scheduleId,
-          removedAt: new Date(),
-          originalDay: removedSubCell.day,
-          originalStartTime: removedSubCell.startTime,
-          originalEndTime: removedSubCell.endTime
-        };
-
-        setTimeout(() => {
-          setRemovedCourses(prev => {
-            const stillNotDuplicate = !prev.some(existing => {
-              const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
-              return existingKey === uniqueKey;
-            });
-            
-            if (stillNotDuplicate) {
-              return [removedCourse, ...prev];
-            } else {
-              return prev;
-            }
-          });
-        }, 50);
-        
-        message.success("ลบวิชาออกจากตารางแล้ว (ย้ายไปยังรายการวิชาที่ลบ)");
-      } else {
-        message.success("ลบวิชาออกจากตารางแล้ว");
-      }
+    if (wasRemoved) {
+      message.success("ลบวิชาออกจากตารางแล้ว (วิชาจะกลับมาพร้อมใช้งานใน sidebar)");
     }
     
     return newData;
@@ -2458,9 +2450,9 @@ const renderSubCell = (subCell: SubCell) => {
       onDragStart={isScheduler && !isTimeFixed ? (e) => handleSubCellDragStart(e, subCell) : undefined}
       onDragEnd={isScheduler && !isTimeFixed ? handleSubCellDragEnd : undefined}
       style={{
-        backgroundColor: subCell.classData.color,
+        backgroundColor: isTimeFixed ? "#f5f5f5" : subCell.classData.color, // สีเทาสำหรับ TimeFixed
         border: isTimeFixed 
-          ? "3px solid #ff4d4f"
+          ? "2px solid #d9d9d9" // เทาอ่อนสำหรับ TimeFixed
           : "2px solid rgba(0,0,0,0.2)",
         borderRadius: "6px",
         padding: "6px 8px",
@@ -2474,7 +2466,7 @@ const renderSubCell = (subCell: SubCell) => {
         fontSize: duration > 2 ? "11px" : shouldSpan ? "10px" : "9px",
         lineHeight: "1.2",
         textAlign: "center",
-        color: "#333",
+        color: isTimeFixed ? "#999" : "#333", // สีข้อความเทาสำหรับ TimeFixed
         height: `${CELL_CONFIG.FIXED_HEIGHT}px`,
         position: "absolute",
         width: "calc(100% - 4px)",
@@ -2483,11 +2475,11 @@ const renderSubCell = (subCell: SubCell) => {
         zIndex: shouldSpan ? 10 : 5,
         fontWeight: shouldSpan ? "bold" : "normal",
         boxShadow: isTimeFixed 
-          ? "0 4px 12px rgba(255, 77, 79, 0.4)"
+          ? "0 2px 6px rgba(153, 153, 153, 0.3)" // เงาสีเทาสำหรับ TimeFixed
           : shouldSpan 
           ? "0 4px 12px rgba(242, 101, 34, 0.4)" 
           : "0 3px 6px rgba(0,0,0,0.15)",
-        opacity: !isScheduler ? 0.8 : isTimeFixed ? 0.95 : 1,
+        opacity: isTimeFixed ? 0.7 : (!isScheduler ? 0.8 : 1), // ลด opacity สำหรับ TimeFixed
       }}
     >
       <Tooltip
@@ -2502,7 +2494,7 @@ const renderSubCell = (subCell: SubCell) => {
               borderRadius: "6px",
             }}
           >
-            <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "6px", color: isTimeFixed ? "#ff4d4f" : "#F26522" }}>
+            <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "6px", color: isTimeFixed ? "#999" : "#F26522" }}>
               {isTimeFixed ? "🔒 Time Fixed Course" : "📚 รายละเอียดวิชา"}
             </div>
             <p><b>🏷️ รหัสวิชา:</b> {subCell.classData.courseCode || "ไม่ระบุ"}</p>
@@ -2514,7 +2506,7 @@ const renderSubCell = (subCell: SubCell) => {
             <p><b>📅 วัน:</b> {subCell.day}</p>
             <p><b>🕐 เวลา:</b> {subCell.startTime} - {subCell.endTime}</p>
             {isTimeFixed && (
-              <p style={{ color: "#ff4d4f", fontSize: "12px", marginTop: "8px", fontWeight: "bold" }}>
+              <p style={{ color: "#999", fontSize: "12px", marginTop: "8px", fontWeight: "bold" }}>
                 🔒 วิชานี้ถูกล็อกไว้ ไม่สามารถย้ายหรือลบได้
               </p>
             )}
@@ -2545,12 +2537,13 @@ const renderSubCell = (subCell: SubCell) => {
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
             maxWidth: "100%",
+            color: isTimeFixed ? "#aaa" : "inherit" // สีเทาอ่อนสำหรับชื่อวิชา TimeFixed
           }}>
             {subCell.classData.subject}
           </div>
           <div style={{
             fontSize: "7px",
-            color: "#050505ff",
+            color: isTimeFixed ? "#bbb" : "#050505ff", // สีเทาอ่อนสำหรับรหัสวิชา TimeFixed
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -2560,7 +2553,7 @@ const renderSubCell = (subCell: SubCell) => {
           </div>
           <div style={{
             fontSize: "10px",
-            color: "#666",
+            color: isTimeFixed ? "#bbb" : "#666", // สีเทาอ่อนสำหรับชื่ออาจารย์ TimeFixed
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -2570,7 +2563,7 @@ const renderSubCell = (subCell: SubCell) => {
           </div>
           <div style={{
             fontSize: "10px",
-            color: "#888",
+            color: isTimeFixed ? "#ccc" : "#888", // สีเทาอ่อนสำหรับห้อง TimeFixed
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -2589,7 +2582,7 @@ const renderSubCell = (subCell: SubCell) => {
             left: "4px",
             width: duration > 2 ? "22px" : shouldSpan ? "20px" : "18px",
             height: duration > 2 ? "22px" : shouldSpan ? "20px" : "18px",
-            backgroundColor: "rgba(255,77,79,0.9)",
+            backgroundColor: "rgba(153, 153, 153, 0.9)", // สีเทาแทนสีแดง
             borderRadius: "50%",
             display: "flex",
             alignItems: "center",
@@ -2600,9 +2593,29 @@ const renderSubCell = (subCell: SubCell) => {
             border: "2px solid white",
             boxShadow: "0 2px 4px rgba(0,0,0,0.3)"
           }}
-          title="Time Fixed Course - ไม่สามารถย้ายได้"
+          title="Time Fixed Course - ถูกล็อกไว้"
         >
           🔒
+        </div>
+      )}
+
+      {/* ตัวบ่งชี้ "ใช้แล้ว" เหมือนใน sidebar */}
+      {isTimeFixed && (
+        <div
+          style={{
+            position: "absolute",
+            top: "4px",
+            right: "4px",
+            backgroundColor: "rgba(153, 153, 153, 0.9)",
+            color: "white",
+            borderRadius: "12px",
+            padding: "2px 6px",
+            fontSize: "8px",
+            fontWeight: "bold",
+            border: "1px solid rgba(255,255,255,0.5)"
+          }}
+        >
+          ล็อก
         </div>
       )}
 
@@ -2642,65 +2655,20 @@ const renderSubCell = (subCell: SubCell) => {
         </div>
       )}
 
-      {isTimeFixed && (
-        <div
-          style={{
-            position: "absolute",
-            top: "4px",
-            right: "4px",
-            width: duration > 2 ? "20px" : shouldSpan ? "18px" : "16px",
-            height: duration > 2 ? "20px" : shouldSpan ? "18px" : "16px",
-            backgroundColor: "rgba(128,128,128,0.6)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: duration > 2 ? "11px" : shouldSpan ? "10px" : "9px",
-            color: "white",
-            cursor: "not-allowed",
-            fontWeight: "bold",
-            border: "1px solid rgba(255,255,255,0.5)"
-          }}
-          title="Time Fixed Course - ไม่สามารถลบได้"
-          onClick={(e) => {
-            e.stopPropagation();
-            message.warning(`ไม่สามารถลบ "${subCell.classData.subject}" ได้ เพราะเป็น Time Fixed Course`);
-          }}
-        >
-          🚫
-        </div>
-      )}
-
       <div style={{
         position: "absolute",
         bottom: "4px",
         left: "4px",
         fontSize: duration > 2 ? "10px" : "9px",
-        color: isTimeFixed ? "#ff4d4f" : "#F26522",
+        color: isTimeFixed ? "#aaa" : "#F26522", // สีเทาอ่อนสำหรับ TimeFixed
         fontWeight: "bold",
         backgroundColor: "rgba(255,255,255,0.95)",
         borderRadius: "4px",
         padding: duration > 1 ? "2px 6px" : "1px 4px",
-        border: `1px solid rgba(${isTimeFixed ? '255, 77, 79' : '242, 101, 34'}, 0.4)`
+        border: `1px solid rgba(${isTimeFixed ? '153, 153, 153' : '242, 101, 34'}, 0.4)`
       }}>
         {duration}คาบ
       </div>
-
-      {!isScheduler && (
-        <div style={{
-          position: "absolute",
-          top: "4px",
-          right: "4px",
-          fontSize: "10px",
-          color: "#666",
-          backgroundColor: "rgba(255,255,255,0.9)",
-          borderRadius: "3px",
-          padding: "1px 4px",
-          border: "1px solid #ddd"
-        }}>
-          🔒
-        </div>
-      )}
 
       <div style={{
         position: "absolute",
@@ -2708,7 +2676,7 @@ const renderSubCell = (subCell: SubCell) => {
         bottom: "0",
         right: "0",
         height: duration > 2 ? "6px" : shouldSpan ? "5px" : "4px",
-        backgroundColor: `rgba(${isTimeFixed ? '255, 77, 79' : '242, 101, 34'}, ${0.3 + (duration * 0.1)})`,
+        backgroundColor: `rgba(${isTimeFixed ? '153, 153, 153' : '242, 101, 34'}, ${0.3 + (duration * 0.1)})`,
         borderRadius: "0 0 6px 6px"
       }} />
       
@@ -2718,12 +2686,12 @@ const renderSubCell = (subCell: SubCell) => {
           right: "4px",
           bottom: "4px",
           fontSize: "8px",
-          color: isTimeFixed ? "#ff4d4f" : "#F26522",
+          color: isTimeFixed ? "#aaa" : "#F26522", // สีเทาอ่อนสำหรับ TimeFixed
           fontWeight: "bold",
           backgroundColor: "rgba(255,255,255,0.9)",
           borderRadius: "3px",
           padding: "1px 4px",
-          border: `1px solid rgba(${isTimeFixed ? '255, 77, 79' : '242, 101, 34'}, 0.3)`
+          border: `1px solid rgba(${isTimeFixed ? '153, 153, 153' : '242, 101, 34'}, 0.3)`
         }}>
           {duration}ช่วง
         </div>
@@ -3517,54 +3485,37 @@ const handleReset = () => {
     }
   });
 
-  // อัปเดต state ต่างๆ
+  // อัปเดต schedule data
   setScheduleData(newScheduleData);
   
-  // ล้างข้อมูลอื่นๆ เหมือนเดิม
+  // ล้างข้อมูลอื่นๆ
   setCurrentTableName("");
   setIsTableFromAPI(false);
   setOriginalScheduleData([]);
   
-  // ล้าง Course Cards เฉพาะที่ไม่ใช่ TimeFixed
-  const timeFixedCourseCards = courseCards.filter(card => {
-    // ตรวจสอบว่า course card นี้เป็น TimeFixed หรือไม่
-    // โดยดูจาก scheduleId ที่ตรงกับ SubCell ที่เป็น TimeFixed
-    const isTimeFixedCard = newScheduleData.some(dayData =>
-      dayData.subCells?.some(subCell => 
-        subCell.scheduleId === card.scheduleId && subCell.isTimeFixed === true
-      )
-    );
-    return isTimeFixedCard;
-  });
-  
-  setCourseCards(timeFixedCourseCards);
-  setFilteredCourseCards(timeFixedCourseCards);
-  
-  // ล้าง removed courses ทั้งหมด (เพราะถือว่า reset แล้ว)
-  setRemovedCourses([]);
-  setFilteredRemovedCourses([]);
-  setRemovedSearchValue("");
+  // *** ไม่ลบ course cards ออก ให้คงไว้ทั้งหมด ***
+  // courseCards จะยังคงอยู่ แต่ isCourseCardUsed() จะตรวจสอบใหม่จาก newScheduleData
+  // ทำให้วิชาที่ไม่ใช่ TimeFixed จะเปลี่ยนเป็นสถานะ "ใช้งานได้" อัตโนมัติ
   
   // ล้าง filters
   clearAllFilters();
   clearAllSidebarFilters();
-  
-  // ไม่ต้องรีเซ็ต color mapping เพื่อให้ TimeFixed courses คงสีเดิม
-  // subjectColorMap.clear();
-  // colorIndex = 0;
   
   // นับจำนวน TimeFixed courses ที่เหลืออยู่
   const timeFixedCount = newScheduleData.reduce((count, dayData) => 
     count + (dayData.subCells?.filter(subCell => subCell.isTimeFixed).length || 0), 0
   );
   
+  // นับจำนวนวิชาปกติที่กลับมาใช้ได้
+  const availableCourses = courseCards.filter(card => !isCourseCardUsed(card));
+  
   if (timeFixedCount > 0) {
-    message.success(`รีเซตตารางสำเร็จ (เก็บ TimeFixed Courses ไว้ ${timeFixedCount} วิชา)`);
+    message.success(`รีเซตตารางสำเร็จ (เก็บ TimeFixed Courses ไว้ ${timeFixedCount} วิชา, วิชาปกติ ${availableCourses.length} วิชา กลับมาพร้อมใช้งาน)`);
   } else {
-    message.success("รีเซตตารางสำเร็จ");
+    message.success(`รีเซตตารางสำเร็จ (วิชาทั้งหมด ${courseCards.length} วิชา กลับมาพร้อมใช้งาน)`);
   }
 
-  console.log(`🔄 Reset completed. TimeFixed courses preserved: ${timeFixedCount}`);
+  console.log(`🔄 Reset completed. TimeFixed courses preserved: ${timeFixedCount}, Available courses: ${availableCourses.length}`);
 };
 
   // =================== RENDER TABLE STATUS ===================
@@ -3790,46 +3741,47 @@ const handleReset = () => {
     );
   };
 
-  const exportPDF = async () => {
-   const node = tableRef.current;
+const exportPDF = async () => {
+  const node = tableRef.current;
   if (!node) return;
-
-  const originalHeight = node.style.height;
-  const originalOverflow = node.style.overflow;
-
-  node.style.height = `${node.scrollHeight}px`;
-  node.style.overflow = "visible";
-
+  
   try {
-    const dataUrl = await toPng(node, { cacheBust: true });
-    const pdf = new jsPDF("p", "mm", "a4");
-
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+    const dataUrl = await toPng(node, { 
+      cacheBust: true,
+      quality: 1.0,
+      pixelRatio: 2,
+      backgroundColor: 'white'
+    });
 
     const img = new Image();
     img.src = dataUrl;
+    
     img.onload = () => {
       const imgWidth = img.width;
       const imgHeight = img.height;
 
-      // สเกลภาพให้พอดีกับหน้ากระดาษ
-      const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
-      const finalWidth = imgWidth * ratio;
-      const finalHeight = imgHeight * ratio;
-
-      // 🎯 คำนวณ offset ให้อยู่ตรงกลาง
-      const offsetX = (pageWidth - finalWidth) / 2;
-      const offsetY = (pageHeight - finalHeight) / 2;
-
-      pdf.addImage(dataUrl, "PNG", offsetX, offsetY, finalWidth, finalHeight);
+      // คำนวณสัดส่วนของรูป
+      const aspectRatio = imgWidth / imgHeight;
+      
+      // กำหนดความกว้างเท่า A4 (210mm)
+      const targetWidth = 210; // A4 width in mm
+      const targetHeight = targetWidth / aspectRatio; // คำนวณความสูงตามสัดส่วน
+      
+      // สร้าง PDF ขนาดที่พอดีกับรูป (custom size)
+      const pdf = new jsPDF({
+        orientation: targetWidth > targetHeight ? 'l' : 'p',
+        unit: 'mm',
+        format: [targetWidth, targetHeight] // custom page size
+      });
+      
+      // วางรูปเต็มหน้าไม่มีขอบ
+      pdf.addImage(dataUrl, "PNG", 0, 0, targetWidth, targetHeight);
       pdf.save("schedule.pdf");
     };
+    
   } catch (error) {
     console.error("Export failed:", error);
-  } finally {
-    node.style.height = originalHeight;
-    node.style.overflow = originalOverflow;
+    message.error("เกิดข้อผิดพลาดในการส่งออก PDF");
   }
 };
 
@@ -3853,7 +3805,7 @@ const exportScheduleToXLSX = async () => {
       section: string;
       studentYear: string;
       room: string;
-      capacity: number; // 🎯 เพิ่มบรรทัดนี้
+      capacity: number;
       schedule: Map<string, Array<{startTime: string; endTime: string; room: string}>>;
     }
     
@@ -3862,9 +3814,15 @@ const exportScheduleToXLSX = async () => {
     scheduleData.forEach(dayData => {
       if (dayData.subCells && dayData.subCells.length > 0) {
         dayData.subCells.forEach(subCell => {
+          // เช็คว่าเป็น TimeFixed Course หรือไม่ ถ้าใช่ให้ข้าม
+          if (subCell.isTimeFixed) {
+            console.log('⏭️ Skipping TimeFixed course from Excel export:', subCell.classData.subject);
+            return;
+          }
+
           const key = `${subCell.classData.courseCode || 'NO_CODE'}-${subCell.classData.section || '1'}`;
           if (!allSubjects.has(key)) {
-            // 🎯 หา capacity จากข้อมูล API โดยใช้ scheduleId
+            // หา capacity จากข้อมูล API โดยใช้ scheduleId
             let capacity = 30; // default value
             if (subCell.scheduleId && originalScheduleData) {
               const originalSchedule = originalScheduleData.find(
@@ -3882,7 +3840,7 @@ const exportScheduleToXLSX = async () => {
               section: subCell.classData.section || "ไม่ระบุ",
               studentYear: subCell.classData.studentYear || "1",
               room: subCell.classData.room || "ไม่ระบุ",
-              capacity: capacity, // 🎯 ใช้ capacity จาก API
+              capacity: capacity,
               schedule: new Map<string, Array<{startTime: string; endTime: string; room: string}>>()
             });
           }
@@ -3906,13 +3864,20 @@ const exportScheduleToXLSX = async () => {
       }
     });
 
-    // กำหนดช่วงเวลา 8-20 (13 ชั่วโมง)
+    // ตรวจสอบว่ามีวิชาที่จะ export หรือไม่
+    if (allSubjects.size === 0) {
+      hide();
+      message.warning("ไม่มีวิชาที่สามารถส่งออกได้ (มีเฉพาะ TimeFixed Courses)");
+      return;
+    }
+
+    // กำหนดช่วงเวลา 8-20 (13 ช่วงโมง)
     const timeSlots = Array.from({length: 13}, (_, i) => i + 8); // [8, 9, 10, ..., 20]
 
     // สร้าง workbook และ worksheet ก่อน (สร้างแบบ manual)
     const wb = XLSX.utils.book_new();
     
-    // 🎯 แก้ไข: ใช้ any type หรือ Record<string, any> สำหรับ ws
+    // ใช้ any type หรือ Record<string, any> สำหรับ ws
     const ws: Record<string, any> = {};
 
     // กำหนดจำนวนคอลัมน์ทั้งหมด
@@ -3925,7 +3890,7 @@ const exportScheduleToXLSX = async () => {
     ws['C1'] = { v: 'กลุ่มละกี่คน', t: 's' };
     ws['D1'] = { v: 'อาจารย์ที่สอน', t: 's' };
 
-    // วันต่างๆ - วางที่ตำแหน่งเริ่มต้นของแต่ละวัน
+    // วันต่าง ๆ - วางที่ตำแหน่งเริ่มต้นของแต่ละวัน
     let currentCol = 4; // เริ่มจากคอลัมน์ E (index 4)
     DAYS.forEach((day, dayIndex) => {
       const cellRef = XLSX.utils.encode_cell({ r: 0, c: currentCol });
@@ -3939,7 +3904,7 @@ const exportScheduleToXLSX = async () => {
     ws['C2'] = { v: 'Students/Group', t: 's' };
     ws['D2'] = { v: 'Instructor', t: 's' };
 
-    // เวลาต่างๆ - แสดงเป็นช่วงเวลา
+    // เวลาต่าง ๆ - แสดงเป็นช่วงเวลา
     currentCol = 4;
     DAYS.forEach(day => {
       timeSlots.forEach((hour, index) => {
@@ -4136,7 +4101,7 @@ const exportScheduleToXLSX = async () => {
       }
     }
 
-    // 🎯 ส่วนที่ขาดหายไป - เพิ่มเติม worksheet ไปใน workbook และบันทึกไฟล์
+    // เพิ่ม worksheet ไปใน workbook และบันทึกไฟล์
     XLSX.utils.book_append_sheet(wb, ws, 'ตารางสอน');
     
     // สร้างชื่อไฟล์พร้อม timestamp
@@ -4148,7 +4113,7 @@ const exportScheduleToXLSX = async () => {
     XLSX.writeFile(wb, filename);
     
     hide();
-    message.success("สร้างไฟล์ Excel เรียบร้อยแล้ว");
+    message.success(`สร้างไฟล์ Excel เรียบร้อยแล้ว (ไม่รวม TimeFixed Courses)`);
     
   } catch (error) {
     console.error("เกิดข้อผิดพลาดในการสร้าง Excel:", error);
