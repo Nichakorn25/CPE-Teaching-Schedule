@@ -1,7 +1,10 @@
-import {CreateCourseInteface,CreateUserInterface,} from "../../interfaces/Adminpage";
-import {TeachingAssistantInterface,} from "../../interfaces/TeachingAssistant";
-import {OpenCourseInterface} from "../../interfaces/OpenCourse";
-import {TimeFixedCoursesIn} from "../../interfaces/TimeFix";
+import {
+  CreateCourseInteface,
+  CreateUserInterface,
+} from "../../interfaces/Adminpage";
+import { TeachingAssistantInterface } from "../../interfaces/TeachingAssistant";
+import { OpenCourseInterface } from "../../interfaces/OpenCourse";
+import { TimeFixedCoursesIn } from "../../interfaces/TimeFix";
 import axios from "axios";
 
 const apiUrl = "http://localhost:8080";
@@ -51,7 +54,7 @@ async function deleteCourse(id: number) {
     .catch((e) => e.response);
 }
 
-async function getTypeofCourse() {   
+async function getTypeofCourse() {
   return await axios
     .get(`${apiUrl}/course-type`, requestOptions)
     .then((res) => res)
@@ -59,7 +62,7 @@ async function getTypeofCourse() {
 }
 
 //------------------ User ------------------------------//
-async function getTeachers() {  
+async function getTeachers() {
   return await axios
     .get(`${apiUrl}/all-instructor`, requestOptions)
     .then((res) => res)
@@ -138,7 +141,10 @@ async function postCreateTeachingAssistant(data: TeachingAssistantInterface) {
     .catch((e) => e.response);
 }
 
-async function putUpdateTeachingAssistant(id: number, data: TeachingAssistantInterface) {
+async function putUpdateTeachingAssistant(
+  id: number,
+  data: TeachingAssistantInterface
+) {
   return await axios
     .put(`${apiUrl}/update-teaching-assistants/${id}`, data, requestOptions)
     .then((res) => res)
@@ -159,7 +165,9 @@ async function postCreateTimeFixedCourses(data: TimeFixedCoursesIn) {
     .then((res) => res)
     .catch((e) => e.response);
 }
-async function postCreateSchduleTeachingAssistant(data: TeachingAssistantInterface) {
+async function postCreateSchduleTeachingAssistant(
+  data: TeachingAssistantInterface
+) {
   return await axios
     .post(`${apiUrl}/ScheduleTeachingAssistants`, data, requestOptions)
     .then((res) => res)
@@ -169,28 +177,22 @@ export {
   getCoursebyid, //used
   getAllCourses, //used
   postCreateCourse, //used
-  putUpdateCourse, //used 
+  putUpdateCourse, //used
   deleteCourse, //used
-
-  getTeachers,//used
+  getTeachers, //used
   getAllTeachers, //used
   getUserById, //used
-  postCreateUser,//used
-  putUpdateUser,//used
-  deleteUser,//used
-
+  postCreateUser, //used
+  putUpdateUser, //used
+  deleteUser, //used
   getOpenCourses, //used
   postCreateOfferedCourse, //used
-
   getTeachingAssistantsById, //used
   getAllTeachingAssistants, //used
   postCreateTeachingAssistant, //used
   putUpdateTeachingAssistant, //used
   deleteTeachingAssistant, //used
-
-  getTypeofCourse,//used
-
+  getTypeofCourse, //used
   postCreateTimeFixedCourses,
-
   postCreateSchduleTeachingAssistant,
 };

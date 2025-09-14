@@ -214,7 +214,8 @@ export interface AllCourseInterfaceForAllcourse {
   ID: number;
   No: number;
   CourseCode: string;
-  CourseName: string;
+  ThaiCourseName: string;
+  EnglishCourseName: string;
   CourseType: string;
   Credit: string;
   CurriculumID: number;
