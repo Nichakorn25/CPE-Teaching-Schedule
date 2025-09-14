@@ -1255,222 +1255,228 @@ const renderCourseCard = (courseCard: CourseCard) => {
   );
 };
 
-  // =================== RENDER AVAILABLE COURSES TAB ===================
-  const renderAvailableCourses = () => {
-    return (
-      <div style={{ height: "100%" }}>
-        {/* Available Courses Filter Section */}
+// =================== RENDER AVAILABLE COURSES TAB ===================
+const renderAvailableCourses = () => {
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* Available Courses Filter Section */}
+      <div style={{ 
+        backgroundColor: "#f5f5f5", 
+        padding: "12px", 
+        borderRadius: "6px", 
+        border: "1px solid #e8e8e8",
+        marginBottom: "16px",
+        flexShrink: 0  // ป้องกันไม่ให้ส่วนนี้ถูกบีบ
+      }}>
+        {/* Filter Header */}
         <div style={{ 
-          backgroundColor: "#f5f5f5", 
-          padding: "12px", 
-          borderRadius: "6px", 
-          border: "1px solid #e8e8e8",
-          marginBottom: "16px" 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          marginBottom: "8px" 
         }}>
-          {/* Filter Header */}
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center", 
-            marginBottom: "8px" 
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <FilterOutlined style={{ color: "#1890ff", fontSize: "12px" }} />
-              <span style={{ fontWeight: "bold", color: "#333", fontSize: "12px" }}>
-                กรองวิชา ({filteredCourseCards.length}/{courseCards.length})
-              </span>
-            </div>
-            <div style={{ display: "flex", gap: "4px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <FilterOutlined style={{ color: "#1890ff", fontSize: "12px" }} />
+            <span style={{ fontWeight: "bold", color: "#333", fontSize: "12px" }}>
+              กรองวิชา ({filteredCourseCards.length}/{courseCards.length})
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "4px" }}>
+            <Button
+              size="small"
+              icon={<SearchOutlined />}
+              type={sidebarFilterVisible ? "primary" : "default"}
+              onClick={() => setSidebarFilterVisible(!sidebarFilterVisible)}
+              style={{ fontSize: "10px", height: "24px" }}
+            >
+              {sidebarFilterVisible ? "ซ่อน" : "แสดง"}
+            </Button>
+            {(sidebarFilterTags.length > 0 || sidebarSearchValue) && (
               <Button
                 size="small"
-                icon={<SearchOutlined />}
-                type={sidebarFilterVisible ? "primary" : "default"}
-                onClick={() => setSidebarFilterVisible(!sidebarFilterVisible)}
+                icon={<ClearOutlined />}
+                onClick={clearAllSidebarFilters}
+                danger
                 style={{ fontSize: "10px", height: "24px" }}
               >
-                {sidebarFilterVisible ? "ซ่อน" : "แสดง"}
+                ล้าง
               </Button>
-              {(sidebarFilterTags.length > 0 || sidebarSearchValue) && (
-                <Button
-                  size="small"
-                  icon={<ClearOutlined />}
-                  onClick={clearAllSidebarFilters}
-                  danger
-                  style={{ fontSize: "10px", height: "24px" }}
-                >
-                  ล้าง
-                </Button>
-              )}
-            </div>
+            )}
           </div>
+        </div>
 
-          {/* Search Bar */}
+        {/* Search Bar */}
+        <div style={{ marginBottom: "8px" }}>
+          <Input
+            placeholder="ค้นหาวิชา, อาจารย์, รหัส..."
+            prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+            value={sidebarSearchValue}
+            onChange={(e) => setSidebarSearchValue(e.target.value)}
+            allowClear
+            size="small"
+            style={{ width: "100%" }}
+          />
+        </div>
+
+        {/* Filter Tags Display */}
+        {sidebarFilterTags.length > 0 && (
           <div style={{ marginBottom: "8px" }}>
-            <Input
-              placeholder="ค้นหาวิชา, อาจารย์, รหัส..."
-              prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
-              value={sidebarSearchValue}
-              onChange={(e) => setSidebarSearchValue(e.target.value)}
-              allowClear
-              size="small"
-              style={{ width: "100%" }}
-            />
-          </div>
-
-          {/* Filter Tags Display */}
-          {sidebarFilterTags.length > 0 && (
-            <div style={{ marginBottom: "8px" }}>
-              <div style={{ fontSize: "10px", color: "#666", marginBottom: "4px" }}>
-                ตัวกรอง:
-              </div>
-              <Space wrap size="small">
-                {sidebarFilterTags.map(tag => (
-                  <Tag
-                    key={tag.id}
-                    color={tag.color}
-                    closable
-                    onClose={() => removeSidebarFilterTag(tag.id)}
-                    style={{ marginBottom: "2px", fontSize: "10px" }}
-                  >
-                    {tag.label}
-                  </Tag>
-                ))}
-              </Space>
+            <div style={{ fontSize: "10px", color: "#666", marginBottom: "4px" }}>
+              ตัวกรอง:
             </div>
-          )}
-
-          {/* Filter Controls */}
-          {sidebarFilterVisible && (
-            <div style={{ 
-              display: "grid", 
-              gridTemplateColumns: "1fr 1fr", 
-              gap: "8px",
-              borderTop: "1px solid #e8e8e8",
-              paddingTop: "8px"
-            }}>
-              {/* Teacher Filter */}
-              <div>
-                <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
-                  อาจารย์:
-                </label>
-                <AutoComplete
-                  placeholder="เลือกอาจารย์"
-                  options={filterOptions.teachers.map(teacher => ({ value: teacher }))}
-                  onSelect={(value) => addSidebarFilterTag('teacher', value)}
-                  style={{ width: "100%" }}
-                  size="small"
-                  filterOption={(inputValue, option) =>
-                    option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
-                  }
-                />
-              </div>
-
-              {/* Student Year Filter */}
-              <div>
-                <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
-                  ชั้นปี:
-                </label>
-                <Select
-                  placeholder="เลือกชั้นปี"
-                  onSelect={(value) => addSidebarFilterTag('studentYear', value)}
-                  style={{ width: "100%" }}
-                  size="small"
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                  }
-                  options={filterOptions.studentYears.map(year => ({ 
-                    label: `ปีที่ ${year}`, 
-                    value: year 
-                  }))}
-                />
-              </div>
-
-              {/* Subject Filter */}
-              <div>
-                <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
-                  วิชา:
-                </label>
-                <AutoComplete
-                  placeholder="เลือกวิชา"
-                  options={filterOptions.subjects.map(subject => ({ value: subject }))}
-                  onSelect={(value) => addSidebarFilterTag('subject', value)}
-                  style={{ width: "100%" }}
-                  size="small"
-                  filterOption={(inputValue, option) =>
-                    option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
-                  }
-                />
-              </div>
-
-              {/* Course Code Filter */}
-              <div>
-                <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
-                  รหัสวิชา:
-                </label>
-                <AutoComplete
-                  placeholder="เลือกรหัสวิชา"
-                  options={filterOptions.courseCodes.map(code => ({ value: code }))}
-                  onSelect={(value) => addSidebarFilterTag('courseCode', value)}
-                  style={{ width: "100%" }}
-                  size="small"
-                  filterOption={(inputValue, option) =>
-                    option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
-                  }
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Course Cards Count */}
-        <div style={{ 
-          backgroundColor: "#e6f7ff", 
-          padding: "8px 12px", 
-          borderRadius: "6px",
-          marginBottom: "16px",
-          border: "1px solid #91d5ff"
-        }}>
-          <div style={{ fontSize: "12px", color: "#1890ff" }}>
-            📊 แสดงวิชา: <strong>{filteredCourseCards.length}</strong> จาก <strong>{courseCards.length}</strong> รายการ
+            <Space wrap size="small">
+              {sidebarFilterTags.map(tag => (
+                <Tag
+                  key={tag.id}
+                  color={tag.color}
+                  closable
+                  onClose={() => removeSidebarFilterTag(tag.id)}
+                  style={{ marginBottom: "2px", fontSize: "10px" }}
+                >
+                  {tag.label}
+                </Tag>
+              ))}
+            </Space>
           </div>
-          <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>
-            💡 ลากการ์ดวิชาไปวางในตารางเรียนได้เลย
-          </div>
-        </div>
+        )}
 
-        {/* Course Cards List */}
-        <div style={{ maxHeight: "calc(100vh - 500px)", overflowY: "auto" }}>
-          {filteredCourseCards.length === 0 ? (
-            <div style={{ 
-              textAlign: "center", 
-              padding: "40px 20px", 
-              color: "#999",
-              backgroundColor: "#f9f9f9",
-              borderRadius: "8px",
-              border: "2px dashed #ddd"
-            }}>
-              <BookOutlined style={{ fontSize: "32px", marginBottom: "8px", color: "#ccc" }} />
-              <div>
-                {courseCards.length === 0 
-                  ? "ไม่มีวิชาในกล่อง" 
-                  : "ไม่มีวิชาที่ตรงกับการกรอง"
+        {/* Filter Controls */}
+        {sidebarFilterVisible && (
+          <div style={{ 
+            display: "grid", 
+            gridTemplateColumns: "1fr 1fr", 
+            gap: "8px",
+            borderTop: "1px solid #e8e8e8",
+            paddingTop: "8px"
+          }}>
+            {/* Teacher Filter */}
+            <div>
+              <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                อาจารย์:
+              </label>
+              <AutoComplete
+                placeholder="เลือกอาจารย์"
+                options={filterOptions.teachers.map(teacher => ({ value: teacher }))}
+                onSelect={(value) => addSidebarFilterTag('teacher', value)}
+                style={{ width: "100%" }}
+                size="small"
+                filterOption={(inputValue, option) =>
+                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
                 }
-              </div>
-              <div style={{ fontSize: "11px", marginTop: "4px" }}>
-                {courseCards.length === 0 
-                  ? "กรุณาโหลดตารางจาก API ก่อน"
-                  : "ลองปรับเงื่อนไขการกรอง"
-                }
-              </div>
+              />
             </div>
-          ) : (
-            filteredCourseCards.map(courseCard => renderCourseCard(courseCard))
-          )}
+
+            {/* Student Year Filter */}
+            <div>
+              <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                ชั้นปี:
+              </label>
+              <Select
+                placeholder="เลือกชั้นปี"
+                onSelect={(value) => addSidebarFilterTag('studentYear', value)}
+                style={{ width: "100%" }}
+                size="small"
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+                options={filterOptions.studentYears.map(year => ({ 
+                  label: `ปีที่ ${year}`, 
+                  value: year 
+                }))}
+              />
+            </div>
+
+            {/* Subject Filter */}
+            <div>
+              <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                วิชา:
+              </label>
+              <AutoComplete
+                placeholder="เลือกวิชา"
+                options={filterOptions.subjects.map(subject => ({ value: subject }))}
+                onSelect={(value) => addSidebarFilterTag('subject', value)}
+                style={{ width: "100%" }}
+                size="small"
+                filterOption={(inputValue, option) =>
+                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                }
+              />
+            </div>
+
+            {/* Course Code Filter */}
+            <div>
+              <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                รหัสวิชา:
+              </label>
+              <AutoComplete
+                placeholder="เลือกรหัสวิชา"
+                options={filterOptions.courseCodes.map(code => ({ value: code }))}
+                onSelect={(value) => addSidebarFilterTag('courseCode', value)}
+                style={{ width: "100%" }}
+                size="small"
+                filterOption={(inputValue, option) =>
+                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                }
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Course Cards Count */}
+      <div style={{ 
+        backgroundColor: "#e6f7ff", 
+        padding: "8px 12px", 
+        borderRadius: "6px",
+        marginBottom: "16px",
+        border: "1px solid #91d5ff",
+        flexShrink: 0
+      }}>
+        <div style={{ fontSize: "12px", color: "#1890ff" }}>
+          📊 แสดงวิชา: <strong>{filteredCourseCards.length}</strong> จาก <strong>{courseCards.length}</strong> รายการ
+        </div>
+        <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>
+          💡 ลากการ์ดวิชาไปวางในตารางเรียนได้เลย
         </div>
       </div>
-    );
-  };
+
+      {/* Course Cards List */}
+      <div style={{ 
+        flex: 1, // ใช้พื้นที่ที่เหลือทั้งหมด
+        overflowY: "auto",
+        paddingRight: "4px" // เพิ่ม padding เล็กน้อยสำหรับ scrollbar
+      }}>
+        {filteredCourseCards.length === 0 ? (
+          <div style={{ 
+            textAlign: "center", 
+            padding: "40px 20px", 
+            color: "#999",
+            backgroundColor: "#f9f9f9",
+            borderRadius: "8px",
+            border: "2px dashed #ddd"
+          }}>
+            <BookOutlined style={{ fontSize: "32px", marginBottom: "8px", color: "#ccc" }} />
+            <div>
+              {courseCards.length === 0 
+                ? "ไม่มีวิชาในกล่อง" 
+                : "ไม่มีวิชาที่ตรงกับการกรอง"
+              }
+            </div>
+            <div style={{ fontSize: "11px", marginTop: "4px" }}>
+              {courseCards.length === 0 
+                ? "กรุณาโหลดตารางจาก API ก่อน"
+                : "ลองปรับเงื่อนไขการกรอง"
+              }
+            </div>
+          </div>
+        ) : (
+          filteredCourseCards.map(courseCard => renderCourseCard(courseCard))
+        )}
+      </div>
+    </div>
+  );
+};
 
   // =================== RENDER REMOVED COURSES TAB ===================
   const renderRemovedCourses = () => {
@@ -3503,54 +3509,37 @@ const handleReset = () => {
     }
   });
 
-  // อัปเดต state ต่างๆ
+  // อัปเดต schedule data
   setScheduleData(newScheduleData);
   
-  // ล้างข้อมูลอื่นๆ เหมือนเดิม
+  // ล้างข้อมูลอื่นๆ
   setCurrentTableName("");
   setIsTableFromAPI(false);
   setOriginalScheduleData([]);
   
-  // ล้าง Course Cards เฉพาะที่ไม่ใช่ TimeFixed
-  const timeFixedCourseCards = courseCards.filter(card => {
-    // ตรวจสอบว่า course card นี้เป็น TimeFixed หรือไม่
-    // โดยดูจาก scheduleId ที่ตรงกับ SubCell ที่เป็น TimeFixed
-    const isTimeFixedCard = newScheduleData.some(dayData =>
-      dayData.subCells?.some(subCell => 
-        subCell.scheduleId === card.scheduleId && subCell.isTimeFixed === true
-      )
-    );
-    return isTimeFixedCard;
-  });
-  
-  setCourseCards(timeFixedCourseCards);
-  setFilteredCourseCards(timeFixedCourseCards);
-  
-  // ล้าง removed courses ทั้งหมด (เพราะถือว่า reset แล้ว)
-  setRemovedCourses([]);
-  setFilteredRemovedCourses([]);
-  setRemovedSearchValue("");
+  // *** ไม่ลบ course cards ออก ให้คงไว้ทั้งหมด ***
+  // courseCards จะยังคงอยู่ แต่ isCourseCardUsed() จะตรวจสอบใหม่จาก newScheduleData
+  // ทำให้วิชาที่ไม่ใช่ TimeFixed จะเปลี่ยนเป็นสถานะ "ใช้งานได้" อัตโนมัติ
   
   // ล้าง filters
   clearAllFilters();
   clearAllSidebarFilters();
-  
-  // ไม่ต้องรีเซ็ต color mapping เพื่อให้ TimeFixed courses คงสีเดิม
-  // subjectColorMap.clear();
-  // colorIndex = 0;
   
   // นับจำนวน TimeFixed courses ที่เหลืออยู่
   const timeFixedCount = newScheduleData.reduce((count, dayData) => 
     count + (dayData.subCells?.filter(subCell => subCell.isTimeFixed).length || 0), 0
   );
   
+  // นับจำนวนวิชาปกติที่กลับมาใช้ได้
+  const availableCourses = courseCards.filter(card => !isCourseCardUsed(card));
+  
   if (timeFixedCount > 0) {
-    message.success(`รีเซตตารางสำเร็จ (เก็บ TimeFixed Courses ไว้ ${timeFixedCount} วิชา)`);
+    message.success(`รีเซตตารางสำเร็จ (เก็บ TimeFixed Courses ไว้ ${timeFixedCount} วิชา, วิชาปกติ ${availableCourses.length} วิชา กลับมาพร้อมใช้งาน)`);
   } else {
-    message.success("รีเซตตารางสำเร็จ");
+    message.success(`รีเซตตารางสำเร็จ (วิชาทั้งหมด ${courseCards.length} วิชา กลับมาพร้อมใช้งาน)`);
   }
 
-  console.log(`🔄 Reset completed. TimeFixed courses preserved: ${timeFixedCount}`);
+  console.log(`🔄 Reset completed. TimeFixed courses preserved: ${timeFixedCount}, Available courses: ${availableCourses.length}`);
 };
 
   // =================== RENDER TABLE STATUS ===================
