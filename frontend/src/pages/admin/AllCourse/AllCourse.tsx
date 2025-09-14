@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   getAllCourses,
   deleteCourse,
@@ -30,6 +30,7 @@ interface CourseTableData extends AllCourseInterfaceForAllcourse {
 const AllCourse: React.FC = () => {
   const userRole = localStorage.getItem("role");
   const navigate = useNavigate();
+  const [sortBy, setSortBy] = useState<"Code" | "Name" | "TypeName">("Code");
   const [searchText, setSearchText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -78,31 +79,22 @@ const AllCourse: React.FC = () => {
     fetchMajors();
   }, []);
 
-  // Options สำหรับ Dropdown
+  // Major dropdown
   const majorOptions =
     selectedDepartment === "all"
-      ? []
+      ? major.map((m) => ({ id: m.ID, name: m.MajorName })) // ถ้า all ให้โชว์ทุกสาขา
       : major
           .filter((m) => m.Department.ID.toString() === selectedDepartment)
           .map((m) => ({ id: m.ID, name: m.MajorName }));
 
+  // Category dropdown
   const categoryOptionsFiltered =
     selectedMajor === "all"
-      ? Array.from(
-          new Set(
-            courseData
-              .filter((c) =>
-                selectedDepartment === "all"
-                  ? true
-                  : c.MajorName.DepartmentID.toString() === selectedDepartment
-              )
-              .map((c) => c.CourseType)
-          )
-        )
+      ? Array.from(new Set(courseData.map((c) => c.CourseType))) // all → เอาทุกหมวด
       : Array.from(
           new Set(
             courseData
-              .filter((c) => c.MajorName.ID.toString() === selectedMajor)
+              .filter((c) => c.MajorName?.ID?.toString() === selectedMajor)
               .map((c) => c.CourseType)
           )
         );
@@ -163,40 +155,70 @@ const AllCourse: React.FC = () => {
     fetchCourses();
   }, []);
 
-  const filteredCourses = courseData.filter(
-    (course: AllCourseInterfaceForAllcourse) => {
-      const matchesSearch =
-        course.EnglishCourseName?.toLowerCase().includes(
-          searchText.toLowerCase()
-        ) ||
-        course.CourseCode?.toLowerCase().includes(searchText.toLowerCase()) ||
-        course.Instructor?.some((instructor) =>
-          instructor.toLowerCase().includes(searchText.toLowerCase())
+  const tableData: CourseTableData[] = useMemo(() => {
+    if (!courseData) return [];
+
+    const filteredCourses = courseData.filter(
+      (course: AllCourseInterfaceForAllcourse) => {
+        const matchesSearch =
+          !searchText ||
+          course.EnglishCourseName?.toLowerCase().includes(
+            searchText.toLowerCase()
+          ) ||
+          course.CourseCode?.toLowerCase().includes(searchText.toLowerCase()) ||
+          course.Instructor?.some((instructor) =>
+            instructor.toLowerCase().includes(searchText.toLowerCase())
+          );
+
+        const matchesCategory =
+          selectedCategory === "all" ||
+          (course.CourseType || "") === selectedCategory;
+
+        const matchesDepartment =
+          selectedDepartment === "all" ||
+          (course.MajorName?.DepartmentID?.toString() || "") ===
+            selectedDepartment;
+
+        const matchesMajor =
+          selectedMajor === "all" ||
+          (course.MajorName?.ID?.toString() || "") === selectedMajor;
+
+        // ถ้า MajorName หรือ DepartmentID ไม่มี ให้ถือว่า match all
+        return (
+          matchesSearch && matchesCategory && matchesDepartment && matchesMajor
         );
+      }
+    );
 
-      const matchesCategory =
-        selectedCategory === "all" || course.CourseType === selectedCategory;
+    // 2. Sort
+    const sortedCourses = [...filteredCourses].sort((a, b) => {
+      if (sortBy === "Code")
+        return (a.CourseCode || "").localeCompare(b.CourseCode || "");
+      if (sortBy === "Name")
+        return (a.EnglishCourseName || "").localeCompare(
+          b.EnglishCourseName || ""
+        );
+      if (sortBy === "TypeName")
+        return (a.CourseType || "").localeCompare(b.CourseType || "");
+      return 0;
+    });
 
-      const matchesDepartment =
-        selectedDepartment === "all" ||
-        course.MajorName?.DepartmentID.toString() === selectedDepartment;
-
-      const matchesMajor =
-        selectedMajor === "all" ||
-        course.MajorName?.ID.toString() === selectedMajor;
-
-      return (
-        matchesSearch && matchesCategory && matchesDepartment && matchesMajor
-      );
-    }
-  );
-
-  // Convert data for table
-  const tableData: CourseTableData[] = filteredCourses.map((course, index) => ({
-    ...course,
-    key: course.ID?.toString() || `${index}`,
-    order: (currentPage - 1) * pageSize + index + 1,
-  }));
+    // 3. Map
+    return sortedCourses.map((course, index) => ({
+      ...course,
+      key: course.ID?.toString() || `${index}`,
+      order: (currentPage - 1) * pageSize + index + 1,
+    }));
+  }, [
+    courseData,
+    searchText,
+    selectedDepartment,
+    selectedMajor,
+    selectedCategory,
+    sortBy,
+    currentPage,
+    pageSize,
+  ]);
 
   // Calculate pagination
   const totalItems = tableData.length;
@@ -535,7 +557,7 @@ const AllCourse: React.FC = () => {
   };
 
   return (
-    <div
+    <div 
       style={{
         fontFamily: "Sarabun, sans-serif",
         padding: 0,
@@ -609,6 +631,37 @@ const AllCourse: React.FC = () => {
             gap: isMobile ? "8px" : "12px",
           }}
         >
+          {/* Sort By select - ด้านซ้ายสุด */}
+          <Select
+            value={sortBy}
+            onChange={setSortBy}
+            placeholder="เลือกการเรียงลำดับ"
+            style={{ width: 150 }}
+            suffixIcon={null}
+            optionLabelProp="children"
+          >
+            {[
+              { value: "Code", label: "รหัสวิชา" },
+              { value: "Name", label: "ชื่อวิชา" },
+              { value: "TypeName", label: "หมวดวิชา" },
+            ].map((item) => (
+              <Option key={item.value} value={item.value}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    height="20"
+                    viewBox="0 -960 960 960"
+                    width="20"
+                    fill="#1f1f1f"
+                  >
+                    <path d="M120-240v-80h240v80H120Zm0-200v-80h480v80H120Zm0-200v-80h720v80H120Z" />
+                  </svg>
+                  {item.label}
+                </div>
+              </Option>
+            ))}
+          </Select>
+
           {/* Search controls */}
           <Input
             placeholder="ค้นหารายวิชา..."
