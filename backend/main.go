@@ -57,7 +57,7 @@ func main() {
 		///////////////////// TeachingAssistant /////////////////////////
 		r.GET("/teaching-assistants/:id", controllers.GetTeachingAssistantByID)
 		r.GET("/all-teaching-assistants", controllers.GetAllTeachingAssistants)
-		r.POST("/create-teaching-assistants", controllers.CreateTeachingAssistant)
+ 		r.POST("/create-teaching-assistants", controllers.CreateTeachingAssistant)
 		r.PUT("/update-teaching-assistants/:id", controllers.UpdateTeachingAssistant)
 		r.DELETE("/delete-teaching-assistants/:id", controllers.DeleteTeachingAssistant)
 
@@ -88,7 +88,6 @@ func main() {
 
 		r.GET("/offered-courses-schedule", controllers.GetOfferedCoursesAndSchedule) 
 		r.GET("/offered-course-filter/:major_id/:department_id/:toc_id", controllers.GetOpenCoursesByFilters) // แบบ path
-		r.GET("/offered-course-filter", controllers.GetOpenCoursesByFilters)                                   // แบบ query
 
 	}
 

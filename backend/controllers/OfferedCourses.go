@@ -341,6 +341,17 @@ type OfferedCoursesDetail struct {
 	Sections      []SectionDetail
 }
 
+type CourseItem struct {
+	ID             uint   
+	Code           string 
+	EnglishName    string 
+	ThaiName       string 
+	CurriculumName string 
+	MajorName      string 
+	DepartmentName string 
+	TypeName       string 
+}
+
 func GetOfferedCoursesAndSchedule(c *gin.Context) {
 	majorName := c.Query("major_name")
 	year := c.Query("year")
@@ -353,7 +364,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 		Preload("AllCourses.Curriculum.Major").
 		Preload("AllCourses.UserAllCourses.User.Title").
 		Preload("Schedule.TimeFixedCourses").
-		Preload("Laboratory"). // preload ห้องเรียน
+		Preload("Laboratory").
 		Where("year = ? AND term = ?", year, term).
 		Find(&offeredCourses).Distinct("offered_courses.id").Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -368,12 +379,12 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 		}
 
 		// room จาก Laboratory ถ้ามี
-		room := ""
+		var room string
 		if oc.LaboratoryID != nil && oc.Laboratory.ID != 0 {
 			room = oc.Laboratory.Room
 		}
 
-		// สร้างชื่ออาจารย์ตั้งแต่ต้น
+		// สร้างชื่ออาจารย์
 		instructors := []string{}
 		for _, uac := range oc.AllCourses.UserAllCourses {
 			instructorName := uac.User.Title.Title + " " + uac.User.Firstname + " " + uac.User.Lastname
@@ -393,18 +404,21 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 				ID:                oc.ID,
 				Code:              oc.AllCourses.Code,
 				ThaiCourseName:    oc.AllCourses.ThaiName,
-				EnglishCourseName:    oc.AllCourses.EnglishName,
-				Credit:        credit,
-				TypeOfCourse:  oc.AllCourses.TypeOfCourses.TypeName,
-				TotalSections: oc.Section,
-				Sections:      []SectionDetail{},
+				EnglishCourseName: oc.AllCourses.EnglishName,
+				Credit:            credit,
+				TypeOfCourse:      oc.AllCourses.TypeOfCourses.TypeName,
+				TotalSections:     oc.Section,
+				Sections: []SectionDetail{
+					{
+						SectionNumber:   oc.Section,
+						Room:            room,
+						DayOfWeek:       "",
+						Time:            "",
+						Capacity:        oc.Capacity,
+						InstructorNames: instructors,
+					},
+				},
 			}
-		}
-
-		instructors := []string{}
-		for _, uac := range oc.AllCourses.UserAllCourses {
-			instructorName := uac.User.Title.Title + " " + uac.User.Firstname + " " + uac.User.Lastname
-			instructors = append(instructors, instructorName)
 		}
 
 		sectionMap := make(map[string]SectionDetail)
@@ -414,36 +428,32 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 				for _, tf := range sch.TimeFixedCourses {
 					key := fmt.Sprintf("%d-%s-%s", tf.Section, tf.DayOfWeek, tf.StartTime)
 					sectionMap[key] = SectionDetail{
-						ID:             tf.ID,
-						SectionNumber:  tf.Section,
-						Room:           tf.RoomFix,
-						DayOfWeek:      tf.DayOfWeek,
-						Time:           tf.StartTime.Format("15:04") + " - " + tf.EndTime.Format("15:04"),
-						Capacity:       tf.Capacity,
+						ID:              tf.ID,
+						SectionNumber:   tf.Section,
+						Room:            tf.RoomFix,
+						DayOfWeek:       tf.DayOfWeek,
+						Time:            tf.StartTime.Format("15:04") + " - " + tf.EndTime.Format("15:04"),
+						Capacity:        tf.Capacity,
 						InstructorNames: instructors,
 					}
 				}
 			}
 		} else {
 			for _, sch := range oc.Schedule {
-				room := ""
-				if oc.LaboratoryID != nil && oc.Laboratory.ID != 0 {
-					room = oc.Laboratory.Room
-				}
 				key := fmt.Sprintf("%d-%s-%s", sch.SectionNumber, sch.DayOfWeek, sch.StartTime)
 				sectionMap[key] = SectionDetail{
-					ID:             sch.ID,
-					SectionNumber:  sch.SectionNumber,
-					Room:           room,
-					DayOfWeek:      sch.DayOfWeek,
-					Time:           sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
-					Capacity:       oc.Capacity,
+					ID:              sch.ID,
+					SectionNumber:   sch.SectionNumber,
+					Room:            room,
+					DayOfWeek:       sch.DayOfWeek,
+					Time:            sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
+					Capacity:        oc.Capacity,
 					InstructorNames: instructors,
 				}
 			}
 		}
 
-		// ถ้ามี Section จริง ๆ ให้แทน placeholder
+		// แทน placeholder ด้วย Section จริง
 		if len(sectionMap) > 0 {
 			grouped[oc.AllCourses.Code].Sections = []SectionDetail{}
 			for _, sec := range sectionMap {
@@ -454,11 +464,25 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 
 	var responses []OfferedCoursesDetail
 	for _, v := range grouped {
+		// ถ้าไม่มี Sections ให้ใส่ placeholder ห้องเรียนรอศูนย์บริการจัดสรร
+		if len(v.Sections) == 0 {
+			v.Sections = []SectionDetail{
+				{
+					SectionNumber:   1,
+					Room:            "รอศูนย์บริการจัดสรรห้องเรียน",
+					DayOfWeek:       "",
+					Time:            "",
+					Capacity:        0,
+					InstructorNames: []string{},
+				},
+			}
+		}
 		responses = append(responses, *v)
 	}
 
 	c.JSON(http.StatusOK, responses)
 }
+
 
 func GetOpenCoursesByFilters(c *gin.Context) {
     majorIDStr := c.Param("major_id")
