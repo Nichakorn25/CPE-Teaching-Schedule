@@ -2450,9 +2450,9 @@ const renderSubCell = (subCell: SubCell) => {
       onDragStart={isScheduler && !isTimeFixed ? (e) => handleSubCellDragStart(e, subCell) : undefined}
       onDragEnd={isScheduler && !isTimeFixed ? handleSubCellDragEnd : undefined}
       style={{
-        backgroundColor: subCell.classData.color,
+        backgroundColor: isTimeFixed ? "#f5f5f5" : subCell.classData.color, // สีเทาสำหรับ TimeFixed
         border: isTimeFixed 
-          ? "3px solid #ff4d4f"
+          ? "2px solid #d9d9d9" // เทาอ่อนสำหรับ TimeFixed
           : "2px solid rgba(0,0,0,0.2)",
         borderRadius: "6px",
         padding: "6px 8px",
@@ -2466,7 +2466,7 @@ const renderSubCell = (subCell: SubCell) => {
         fontSize: duration > 2 ? "11px" : shouldSpan ? "10px" : "9px",
         lineHeight: "1.2",
         textAlign: "center",
-        color: "#333",
+        color: isTimeFixed ? "#999" : "#333", // สีข้อความเทาสำหรับ TimeFixed
         height: `${CELL_CONFIG.FIXED_HEIGHT}px`,
         position: "absolute",
         width: "calc(100% - 4px)",
@@ -2475,11 +2475,11 @@ const renderSubCell = (subCell: SubCell) => {
         zIndex: shouldSpan ? 10 : 5,
         fontWeight: shouldSpan ? "bold" : "normal",
         boxShadow: isTimeFixed 
-          ? "0 4px 12px rgba(255, 77, 79, 0.4)"
+          ? "0 2px 6px rgba(153, 153, 153, 0.3)" // เงาสีเทาสำหรับ TimeFixed
           : shouldSpan 
           ? "0 4px 12px rgba(242, 101, 34, 0.4)" 
           : "0 3px 6px rgba(0,0,0,0.15)",
-        opacity: !isScheduler ? 0.8 : isTimeFixed ? 0.95 : 1,
+        opacity: isTimeFixed ? 0.7 : (!isScheduler ? 0.8 : 1), // ลด opacity สำหรับ TimeFixed
       }}
     >
       <Tooltip
@@ -2494,7 +2494,7 @@ const renderSubCell = (subCell: SubCell) => {
               borderRadius: "6px",
             }}
           >
-            <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "6px", color: isTimeFixed ? "#ff4d4f" : "#F26522" }}>
+            <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "6px", color: isTimeFixed ? "#999" : "#F26522" }}>
               {isTimeFixed ? "🔒 Time Fixed Course" : "📚 รายละเอียดวิชา"}
             </div>
             <p><b>🏷️ รหัสวิชา:</b> {subCell.classData.courseCode || "ไม่ระบุ"}</p>
@@ -2506,7 +2506,7 @@ const renderSubCell = (subCell: SubCell) => {
             <p><b>📅 วัน:</b> {subCell.day}</p>
             <p><b>🕐 เวลา:</b> {subCell.startTime} - {subCell.endTime}</p>
             {isTimeFixed && (
-              <p style={{ color: "#ff4d4f", fontSize: "12px", marginTop: "8px", fontWeight: "bold" }}>
+              <p style={{ color: "#999", fontSize: "12px", marginTop: "8px", fontWeight: "bold" }}>
                 🔒 วิชานี้ถูกล็อกไว้ ไม่สามารถย้ายหรือลบได้
               </p>
             )}
@@ -2537,12 +2537,13 @@ const renderSubCell = (subCell: SubCell) => {
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
             maxWidth: "100%",
+            color: isTimeFixed ? "#aaa" : "inherit" // สีเทาอ่อนสำหรับชื่อวิชา TimeFixed
           }}>
             {subCell.classData.subject}
           </div>
           <div style={{
             fontSize: "7px",
-            color: "#050505ff",
+            color: isTimeFixed ? "#bbb" : "#050505ff", // สีเทาอ่อนสำหรับรหัสวิชา TimeFixed
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -2552,7 +2553,7 @@ const renderSubCell = (subCell: SubCell) => {
           </div>
           <div style={{
             fontSize: "10px",
-            color: "#666",
+            color: isTimeFixed ? "#bbb" : "#666", // สีเทาอ่อนสำหรับชื่ออาจารย์ TimeFixed
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -2562,7 +2563,7 @@ const renderSubCell = (subCell: SubCell) => {
           </div>
           <div style={{
             fontSize: "10px",
-            color: "#888",
+            color: isTimeFixed ? "#ccc" : "#888", // สีเทาอ่อนสำหรับห้อง TimeFixed
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -2581,7 +2582,7 @@ const renderSubCell = (subCell: SubCell) => {
             left: "4px",
             width: duration > 2 ? "22px" : shouldSpan ? "20px" : "18px",
             height: duration > 2 ? "22px" : shouldSpan ? "20px" : "18px",
-            backgroundColor: "rgba(255,77,79,0.9)",
+            backgroundColor: "rgba(153, 153, 153, 0.9)", // สีเทาแทนสีแดง
             borderRadius: "50%",
             display: "flex",
             alignItems: "center",
@@ -2592,9 +2593,29 @@ const renderSubCell = (subCell: SubCell) => {
             border: "2px solid white",
             boxShadow: "0 2px 4px rgba(0,0,0,0.3)"
           }}
-          title="Time Fixed Course - ไม่สามารถย้ายได้"
+          title="Time Fixed Course - ถูกล็อกไว้"
         >
           🔒
+        </div>
+      )}
+
+      {/* ตัวบ่งชี้ "ใช้แล้ว" เหมือนใน sidebar */}
+      {isTimeFixed && (
+        <div
+          style={{
+            position: "absolute",
+            top: "4px",
+            right: "4px",
+            backgroundColor: "rgba(153, 153, 153, 0.9)",
+            color: "white",
+            borderRadius: "12px",
+            padding: "2px 6px",
+            fontSize: "8px",
+            fontWeight: "bold",
+            border: "1px solid rgba(255,255,255,0.5)"
+          }}
+        >
+          ล็อก
         </div>
       )}
 
@@ -2634,65 +2655,20 @@ const renderSubCell = (subCell: SubCell) => {
         </div>
       )}
 
-      {isTimeFixed && (
-        <div
-          style={{
-            position: "absolute",
-            top: "4px",
-            right: "4px",
-            width: duration > 2 ? "20px" : shouldSpan ? "18px" : "16px",
-            height: duration > 2 ? "20px" : shouldSpan ? "18px" : "16px",
-            backgroundColor: "rgba(128,128,128,0.6)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: duration > 2 ? "11px" : shouldSpan ? "10px" : "9px",
-            color: "white",
-            cursor: "not-allowed",
-            fontWeight: "bold",
-            border: "1px solid rgba(255,255,255,0.5)"
-          }}
-          title="Time Fixed Course - ไม่สามารถลบได้"
-          onClick={(e) => {
-            e.stopPropagation();
-            message.warning(`ไม่สามารถลบ "${subCell.classData.subject}" ได้ เพราะเป็น Time Fixed Course`);
-          }}
-        >
-          🚫
-        </div>
-      )}
-
       <div style={{
         position: "absolute",
         bottom: "4px",
         left: "4px",
         fontSize: duration > 2 ? "10px" : "9px",
-        color: isTimeFixed ? "#ff4d4f" : "#F26522",
+        color: isTimeFixed ? "#aaa" : "#F26522", // สีเทาอ่อนสำหรับ TimeFixed
         fontWeight: "bold",
         backgroundColor: "rgba(255,255,255,0.95)",
         borderRadius: "4px",
         padding: duration > 1 ? "2px 6px" : "1px 4px",
-        border: `1px solid rgba(${isTimeFixed ? '255, 77, 79' : '242, 101, 34'}, 0.4)`
+        border: `1px solid rgba(${isTimeFixed ? '153, 153, 153' : '242, 101, 34'}, 0.4)`
       }}>
         {duration}คาบ
       </div>
-
-      {!isScheduler && (
-        <div style={{
-          position: "absolute",
-          top: "4px",
-          right: "4px",
-          fontSize: "10px",
-          color: "#666",
-          backgroundColor: "rgba(255,255,255,0.9)",
-          borderRadius: "3px",
-          padding: "1px 4px",
-          border: "1px solid #ddd"
-        }}>
-          🔒
-        </div>
-      )}
 
       <div style={{
         position: "absolute",
@@ -2700,7 +2676,7 @@ const renderSubCell = (subCell: SubCell) => {
         bottom: "0",
         right: "0",
         height: duration > 2 ? "6px" : shouldSpan ? "5px" : "4px",
-        backgroundColor: `rgba(${isTimeFixed ? '255, 77, 79' : '242, 101, 34'}, ${0.3 + (duration * 0.1)})`,
+        backgroundColor: `rgba(${isTimeFixed ? '153, 153, 153' : '242, 101, 34'}, ${0.3 + (duration * 0.1)})`,
         borderRadius: "0 0 6px 6px"
       }} />
       
@@ -2710,12 +2686,12 @@ const renderSubCell = (subCell: SubCell) => {
           right: "4px",
           bottom: "4px",
           fontSize: "8px",
-          color: isTimeFixed ? "#ff4d4f" : "#F26522",
+          color: isTimeFixed ? "#aaa" : "#F26522", // สีเทาอ่อนสำหรับ TimeFixed
           fontWeight: "bold",
           backgroundColor: "rgba(255,255,255,0.9)",
           borderRadius: "3px",
           padding: "1px 4px",
-          border: `1px solid rgba(${isTimeFixed ? '255, 77, 79' : '242, 101, 34'}, 0.3)`
+          border: `1px solid rgba(${isTimeFixed ? '153, 153, 153' : '242, 101, 34'}, 0.3)`
         }}>
           {duration}ช่วง
         </div>
