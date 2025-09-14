@@ -212,13 +212,18 @@ export interface MajorInterfaceForAllcourse{
 
 export interface AllCourseInterfaceForAllcourse {
   ID: number;
-  No: number;
+  No: number; // ลำดับ
   CourseCode: string;
   ThaiCourseName: string;
   EnglishCourseName: string;
-  CourseType: string;
   Credit: string;
+  CourseType: string;
   CurriculumID: number;
-  Instructor: string[];       // แก้จาก string[] เป็น string
-  MajorName: MajorInterface; // แก้จาก string เป็น object
+  Instructor: string[];
+  MajorName: {
+    ID: number;
+    DepartmentID: number;
+    MajorName: string;
+    DepartmentName: string;
+  };
 }

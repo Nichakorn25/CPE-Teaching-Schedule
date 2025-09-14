@@ -31,15 +31,6 @@ const AllCourse: React.FC = () => {
   const userRole = localStorage.getItem("role");
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [department, setDepartment] = useState<
-    DepartmentInterfaceForAllcourse[]
-  >([]);
-  const [major, setMajor] = useState<MajorInterfaceForAllcourse[]>([]);
-  const [selectedDepartment, setSelectedDepartment] = useState<number | "all">(
-    "all"
-  );
-  const [selectedMajor, setSelectedMajor] = useState<number | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [courseData, setCourseData] = useState<
@@ -47,11 +38,18 @@ const AllCourse: React.FC = () => {
   >([]);
   const [loading, setLoading] = useState(false);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
-
   // NEW: hovered row state for hover effect
   const [hoveredRowKey, setHoveredRowKey] = useState<string | number | null>(
     null
   );
+  // State
+  const [department, setDepartment] = useState<
+    DepartmentInterfaceForAllcourse[]
+  >([]);
+  const [major, setMajor] = useState<MajorInterfaceForAllcourse[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
+  const [selectedMajor, setSelectedMajor] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   useEffect(() => {
     const fetchMajors = async () => {
@@ -61,9 +59,16 @@ const AllCourse: React.FC = () => {
           const majorData = res.data as MajorInterfaceForAllcourse[];
           setMajor(majorData);
 
+          // แปลงสำนักวิชาให้ตรง interface
           const uniqueDepartments = Array.from(
-            new Map(majorData.map((m) => [m.Department.ID, m.Department])).values()
-          );
+            new Map(
+              majorData.map((m) => [m.Department.ID, m.Department])
+            ).values()
+          ).map((d) => ({
+            ID: d.ID,
+            DepartmentName: d.DepartmentName,
+          }));
+
           setDepartment(uniqueDepartments);
         }
       } catch (error) {
@@ -72,6 +77,35 @@ const AllCourse: React.FC = () => {
     };
     fetchMajors();
   }, []);
+
+  // Options สำหรับ Dropdown
+  const majorOptions =
+    selectedDepartment === "all"
+      ? []
+      : major
+          .filter((m) => m.Department.ID.toString() === selectedDepartment)
+          .map((m) => ({ id: m.ID, name: m.MajorName }));
+
+  const categoryOptionsFiltered =
+    selectedMajor === "all"
+      ? Array.from(
+          new Set(
+            courseData
+              .filter((c) =>
+                selectedDepartment === "all"
+                  ? true
+                  : c.MajorName.DepartmentID.toString() === selectedDepartment
+              )
+              .map((c) => c.CourseType)
+          )
+        )
+      : Array.from(
+          new Set(
+            courseData
+              .filter((c) => c.MajorName.ID.toString() === selectedMajor)
+              .map((c) => c.CourseType)
+          )
+        );
 
   // Monitor container width for responsive behavior
   useEffect(() => {
@@ -145,10 +179,11 @@ const AllCourse: React.FC = () => {
 
       const matchesDepartment =
         selectedDepartment === "all" ||
-        course.MajorName?.DepartmentID === selectedDepartment;
+        course.MajorName?.DepartmentID.toString() === selectedDepartment;
 
       const matchesMajor =
-        selectedMajor === "all" || course.MajorName?.ID === selectedMajor;
+        selectedMajor === "all" ||
+        course.MajorName?.ID.toString() === selectedMajor;
 
       return (
         matchesSearch && matchesCategory && matchesDepartment && matchesMajor
@@ -279,25 +314,24 @@ const AllCourse: React.FC = () => {
             </div>
           ),
         },
-       {
-  title: "อาจารย์",
-  key: "instructors",
-  width: 100,
-  render: (_, record: CourseTableData) => (
-    <div style={{ fontSize: "10px", textAlign: "center" }}>
-      {record.Instructor?.map((instructor, idx) => (
-        <div key={idx} style={{ marginBottom: "2px" }}>
-          {idx + 1}. {instructor}
-        </div>
-      )) || "-"}
-    </div>
-  ),
-}
-
+        {
+          title: "อาจารย์",
+          key: "instructors",
+          width: 100,
+          render: (_, record: CourseTableData) => (
+            <div style={{ fontSize: "10px", textAlign: "center" }}>
+              {record.Instructor?.map((instructor, idx) => (
+                <div key={idx} style={{ marginBottom: "2px" }}>
+                  {idx + 1}. {instructor}
+                </div>
+              )) || "-"}
+            </div>
+          ),
+        }
       );
 
       // Add action column only if admin
-      if (userRole === "admin") {
+      if (userRole === "Admin") {
         columns.push({
           title: "จัดการ",
           key: "action",
@@ -423,24 +457,23 @@ const AllCourse: React.FC = () => {
       }
     );
 
-   if (!isSmallScreen) {
-  columns.push({
-    title: "อาจารย์ผู้สอน",
-    dataIndex: "Instructor",
-    key: "instructors",
-    width: 200,
-    render: (value: string[]) => (
-      <div style={{ fontSize: "12px" }}>
-        {value?.map((instructor, idx) => (
-          <div key={idx}>
-            {idx + 1}. {instructor}
+    if (!isSmallScreen) {
+      columns.push({
+        title: "อาจารย์ผู้สอน",
+        dataIndex: "Instructor",
+        key: "instructors",
+        width: 200,
+        render: (value: string[]) => (
+          <div style={{ fontSize: "12px" }}>
+            {value?.map((instructor, idx) => (
+              <div key={idx}>
+                {idx + 1}. {instructor}
+              </div>
+            )) || "-"}
           </div>
-        )) || "-"}
-      </div>
-    ),
-  });
-}
-
+        ),
+      });
+    }
 
     // Add action column only if admin
     if (userRole === "Admin") {
@@ -588,73 +621,58 @@ const AllCourse: React.FC = () => {
             }}
             size="small"
           />
-
-          {/* หมวดวิชา */}
-          <Select
-            value={selectedCategory}
-            onChange={setSelectedCategory}
-            style={{
-              width: isMobile ? "100%" : 150,
-              fontFamily: "Sarabun, sans-serif",
-            }}
-            placeholder="เลือกหมวดวิชา"
-            size="small"
-          >
-            <Option value="all">ทุกหมวดวิชา</Option>
-            {categories.map((category) => (
-              <Option key={category} value={category}>
-                {category}
-              </Option>
-            ))}
-          </Select>
-
-          {/* สำนักวิชา */}
-          <Select
-            value={selectedDepartment}
-            onChange={(value) => {
-              setSelectedDepartment(value);
-              setSelectedMajor("all"); // reset major เมื่อเปลี่ยนสำนักวิชา
-            }}
-            style={{
-              width: isMobile ? "100%" : 150,
-              fontFamily: "Sarabun, sans-serif",
-            }}
-            placeholder="เลือกสำนักวิชา"
-            size="small"
-          >
-            <Option value="all">ทุกสำนักวิชา</Option>
-            {department.map((dep) => (
-              <Option key={dep.ID} value={dep.ID}>
-                {dep.DepartmentName}
-              </Option>
-            ))}
-          </Select>
-
-          {/* สาขาวิชา */}
-          <Select
-            value={selectedMajor}
-            onChange={setSelectedMajor}
-            style={{
-              width: isMobile ? "100%" : 150,
-              fontFamily: "Sarabun, sans-serif",
-            }}
-            placeholder="เลือกสาขาวิชา"
-            size="small"
-            disabled={selectedDepartment === "all"}
-          >
-            <Option value="all">ทุกสาขา</Option>
-            {major
-              .filter(
-                (m) =>
-                  selectedDepartment === "all" ||
-                  m.DepartmentID === selectedDepartment
-              )
-              .map((m) => (
-                <Option key={m.ID} value={m.ID}>
-                  {m.MajorName}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Select
+              value={selectedDepartment}
+              onChange={(val) => {
+                setSelectedDepartment(val);
+                setSelectedMajor("all");
+                setSelectedCategory("all");
+              }}
+              placeholder="เลือกสำนักวิชา"
+              style={{ width: 150 }}
+            >
+              <Option value="all">ทุกสำนักวิชา</Option>
+              {department.map((dep) => (
+                <Option key={dep.ID} value={dep.ID.toString()}>
+                  {dep.DepartmentName}
                 </Option>
               ))}
-          </Select>
+            </Select>
+
+            <Select
+              value={selectedMajor}
+              onChange={(val) => {
+                setSelectedMajor(val);
+                setSelectedCategory("all");
+              }}
+              placeholder="เลือกสาขาวิชา"
+              style={{ width: 150 }}
+              disabled={selectedDepartment === "all"}
+            >
+              <Option value="all">ทุกสาขา</Option>
+              {majorOptions.map((m) => (
+                <Option key={m.id} value={m.id.toString()}>
+                  {m.name}
+                </Option>
+              ))}
+            </Select>
+
+            <Select
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+              placeholder="เลือกหมวดวิชา"
+              style={{ width: 150 }}
+              disabled={categoryOptionsFiltered.length === 0}
+            >
+              <Option value="all">ทุกหมวดวิชา</Option>
+              {categoryOptionsFiltered.map((cat) => (
+                <Option key={cat} value={cat}>
+                  {cat}
+                </Option>
+              ))}
+            </Select>
+          </div>
 
           {/* Pagination controls for desktop */}
           {!isMobile && (
@@ -732,7 +750,6 @@ const AllCourse: React.FC = () => {
               <div style={{ flex: 1 }}></div>
             </>
           )}
-
           {/* Add Course Button */}
           <Button
             type="primary"
