@@ -3776,46 +3776,47 @@ const handleReset = () => {
     );
   };
 
-  const exportPDF = async () => {
-   const node = tableRef.current;
+const exportPDF = async () => {
+  const node = tableRef.current;
   if (!node) return;
-
-  const originalHeight = node.style.height;
-  const originalOverflow = node.style.overflow;
-
-  node.style.height = `${node.scrollHeight}px`;
-  node.style.overflow = "visible";
-
+  
   try {
-    const dataUrl = await toPng(node, { cacheBust: true });
-    const pdf = new jsPDF("p", "mm", "a4");
-
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+    const dataUrl = await toPng(node, { 
+      cacheBust: true,
+      quality: 1.0,
+      pixelRatio: 2,
+      backgroundColor: 'white'
+    });
 
     const img = new Image();
     img.src = dataUrl;
+    
     img.onload = () => {
       const imgWidth = img.width;
       const imgHeight = img.height;
 
-      // สเกลภาพให้พอดีกับหน้ากระดาษ
-      const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
-      const finalWidth = imgWidth * ratio;
-      const finalHeight = imgHeight * ratio;
-
-      // 🎯 คำนวณ offset ให้อยู่ตรงกลาง
-      const offsetX = (pageWidth - finalWidth) / 2;
-      const offsetY = (pageHeight - finalHeight) / 2;
-
-      pdf.addImage(dataUrl, "PNG", offsetX, offsetY, finalWidth, finalHeight);
+      // คำนวณสัดส่วนของรูป
+      const aspectRatio = imgWidth / imgHeight;
+      
+      // กำหนดความกว้างเท่า A4 (210mm)
+      const targetWidth = 210; // A4 width in mm
+      const targetHeight = targetWidth / aspectRatio; // คำนวณความสูงตามสัดส่วน
+      
+      // สร้าง PDF ขนาดที่พอดีกับรูป (custom size)
+      const pdf = new jsPDF({
+        orientation: targetWidth > targetHeight ? 'l' : 'p',
+        unit: 'mm',
+        format: [targetWidth, targetHeight] // custom page size
+      });
+      
+      // วางรูปเต็มหน้าไม่มีขอบ
+      pdf.addImage(dataUrl, "PNG", 0, 0, targetWidth, targetHeight);
       pdf.save("schedule.pdf");
     };
+    
   } catch (error) {
     console.error("Export failed:", error);
-  } finally {
-    node.style.height = originalHeight;
-    node.style.overflow = originalOverflow;
+    message.error("เกิดข้อผิดพลาดในการส่งออก PDF");
   }
 };
 
@@ -3839,7 +3840,7 @@ const exportScheduleToXLSX = async () => {
       section: string;
       studentYear: string;
       room: string;
-      capacity: number; // 🎯 เพิ่มบรรทัดนี้
+      capacity: number;
       schedule: Map<string, Array<{startTime: string; endTime: string; room: string}>>;
     }
     
@@ -3848,9 +3849,15 @@ const exportScheduleToXLSX = async () => {
     scheduleData.forEach(dayData => {
       if (dayData.subCells && dayData.subCells.length > 0) {
         dayData.subCells.forEach(subCell => {
+          // เช็คว่าเป็น TimeFixed Course หรือไม่ ถ้าใช่ให้ข้าม
+          if (subCell.isTimeFixed) {
+            console.log('⏭️ Skipping TimeFixed course from Excel export:', subCell.classData.subject);
+            return;
+          }
+
           const key = `${subCell.classData.courseCode || 'NO_CODE'}-${subCell.classData.section || '1'}`;
           if (!allSubjects.has(key)) {
-            // 🎯 หา capacity จากข้อมูล API โดยใช้ scheduleId
+            // หา capacity จากข้อมูล API โดยใช้ scheduleId
             let capacity = 30; // default value
             if (subCell.scheduleId && originalScheduleData) {
               const originalSchedule = originalScheduleData.find(
@@ -3868,7 +3875,7 @@ const exportScheduleToXLSX = async () => {
               section: subCell.classData.section || "ไม่ระบุ",
               studentYear: subCell.classData.studentYear || "1",
               room: subCell.classData.room || "ไม่ระบุ",
-              capacity: capacity, // 🎯 ใช้ capacity จาก API
+              capacity: capacity,
               schedule: new Map<string, Array<{startTime: string; endTime: string; room: string}>>()
             });
           }
@@ -3892,13 +3899,20 @@ const exportScheduleToXLSX = async () => {
       }
     });
 
-    // กำหนดช่วงเวลา 8-20 (13 ชั่วโมง)
+    // ตรวจสอบว่ามีวิชาที่จะ export หรือไม่
+    if (allSubjects.size === 0) {
+      hide();
+      message.warning("ไม่มีวิชาที่สามารถส่งออกได้ (มีเฉพาะ TimeFixed Courses)");
+      return;
+    }
+
+    // กำหนดช่วงเวลา 8-20 (13 ช่วงโมง)
     const timeSlots = Array.from({length: 13}, (_, i) => i + 8); // [8, 9, 10, ..., 20]
 
     // สร้าง workbook และ worksheet ก่อน (สร้างแบบ manual)
     const wb = XLSX.utils.book_new();
     
-    // 🎯 แก้ไข: ใช้ any type หรือ Record<string, any> สำหรับ ws
+    // ใช้ any type หรือ Record<string, any> สำหรับ ws
     const ws: Record<string, any> = {};
 
     // กำหนดจำนวนคอลัมน์ทั้งหมด
@@ -3911,7 +3925,7 @@ const exportScheduleToXLSX = async () => {
     ws['C1'] = { v: 'กลุ่มละกี่คน', t: 's' };
     ws['D1'] = { v: 'อาจารย์ที่สอน', t: 's' };
 
-    // วันต่างๆ - วางที่ตำแหน่งเริ่มต้นของแต่ละวัน
+    // วันต่าง ๆ - วางที่ตำแหน่งเริ่มต้นของแต่ละวัน
     let currentCol = 4; // เริ่มจากคอลัมน์ E (index 4)
     DAYS.forEach((day, dayIndex) => {
       const cellRef = XLSX.utils.encode_cell({ r: 0, c: currentCol });
@@ -3925,7 +3939,7 @@ const exportScheduleToXLSX = async () => {
     ws['C2'] = { v: 'Students/Group', t: 's' };
     ws['D2'] = { v: 'Instructor', t: 's' };
 
-    // เวลาต่างๆ - แสดงเป็นช่วงเวลา
+    // เวลาต่าง ๆ - แสดงเป็นช่วงเวลา
     currentCol = 4;
     DAYS.forEach(day => {
       timeSlots.forEach((hour, index) => {
@@ -4122,7 +4136,7 @@ const exportScheduleToXLSX = async () => {
       }
     }
 
-    // 🎯 ส่วนที่ขาดหายไป - เพิ่มเติม worksheet ไปใน workbook และบันทึกไฟล์
+    // เพิ่ม worksheet ไปใน workbook และบันทึกไฟล์
     XLSX.utils.book_append_sheet(wb, ws, 'ตารางสอน');
     
     // สร้างชื่อไฟล์พร้อม timestamp
@@ -4134,7 +4148,7 @@ const exportScheduleToXLSX = async () => {
     XLSX.writeFile(wb, filename);
     
     hide();
-    message.success("สร้างไฟล์ Excel เรียบร้อยแล้ว");
+    message.success(`สร้างไฟล์ Excel เรียบร้อยแล้ว (ไม่รวม TimeFixed Courses)`);
     
   } catch (error) {
     console.error("เกิดข้อผิดพลาดในการสร้าง Excel:", error);
