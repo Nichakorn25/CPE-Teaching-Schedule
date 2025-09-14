@@ -466,8 +466,10 @@ useEffect(() => {
 
   // Apply sidebar filters whenever sidebarFilterTags or sidebarSearchValue changes
   useEffect(() => {
-    applySidebarFilters();
-  }, [sidebarFilterTags, sidebarSearchValue, courseCards]);
+  applySidebarFilters();
+}, [sidebarFilterTags, sidebarSearchValue, courseCards, scheduleData]); // เพิ่ม scheduleData
+
+
 
   // =================== REMOVED COURSES FUNCTIONS ===================
   const addToRemovedCourses = (subCell: SubCell) => {
@@ -775,12 +777,37 @@ const getTeacherInfo = (schedule: ScheduleInterface) => {
   setFilteredCourseCards(cards);
 };
 
+// =================== CHECK IF COURSE CARD IS USED ===================
+const isCourseCardUsed = (courseCard: CourseCard): boolean => {
+  return scheduleData.some(dayData =>
+    dayData.subCells?.some(subCell => {
+      // ตรวจสอบตาม scheduleId ก่อน (แม่นยำที่สุด)
+      if (courseCard.scheduleId && subCell.scheduleId) {
+        return subCell.scheduleId === courseCard.scheduleId;
+      }
+      
+      // ตรวจสอบตามข้อมูลสำคัญ (fallback)
+      return subCell.classData.subject === courseCard.subject &&
+             subCell.classData.courseCode === courseCard.courseCode &&
+             subCell.classData.section === courseCard.section &&
+             subCell.classData.teacher === courseCard.teacher;
+    })
+  );
+};
+
   // =================== COURSE CARD DRAG HANDLERS ===================
 const handleCourseCardDragStart = (e: React.DragEvent, courseCard: CourseCard) => {
   // ตรวจสอบ role ก่อน
   if (role !== "Scheduler") {
     e.preventDefault();
     message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลากวิชาไปใส่ในตารางได้");
+    return;
+  }
+
+  // ตรวจสอบว่าวิชาถูกใช้แล้วหรือไม่
+  if (isCourseCardUsed(courseCard)) {
+    e.preventDefault();
+    message.warning(`วิชา "${courseCard.subject}" ถูกใช้ในตารางแล้ว`);
     return;
   }
 
@@ -1031,33 +1058,38 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
   // =================== RENDER COURSE CARD ===================
 const renderCourseCard = (courseCard: CourseCard) => {
   const isScheduler = role === "Scheduler";
+  const isUsed = isCourseCardUsed(courseCard);
+  const canDrag = isScheduler && !isUsed;
 
   return (
     <div
       key={courseCard.id}
-      draggable={isScheduler} // เฉพาะ Scheduler เท่านั้นที่ drag ได้
-      onDragStart={isScheduler ? (e) => handleCourseCardDragStart(e, courseCard) : undefined}
-      onDragEnd={isScheduler ? handleCourseCardDragEnd : undefined}
+      draggable={canDrag}
+      onDragStart={canDrag ? (e) => handleCourseCardDragStart(e, courseCard) : undefined}
+      onDragEnd={canDrag ? handleCourseCardDragEnd : undefined}
       style={{
-        backgroundColor: courseCard.color,
-        border: "2px solid rgba(0,0,0,0.1)",
+        backgroundColor: isUsed ? "#f5f5f5" : courseCard.color,
+        border: isUsed 
+          ? "2px solid #d9d9d9" 
+          : "2px solid rgba(0,0,0,0.1)",
         borderRadius: "8px",
         padding: "12px",
         margin: "8px 0",
-        cursor: isScheduler ? "grab" : "default", // เปลี่ยน cursor ตาม role
+        cursor: canDrag ? "grab" : isUsed ? "not-allowed" : "default",
         transition: "all 0.2s ease",
         fontSize: "11px",
         lineHeight: "1.3",
-        opacity: !isScheduler ? 0.7 : 1, // ลด opacity สำหรับ non-scheduler
+        opacity: isUsed ? 0.6 : (!isScheduler ? 0.7 : 1),
+        position: "relative"
       }}
       onMouseEnter={(e) => {
-        if (isScheduler) {
+        if (canDrag) {
           e.currentTarget.style.transform = "translateY(-2px)";
           e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
         }
       }}
       onMouseLeave={(e) => {
-        if (isScheduler) {
+        if (canDrag) {
           e.currentTarget.style.transform = "translateY(0px)";
           e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
         }
@@ -1065,26 +1097,30 @@ const renderCourseCard = (courseCard: CourseCard) => {
       onClick={() => {
         if (!isScheduler) {
           message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลากวิชาไปใส่ในตารางได้");
+        } else if (isUsed) {
+          message.info(`วิชา "${courseCard.subject}" ถูกใช้ในตารางแล้ว`);
         }
       }}
     >
       <Tooltip
         title={
           <div style={{ fontFamily: "Sarabun, sans-serif", minWidth: "250px" }}>
-            <div style={{ fontWeight: "bold", fontSize: "13px", marginBottom: "6px", color: "#F26522" }}>
-              📚 รายละเอียดวิชา
+            <div style={{ fontWeight: "bold", fontSize: "13px", marginBottom: "6px", color: isUsed ? "#999" : "#F26522" }}>
+              {isUsed ? "🔒 วิชาที่ใช้ในตารางแล้ว" : "📚 รายละเอียดวิชา"}
             </div>
             <p><b>🏷️ รหัสวิชา:</b> {courseCard.courseCode || "ไม่ระบุ"}</p>
             <p><b>📖 ชื่อวิชา:</b> {courseCard.subject || "ไม่ระบุ"}</p>
             <p><b>🎓 ชั้นปี:</b> {courseCard.studentYear ? `ปีที่ ${courseCard.studentYear}` : "ไม่ระบุ"}</p>
             <p><b>📄 หมู่เรียน:</b> {courseCard.section || "ไม่ระบุ"}</p>
             <p><b>👩‍🏫 อาจารย์:</b> {courseCard.teacher || "ไม่ระบุ"}</p>
-            <p><b>� ห้องเรียน:</b> {courseCard.room || "ไม่ระบุ"}</p>
-            <p><b>ⱶ️ ระยะเวลา:</b> {courseCard.duration} ชั่วโมง</p>
+            <p><b>🏢 ห้องเรียน:</b> {courseCard.room || "ไม่ระบุ"}</p>
+            <p><b>⏱️ ระยะเวลา:</b> {courseCard.duration} ชั่วโมง</p>
             <div style={{ marginTop: "8px", fontSize: "11px", color: "#666", fontStyle: "italic" }}>
-              {isScheduler 
-                ? "💡 ลากการ์ดนี้ไปวางในตารางเรียน"
-                : "🔒 ต้องเป็น Scheduler เท่านั้นถึงจะลากได้"
+              {isUsed 
+                ? "🔒 วิชานี้ถูกใช้ในตารางแล้ว ไม่สามารถลากได้อีก"
+                : !isScheduler 
+                ? "🔐 ต้องเป็น Scheduler เท่านั้นถึงจะลากได้"
+                : "💡 ลากการ์ดนี้ไปวางในตารางเรียน"
               }
             </div>
           </div>
@@ -1093,149 +1129,131 @@ const renderCourseCard = (courseCard: CourseCard) => {
         overlayStyle={{ maxWidth: "350px" }}
       >
         <div>
-          <div style={{ fontWeight: "bold", fontSize: "12px", marginBottom: "4px", color: "#333" }}>
+          <div style={{ fontWeight: "bold", fontSize: "12px", marginBottom: "4px", color: isUsed ? "#999" : "#333" }}>
             {courseCard.subject}
-            {!isScheduler && (
+            {isUsed && (
               <span style={{ marginLeft: "8px", fontSize: "10px" }}>🔒</span>
             )}
+            {!isScheduler && (
+              <span style={{ marginLeft: "8px", fontSize: "10px" }}>🔐</span>
+            )}
           </div>
-          <div style={{ fontSize: "9px", color: "#666", marginBottom: "2px" }}>
+          <div style={{ fontSize: "9px", color: isUsed ? "#aaa" : "#666", marginBottom: "2px" }}>
             รหัส: {courseCard.courseCode}
           </div>
-          <div style={{ fontSize: "10px", color: "#555", marginBottom: "2px" }}>
+          <div style={{ fontSize: "10px", color: isUsed ? "#aaa" : "#555", marginBottom: "2px" }}>
             อาจารย์: {courseCard.teacher}
           </div>
-          <div style={{ fontSize: "9px", color: "#777", marginBottom: "2px" }}>
+          <div style={{ fontSize: "9px", color: isUsed ? "#bbb" : "#777", marginBottom: "2px" }}>
             ห้อง: {courseCard.room}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
-            <span style={{ fontSize: "9px", color: "#888" }}>
+            <span style={{ fontSize: "9px", color: isUsed ? "#bbb" : "#888" }}>
               ปี {courseCard.studentYear} หมู่ {courseCard.section}
             </span>
-            <span style={{ fontSize: "10px", fontWeight: "bold", color: "#F26522" }}>
+            <span style={{ fontSize: "10px", fontWeight: "bold", color: isUsed ? "#aaa" : "#F26522" }}>
               {courseCard.duration}ชม.
             </span>
           </div>
+          
+          {/* Used indicator overlay */}
+          {isUsed && (
+            <div
+              style={{
+                position: "absolute",
+                top: "8px",
+                right: "8px",
+                backgroundColor: "rgba(153, 153, 153, 0.9)",
+                color: "white",
+                borderRadius: "12px",
+                padding: "4px 8px",
+                fontSize: "10px",
+                fontWeight: "bold",
+                border: "1px solid rgba(255,255,255,0.5)"
+              }}
+            >
+              ใช้แล้ว
+            </div>
+          )}
         </div>
       </Tooltip>
     </div>
   );
 };
-
   // =================== RENDER SIDEBAR ===================
   const renderSidebar = () => {
-    if (role !== "Scheduler" || !sidebarVisible) return null;
-    
-    const tabItems = [
-      {
-        key: 'available',
-        label: (
-          <span>
-            📚 วิชาพร้อมใช้ 
-            <Badge count={filteredCourseCards.length} style={{ marginLeft: '8px' }} />
-          </span>
-        ),
-        children: renderAvailableCourses()
-      },
-      {
-        key: 'removed',
-        label: (
-          <span>
-            🗑️ วิชาที่ลบแล้ว 
-            <Badge 
-              count={filteredRemovedCourses.length} 
-              style={{ marginLeft: '8px', backgroundColor: '#ff4d4f' }} 
-            />
-          </span>
-        ),
-        children: renderRemovedCourses()
-      }
-    ];
-    
-    return (
-      <div
-        style={{
-          width: `${sidebarWidth}px`,
-          backgroundColor: "#fafafa",
-          borderLeft: "1px solid #d9d9d9",
-          height: "100vh",
-          minHeight: "100vh",
-          maxHeight: "100vh",
-          position: "fixed",
-          right: 0,
-          top: 0,
-          bottom: 0,
-          zIndex: 1000,
-          boxShadow: "-2px 0 8px rgba(0,0,0,0.1)",
-          transition: "right 0.3s ease",
-          display: "flex",
-          flexDirection: "column"
-        }}
-      >
-        {/* Sidebar Header */}
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center",
-          padding: "16px",
-          paddingBottom: "12px",
-          borderBottom: "2px solid #F26522",
-          flexShrink: 0
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <BookOutlined style={{ color: "#F26522", fontSize: "18px" }} />
-            <h3 style={{ margin: 0, color: "#333", fontSize: "16px" }}>
-              กล่องวิชา
-            </h3>
-          </div>
-          <Button
-            type="text"
-            icon={<CloseOutlined />}
-            onClick={() => setSidebarVisible(false)}
-            size="small"
-          />
+  if (role !== "Scheduler" || !sidebarVisible) return null;
+  
+  return (
+    <div
+      style={{
+        width: `${sidebarWidth}px`,
+        backgroundColor: "#fafafa",
+        borderLeft: "1px solid #d9d9d9",
+        height: "100vh",
+        minHeight: "100vh",
+        maxHeight: "100vh",
+        position: "fixed",
+        right: 0,
+        top: 0,
+        bottom: 0,
+        zIndex: 1000,
+        boxShadow: "-2px 0 8px rgba(0,0,0,0.1)",
+        transition: "right 0.3s ease",
+        display: "flex",
+        flexDirection: "column"
+      }}
+    >
+      {/* Sidebar Header */}
+      <div style={{ 
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "center",
+        padding: "16px",
+        paddingBottom: "12px",
+        borderBottom: "2px solid #F26522",
+        flexShrink: 0
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <BookOutlined style={{ color: "#F26522", fontSize: "18px" }} />
+          <h3 style={{ margin: 0, color: "#333", fontSize: "16px" }}>
+            กล่องวิชา
+          </h3>
         </div>
-
-        {/* Tabs for Available and Removed Courses */}
-        <div style={{ 
-          flex: 1,
-          padding: "0 16px 16px 16px",
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column"
-        }}>
-          <Tabs 
-            activeKey={activeTab}
-            onChange={setActiveTab}
-            items={tabItems}
-            size="small"
-            style={{ 
-              height: "100%",
-              display: "flex",
-              flexDirection: "column"
-            }}
-            tabBarStyle={{ 
-              marginBottom: "16px",
-              flexShrink: 0
-            }}
-          />
-        </div>
-
-        {/* Sidebar Footer */}
-        <div style={{ 
-          padding: "12px 16px",
-          borderTop: "1px solid #e8e8e8",
-          fontSize: "10px",
-          color: "#999",
-          textAlign: "center",
-          flexShrink: 0,
-          backgroundColor: "#f0f0f0"
-        }}>
-          🔧 ใช้ปุ่มข้างบนเพื่อปิด sidebar
-        </div>
+        <Button
+          type="text"
+          icon={<CloseOutlined />}
+          onClick={() => setSidebarVisible(false)}
+          size="small"
+        />
       </div>
-    );
-  };
+
+      {/* Available Courses Content */}
+      <div style={{ 
+        flex: 1,
+        padding: "0 16px 16px 16px",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column"
+      }}>
+        {renderAvailableCourses()}
+      </div>
+
+      {/* Sidebar Footer */}
+      <div style={{ 
+        padding: "12px 16px",
+        borderTop: "1px solid #e8e8e8",
+        fontSize: "10px",
+        color: "#999",
+        textAlign: "center",
+        flexShrink: 0,
+        backgroundColor: "#f0f0f0"
+      }}>
+        🔧 ใช้ปุ่มข้างบนเพื่อปิด sidebar
+      </div>
+    </div>
+  );
+};
 
   // =================== RENDER AVAILABLE COURSES TAB ===================
   const renderAvailableCourses = () => {
@@ -1851,7 +1869,6 @@ const checkAllConflicts = (
     const timeOverlap = doSubCellsOverlap(newSubCell, existingSubCell);
     
     if (timeOverlap) {
-      // ตรวจสอบว่าเป็นวิชาเดียวกัน + อาจารย์เดียวกัน + ห้องเดียวกัน หรือไม่
       const isSameSubject = newSubCell.classData.subject === existingSubCell.classData.subject;
       const isSameTeacher = newSubCell.classData.teacher && existingSubCell.classData.teacher &&
                            newSubCell.classData.teacher.trim() !== "" && existingSubCell.classData.teacher.trim() !== "" &&
@@ -1862,53 +1879,67 @@ const checkAllConflicts = (
       const isSameCourseCode = newSubCell.classData.courseCode && existingSubCell.classData.courseCode &&
                               newSubCell.classData.courseCode === existingSubCell.classData.courseCode;
 
-      // หากเป็นวิชาเดียวกัน + อาจารย์เดียวกัน + ห้องเดียวกัน = ไม่ขัดแย้ง (เป็น section ต่างกัน)
-      if (isSameSubject && isSameTeacher && isSameRoom && isSameCourseCode) {
+      // เงื่อนไข 1: ถ้าเป็นวิชาเดียวกัน + รหัสเดียวกัน = ไม่ขัดแย้ง (คนละ section)
+      if (isSameSubject && isSameCourseCode) {
         console.log('✅ ไม่ขัดแย้ง: วิชาเดียวกัน section ต่างกัน', {
           subject: newSubCell.classData.subject,
-          teacher: newSubCell.classData.teacher,
-          room: newSubCell.classData.room,
+          courseCode: newSubCell.classData.courseCode,
           newSection: newSubCell.classData.section,
           existingSection: existingSubCell.classData.section
         });
-        continue; // ไม่ถือว่าขัดแย้ง
+        continue;
       }
 
-      // เพิ่มในรายการขัดแย้ง
-      conflictInfo.conflictingSubCells.push(existingSubCell);
-      
-      // ถ้าเวลาทับซ้อน ให้ตรวจสอบห้องและอาจารย์
-      if (!conflictInfo.conflictDetails.time) {
-        conflictInfo.conflictDetails.time = true;
-        conflicts.push('time');
-      }
-
-      // ตรวจสอบห้องเดียวกัน (แต่ไม่ใช่วิชาเดียวกัน)
+      // เงื่อนไข 2: ตรวจสอบห้องขัดแย้ง
       if (isSameRoom && !isSameSubject) {
-        conflictInfo.conflictDetails.room = {
-          conflictingSubCell: existingSubCell,
-          room: existingSubCell.classData.room
-        };
-        if (!conflicts.includes('room')) conflicts.push('room');
-      }
-
-      // ตรวจสอบอาจารย์เดียวกัน (แต่ไม่ใช่วิชาเดียวกัน)
-      if (isSameTeacher && !isSameSubject) {
-        conflictInfo.conflictDetails.teacher = {
-          conflictingSubCell: existingSubCell,
-          teacher: existingSubCell.classData.teacher
-        };
-        if (!conflicts.includes('teacher')) conflicts.push('teacher');
-      }
-
-      // กรณีพิเศษ: วิชาต่างกัน + อาจารย์เดียวกัน + ห้องเดียวกัน = ขัดแย้งทั้งคู่
-      if (!isSameSubject && isSameTeacher && isSameRoom) {
-        if (!conflictInfo.conflictDetails.room) {
+        // ถ้าห้อง TBA ไม่ขัดแย้ง
+        if (newSubCell.classData.room === "TBA" || existingSubCell.classData.room === "TBA") {
+          console.log('✅ ไม่ขัดแย้ง: ห้อง TBA');
+        } else {
+          // ห้องเดียวกัน + วิชาต่างกัน = ขัดแย้ง
+          conflictInfo.conflictingSubCells.push(existingSubCell);
           conflictInfo.conflictDetails.room = {
             conflictingSubCell: existingSubCell,
             room: existingSubCell.classData.room
           };
           if (!conflicts.includes('room')) conflicts.push('room');
+          console.log('❌ ขัดแย้ง: ห้องเดียวกัน วิชาต่างกัน', {
+            room: newSubCell.classData.room,
+            newSubject: newSubCell.classData.subject,
+            existingSubject: existingSubCell.classData.subject
+          });
+        }
+      }
+
+      // เงื่อนไข 3: ตรวจสอบอาจารย์ขัดแย้ง
+      if (isSameTeacher && !isSameSubject) {
+        // อาจารย์เดียวกัน + วิชาต่างกัน = ขัดแย้ง
+        if (!conflictInfo.conflictingSubCells.includes(existingSubCell)) {
+          conflictInfo.conflictingSubCells.push(existingSubCell);
+        }
+        conflictInfo.conflictDetails.teacher = {
+          conflictingSubCell: existingSubCell,
+          teacher: existingSubCell.classData.teacher
+        };
+        if (!conflicts.includes('teacher')) conflicts.push('teacher');
+        console.log('❌ ขัดแย้ง: อาจารย์เดียวกัน วิชาต่างกัน', {
+          teacher: newSubCell.classData.teacher,
+          newSubject: newSubCell.classData.subject,
+          existingSubject: existingSubCell.classData.subject
+        });
+      }
+
+      // เงื่อนไข 4: ถ้าทั้งห้องและอาจารย์เดียวกัน แต่วิชาต่างกัน
+      if (isSameRoom && isSameTeacher && !isSameSubject) {
+        // ถ้าห้อง TBA ให้ขัดแย้งเฉพาะอาจารย์
+        if (newSubCell.classData.room !== "TBA" && existingSubCell.classData.room !== "TBA") {
+          if (!conflictInfo.conflictDetails.room) {
+            conflictInfo.conflictDetails.room = {
+              conflictingSubCell: existingSubCell,
+              room: existingSubCell.classData.room
+            };
+            if (!conflicts.includes('room')) conflicts.push('room');
+          }
         }
         if (!conflictInfo.conflictDetails.teacher) {
           conflictInfo.conflictDetails.teacher = {
@@ -2247,64 +2278,19 @@ const removeSubCell = (subCellId: string) => {
 
   setScheduleData(prevData => {
     const newData = [...prevData];
-    let removedSubCell: SubCell | null = null;
     let wasRemoved = false;
     
     for (const dayData of newData) {
       const cellIndex = (dayData.subCells || []).findIndex(cell => cell.id === subCellId);
       if (cellIndex !== -1) {
-        removedSubCell = dayData.subCells![cellIndex];
         dayData.subCells!.splice(cellIndex, 1);
         wasRemoved = true;
         break;
       }
     }
     
-    if (removedSubCell && wasRemoved) {
-      const uniqueKey = `${removedSubCell.classData.subject}-${removedSubCell.classData.courseCode}-${removedSubCell.classData.section}-${removedSubCell.classData.teacher}-${removedSubCell.day}-${removedSubCell.startTime}-${removedSubCell.endTime}`;
-      
-      const isDuplicate = removedCourses.some(existing => {
-        const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
-        return existingKey === uniqueKey;
-      });
-
-      if (!isDuplicate) {
-        const removedCourse: RemovedCourse = {
-          id: `removed-${Date.now()}-${Math.random()}`,
-          subject: removedSubCell.classData.subject,
-          courseCode: removedSubCell.classData.courseCode || "",
-          teacher: removedSubCell.classData.teacher,
-          room: removedSubCell.classData.room,
-          section: removedSubCell.classData.section || "",
-          studentYear: removedSubCell.classData.studentYear || "",
-          duration: removedSubCell.position.endSlot - removedSubCell.position.startSlot,
-          color: removedSubCell.classData.color || getSubjectColor(removedSubCell.classData.subject),
-          scheduleId: removedSubCell.scheduleId,
-          removedAt: new Date(),
-          originalDay: removedSubCell.day,
-          originalStartTime: removedSubCell.startTime,
-          originalEndTime: removedSubCell.endTime
-        };
-
-        setTimeout(() => {
-          setRemovedCourses(prev => {
-            const stillNotDuplicate = !prev.some(existing => {
-              const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
-              return existingKey === uniqueKey;
-            });
-            
-            if (stillNotDuplicate) {
-              return [removedCourse, ...prev];
-            } else {
-              return prev;
-            }
-          });
-        }, 50);
-        
-        message.success("ลบวิชาออกจากตารางแล้ว (ย้ายไปยังรายการวิชาที่ลบ)");
-      } else {
-        message.success("ลบวิชาออกจากตารางแล้ว");
-      }
+    if (wasRemoved) {
+      message.success("ลบวิชาออกจากตารางแล้ว (วิชาจะกลับมาพร้อมใช้งานใน sidebar)");
     }
     
     return newData;
