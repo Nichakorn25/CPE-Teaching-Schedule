@@ -334,116 +334,12 @@ type OfferedCoursesDetail struct {
 	ID                uint
 	Code              string
 	ThaiCourseName    string
-	EnglishCourseName string
-	Credit            string
-	TypeOfCourse      string
-	TotalSections     uint
-	Sections          []SectionDetail
+	EnglishCourseName    string
+	Credit        string
+	TypeOfCourse  string
+	TotalSections uint
+	Sections      []SectionDetail
 }
-
-// func GetOfferedCoursesAndSchedule(c *gin.Context) {
-// 	majorName := c.Query("major_name")
-// 	year := c.Query("year")
-// 	term := c.Query("term")
-
-// 	var offeredCourses []entity.OfferedCourses
-// 	if err := config.DB().
-// 		Preload("AllCourses.Credit").
-// 		Preload("AllCourses.TypeOfCourses").
-// 		Preload("AllCourses.Curriculum.Major").
-// 		Preload("AllCourses.UserAllCourses.User.Title").
-// 		Preload("Schedule.TimeFixedCourses").
-// 		Preload("Laboratory").
-// 		Where("year = ? AND term = ?", year, term).
-// 		Find(&offeredCourses).Distinct("offered_courses.id").Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-// 		return
-// 	}
-
-// 	grouped := make(map[string]*OfferedCoursesDetail)
-
-// 	for _, oc := range offeredCourses {
-// 		if !oc.IsFixCourses && oc.AllCourses.Curriculum.Major.MajorName != majorName {
-// 			continue
-// 		}
-
-
-// 		credit := fmt.Sprintf("%d(%d-%d-%d)",
-// 			oc.AllCourses.Credit.Unit,
-// 			oc.AllCourses.Credit.Lecture,
-// 			oc.AllCourses.Credit.Lab,
-// 			oc.AllCourses.Credit.Self,
-// 		)
-
-// 		if _, ok := grouped[oc.AllCourses.Code]; !ok {
-// 			grouped[oc.AllCourses.Code] = &OfferedCoursesDetail{
-// 				ID:                oc.ID,
-// 				Code:              oc.AllCourses.Code,
-// 				ThaiCourseName:    oc.AllCourses.ThaiName,
-// 				EnglishCourseName: oc.AllCourses.EnglishName,
-// 				Credit:            credit,
-// 				TypeOfCourse:      oc.AllCourses.TypeOfCourses.TypeName,
-// 				TotalSections:     oc.Section,
-// 				Sections: []SectionDetail{},
-// 			}
-// 		}
-
-// 		instructors := []string{}
-// 		for _, uac := range oc.AllCourses.UserAllCourses {
-// 			instructorName := uac.User.Title.Title + " " + uac.User.Firstname + " " + uac.User.Lastname
-// 			instructors = append(instructors, instructorName)
-// 		}
-
-// 		sectionMap := make(map[string]SectionDetail)
-
-// 		if oc.IsFixCourses {
-// 			for _, sch := range oc.Schedule {
-// 				for _, tf := range sch.TimeFixedCourses {
-// 					key := fmt.Sprintf("%d-%s-%s", tf.Section, tf.DayOfWeek, tf.StartTime)
-
-// 					sectionMap[key] = SectionDetail{
-// 						ID:              tf.ID,
-// 						SectionNumber:   tf.Section,
-// 						Room:            tf.RoomFix,
-// 						DayOfWeek:       tf.DayOfWeek,
-// 						Time:            tf.StartTime.Format("15:04") + " - " + tf.EndTime.Format("15:04"),
-// 						Capacity:        tf.Capacity,
-// 						InstructorNames: instructors,
-// 					}
-// 				}
-// 			}
-// 		} else {
-// 			for _, sch := range oc.Schedule {
-// 				room := ""
-// 				if oc.LaboratoryID != nil {
-// 					room = oc.Laboratory.Room
-// 				}
-// 				key := fmt.Sprintf("%d-%s-%s", sch.SectionNumber, sch.DayOfWeek, sch.StartTime)
-
-// 				sectionMap[key] = SectionDetail{
-// 					ID:              sch.ID,
-// 					SectionNumber:   sch.SectionNumber,
-// 					Room:            room,
-// 					DayOfWeek:       sch.DayOfWeek,
-// 					Time:            sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
-// 					Capacity:        oc.Capacity,
-// 					InstructorNames: instructors,
-// 				}
-// 			}
-// 		}
-
-// 		for _, sec := range sectionMap {
-// 			grouped[oc.AllCourses.Code].Sections = append(grouped[oc.AllCourses.Code].Sections, sec)
-// 		}
-// 	}
-
-// 	var responses []OfferedCoursesDetail
-// 	for _, v := range grouped {
-// 		responses = append(responses, *v)
-// 	}
-
-// 	c.JSON(http.StatusOK, responses)
-// }
 
 func GetOfferedCoursesAndSchedule(c *gin.Context) {
 	majorName := c.Query("major_name")
@@ -497,24 +393,20 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 				ID:                oc.ID,
 				Code:              oc.AllCourses.Code,
 				ThaiCourseName:    oc.AllCourses.ThaiName,
-				EnglishCourseName: oc.AllCourses.EnglishName,
-				Credit:            credit,
-				TypeOfCourse:      oc.AllCourses.TypeOfCourses.TypeName,
-				TotalSections:     oc.Section,
-				Sections: []SectionDetail{
-					{
-						SectionNumber:   oc.Section,
-						Room:            room,
-						DayOfWeek:       "",
-						Time:            "",
-						Capacity:        oc.Capacity,
-						InstructorNames: instructors, //ใส่ชื่ออาจารย์ทันที
-					},
-				},
+				EnglishCourseName:    oc.AllCourses.EnglishName,
+				Credit:        credit,
+				TypeOfCourse:  oc.AllCourses.TypeOfCourses.TypeName,
+				TotalSections: oc.Section,
+				Sections:      []SectionDetail{},
 			}
 		}
 
-		// เตรียม map สำหรับ Section จริง
+		instructors := []string{}
+		for _, uac := range oc.AllCourses.UserAllCourses {
+			instructorName := uac.User.Title.Title + " " + uac.User.Firstname + " " + uac.User.Lastname
+			instructors = append(instructors, instructorName)
+		}
+
 		sectionMap := make(map[string]SectionDetail)
 
 		if oc.IsFixCourses {
@@ -522,13 +414,13 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 				for _, tf := range sch.TimeFixedCourses {
 					key := fmt.Sprintf("%d-%s-%s", tf.Section, tf.DayOfWeek, tf.StartTime)
 					sectionMap[key] = SectionDetail{
-						ID:              tf.ID,
-						SectionNumber:   tf.Section,
-						Room:            tf.RoomFix,
-						DayOfWeek:       tf.DayOfWeek,
-						Time:            tf.StartTime.Format("15:04") + " - " + tf.EndTime.Format("15:04"),
-						Capacity:        tf.Capacity,
-						InstructorNames: instructors, // ใส่ชื่ออาจารย์ด้วย
+						ID:             tf.ID,
+						SectionNumber:  tf.Section,
+						Room:           tf.RoomFix,
+						DayOfWeek:      tf.DayOfWeek,
+						Time:           tf.StartTime.Format("15:04") + " - " + tf.EndTime.Format("15:04"),
+						Capacity:       tf.Capacity,
+						InstructorNames: instructors,
 					}
 				}
 			}
@@ -540,13 +432,13 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 				}
 				key := fmt.Sprintf("%d-%s-%s", sch.SectionNumber, sch.DayOfWeek, sch.StartTime)
 				sectionMap[key] = SectionDetail{
-					ID:              sch.ID,
-					SectionNumber:   sch.SectionNumber,
-					Room:            room,
-					DayOfWeek:       sch.DayOfWeek,
-					Time:            sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
-					Capacity:        oc.Capacity,
-					InstructorNames: instructors, // ใส่ชื่ออาจารย์ด้วย
+					ID:             sch.ID,
+					SectionNumber:  sch.SectionNumber,
+					Room:           room,
+					DayOfWeek:      sch.DayOfWeek,
+					Time:           sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
+					Capacity:       oc.Capacity,
+					InstructorNames: instructors,
 				}
 			}
 		}
@@ -566,4 +458,43 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, responses)
+}
+
+func GetOpenCoursesByFilters(c *gin.Context) {
+    majorIDStr := c.Param("major_id")
+    if majorIDStr == "" { majorIDStr = c.Query("major_id") }
+
+    deptIDStr := c.Param("department_id")
+    if deptIDStr == "" { deptIDStr = c.Query("department_id") }
+
+    tocIDStr := c.Param("toc_id")
+    if tocIDStr == "" { tocIDStr = c.Query("toc_id") }
+
+    if majorIDStr == "" || deptIDStr == "" || tocIDStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "ต้องส่ง major_id, department_id, toc_id"})
+        return
+    }
+
+    majorID, err1 := strconv.Atoi(majorIDStr)
+    deptID,  err2 := strconv.Atoi(deptIDStr)
+    tocID,   err3 := strconv.Atoi(tocIDStr)
+    if err1 != nil || err2 != nil || err3 != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "id ทั้งหมดต้องเป็นตัวเลข"})
+        return
+    }
+
+    sql := `SELECT ac.id, ac.code, ac.english_name, ac.thai_name,
+                   c.curriculum_name, m.major_name, d.department_name, toc.type_name
+            FROM public.all_courses ac
+            JOIN public.curriculums c ON ac.curriculum_id = c.id
+            JOIN public.majors m ON c.major_id = m.id
+            JOIN public.departments d ON m.department_id = d.id
+            JOIN public.type_of_courses toc ON ac.type_of_courses_id = toc.id
+            WHERE m.id = ? AND d.id = ? AND toc.id = ?`
+    var results []CourseItem
+    if err := config.DB().Raw(sql, majorID, deptID, tocID).Scan(&results).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+    c.JSON(http.StatusOK, results)
 }

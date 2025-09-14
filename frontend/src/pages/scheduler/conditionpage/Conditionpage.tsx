@@ -24,6 +24,9 @@ const Conditionpage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [containerWidth, setContainerWidth] = useState(window.innerWidth);
 
+    // New: hover state for rows
+    const [hoveredRowKey, setHoveredRowKey] = useState<string | number | null>(null);
+
     // Monitor container width for responsive behavior
     useEffect(() => {
         const handleResize = () => {
@@ -167,6 +170,12 @@ const Conditionpage: React.FC = () => {
                 existingConditions: conditions
             }
         });
+    };
+
+    // Row class for hover
+    const getRowClassName = (record: any) => {
+        const isHovered = hoveredRowKey === record.key;
+        return `normal-row ${isHovered ? "row-hovered" : ""}`;
     };
 
     // Responsive columns configuration
@@ -456,6 +465,27 @@ const Conditionpage: React.FC = () => {
             padding: 0,
             margin: 0
         }}>
+            {/* Custom CSS for hover (copied/adjusted from OfferedCoursespage) */}
+            <style>
+            {`
+              .custom-table .ant-table-tbody > tr.normal-row {
+                background-color: #ffffff !important;
+                transition: background-color 0.2s ease;
+              }
+
+              .custom-table .ant-table-tbody > tr.normal-row:hover,
+              .custom-table .ant-table-tbody > tr.normal-row.row-hovered {
+                background-color: #6b7280 !important; /* สีเทาเข้ม เมื่อ hover */
+                color: white !important;
+              }
+
+              /* ปิด hover default ของ antd เพื่อให้ rule ของเราได้ผล */
+              .custom-table .ant-table-tbody > tr:hover > td {
+                background-color: transparent !important;
+              }
+            `}
+            </style>
+
             {/* Page Title */}
             <div style={{ 
                 marginBottom: '20px',
@@ -701,6 +731,12 @@ const Conditionpage: React.FC = () => {
                         fontFamily: 'Sarabun, sans-serif'
                     }}
                     className="custom-table"
+                    // ADD: hover support
+                    rowClassName={getRowClassName}
+                    onRow={(record) => ({
+                      onMouseEnter: () => setHoveredRowKey(record.key),
+                      onMouseLeave: () => setHoveredRowKey(null),
+                    })}
                     locale={{
                         emptyText: (
                             <div style={{ 
@@ -773,10 +809,13 @@ const Conditionpage: React.FC = () => {
                     color: '#856404',
                     fontFamily: 'Sarabun, sans-serif'
                 }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>💡 เคล็ดลับการใช้งาน:</div>
-                    <div>• กดที่ชื่ออาจารย์เพื่อดูรายละเอียดเพิ่มเติม</div>
-                    <div>• หมุนหน้าจอเป็นแนวนอนเพื่อดูข้อมูลเพิ่มเติม</div>
-                    <div>• ใช้การค้นหาเพื่อหาอาจารย์ที่ต้องการได้เร็วขึ้น</div>
+                    <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>
+                        เคล็ดลับการใช้งานบนมือถือ
+                    </div>
+                    <div>
+                        - แตะปุ่ม <strong>แก้ไข</strong> เพื่อแก้ไขเงื่อนไขของอาจารย์ <br />
+                        - แตะ <strong>รีเฟรช</strong> หากข้อมูลไม่อัพเดตทันที
+                    </div>
                 </div>
             )}
         </div>
