@@ -340,43 +340,43 @@ const OfferedCoursespage: React.FC = () => {
       });
     }
 
-function normalizeName(name: string) {
-  return name
-    .replace(/\s+/g, "") // ลบช่องว่างทั้งหมด
-    .replace(/\./g, "")  // ลบจุด
-    .toLowerCase();
-}
+    function normalizeName(name: string) {
+      return name
+        .replace(/\s+/g, "") // ลบช่องว่างทั้งหมด
+        .replace(/\./g, "") // ลบจุด
+        .toLowerCase();
+    }
 
-// ดึงชื่อเต็มของผู้ใช้ปัจจุบัน
-const title = localStorage.getItem("title") || "";
-const firstName = localStorage.getItem("first_name") || "";
-const lastName = localStorage.getItem("last_name") || "";
-const fullName = `${title}${firstName} ${lastName}`.trim();
+    // ดึงชื่อเต็มของผู้ใช้ปัจจุบัน
+    const title = localStorage.getItem("title") || "";
+    const firstName = localStorage.getItem("first_name") || "";
+    const lastName = localStorage.getItem("last_name") || "";
+    const fullName = `${title}${firstName} ${lastName}`.trim();
 
-if (showonlyMine) {
-  data = data.filter((course: any) => {
-    if (course.isChild) return true;
+    if (showonlyMine) {
+      data = data.filter((course: any) => {
+        if (course.isChild) return true;
 
-    return course.Sections?.some((s: any) =>
-      Array.isArray(s.InstructorNames) &&
-      s.InstructorNames.some((instructor: string) => {
-        const match =
-          normalizeName(instructor) === normalizeName(fullName);
+        return course.Sections?.some(
+          (s: any) =>
+            Array.isArray(s.InstructorNames) &&
+            s.InstructorNames.some((instructor: string) => {
+              const match =
+                normalizeName(instructor) === normalizeName(fullName);
 
-        if (match) {
-          console.log("เจอ match:", instructor, "==>", fullName);
-        } else {
-          console.log("ไม่ match:", instructor, "!==", fullName);
-        }
+              if (match) {
+                console.log("เจอ match:", instructor, "==>", fullName);
+              } else {
+                console.log("ไม่ match:", instructor, "!==", fullName);
+              }
 
-        return match;
-      })
-    );
-  });
+              return match;
+            })
+        );
+      });
 
-  console.log("Data หลัง filter:", data);
-}
-
+      console.log("Data หลัง filter:", data);
+    }
 
     // sort ตาม dropdown
     data.sort((a: any, b: any) => {
@@ -612,369 +612,274 @@ if (showonlyMine) {
     return {};
   };
 
-  const getColumns = (): ColumnsType<CourseTableData> => {
-    const columns: ColumnsType<CourseTableData> = [];
+ const getColumns = (): ColumnsType<CourseTableData> => {
+  const columns: ColumnsType<CourseTableData> = [];
 
-    if (isMobile) {
-      // Mobile layout
-      columns.push(
-        {
-          title: "#",
-          key: "order",
-          width: 40,
-          align: "center",
-          render: (_text, record) => {
-            if (record.isChild) return null;
-            return (
-              <span style={{ fontWeight: "bold", fontSize: "10px" }}>
-                {record.order}
-              </span>
-            );
-          },
-        },
-        {
-          title: "รายวิชา",
-          key: "course",
-          width: 160,
-          render: (_, record: CourseTableData) => (
-            <div style={{ fontSize: "11px" }}>
-              <div
-                style={{
-                  fontWeight: "bold",
-                  color: "#1890ff",
-                  marginBottom: "2px",
-                }}
-              >
-                {record.Code}
-              </div>
-              <div style={{ fontWeight: "500", marginBottom: "2px" }}>
-                {record.CourseName}
-              </div>
-              <div style={{ color: "#666", fontSize: "9px" }}>
-                {record.Credit} หน่วยกิต | {record.TypeOfCourse}
-              </div>
-              {!record.isChild && record.Sections?.length > 1 && (
-                <button
-                  onClick={() => toggleExpandRow(record.ID)}
-                  style={{
-                    color: "#1677ff",
-                    background: "none",
-                    border: "none",
-                    padding: 0,
-                    cursor: "pointer",
-                    fontSize: "9px",
-                  }}
-                >
-                  {expandedRowKeys.includes(record.ID) ? "ซ่อน" : "ดูเพิ่มเติม"}
-                </button>
-              )}
-            </div>
-          ),
-        },
-        {
-          title: "กลุ่ม/เวลา",
-          key: "section_time",
-          width: 100,
-          render: (_, record: CourseTableData) => {
-            const section = record.isChild
-              ? record.Section
-              : record.Sections?.[0];
-            return (
-              <div style={{ fontSize: "10px", textAlign: "center" }}>
-                <div style={{ fontWeight: "bold" }}>
-                  กลุ่ม {section?.SectionNumber || "-"}
-                </div>
-                <div>{section?.DayOfWeek || "-"}</div>
-                <div>{section?.Time || "-"}</div>
-                <div style={{ color: "#666" }}>{section?.Room || "-"}</div>
-              </div>
-            );
-          },
-        }
-      );
-    } else {
-      // Desktop layout
-      columns.push(
-        {
-          title: "ลำดับ",
-          key: "order",
-          width: 60,
-          align: "center",
-          render: (_text, record) => {
-            if (record.isChild) return null;
-            return <span style={{ fontWeight: "bold" }}>{record.order}</span>;
-          },
-        },
-        {
-          title: "รหัสวิชา",
-          key: "Code",
-          width: 100,
-          render: (_t, r) => (
-            <span style={{ fontWeight: "bold", color: "#1890ff" }}>
-              {r.Code}
-            </span>
-          ),
-        },
-        {
-          title: "ชื่อวิชา",
-          key: "CourseName",
-          width: isSmallScreen ? 180 : 220,
-          render: (_t, r) => (
-            <span style={{ fontWeight: "500" }}>{r.CourseName}</span>
-          ),
-        },
-        {
-          title: "หน่วยกิต",
-          key: "Credit",
-          width: 80,
-          align: "center",
-          render: (_t, r) => (
-            <span
+  const fullName = `${localStorage.getItem("title") || ""}${localStorage.getItem("first_name") || ""} ${localStorage.getItem("last_name") || ""}`.trim();
+
+  function normalizeName(name: string) {
+    return name.replace(/\s+/g, "").replace(/\./g, "").toLowerCase();
+  }
+
+  const isMobile = window.innerWidth <= 768;
+  const isIPad = window.innerWidth > 768 && window.innerWidth <= 1024;
+  const isSmallScreen = isMobile || isIPad;
+
+  // -------------------- ลำดับ --------------------
+  columns.push({
+    title: "ลำดับ",
+    key: "order",
+    width: isSmallScreen ? 40 : 60,
+    align: "center",
+    render: (_text, record) => (record.isChild ? null : <span style={{ fontWeight: "bold" }}>{record.order}</span>),
+  });
+
+  // -------------------- รหัสวิชา --------------------
+  columns.push({
+    title: "รหัสวิชา",
+    key: "Code",
+    width: isSmallScreen ? 80 : 100,
+    render: (_t, r) => <span style={{ fontWeight: "bold", color: "#1890ff" }}>{r.Code}</span>,
+  });
+
+  // -------------------- ชื่อวิชา --------------------
+  columns.push({
+    title: "ชื่อวิชา",
+    key: "CourseName",
+    width: isSmallScreen ? 160 : 220,
+    render: (_t, r) => (
+      <div>
+        <div style={{ fontWeight: 600, fontSize: isSmallScreen ? "12px" : "16px" }}>
+          {r.EnglishCourseName || "-"}
+        </div>
+        <div style={{ color: "#555", fontSize: isSmallScreen ? "10px" : "14px" }}>
+          {r.ThaiCourseName || "-"}
+        </div>
+      </div>
+    ),
+  });
+
+  // -------------------- หน่วยกิต --------------------
+  columns.push({
+    title: "หน่วยกิต",
+    key: "Credit",
+    width: 80,
+    align: "center",
+    render: (_t, r) => (
+      <span
+        style={{
+          backgroundColor: "#e6f7ff",
+          color: "#1890ff",
+          padding: "2px 6px",
+          borderRadius: "4px",
+          fontSize: "11px",
+          fontWeight: "bold",
+          border: "1px solid #91d5ff",
+        }}
+      >
+        {r.Credit}
+      </span>
+    ),
+  });
+
+  // -------------------- หมวดวิชา --------------------
+  columns.push({
+    title: "หมวดวิชา",
+    key: "TypeOfCourse",
+    width: 120,
+    align: "center",
+    render: (_t, r) => <span>{r.TypeOfCourse}</span>,
+  });
+
+  // -------------------- กลุ่มเรียน --------------------
+  columns.push({
+    title: "กลุ่มเรียน",
+    key: "Sections",
+    width: 100,
+    align: "center",
+    render: (_text, record) => {
+      if (!record.Sections?.length) return "-";
+
+      const sortedSections = [...record.Sections].sort((a, b) => a.SectionNumber - b.SectionNumber);
+      if (record.isChild) return record.Section.SectionNumber;
+
+      const firstSection = sortedSections[0];
+      const hasMore = sortedSections.length > 1;
+
+      return (
+        <div style={{ textAlign: "center" }}>
+          {firstSection?.SectionNumber ?? "-"}
+          {hasMore && (
+            <button
+              onClick={() => toggleExpandRow(record.ID)}
               style={{
-                backgroundColor: "#e6f7ff",
-                color: "#1890ff",
-                padding: "2px 6px",
-                borderRadius: "4px",
+                color: "#1677ff",
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                marginLeft: "4px",
                 fontSize: "11px",
-                fontWeight: "bold",
-                border: "1px solid #91d5ff",
               }}
             >
-              {r.Credit}
-            </span>
-          ),
-        },
-        {
-          title: "หมวดวิชา",
-          key: "TypeOfCourse",
-          width: 120,
-          align: "center",
-          render: (_t, r) => <span>{r.TypeOfCourse}</span>,
-        },
-        {
-          title: "กลุ่มเรียน",
-          key: "Sections",
-          width: 100,
-          align: "center",
-          render: (_text, record) => {
-            if (!record.Sections?.length) return "-";
+              {expandedRowKeys.includes(record.ID) ? "ซ่อน" : "ดูเพิ่มเติม"}
+            </button>
+          )}
+        </div>
+      );
+    },
+  });
 
-            const sortedSections = [...record.Sections].sort(
-              (a, b) => a.SectionNumber - b.SectionNumber
-            );
+  // -------------------- ห้อง --------------------
+  columns.push({
+    title: "ห้อง",
+    key: "Room",
+    width: 100,
+    align: "center",
+    render: (_t, r) => {
+      const room = r.isChild ? r.Section?.Room : r.Sections?.[0]?.Room;
+      return room || "รอศูนย์บริการจัดสรรห้องเรียน";
+    },
+  });
 
-            if (record.isChild) return record.Section.SectionNumber;
+  // -------------------- วันที่สอน --------------------
+  columns.push({
+    title: "วันที่สอน",
+    key: "DayOfWeek",
+    width: 80,
+    align: "center",
+    render: (_t, r) => (r.isChild ? r.Section?.DayOfWeek : r.Sections?.[0]?.DayOfWeek ?? "-"),
+  });
 
-            const firstSection = sortedSections[0];
-            const hasMore = sortedSections.length > 1;
+  // -------------------- เวลา --------------------
+  columns.push({
+    title: "เวลา",
+    key: "Time",
+    width: 120,
+    align: "center",
+    render: (_t, r) => (r.isChild ? r.Section?.Time : r.Sections?.[0]?.Time ?? "-"),
+  });
 
-            return (
-              <div style={{ textAlign: "center" }}>
-                {firstSection?.SectionNumber ?? "-"}
-                {hasMore && (
-                  <button
-                    onClick={() => toggleExpandRow(record.ID)}
-                    style={{
-                      color: "#1677ff",
-                      background: "none",
-                      border: "none",
-                      padding: 0,
-                      cursor: "pointer",
-                      marginLeft: "4px",
-                      fontSize: "11px",
-                    }}
-                  >
-                    {expandedRowKeys.includes(record.ID)
-                      ? "ซ่อน"
-                      : "ดูเพิ่มเติม"}
-                  </button>
-                )}
-              </div>
-            );
-          },
-        },
-        {
-          title: "ห้อง",
-          key: "Room",
-          width: 80,
-          align: "center",
-          render: (_t, r) =>
-            r.isChild ? r.Section.Room : r.Sections?.[0]?.Room ?? "-",
-        },
-        {
-          title: "วันที่สอน",
-          key: "DayOfWeek",
-          width: 100,
-          align: "center",
-          render: (_t, r) =>
-            r.isChild ? r.Section.DayOfWeek : r.Sections?.[0]?.DayOfWeek ?? "-",
-        },
-        {
-          title: "เวลา",
-          key: "Time",
-          width: 120,
-          align: "center",
-          render: (_t, r) =>
-            r.isChild ? r.Section.Time : r.Sections?.[0]?.Time ?? "-",
-        }
+  // -------------------- จำนวนกลุ่ม --------------------
+  columns.push({
+    title: "จำนวนกลุ่ม",
+    key: "TotalSections",
+    width: 90,
+    align: "center",
+    render: (_t, r) => r.TotalSections ?? 1,
+  });
+
+  // -------------------- จำนวนนักศึกษา --------------------
+  columns.push({
+    title: "จำนวนนักศึกษา",
+    key: "Capacity",
+    width: 110,
+    align: "center",
+    render: (_t, r) => (r.Sections?.[0]?.Capacity ?? "-"),
+  });
+
+  // -------------------- อาจารย์ผู้สอน --------------------
+  columns.push({
+    title: "อาจารย์ผู้สอน",
+    key: "Teacher",
+    width: 150,
+    render: (_t, record) => {
+      const instructors = record.isChild
+        ? record.Section?.InstructorNames
+        : record.Sections?.[0]?.InstructorNames ?? [];
+      return (
+        <div style={{ fontSize: isSmallScreen ? "10px" : "12px", color: "#000000ff" }}>
+          {Array.isArray(instructors) && instructors.length > 0
+            ? instructors.map((name: string, idx: number) => <div key={idx}>{idx + 1}. {name}</div>)
+            : "-"}
+        </div>
+      );
+    },
+  });
+
+  // -------------------- จัดการ --------------------
+  columns.push({
+    title: "จัดการ",
+    key: "actions",
+    width: isSmallScreen ? 100 : 120,
+    align: "center",
+    render: (_text, record) => {
+      if (record.isChild) return null;
+
+      const canEdit = record.Sections?.some(
+        (s: any) =>
+          Array.isArray(s.InstructorNames) &&
+          s.InstructorNames.some((name: string) => normalizeName(name) === normalizeName(fullName))
       );
 
-      if (!isSmallScreen) {
-        columns.push(
-          {
-            title: "จำนวนกลุ่ม",
-            key: "TotalSections",
-            width: 90,
-            align: "center",
-            render: (_t, r) => r.TotalSections ?? 1,
-          },
-          {
-            title: "จำนวนนักศึกษา",
-            key: "Capacity",
-            width: 110,
-            align: "center",
-            render: (_t, r) => r.Sections?.[0]?.Capacity ?? "-",
-          },
-          {
-            title: "อาจารย์ผู้สอน",
-            key: "Teacher",
-            width: 150,
-            render: (_t, record) => {
-              // ถ้าเป็น child ใช้ InstructorName เดียว
-              const instructorName = record.isChild
-                ? record.Section?.InstructorName
-                : record.Sections?.[0]?.InstructorNames ?? [];
+      if (!canEdit) return null;
 
-              // ถ้าเป็น array → map ใส่ <div> ให้ขึ้นบรรทัดใหม่
-              return (
-                <div style={{ fontSize: "12px", whiteSpace: "pre-line" }}>
-                  {Array.isArray(instructorName)
-                    ? instructorName.map((name: string, idx: number) => (
-                        <div key={idx}>{name}</div>
-                      ))
-                    : instructorName || "-"}
-                </div>
-              );
-            },
-          }
-        );
-      }
-    }
-    function normalizeName(name: string) {
-      return name
-        .replace(/\s+/g, "") // ลบช่องว่างทั้งหมด
-        .replace(/\./g, "") // ลบจุด
-        .toLowerCase(); // ตัวเล็กหมด
-    }
+      const isCesCourse = record.IsFixCourses === true;
 
-    // ดึงชื่อเต็มของผู้ใช้ปัจจุบัน
-    const title = localStorage.getItem("title") || "";
-    const firstName = localStorage.getItem("first_name") || "";
-    const lastName = localStorage.getItem("last_name") || "";
-    const fullName = `${title}${firstName} ${lastName}`.trim();
-
-    columns.push({
-      title: "จัดการ",
-      key: "actions",
-      width: isMobile ? 100 : 120,
-      align: "center",
-      render: (_text, record) => {
-        if (record.isChild) return null;
-
-        // ตรวจว่ามีชื่อใน InstructorNames ตรงกับ fullName ไหม
-        const canEdit = record.Sections?.some(
-          (s: any) =>
-            Array.isArray(s.InstructorNames) &&
-            s.InstructorNames.some(
-              (instructor: string) =>
-                normalizeName(instructor) === normalizeName(fullName)
-            )
-        );
-
-        // console.log(
-        //   "ตรวจชื่อ:",
-        //   fullName,
-        //   "ใน",
-        //   record.Sections,
-        //   "=>",
-        //   canEdit
-        // );
-
-        if (!canEdit) return null;
-
-        const isCesCourse = record.IsFixCourses === true;
-
-        return (
-          <div
-            style={{ display: "flex", gap: "4px", justifyContent: "center" }}
+      return (
+        <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
+          <Button
+            size="small"
+            icon={!isSmallScreen ? <EditOutlined /> : undefined}
+            style={{
+              backgroundColor: "#F26522",
+              borderColor: "#F26522",
+              color: "white",
+              fontSize: isSmallScreen ? "10px" : "11px",
+              padding: "2px 8px",
+              height: "auto",
+            }}
+            onClick={() => {
+              const path = isCesCourse ? `/manage-cescourse/${record.ID}` : `/add-open-course/${record.ID}`;
+              navigate(path);
+            }}
           >
-            <Button
-              size="small"
-              icon={!isMobile ? <EditOutlined /> : undefined}
-              style={{
-                backgroundColor: "#F26522",
-                borderColor: "#F26522",
-                color: "white",
-                fontSize: isMobile ? "10px" : "11px",
-                padding: "2px 8px",
-                height: "auto",
-              }}
-              onClick={() => {
-                const targetPath = isCesCourse
-                  ? `/manage-cescourse/${record.ID}`
-                  : `/add-open-course/${record.ID}`;
-                navigate(targetPath);
-              }}
-              title="แก้ไขข้อมูล"
-            >
-              แก้ไข
-            </Button>
-            <Button
-              size="small"
-              icon={!isMobile ? <DeleteOutlined /> : undefined}
-              style={{
-                backgroundColor: "#ff4d4f",
-                borderColor: "#ff4d4f",
-                color: "white",
-                fontSize: isMobile ? "10px" : "11px",
-                padding: "2px 8px",
-                height: "auto",
-              }}
-              onClick={async () => {
-                const result = await Swal.fire({
-                  title: `คุณต้องการลบรายวิชา "${record.CourseName}" หรือไม่?`,
-                  text: "หากลบแล้วต้องการเพิ่มรายวิชาที่เปิดสอน ให้ไปที่เมนู 'เพิ่มวิชาที่ต้องการสอน'",
-                  icon: "warning",
-                  showCancelButton: true,
-                  confirmButtonColor: "#d33",
-                  cancelButtonColor: "#3085d6",
-                  confirmButtonText: "ตกลง",
-                  cancelButtonText: "ยกเลิก",
-                });
+            แก้ไข
+          </Button>
+          <Button
+            size="small"
+            icon={!isSmallScreen ? <DeleteOutlined /> : undefined}
+            style={{
+              backgroundColor: "#ff4d4f",
+              borderColor: "#ff4d4f",
+              color: "white",
+              fontSize: isSmallScreen ? "10px" : "11px",
+              padding: "2px 8px",
+              height: "auto",
+            }}
+            onClick={async () => {
+              const result = await Swal.fire({
+                title: `คุณต้องการลบรายวิชา "${record.EnglishCourseName} ${record.ThaiCourseName}" หรือไม่?`,
+                text: "หากลบแล้วต้องการเพิ่มรายวิชาที่เปิดสอน ให้ไปที่เมนู 'เพิ่มวิชาที่ต้องการสอน'",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#d33",
+                cancelButtonColor: "#3085d6",
+                confirmButtonText: "ตกลง",
+                cancelButtonText: "ยกเลิก",
+              });
 
-                if (result.isConfirmed) {
-                  const res = await deleteOfferedCourse(record.ID);
-                  if (res.status === 200) {
-                    setCourses((prev) =>
-                      prev.filter((c) => c.ID !== record.ID)
-                    );
-                    message.success("ลบรายวิชาสำเร็จ");
-                  } else {
-                    message.error("ไม่สามารถลบรายวิชาได้");
-                  }
+              if (result.isConfirmed) {
+                const res = await deleteOfferedCourse(record.ID);
+                if (res.status === 200) {
+                  setCourses(prev => prev.filter(c => c.ID !== record.ID));
+                  message.success("ลบรายวิชาสำเร็จ");
+                } else {
+                  message.error("ไม่สามารถลบรายวิชาได้");
                 }
-              }}
-              title="ลบข้อมูล"
-            >
-              ลบ
-            </Button>
-          </div>
-        );
-      },
-    });
+              }
+            }}
+          >
+            ลบ
+          </Button>
+        </div>
+      );
+    },
+  });
 
-    return columns;
-  };
+  return columns;
+};
+
 
   return (
     <div

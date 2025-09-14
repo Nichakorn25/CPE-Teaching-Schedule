@@ -73,7 +73,8 @@ export interface CourseTableData {
   order: number;
   ID: number;
   Code: string;
-  CourseName: string;
+  ThaiCourseName: string;
+  EnglishCourseName: string;
   Credit: string;
   TypeOfCourse: string;
   Sections: any[];
