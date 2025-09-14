@@ -47,6 +47,9 @@ const TeacherList: React.FC = () => {
   const [role, setRole] = useState<string>("");
   const [userMajor, setUserMajor] = useState<string>("");
 
+  // ── NEW: hover state for rows
+  const [hoveredRowKey, setHoveredRowKey] = useState<string | number | null>(null);
+
   const isSmallScreen = containerWidth < 1400;
   const isMobile = containerWidth < 768;
 
@@ -442,8 +445,35 @@ const TeacherList: React.FC = () => {
     return columns;
   };
 
+  // Row class for hover (simple)
+  const getRowClassName = (record: any) => {
+    const isHovered = hoveredRowKey === record.key;
+    return `normal-row ${isHovered ? "row-hovered" : ""}`;
+  };
+
   return (
     <div style={{ fontFamily: "Sarabun, sans-serif", padding: 0, margin: 0 }}>
+      {/* Custom CSS for hover (same style as other pages) */}
+      <style>
+        {`
+          .custom-table .ant-table-tbody > tr.normal-row {
+            background-color: #ffffff !important;
+            transition: background-color 0.2s ease;
+          }
+
+          .custom-table .ant-table-tbody > tr.normal-row:hover,
+          .custom-table .ant-table-tbody > tr.normal-row.row-hovered {
+            background-color: #6b7280 !important; /* สีเทาเข้ม เมื่อ hover */
+            color: white !important;
+          }
+
+          /* ปิด hover default ของ antd เพื่อให้ rule ของเราได้ผล */
+          .custom-table .ant-table-tbody > tr:hover > td {
+            background-color: transparent !important;
+          }
+        `}
+      </style>
+
       {/* Page Title */}
       <div style={{ marginBottom: 20, paddingBottom: 12, borderBottom: "2px solid #F26522" }}>
         <h2 style={{ margin: "0 0 8px 0", color: "#333", fontSize: isMobile ? 18 : 20, fontWeight: "bold" }}>
@@ -634,6 +664,12 @@ const TeacherList: React.FC = () => {
           loading={loading}
           style={{ fontSize: isMobile ? 11 : 12 }}
           className="custom-table"
+          // ADD: hover support
+          rowClassName={getRowClassName}
+          onRow={(record) => ({
+            onMouseEnter: () => setHoveredRowKey((record as any).key),
+            onMouseLeave: () => setHoveredRowKey(null),
+          })}
           locale={{
             emptyText: (
               <div style={{ padding: isMobile ? 20 : 40, textAlign: "center", color: "#999" }}>
