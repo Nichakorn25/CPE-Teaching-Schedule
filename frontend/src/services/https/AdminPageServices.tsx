@@ -1,5 +1,7 @@
 import {
   CreateCourseInteface,
+  CreateCurriculumInterface,
+  CreateLaboratoryInterface,
   CreateUserInterface,
 } from "../../interfaces/Adminpage";
 import { TeachingAssistantInterface } from "../../interfaces/TeachingAssistant";
@@ -173,6 +175,22 @@ async function postCreateSchduleTeachingAssistant(
     .then((res) => res)
     .catch((e) => e.response);
 }
+
+
+async function postCreateLaboratory(data: CreateLaboratoryInterface) {
+  return await axios
+    .post(`${apiUrl}/api/v1/laboratories`, data, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
+async function postCreateCurriculum(data: CreateCurriculumInterface) {
+  return await axios
+    .post(`${apiUrl}/api/v1/curricula`, data, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 export {
   getCoursebyid, //used
   getAllCourses, //used
@@ -195,4 +213,6 @@ export {
   getTypeofCourse, //used
   postCreateTimeFixedCourses,
   postCreateSchduleTeachingAssistant,
+  postCreateLaboratory,
+  postCreateCurriculum,
 };
