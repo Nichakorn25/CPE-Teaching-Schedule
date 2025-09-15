@@ -236,7 +236,7 @@ const TeacherList: React.FC = () => {
       // Mobile layout (ไม่มี EmpId อยู่แล้ว) → ซ่อน "จัดการ" ถ้าไม่ใช่ admin
       const base: ColumnsType<TeacherTableData> = [
         {
-          title: "#",
+          title: "ลำดับ",
           dataIndex: "order",
           key: "order",
           width: 40,

@@ -49,10 +49,12 @@ const ManageCourse: React.FC = () => {
 
   const [majors, setMajors] = useState<MajorInterface[]>([]);
   const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
-  const [selectedDepartmentID, setSelectedDepartmentID] = useState<number>(0);
+  const [selectedDepartmentID, setSelectedDepartmentID] = useState<
+    number | null
+  >(null);
+  const [selectedMajorID, setSelectedMajorID] = useState<number | null>(null);
   const [filteredMajors, setFilteredMajors] = useState<MajorInterface[]>([]);
   const [selectedMajorName, setSelectedMajorName] = useState("");
-  const [selectedMajorID, setSelectedMajorID] = useState<number>(0);
   const [allTeachers, setAllTeachers] = useState<AllTeacher[]>([]);
   const [teacherOptions, setTeacherOptions] = useState<AllTeacher[]>([]);
   const [teachers, setTeachers] = useState<AllTeacher[]>([]);
@@ -156,10 +158,11 @@ const ManageCourse: React.FC = () => {
       try {
         const res = await getTeachers();
         if (res.status === 200) {
-          const all = res.data;
+          const all: AllTeacher[] = res.data;
           const filtered = all.filter(
-            (teacher) => teacher.MajorID === selectedMajorID
+            (teacher: AllTeacher) => teacher.MajorID === selectedMajorID
           );
+
           setAllTeachers(filtered);
           setTeacherOptions(filtered);
         }
@@ -211,67 +214,85 @@ const ManageCourse: React.FC = () => {
     );
   };
 
-  useEffect(() => {
-    const fetchCourseData = async () => {
-      if (!id) return;
+useEffect(() => {
+  const fetchCourseData = async () => {
+    if (!id) return;
 
-      try {
-        const res = await getCoursebyid(Number(id));
-        if (res.status === 200 && res.data) {
-          const data = res.data;
+    try {
+      const res = await getCoursebyid(Number(id));
+      if (res.status === 200 && res.data) {
+        const data = res.data;
 
-          setCourseCode(data.Code || "");
-          setThaiName(data.ThaiName || "");
-          setEnglishName(data.EnglishName || "");
-          setCredit(data.Credit.Unit ? data.Credit.Unit.toString() : "");
-          setCourseType(
-            data.TypeOfCoursesID ? data.TypeOfCoursesID.toString() : ""
-          );
-          setHours({
-            lecture: data.Credit.Lecture ? data.Credit.Lecture.toString() : "",
-            practice: data.Credit.Lab ? data.Credit.Lab.toString() : "",
-            selfStudy: data.Credit.Self ? data.Credit.Self.toString() : "",
-          });
+        // map UserAllCourses เป็น teacher objects
+        const fullTeacherObjects: AllTeacher[] = data.UserAllCourses?.map(
+          (item: { User: any }) => {
+            const user = item.User!;
+            const major = user.Major as MajorInterface;
+            const department = major.Department as DepartmentInterface;
 
-          const foundCurriculum = curriculums.find(
-            (c) => c.ID === data.CurriculumID
-          );
-          if (foundCurriculum) setSelectedCurriculum(foundCurriculum);
-
-          const foundAcademicYear = academicYears.find(
-            (a) => a.ID === data.AcademicYearID
-          );
-          if (foundAcademicYear) setSelectedAcademicYear(foundAcademicYear);
-
-          const foundMajor = majors.find(
-            (m) => m.ID === data.Curriculum?.Major?.ID
-          );
-          if (foundMajor) {
-            setSelectedDepartmentID(foundMajor.Department.ID);
-            setSelectedMajorID(foundMajor.ID);
-            setSelectedMajorName(foundMajor.MajorName);
+            return {
+              ID: user.ID,
+              Title: user.Title?.Title || "",
+              Firstname: user.Firstname,
+              Lastname: user.Lastname,
+              Email: user.Email,
+              EmpId: user.EmpId,
+              Department: department,
+              Major: major,
+              Position: user.Position,
+              Status: user.Status,
+              Role: user.Role,
+            };
           }
+        ) || [];
 
-          if (data.UserAllCourses && Array.isArray(data.UserAllCourses)) {
-            const fullTeacherObjects = data.UserAllCourses.map(
-              (item) => item.User
-            ).filter((user) => !!user);
-            setTeachers(fullTeacherObjects);
-          }
+        setTeachers(fullTeacherObjects);
+        setTeacherOptions(fullTeacherObjects);
+
+        // ถ้ามี teacher อย่างน้อย 1 คน
+        if (fullTeacherObjects.length > 0) {
+          const firstTeacher = fullTeacherObjects[0];
+          const department = firstTeacher.Department as unknown as DepartmentInterface;
+          const major = firstTeacher.Major as unknown as MajorInterface;
+
+          // auto select department
+          setSelectedDepartmentID(department.ID);
+
+          // filter majors ของ department นั้น
+          const majorsOfDepartment = majors.filter(
+            (m) => m.DepartmentID === department.ID
+          );
+          setFilteredMajors(majorsOfDepartment);
+
+          // auto select major ของ teacher
+          setSelectedMajorID(major.ID);
         }
-      } catch (error) {
-        message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลรายวิชา");
-      }
-    };
 
-    if (
-      majors.length > 0 &&
-      curriculums.length > 0 &&
-      academicYears.length > 0
-    ) {
-      fetchCourseData();
+        // set form fields
+        form.setFieldsValue({
+          ThaiName: data.ThaiName,
+          EnglishName: data.EnglishName,
+          Code: data.Code,
+          Credit: data.Credit?.Unit?.toString(),
+          Lecture: data.Credit?.Lecture?.toString(),
+          Lab: data.Credit?.Lab?.toString(),
+          Self: data.Credit?.Self?.toString(),
+          TypeOfCoursesID: data.TypeOfCoursesID?.toString(),
+          CurriculumID: data.CurriculumID,
+          AcademicYearID: data.AcademicYearID,
+          UserIDs: fullTeacherObjects.map((t) => t.ID),
+        });
+      }
+    } catch (error) {
+      message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลรายวิชา");
+      console.error(error);
     }
-  }, [id, majors, curriculums, academicYears]);
+  };
+
+  fetchCourseData();
+}, [id, form, majors]);
+
+
 
   const handleSubmit = async () => {
     if (!selectedCurriculum || !selectedAcademicYear) {
@@ -392,20 +413,18 @@ const ManageCourse: React.FC = () => {
             }
             style={{ marginBottom: "24px" }}
           >
-            <Form.Item label="เลือกหลักสูตร" required>
+            <Form.Item label="เลือกหลักสูตร" name="CurriculumID" required>
               <Select
                 placeholder="-- กรุณาเลือกหลักสูตร --"
-                value={selectedCurriculum?.ID?.toString() || undefined}
                 onChange={(value) => {
                   const found = curriculums.find((c) => c.ID === Number(value));
-                  if (found) setSelectedCurriculum(found);
+                  if (found) setSelectedCurriculum(found); // เก็บ state เฉพาะ logic ภายใน
                 }}
                 size="large"
-                style={{ fontFamily: "Sarabun, sans-serif" }}
               >
                 {curriculums.map((c) => (
-                  <Option key={c.ID} value={c.ID.toString()}>
-                    {c.CurriculumName}
+                  <Option key={c.ID} value={c.ID}>
+                    {c.CurriculumName} {/* แสดงชื่อหลักสูตร */}
                   </Option>
                 ))}
               </Select>
@@ -430,11 +449,13 @@ const ManageCourse: React.FC = () => {
           >
             <Row gutter={[16, 16]}>
               <Col xs={24} md={8}>
-                <Form.Item label="หมวดวิชา" required>
+                <Form.Item label="หมวดวิชา" name="TypeOfCoursesID" required>
                   <Select
                     placeholder="-- กรุณาเลือกหมวดวิชา --"
-                    value={courseType || undefined}
-                    onChange={setCourseType}
+                    value={form.getFieldValue("TypeOfCoursesID")}
+                    onChange={(val) =>
+                      form.setFieldsValue({ TypeOfCoursesID: val })
+                    }
                     size="large"
                   >
                     {typeOfCoursesList.map((type) => (
@@ -446,17 +467,20 @@ const ManageCourse: React.FC = () => {
                 </Form.Item>
               </Col>
               <Col xs={24} md={8}>
-                <Form.Item label="รหัสวิชา" required>
-                  <Input
-                    placeholder="กรอกรหัสวิชา"
-                    value={courseCode}
-                    onChange={(e) => setCourseCode(e.target.value)}
-                    size="large"
-                  />
+                <Form.Item
+                  label="รหัสวิชา"
+                  name="Code"
+                  rules={[{ required: true }]}
+                >
+                  <Input placeholder="กรอกรหัสวิชา" size="large" />
                 </Form.Item>
               </Col>
               <Col xs={24} md={8}>
-                <Form.Item label="ชั้นปีที่สามารถเรียนได้" required>
+                <Form.Item
+                  label="ชั้นปีที่สามารถเรียนได้"
+                  name="AcademicYearID"
+                  required
+                >
                   <Select
                     placeholder="-- กรุณาเลือกชั้นปี --"
                     value={selectedAcademicYear?.ID?.toString() || undefined}
@@ -480,24 +504,21 @@ const ManageCourse: React.FC = () => {
 
             <Row gutter={[16, 16]}>
               <Col xs={24} md={12}>
-                <Form.Item label="หน่วยกิต" required>
-                  <Select
-                    placeholder="เลือกหน่วยกิต"
-                    value={credit || undefined}
-                    onChange={setCredit}
-                    size="large"
-                  >
-                    {generateNumberOptions(10)}
-                  </Select>
+                <Form.Item
+                  label="หน่วยกิต"
+                  name="Credit"
+                  rules={[{ required: true }]}
+                >
+                  <Input placeholder="หน่วยกิต" size="large" />
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
                 <Form.Item label="รูปแบบชั่วโมงการสอน" required>
                   <Row gutter={[8, 8]}>
                     {[
-                      { label: "บรรยาย", key: "lecture" },
-                      { label: "ปฏิบัติ", key: "practice" },
-                      { label: "เรียนรู้ด้วยตนเอง", key: "selfStudy" },
+                      { label: "บรรยาย", key: "Lecture" },
+                      { label: "ปฏิบัติ", key: "Lab" },
+                      { label: "เรียนรู้ด้วยตนเอง", key: "Self" },
                     ].map(({ label, key }) => (
                       <Col xs={8} key={key}>
                         <div style={{ textAlign: "center" }}>
@@ -511,18 +532,11 @@ const ManageCourse: React.FC = () => {
                           >
                             {label}
                           </div>
-                          <Select
-                            value={
-                              hours[key as keyof typeof hours] || undefined
-                            }
-                            onChange={(value) =>
-                              setHours({ ...hours, [key]: value })
-                            }
-                            size="large"
-                            style={{ width: "100%" }}
-                          >
-                            {generateNumberOptions(10)}
-                          </Select>
+                          <Form.Item name={key} noStyle>
+                            <Select size="large" style={{ width: "100%" }}>
+                              {generateNumberOptions(10)}
+                            </Select>
+                          </Form.Item>
                         </div>
                       </Col>
                     ))}
@@ -535,7 +549,7 @@ const ManageCourse: React.FC = () => {
               <Col xs={24} md={12}>
                 <Form.Item
                   label="ชื่อวิชา (ภาษาไทย)"
-                  name="thaiName"
+                  name="ThaiName"
                   rules={[
                     { required: true, message: "กรุณากรอกชื่อวิชา (ภาษาไทย)" },
                     {
@@ -550,18 +564,13 @@ const ManageCourse: React.FC = () => {
                     },
                   ]}
                 >
-                  <Input
-                    placeholder="กรอกชื่อวิชาภาษาไทย"
-                    value={thaiName}
-                    onChange={(e) => setThaiName(e.target.value)}
-                    size="large"
-                  />
+                  <Input placeholder="กรอกชื่อวิชาภาษาไทย" size="large" />
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
                 <Form.Item
                   label="ชื่อวิชา (ภาษาอังกฤษ)"
-                  name="englishName"
+                  name="EnglishName"
                   rules={[
                     {
                       required: true,
@@ -579,12 +588,7 @@ const ManageCourse: React.FC = () => {
                     },
                   ]}
                 >
-                  <Input
-                    placeholder="กรอกชื่อวิชาภาษาอังกฤษ"
-                    value={englishName}
-                    onChange={(e) => setEnglishName(e.target.value)}
-                    size="large"
-                  />
+                  <Input placeholder="กรอกชื่อวิชาภาษาอังกฤษ" size="large" />
                 </Form.Item>
               </Col>
             </Row>
@@ -624,12 +628,12 @@ const ManageCourse: React.FC = () => {
             >
               <Row gutter={[16, 16]}>
                 <Col xs={24} md={12}>
-                  <Form.Item label="สำนักวิชา" required>
+                  <Form.Item label="สำนักวิชา">
                     <Select
-                      placeholder="-- กรุณาเลือกสำนักวิชา --"
+                      placeholder="-- สำนักวิชา --"
                       value={selectedDepartmentID || undefined}
-                      onChange={setSelectedDepartmentID}
                       size="large"
+                      onChange={(val) => setSelectedDepartmentID(val as number)}
                     >
                       {departments.map((d) => (
                         <Option key={d.ID} value={d.ID}>
@@ -639,14 +643,14 @@ const ManageCourse: React.FC = () => {
                     </Select>
                   </Form.Item>
                 </Col>
+
                 <Col xs={24} md={12}>
                   <Form.Item label="สาขาวิชา" required>
                     <Select
-                      placeholder="-- กรุณาเลือกสาขาวิชา --"
+                      placeholder="-- สาขาวิชา --"
                       value={selectedMajorID || undefined}
-                      onChange={setSelectedMajorID}
                       size="large"
-                      disabled={!selectedDepartmentID}
+                      onChange={(val) => setSelectedMajorID(val as number)}
                     >
                       {filteredMajors.map((m) => (
                         <Option key={m.ID} value={m.ID}>
@@ -711,7 +715,7 @@ const ManageCourse: React.FC = () => {
                   <div style={{ flex: 1 }}>
                     <Select
                       placeholder="-- เลือกอาจารย์ --"
-                      value={t.ID || undefined}
+                      value={t.ID} // ต้องเป็น ID
                       onChange={(value) => {
                         const selectedId = Number(value);
                         const selected = teacherOptions.find(
@@ -732,7 +736,6 @@ const ManageCourse: React.FC = () => {
                           typeof teacher.Title === "string"
                             ? teacher.Title
                             : teacher.Title?.Title || "";
-
                         return (
                           <Option key={teacher.ID} value={teacher.ID}>
                             {`${titleStr} ${teacher.Firstname} ${teacher.Lastname}`}

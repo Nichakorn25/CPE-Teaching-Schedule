@@ -66,6 +66,7 @@ export interface AllTeacher {
   EmpId: string,
   Department: string,
   Major: string,
+  MajorID?: number,
   Position: string,
   Status: string,
   Role: string,

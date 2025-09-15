@@ -25,6 +25,8 @@ func GetAllCourseByID(c *gin.Context) {
 		Preload("Credit"). //
 		Preload("UserAllCourses"). //
 		Preload("UserAllCourses.User"). //
+		Preload("UserAllCourses.User.Major"). //
+		Preload("UserAllCourses.User.Major.Department"). //
 		Preload("OfferedCourses"). //
 		Preload("TimeFixedCourses"). //
 		First(&course, id).Error; err != nil {

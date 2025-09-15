@@ -269,7 +269,7 @@ const Sidebar: React.FC = () => {
               transition: "width 0.3s ease",
               cursor: "pointer",
             }}
-            onClick={() => navigate("/Homepage")}
+            onClick={() => navigate("/home-dash")}
             title="กลับสู่หน้าแรก"
           />
         </div>
