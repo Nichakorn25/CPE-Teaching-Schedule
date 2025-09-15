@@ -141,6 +141,19 @@ export interface CurriculumInterface{
   CurriculumName: string;
 }
 
+export interface CreateLaboratoryInterface {
+  room: string;
+  building: string;
+  capacity: string;
+}
+
+export interface CreateCurriculumInterface {
+  curriculumName: string;
+  year: number;
+  started: number;
+  majorId: number;
+}
+
 export interface AcademicYearInterface{
   ID: number;
   Level: string;
