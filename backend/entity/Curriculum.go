@@ -1,17 +1,15 @@
 package entity
 
-import (
-	"gorm.io/gorm"
-)
+import "gorm.io/gorm"
 
 type Curriculum struct {
 	gorm.Model
-	CurriculumName string `valid:"required~CurriculumName is required."`
-	Year           uint   `valid:"required~Year is required."`
-	Started        uint   `valid:"required~Started is required."`
+	CurriculumName string `json:"curriculumName" valid:"required~CurriculumName is required."`
+	Year           uint   `json:"year"           valid:"required~Year is required."`
+	Started        uint   `json:"started"        valid:"required~Started is required."`
 
-	MajorID uint
-	Major   Major `gorm:"foreignKey:MajorID"`
+	MajorID uint   `json:"majorId"              valid:"required~MajorID is required."`
+	Major   Major  `gorm:"foreignKey:MajorID"   json:"-" valid:"-"`
 
-	AllCourses []AllCourses `gorm:"foreignKey:CurriculumID"`
+	AllCourses []AllCourses `gorm:"foreignKey:CurriculumID" json:"-" valid:"-"`
 }
