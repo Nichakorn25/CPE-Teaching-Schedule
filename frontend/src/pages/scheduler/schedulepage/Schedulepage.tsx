@@ -702,7 +702,7 @@ const addSubCellToSpecificRow = (targetRow: ExtendedScheduleData, subCell: SubCe
 const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
   const cards: CourseCard[] = [];
   
-  // เก็บข้อมูลวิชาทั้งหมดจาก API ก่อน (ไม่กรองซ้ำ)
+  // เก็บข้อมูลวิชาทั้งหมดจาก API ก่อน (ไม่กรอง)
   const allCourseData: Array<{
     subject: string;
     courseCode: string;
@@ -713,6 +713,9 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
     studentYear: string;
     scheduleId: number;
     duration: number;
+    dayOfWeek: string; // เพิ่มเพื่อแยกแต่ละคาบ
+    startTime: string; // เพิ่มเพื่อแยกแต่ละคาบ
+    endTime: string;   // เพิ่มเพื่อแยกแต่ละคาบ
   }> = [];
 
   schedules.forEach((schedule, index) => {
@@ -863,11 +866,14 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
       section,
       studentYear,
       scheduleId: schedule.ID,
-      duration: Math.max(1, duration)
+      duration: Math.max(1, duration),
+      dayOfWeek: schedule.DayOfWeek, // เพิ่ม
+      startTime: startTime, // เพิ่ม
+      endTime: endTime // เพิ่ม
     });
   });
 
-  // กรุ๊ปตามข้อมูลที่เหมือนกัน (ยกเว้นเวลา)
+  // กรุ๊ปตามข้อมูลที่เหมือนกัน (ยกเว้นเวลาและวัน)
   const courseGroups = new Map<string, typeof allCourseData>();
   
   allCourseData.forEach(courseData => {
@@ -883,7 +889,20 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
   // สร้าง CourseCard จากแต่ละกรุ๊ป
   courseGroups.forEach((group, groupKey) => {
     const firstCourse = group[0];
-    const totalDuration = group.reduce((sum, course) => sum + course.duration, 0);
+    
+    // **แก้ไขการคำนวณ totalDuration ให้ถูกต้อง**
+    // แทนที่จะรวม duration ของทุก record ให้นับเฉพาะคาบที่ไม่ซ้ำกัน
+    const uniquePeriods = new Set<string>();
+    
+    group.forEach(course => {
+      // สร้าง unique key สำหรับแต่ละคาบ (วัน + เวลา)
+      for (let slot = timeToSlotIndex(course.startTime); slot < timeToSlotIndex(course.endTime); slot++) {
+        const periodKey = `${course.dayOfWeek}-${slot}`;
+        uniquePeriods.add(periodKey);
+      }
+    });
+    
+    const totalDuration = uniquePeriods.size; // นับจากจำนวนคาบที่ไม่ซ้ำกัน
 
     const card: CourseCard = {
       id: `course-card-${groupKey}`,
@@ -894,10 +913,10 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
       room: firstCourse.room,
       section: firstCourse.section,
       studentYear: firstCourse.studentYear,
-      duration: totalDuration,
+      duration: totalDuration, // ใช้ค่าที่คำนวณใหม่
       color: getSubjectColor(firstCourse.subject, firstCourse.courseCode),
       scheduleId: firstCourse.scheduleId,
-      scheduleIds: group.map(course => course.scheduleId) // เพิ่มนี้สำคัญ
+      scheduleIds: group.map(course => course.scheduleId)
     };
 
     cards.push(card);
@@ -908,9 +927,10 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
   setCourseCards(cards);
   setFilteredCourseCards(cards);
 };
+
 // เพิ่ม function ใหม่หลังจาก isCourseCardUsed
 const getCourseCardUsageInfo = (courseCard: CourseCard): { usedDuration: number; totalDuration: number; isFullyUsed: boolean } => {
-  let usedDuration = 0;
+  const usedPeriods = new Set<string>(); // ใช้ Set เพื่อป้องกันการนับซ้ำ
   
   scheduleData.forEach(dayData => {
     dayData.subCells?.forEach(subCell => {
@@ -920,7 +940,7 @@ const getCourseCardUsageInfo = (courseCard: CourseCard): { usedDuration: number;
       if (courseCard.scheduleIds && Array.isArray(courseCard.scheduleIds) && subCell.scheduleId) {
         isMatch = courseCard.scheduleIds.includes(subCell.scheduleId);
       }
-      // Method 2: เช็คจาก scheduleId เดี่ยว (backward compatibility)
+      // Method 2: เช็คจาก scheduleId เดียว (backward compatibility)
       else if (courseCard.scheduleId && subCell.scheduleId) {
         isMatch = subCell.scheduleId === courseCard.scheduleId;
       }
@@ -950,13 +970,19 @@ const getCourseCardUsageInfo = (courseCard: CourseCard): { usedDuration: number;
       }
       
       if (isMatch) {
-        const subCellDuration = subCell.position.endSlot - subCell.position.startSlot;
-        usedDuration += subCellDuration;
+        // **แก้ไขการนับ usedDuration ให้ถูกต้อง**
+        // สร้าง unique key สำหรับแต่ละคาบที่ใช้ไป
+        for (let slot = subCell.position.startSlot; slot < subCell.position.endSlot; slot++) {
+          const periodKey = `${subCell.day}-${slot}`;
+          usedPeriods.add(periodKey);
+        }
         
-        console.log(`📝 Found matching subCell: ${subCell.classData.subject} (${subCellDuration} periods), total used: ${usedDuration}/${courseCard.duration}`);
+        console.log(`🔍 Found matching subCell: ${subCell.classData.subject}, periods: ${subCell.position.endSlot - subCell.position.startSlot}, total unique used: ${usedPeriods.size}/${courseCard.duration}`);
       }
     });
   });
+  
+  const usedDuration = usedPeriods.size; // นับจาก Set ไม่ซ้ำ
   
   return {
     usedDuration,
@@ -1285,6 +1311,9 @@ const renderCourseCard = (courseCard: CourseCard) => {
   const isFullyUsed = usageInfo.isFullyUsed;
   const canDrag = isScheduler && !isFullyUsed;
 
+  // เพิ่มการเช็คสถานะ drag เพื่อซ่อน tooltip
+  const isDragging = draggedSubCell !== null || draggedCourseCard !== null;
+
   return (
     <div
       key={courseCard.id}
@@ -1337,12 +1366,12 @@ const renderCourseCard = (courseCard: CourseCard) => {
             <p><b>🎓 ชั้นปี:</b> {courseCard.studentYear ? `ปีที่ ${courseCard.studentYear}` : "ไม่ระบุ"}</p>
             <p><b>📄 หมู่เรียน:</b> {courseCard.section || "ไม่ระบุ"}</p>
             <p><b>👩‍🏫 อาจารย์:</b> {courseCard.teacher || "ไม่ระบุ"}</p>
-            <p><b>� ห้องเรียน:</b> {courseCard.room || "ไม่ระบุ"}</p>
+            <p><b>🏢 ห้องเรียน:</b> {courseCard.room || "ไม่ระบุ"}</p>
             <p><b>⏰ ระยะเวลา:</b> {courseCard.duration} ชั่วโมง</p>
             <p><b>📊 สถานะการใช้:</b> {usageInfo.usedDuration}/{courseCard.duration} คาบ</p>
             <div style={{ marginTop: "8px", fontSize: "11px", color: "#666", fontStyle: "italic" }}>
               {isFullyUsed 
-                ? "🔒 วิชานี้ถูกใช้ในตารางแล้ว ไม่สามารถลากได้อีด"
+                ? "🔒 วิชานี้ถูกใช้ในตารางแล้ว ไม่สามารถลากได้อีก"
                 : !isScheduler 
                 ? "🔒 ต้องเป็น Scheduler เท่านั้นถึงจะลากได้"
                 : "💡 ลากการ์ดนี้ไปวางในตารางเรียน"
@@ -1352,6 +1381,8 @@ const renderCourseCard = (courseCard: CourseCard) => {
         }
         placement="left"
         overlayStyle={{ maxWidth: "350px" }}
+        trigger={isDragging ? [] : ["hover"]} // แก้ไขให้ซ่อนขณะ drag
+        open={isDragging ? false : undefined} // บังคับซ่อนขณะ drag
       >
         <div>
           <div style={{ fontWeight: "bold", fontSize: "12px", marginBottom: "4px", color: isFullyUsed ? "#999" : "#333" }}>
@@ -1435,8 +1466,9 @@ const renderCourseCard = (courseCard: CourseCard) => {
     </div>
   );
 };
+
   // =================== RENDER SIDEBAR ===================
-  const renderSidebar = () => {
+const renderSidebar = () => {
   if (role !== "Scheduler" || !sidebarVisible) return null;
   
   return (
@@ -1444,17 +1476,17 @@ const renderCourseCard = (courseCard: CourseCard) => {
       style={{
         width: `${sidebarWidth}px`,
         backgroundColor: "#fafafa",
-        borderLeft: "1px solid #d9d9d9",
+        borderRight: "1px solid #d9d9d9", // เปลี่ยนจาก borderLeft
         height: "100vh",
         minHeight: "100vh",
         maxHeight: "100vh",
         position: "fixed",
-        right: 0,
+        left: sidebarVisible ? 0 : -sidebarWidth, // เปลี่ยนจาก right: 0
         top: 0,
         bottom: 0,
         zIndex: 1000,
-        boxShadow: "-2px 0 8px rgba(0,0,0,0.1)",
-        transition: "right 0.3s ease",
+        boxShadow: "2px 0 8px rgba(0,0,0,0.1)", // เปลี่ยนจาก -2px เป็น 2px
+        transition: "left 0.3s ease", // เปลี่ยนจาก right เป็น left
         display: "flex",
         flexDirection: "column"
       }}
@@ -1509,6 +1541,7 @@ const renderCourseCard = (courseCard: CourseCard) => {
     </div>
   );
 };
+
 
 // =================== RENDER AVAILABLE COURSES TAB ===================
 const renderAvailableCourses = () => {
@@ -2653,6 +2686,9 @@ const renderSubCell = (subCell: SubCell) => {
   const isScheduler = role === "Scheduler";
   const isTimeFixed = subCell.isTimeFixed;
 
+  // เพิ่มการเช็คสถานะ drag เพื่อซ่อน tooltip
+  const isDragging = draggedSubCell !== null || draggedCourseCard !== null;
+
   // เพิ่ม function สำหรับดึงข้อมูลห้องแลป
   const getLaboratoryRoom = (subCell: SubCell): string => {
     if (subCell.scheduleId && originalScheduleData) {
@@ -2750,7 +2786,8 @@ const renderSubCell = (subCell: SubCell) => {
         }
         placement="top"
         overlayStyle={{ maxWidth: "400px", backgroundColor: "white", color: "black" }}
-        trigger="hover"
+        trigger={isDragging ? [] : ["hover"]} // แก้ไขให้ซ่อนขณะ drag
+        open={isDragging ? false : undefined} // บังคับซ่อนขณะ drag
       >
         <div style={{
           flex: 1,
@@ -2935,6 +2972,7 @@ const renderSubCell = (subCell: SubCell) => {
     </div>
   );
 };
+
 
   // เพิ่ม helper function สำหรับสร้าง empty row
 const createEmptyDayRow = (day: string, dayIndex: number, rowIndex: number, totalRowsInDay: number): ExtendedScheduleData => {
