@@ -88,7 +88,10 @@ func main() {
 
 		r.GET("/offered-courses-schedule", controllers.GetOfferedCoursesAndSchedule) 
 		r.GET("/offered-course-filter/:major_id/:department_id/:toc_id", controllers.GetOpenCoursesByFilters) // แบบ path
+		
+		r.POST("/curriculum", controllers.CreateCurriculum)
 
+		r.POST("/lab", controllers.CreateLaboratory)
 	}
 
 	r.GET("/", func(c *gin.Context) {
