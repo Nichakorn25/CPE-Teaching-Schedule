@@ -120,7 +120,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         }}>
           <div style={{
             width: '100%',
-            maxWidth: '1200px', // Fixed max-width ไม่เปลี่ยนตาม sidebar
+            maxWidth: '98%', // Fixed max-width ไม่เปลี่ยนตาม sidebar
             backgroundColor: '#ffffff',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
             border: '1px solid #e0e0e0',
