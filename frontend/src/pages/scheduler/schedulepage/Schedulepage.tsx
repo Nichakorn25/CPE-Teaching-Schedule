@@ -4059,7 +4059,6 @@ const exportPDF = async () => {
   }
 };
 
-
 const exportScheduleToXLSX = async () => {
   if (!scheduleData || scheduleData.length === 0) {
     message.warning("ไม่มีข้อมูลให้ส่งออก กรุณาสร้างตารางก่อน");
@@ -4366,7 +4365,6 @@ const exportScheduleToXLSX = async () => {
     message.error("เกิดข้อผิดพลาดในการสร้างไฟล์ Excel");
   }
 };
-
 
   // =================== TABLE COLUMNS WITH FIXED ROW GROUPING ===================
   const columns: ColumnsType<ExtendedScheduleData> = [
