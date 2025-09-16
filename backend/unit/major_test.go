@@ -13,7 +13,7 @@ func TestMajorValidation(t *testing.T) {
 
 	t.Run("MajorName is required", func(t *testing.T) {
 		major := entity.Major{
-			MajorName:    "", // ว่าง
+			MajorName:    "",
 			DepartmentID: 1,
 		}
 
@@ -27,7 +27,7 @@ func TestMajorValidation(t *testing.T) {
 	t.Run("DepartmentID is required", func(t *testing.T) {
 		major := entity.Major{
 			MajorName:    "วิศวกรรมคอมพิวเตอร์",
-			DepartmentID: 0, // ค่า default ของ uint
+			DepartmentID: 0, 
 		}
 
 		ok, err := govalidator.ValidateStruct(major)
@@ -42,8 +42,6 @@ func TestMajorValidation(t *testing.T) {
 			MajorName:    "วิศวกรรมคอมพิวเตอร์",
 			DepartmentID: 1,
 
-			// ถ้า Department มี validation และถูก validate อัตโนมัติ ให้กำหนดข้อมูลไว้ด้วย
-			// Department: entity.Department{...}
 		}
 
 		ok, err := govalidator.ValidateStruct(major)
