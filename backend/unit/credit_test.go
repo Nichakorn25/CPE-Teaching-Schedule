@@ -13,7 +13,7 @@ func TestCreditValidation(t *testing.T) {
 
 	t.Run("Unit is required (0 is not valid)", func(t *testing.T) {
 		credit := entity.Credit{
-			Unit:    0, // invalid
+			Unit:    0, 
 			Lecture: 1,
 			Lab:     1,
 			Self:    1,
@@ -21,7 +21,6 @@ func TestCreditValidation(t *testing.T) {
 
 		ok, err := govalidator.ValidateStruct(credit)
 
-		// ถ้าใช้ uint แบบนี้ required จะมองว่า 0 ก็ valid แล้ว ต้องแก้เป็น pointer ถ้าจะเช็คว่างจริง
 		g.Expect(ok).NotTo(BeTrue())
 		g.Expect(err).NotTo(BeNil())
 		g.Expect(err.Error()).To(Equal("Unit is required."))
@@ -30,7 +29,7 @@ func TestCreditValidation(t *testing.T) {
 	t.Run("Lecture is required (non-zero)", func(t *testing.T) {
 		credit := entity.Credit{
 			Unit:    1,
-			Lecture: 0, // invalid
+			Lecture: 0,
 			Lab:     1,
 			Self:    1,
 		}
