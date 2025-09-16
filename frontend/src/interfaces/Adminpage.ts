@@ -32,7 +32,8 @@ export interface AllCourseInterface {
 export interface AllCourseinOpenCourseInterface {
   ID: number;
   CourseCode: string;
-  CourseName: string;
+  EnglishName: string;
+  ThaiName: string;
   CourseType: string;
   Credit: string;
   Instructor: string;

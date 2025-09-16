@@ -113,6 +113,14 @@ async function getOfferedCoursesByMajor(majorName: string, year: number, term: n
     .catch((e) => e.response);
 }
 
+async function getOfferedCoursesByMajorbyID(opencourse: number,) {
+  return await axios
+    .get(`${apiUrl}/offered-courses-schedule?id=${opencourse}`,requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
+
 async function GetOpenCoursesByFilters(majorID: string, departmentID: string, TypeofCourseID: string) {
   return await axios
     .get(`${apiUrl}/offered-course-filter/${majorID}/${departmentID}/${TypeofCourseID}`, requestOptions)
@@ -135,4 +143,5 @@ export {
   getOfferedCoursesByMajor,
   getCountOffered,
   GetOpenCoursesByFilters,
+  getOfferedCoursesByMajorbyID,
 };

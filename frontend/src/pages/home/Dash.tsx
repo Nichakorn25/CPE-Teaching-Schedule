@@ -138,7 +138,7 @@ const Dashboard: React.FC = () => {
       "เสาร์",
     ];
     const today = new Date();
-    return daysInThai[today.getDate()];
+    return daysInThai[today.getDay()];
   };
 
   const todayName = getThaiDayName();

@@ -4,6 +4,7 @@ import { Button, Input, Select, Card, Form, InputNumber, message } from "antd";
 import {
   getAllCurriculum,
   getLaboratory,
+  getOfferedCoursesByMajorbyID,
 } from "../../../services/https/GetService";
 import {
   getCoursebyid,
@@ -15,6 +16,7 @@ import {
   AllCourseinOpenCourseInterface,
   LaboratoryInterface,
 } from "../../../interfaces/Adminpage";
+import {CourseInterface} from "../../../interfaces/AddCoursePage";
 import Swal from "sweetalert2";
 import { upCreateOfferedCourse } from "../../../services/https/SchedulerPageService";
 
@@ -131,36 +133,35 @@ const AddCoursepage: React.FC = () => {
 
   // ───────────────── โหลดข้อมูล “วิชาที่แก้ไข” ─────────────────
   useEffect(() => {
-    if (!id) return;
+  if (!id) return;
 
-    const fetchExistingCourse = async () => {
-      const res = await getCoursebyid(Number(id));
-      if (res.status === 200) {
-        const course = res.data;
+  const fetchExistingCourse = async () => {
+    const res = await getOfferedCoursesByMajorbyID(Number(id));
+    if (res.status === 200) {
+      const course: CourseInterface = res.data;
 
-        form.setFieldsValue({
-          curriculum: course.CurriculumID,
-          courseCode: course.ID,
-          courseNameTh: course.ThaiName,
-          courseNameEn: course.EnglishName,
-          credits: course.Credit?.Unit || 0,
-          labRoom: course.Laboratory?.ID || null,
-          groupCount: course.Section,
-          studentsPerGroup: course.Capacity,
-        });
+      form.setFieldsValue({
+        curriculum: course.Curriculum,
+        courseCode: course.Code,
+        courseNameTh: course.ThaiCourseName,
+        courseNameEn: course.EnglishCourseName,
+        credits: course.Credit,
+        labRoom: course.Laboratory,
+        groupCount: course.Sections,
+        studentsPerGroup: course.Sections,
+      });
 
-        // โหลดรายวิชาทั้งหมดในหลักสูตรนั้น
-        await handleCurriculumChange(course.CurriculumID);
-      }
-    };
-    fetchExistingCourse();
-  }, [id, form]);
+      await handleCurriculumChange(course.CurriculumID);
+    }
+  };
+  fetchExistingCourse();
+}, [id, form]);
+
 
   // ───────────────── เปลี่ยนหลักสูตร → โหลดรายวิชาในหลักสูตรนั้น ─────────────────
   const handleCurriculumChange = async (value: number) => {
     setSelectedCurriculumID(value);
     const response = await getAllCourses();
-    console.log("dfghjk",response)
     if (response.status === 200) {
       const filtered = response.data.filter(
         (course: AllCourseinOpenCourseInterface) =>
@@ -233,8 +234,8 @@ const AddCoursepage: React.FC = () => {
       Swal.fire(
         "สำเร็จ",
         id
-          ? `แก้ไขข้อมูลวิชา <b>${selectedCourse.CourseName}</b> แล้ว`
-          : `เพิ่มวิชา <b>${selectedCourse.CourseName}</b><br>เป็นรายวิชาที่เปิดสอนใน <b>เทอม ${term} ปีการศึกษา ${academicYear}</b> เรียบร้อยแล้ว`,
+          ? `แก้ไขข้อมูลวิชา <b>${selectedCourse.EnglishName} - ${selectedCourse.ThaiName} </b> แล้ว`
+          : `เพิ่มวิชา <b>${selectedCourse.EnglishName} - ${selectedCourse.ThaiName}</b><br>เป็นรายวิชาที่เปิดสอนใน <b>เทอม ${term} ปีการศึกษา ${academicYear}</b> เรียบร้อยแล้ว`,
         "success"
       ).then(() => navigate("/all-open-course"));
     } else {
@@ -357,7 +358,7 @@ const AddCoursepage: React.FC = () => {
                 >
                   {courses.map((c) => (
                     <Option key={c.ID} value={c.ID}>
-                      {c.CourseCode} - {c.CourseName}
+                      {c.CourseCode} - {c.EnglishName} {c.ThaiName}
                     </Option>
                   ))}
                 </Select>
