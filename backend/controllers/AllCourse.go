@@ -37,6 +37,7 @@ func GetAllCourseByID(c *gin.Context) {
 	c.JSON(http.StatusOK, course)
 }
 
+
 func GetAllCourses(c *gin.Context) {
 	var courses []entity.AllCourses
 

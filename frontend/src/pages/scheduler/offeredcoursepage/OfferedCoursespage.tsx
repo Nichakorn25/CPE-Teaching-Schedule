@@ -831,6 +831,7 @@ const OfferedCoursespage: React.FC = () => {
             }}
             onClick={() => {
               const path = isCesCourse ? `/manage-cescourse/${record.ID}` : `/add-open-course/${record.ID}`;
+              console.log("rdtdtyjk",path)
               navigate(path);
             }}
           >
@@ -879,7 +880,6 @@ const OfferedCoursespage: React.FC = () => {
 
   return columns;
 };
-
 
   return (
     <div

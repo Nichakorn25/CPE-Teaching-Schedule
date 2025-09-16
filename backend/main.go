@@ -87,6 +87,7 @@ func main() {
 		r.GET("/all-department", controllers.GetAllDepartment)
 
 		r.GET("/offered-courses-schedule", controllers.GetOfferedCoursesAndSchedule) 
+		r.GET("/offered-courses-schedule/:id", controllers.GetOfferedCoursesAndSchedulebyID) 
 		r.GET("/offered-course-filter/:major_id/:department_id/:toc_id", controllers.GetOpenCoursesByFilters) // แบบ path
 		
 		r.POST("/curriculum", controllers.CreateCurriculum)
