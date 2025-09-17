@@ -257,29 +257,6 @@ const TeacherList: React.FC = () => {
             </div>
           ),
         },
-        {
-          title: "สถานะ",
-          key: "status",
-          width: 80,
-          align: "center",
-          render: (_, r) => (
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  backgroundColor: r.Status === "active" ? "#f6ffed" : "#fff2e8",
-                  color: r.Status === "active" ? "#52c41a" : "#fa8c16",
-                  padding: "2px 6px",
-                  borderRadius: 4,
-                  fontSize: 10,
-                  fontWeight: "bold",
-                  border: `1px solid ${r.Status === "active" ? "#b7eb8f" : "#ffd591"}`,
-                }}
-              >
-                {r.Status}
-              </div>
-            </div>
-          ),
-        },
       ];
 
       if (isAdmin) {
@@ -380,28 +357,6 @@ const TeacherList: React.FC = () => {
     if (!isSmallScreen) {
       columns.push(
         { title: "ตำแหน่ง", dataIndex: "Position", key: "Position", width: 150, align: "center" },
-        {
-          title: "สถานะ",
-          dataIndex: "Status",
-          key: "Status",
-          width: 100,
-          align: "center",
-          render: (v: string) => (
-            <span
-              style={{
-                backgroundColor: v === "active" ? "#f6ffed" : "#fff2e8",
-                color: v === "active" ? "#52c41a" : "#fa8c16",
-                padding: "2px 8px",
-                borderRadius: 4,
-                fontSize: 11,
-                fontWeight: "bold",
-                border: `1px solid ${v === "active" ? "#b7eb8f" : "#ffd591"}`,
-              }}
-            >
-              {v}
-            </span>
-          ),
-        },
         { title: "บทบาท", dataIndex: "Role", key: "Role", width: 100, align: "center" }
       );
     }

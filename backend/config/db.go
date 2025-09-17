@@ -206,7 +206,7 @@ func SeedDataUser() {
 			RoleID:        1,
 		},
 		{
-			Username:      "SS1234",
+			Username:      "sarunya.k",
 			Password:      hashedPassword,
 			Firstname:     "ศรัญญา",
 			Lastname:      "กาญจนวัฒนา",
@@ -221,7 +221,7 @@ func SeedDataUser() {
 			RoleID:        2,
 		},
 		{
-			Username:      "A1234",
+			Username:      "nuntawut.k",
 			Password:      hashedPassword,
 			Firstname:     "นันทวุฒิ",
 			Lastname:      "คะอังกุ",
@@ -236,7 +236,7 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "B1234",
+			Username:      "wichai.s",
 			Password:      hashedPassword,
 			Firstname:     "วิชัย",
 			Lastname:      "ศรีสุรักษ์",
@@ -251,7 +251,7 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "C1234",
+			Username:      "kacha.c",
 			Password:      hashedPassword,
 			Firstname:     "คะชา",
 			Lastname:      "ชาญศิลป์",
@@ -266,7 +266,7 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "D1234",
+			Username:      "kittisak.k",
 			Password:      hashedPassword,
 			Firstname:     "กิตติศักดิ์",
 			Lastname:      "เกิดประสพ",
@@ -281,7 +281,7 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "E1234",
+			Username:      "komsan.s",
 			Password:      hashedPassword,
 			Firstname:     "คมศัลล์",
 			Lastname:      "ศรีวิสุทธิ์",
@@ -296,7 +296,7 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "F1234",
+			Username:      "nittaya.k",
 			Password:      hashedPassword,
 			Firstname:     "นิตยา",
 			Lastname:      "เกิดประสพ",
@@ -311,7 +311,7 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "G1234",
+			Username:      "poramet.h",
 			Password:      hashedPassword,
 			Firstname:     "ปรเมศวร์",
 			Lastname:      "ห่อแก้ว",
@@ -326,7 +326,7 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "H1234",
+			Username:      "parin.s",
 			Password:      hashedPassword,
 			Firstname:     "ปริญญ์",
 			Lastname:      "ศรเลิศล้ำวาณิช",
@@ -341,7 +341,7 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "I1234",
+			Username:      "supaporn.s",
 			Password:      hashedPassword,
 			Firstname:     "สุภาพร",
 			Lastname:      "บุญฤทธิ์",
@@ -356,7 +356,7 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "J1234",
+			Username:      "keerati.c",
 			Password:      hashedPassword,
 			Firstname:     "กีรติ",
 			Lastname:      "ชะกุลศีร์",
@@ -371,10 +371,10 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "K1234",
+			Username:      "anan.o",
 			Password:      hashedPassword,
 			Firstname:     "อนันท์",
-			Lastname:      "อุ่นศิริไลย์",
+			Lastname:      "อุ่นศิวิไลย์",
 			Image:         "",
 			Email:         "anant@sut.ac.th",
 			PhoneNumber:   "044224411",
@@ -386,7 +386,7 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "L1234",
+			Username:      "kitti.a",
 			Password:      hashedPassword,
 			Firstname:     "กิตติ",
 			Lastname:      "อัตถกิจมงคล",
@@ -401,7 +401,7 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "M1234",
+			Username:      "arthit.s",
 			Password:      hashedPassword,
 			Firstname:     "อาทิตย์",
 			Lastname:      "ศรีแก้ว",
@@ -416,7 +416,7 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "N1234",
+			Username:      "thanatchai.k",
 			Password:      hashedPassword,
 			Firstname:     "ธนัตชัย",
 			Lastname:      "กุลวรานิชมงษ์",
@@ -431,7 +431,7 @@ func SeedDataUser() {
 			RoleID:        3,
 		},
 		{
-			Username:      "AA1234",
+			Username:      "panomsak.m",
 			Password:      hashedPassword,
 			Firstname:     "พนมศักดิ์",
 			Lastname:      "มีมนต์",
