@@ -21,8 +21,8 @@ func DB() *gorm.DB {
 }
 
 func CreateDatabase() {
-	// dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
-	dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
+	dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
+	// dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
 	dbSQL, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal("Failed to connect to PostgreSQL:", err)
@@ -40,8 +40,8 @@ func CreateDatabase() {
 
 func ConnectionDB() {
 	CreateDatabase()
-	// dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
-	dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
+	dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
+	// dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
@@ -1991,16 +1991,16 @@ func SeedUserAllCourses() {
 	)
 
 	db.First(&admin, "username = ?", "admin")
-	db.First(&ss1234, "username = ?", "SS1234")
-	db.First(&a1234, "username = ?", "A1234")
-	db.First(&b1234, "username = ?", "B1234")
-	db.First(&c1234, "username = ?", "C1234")
-	db.First(&d1234, "username = ?", "D1234")
-	db.First(&e1234, "username = ?", "E1234")
-	db.First(&f1234, "username = ?", "F1234")
-	db.First(&g1234, "username = ?", "G1234")
-	db.First(&h1234, "username = ?", "H1234")
-	db.First(&i1234, "username = ?", "I1234")
+	db.First(&ss1234, "username = ?", "sarunya.k")
+	db.First(&a1234, "username = ?", "nuntawut.k")
+	db.First(&b1234, "username = ?", "wichai.s")
+	db.First(&c1234, "username = ?", "kacha.c")
+	db.First(&d1234, "username = ?", "kittisak.k")
+	db.First(&e1234, "username = ?", "komsan.s")
+	db.First(&f1234, "username = ?", "nittaya.k")
+	db.First(&g1234, "username = ?", "poramet.h")
+	db.First(&h1234, "username = ?", "parin.s")
+	db.First(&i1234, "username = ?", "supaporn.s")
 
 	db.First(&ist201001, "code = ?", "IST20 1001")
 	db.First(&ist201002, "code = ?", "IST20 1002")
