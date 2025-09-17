@@ -115,7 +115,7 @@ async function getOfferedCoursesByMajor(majorName: string, year: number, term: n
 
 async function getOfferedCoursesByMajorbyID(opencourse: number,) {
   return await axios
-    .get(`${apiUrl}/offered-courses-schedule?id=${opencourse}`,requestOptions)
+    .get(`${apiUrl}/offered-courses-schedule/${opencourse}`,requestOptions)
     .then((res) => res)
     .catch((e) => e.response);
 }

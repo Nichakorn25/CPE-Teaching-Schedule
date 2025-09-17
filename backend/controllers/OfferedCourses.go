@@ -552,7 +552,7 @@ func GetOfferedCoursesAndSchedulebyID(c *gin.Context) {
 			oc.AllCourses.Credit.Unit,
 		)
 
-		lab := "ไม่มีการสอนแลป"
+		lab := "ไม่มีการสอนปฏิบัติการ"
 		if oc.LaboratoryID != nil && oc.Laboratory.ID != 0 {
 			lab = oc.Laboratory.Room
 		}

@@ -43,6 +43,7 @@
     npm install @ant-design/icons
     npm install lucide-react clsx
     npm install xlsx
+    npm install xlsx-populate
     ```
 
 ---

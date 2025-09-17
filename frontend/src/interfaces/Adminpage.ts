@@ -32,14 +32,40 @@ export interface AllCourseInterface {
 export interface AllCourseinOpenCourseInterface {
   ID: number;
   CourseCode: string;
-  EnglishName: string;
-  ThaiName: string;
+  EnglishCourseName: string;
+  ThaiCourseName: string;
   CourseType: string;
   Credit: string;
   Instructor: string;
   Ismain:boolean;
   CurriculumID: number;
 }
+
+export interface SectionDetailInterface {
+  ID: number;
+  SectionNumber: number;
+  Room: string;
+  DayOfWeek: string;
+  Time: string;
+  Capacity: number;
+  ID_user: number;
+  InstructorNames: string[];
+}
+
+export interface OfferedCourseDetailInterface {
+  ID: number;
+  CurriculumID: number;
+  Curriculum: string;
+  Code: string;  // ใช้ตอนแก้ไขแทน CourseCode
+  ThaiCourseName: string;
+  EnglishCourseName: string;
+  Credit: string;   // API ส่งเป็น string
+  TypeOfCourse: string;
+  TotalSections: number;
+  Laboratory: string;   // เช่น "ไม่มีการสอนแลป"
+  Sections: SectionDetailInterface[];
+}
+
 
 
 export interface CreateUserInterface {
