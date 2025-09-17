@@ -532,6 +532,100 @@ const loadInitialFilterData = async () => {
   }
 };
 useEffect(() => {
+  const updateInitialFilterOptions = async () => {
+    const currentMajor = localStorage.getItem("major_name");
+    const currentAcademicYear = localStorage.getItem("academicYear");
+    const currentTerm = localStorage.getItem("term");
+
+    // ถ้าไม่มีข้อมูลที่จำเป็น ให้ข้าม
+    if (!currentMajor || !currentAcademicYear || !currentTerm) {
+      return;
+    }
+
+    try {
+      console.log('🔄 Updating filter options from APIs...');
+      
+      const results = await Promise.allSettled([
+        getOfferedCoursesByMajor(currentMajor, parseInt(currentAcademicYear), parseInt(currentTerm)),
+        getLaboratory()
+      ]);
+
+      const subjects = new Set<string>();
+      const courseCodes = new Set<string>();
+      const rooms = new Set<string>();
+      const studentYears = new Set<string>();
+      const laboratories = new Set<string>();
+
+      // ประมวลผลข้อมูลจาก OpenCourse API
+      if (results[0].status === 'fulfilled' && results[0].value?.status === 200) {
+        const openCourses: OpenCourseInterface[] = results[0].value.data;
+        
+        openCourses.forEach(course => {
+          if (course.CourseName) {
+            subjects.add(course.CourseName);
+          }
+          
+          if (course.Code) {
+            courseCodes.add(course.Code);
+            // เพิ่มชั้นปี
+            const yearMatch = course.Code.match(/[A-Z]+(\d)/);
+            if (yearMatch && yearMatch[1]) {
+              const year = yearMatch[1];
+              if (['1', '2', '3', '4'].includes(year)) {
+                studentYears.add(year);
+              }
+            }
+          }
+          
+          // เพิ่มห้องเรียน
+          if (course.GroupInfos && course.GroupInfos.length > 0) {
+            course.GroupInfos.forEach(group => {
+              if (group.Room && group.Room.trim() !== '') {
+                rooms.add(group.Room.trim());
+              }
+            });
+          }
+        });
+      }
+
+      // ประมวลผลข้อมูลจาก Laboratory API
+      if (results[1].status === 'fulfilled' && results[1].value?.status === 200) {
+        const laboratoryData: LaboratoryInterface[] = results[1].value.data;
+        
+        laboratoryData.forEach(lab => {
+          if (lab.Room && lab.Room.trim() !== '') {
+            laboratories.add(lab.Room.trim());
+          }
+        });
+      }
+
+      // อัปเดต filterOptions ทันที (ไม่รอ scheduleData)
+      setFilterOptions(prevOptions => ({
+        ...prevOptions,
+        subjects: Array.from(subjects).filter(Boolean).sort(),
+        courseCodes: Array.from(courseCodes).filter(Boolean).sort(),
+        rooms: Array.from(rooms).filter(Boolean).sort(),
+        studentYears: Array.from(studentYears).sort(),
+        laboratories: Array.from(laboratories).filter(Boolean).sort(),
+      }));
+      
+      console.log('✅ Filter options updated immediately from APIs:', {
+        subjectsCount: subjects.size,
+        courseCodesCount: courseCodes.size,
+        roomsCount: rooms.size,
+        studentYearsCount: studentYears.size,
+        laboratoriesCount: laboratories.size
+      });
+      
+    } catch (error) {
+      console.error('❌ Error updating initial filter options:', error);
+    }
+  };
+
+  // เรียกใช้ทันทีเมื่อ component mount และเมื่อ localStorage เปลี่ยน
+  updateInitialFilterOptions();
+}, [academicYear, term, major_name]); // dependency ตาม localStorage values
+useEffect(() => {
   loadInitialFilterData();
 }, []);
 
@@ -642,6 +736,8 @@ useEffect(() => {
         )
       ].filter((teacher, index, array) => array.indexOf(teacher) === index).sort() // remove duplicates
     }));
+    
+    console.log('✅ Teachers filter updated:', extractTeachersFromAPI().length);
   }
 }, [allTeachers]);
 
@@ -2193,17 +2289,15 @@ const renderAvailableCourses = () => {
 
   // =================== FILTER FUNCTIONS ===================
 const extractFilterOptions = (data: ExtendedScheduleData[]) => {
-  // เริ่มจากข้อมูล API ก่อน
-  const apiOptions = extractAPIBasedOptions();
-  
-  const teachers = new Set(apiOptions.teachers);
-  const studentYears = new Set(apiOptions.studentYears);
-  const subjects = new Set(apiOptions.subjects);
-  const courseCodes = new Set(apiOptions.courseCodes);
-  const rooms = new Set(apiOptions.rooms);
-  const laboratories = new Set(apiOptions.laboratories);
+  // เริ่มจากข้อมูล API ที่มีอยู่แล้วใน filterOptions
+  const teachers = new Set(filterOptions.teachers);
+  const studentYears = new Set(filterOptions.studentYears);
+  const subjects = new Set(filterOptions.subjects);
+  const courseCodes = new Set(filterOptions.courseCodes);
+  const rooms = new Set(filterOptions.rooms);
+  const laboratories = new Set(filterOptions.laboratories);
 
-  // เพิ่มข้อมูลจาก schedule data (เพื่อความสมบูรณ์)
+  // เพิ่มข้อมูลจาก schedule data เท่านั้น (ไม่เขียนทับ)
   data.forEach(dayData => {
     dayData.subCells?.forEach(subCell => {
       // เพิ่มอาจารย์จาก subCell
@@ -2229,7 +2323,7 @@ const extractFilterOptions = (data: ExtendedScheduleData[]) => {
         rooms.add(subCell.classData.room);
       }
 
-      // เพิ่มข้อมูลห้องแลปจาก subCell
+      // เพิ่มข้อมูลห้องแล็บจาก subCell
       if (subCell.scheduleId && originalScheduleData) {
         const originalSchedule = originalScheduleData.find(
           (schedule: any) => schedule.ID === subCell.scheduleId
@@ -2249,21 +2343,20 @@ const extractFilterOptions = (data: ExtendedScheduleData[]) => {
     return !isNaN(num) && num >= 1 && num <= 9;
   });
 
-  setFilterOptions({
+  // อัปเดตเฉพาะที่เพิ่มขึ้น ไม่เขียนทับของเดิม
+  setFilterOptions(prevOptions => ({
     teachers: Array.from(teachers).filter(Boolean).sort(),
     studentYears: validYears.sort((a, b) => parseInt(a) - parseInt(b)),
     subjects: Array.from(subjects).filter(Boolean).sort(),
     courseCodes: Array.from(courseCodes).filter(Boolean).sort(),
     rooms: Array.from(rooms).filter(Boolean).sort(),
     laboratories: Array.from(laboratories).filter(Boolean).sort()
-  });
+  }));
 
-  console.log('🎯 Filter options updated:', {
-    teachersCount: Array.from(teachers).length,
-    laboratoriesCount: Array.from(laboratories).length,
-    fromAPI: allTeachers.length,
-    fromSchedule: data.length,
-    currentMajor: localStorage.getItem("major_name")
+  console.log('🎯 Filter options merged with schedule data:', {
+    teachersCount: teachers.size,
+    subjectsCount: subjects.size,
+    laboratoriesCount: laboratories.size,
   });
 };
 useEffect(() => {
