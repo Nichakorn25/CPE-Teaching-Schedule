@@ -178,7 +178,10 @@ interface ConflictInfo {
   hasConflict: boolean;
   conflictType: 'time' | 'room' | 'teacher' | 'multiple';
   conflictDetails: {
-    time?: boolean;
+    time?: {
+      conflictingSubCell: SubCell;
+      reason: string;
+    };
     room?: {
       conflictingSubCell: SubCell;
       room: string;
@@ -1545,6 +1548,40 @@ const handleCellDragOver = (e: React.DragEvent, targetRow: ExtendedScheduleData,
   });
 };
 
+const checkDuplicateInSameTimeForCourseCard = (
+  draggedCourseCard: CourseCard, 
+  targetDay: string, 
+  slotIndex: number,
+  scheduleData: ExtendedScheduleData[]
+): { isDuplicate: boolean; conflictingSubCell?: SubCell } => {
+  const dayRows = scheduleData.filter(row => row.day === targetDay);
+  
+  for (const row of dayRows) {
+    if (row.subCells) {
+      for (const existingSubCell of row.subCells) {
+        const existingStart = timeToSlotIndex(existingSubCell.startTime);
+        const existingEnd = timeToSlotIndex(existingSubCell.endTime);
+        const newStart = slotIndex;
+        const newEnd = slotIndex + 1;
+        
+        const timeOverlap = !(newEnd <= existingStart || existingEnd <= newStart);
+        
+        if (timeOverlap) {
+          const isSameSubject = existingSubCell.classData.subject === draggedCourseCard.subject;
+          const isSameCourseCode = existingSubCell.classData.courseCode === draggedCourseCard.courseCode;
+          const isSameSection = existingSubCell.classData.section === draggedCourseCard.section;
+          
+          // วิชาเดียวกัน รหัสเดียวกัน section เดียวกัน = ห้ามซ้ำ
+          if (isSameSubject && isSameCourseCode && isSameSection) {
+            return { isDuplicate: true, conflictingSubCell: existingSubCell };
+          }
+        }
+      }
+    }
+  }
+  return { isDuplicate: false };
+};
+
   // Modified drop handler to handle both subcells and course cards
 const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, timeSlot: string) => {
   e.preventDefault();
@@ -1563,41 +1600,35 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     const startTime = slotIndexToTime(slotIndex);
     const endTime = slotIndexToTime(slotIndex + 1);
     
-    // เช็คการซ้ำ (เหมือนเดิม)
-    const checkDuplicateInSameTime = (): boolean => {
-      const dayRows = scheduleData.filter(row => row.day === targetRow.day);
-      
-      for (const row of dayRows) {
-        if (row.subCells) {
-          for (const existingSubCell of row.subCells) {
-            const existingStart = timeToSlotIndex(existingSubCell.startTime);
-            const existingEnd = timeToSlotIndex(existingSubCell.endTime);
-            const newStart = slotIndex;
-            const newEnd = slotIndex + 1;
-            
-            const timeOverlap = !(newEnd <= existingStart || existingEnd <= newStart);
-            
-            if (timeOverlap) {
-              const isSameSubject = existingSubCell.classData.subject === draggedCourseCard.subject;
-              const isSameCourseCode = existingSubCell.classData.courseCode === draggedCourseCard.courseCode;
-              const isSameSection = existingSubCell.classData.section === draggedCourseCard.section;
-              
-              if (isSameSubject && isSameCourseCode && isSameSection) {
-                return true;
-              }
-            }
-          }
-        }
-      }
-      return false;
-    };
+    // ============= แทนที่ส่วนนี้ =============
+    // ลบฟังก์ชัน checkDuplicateInSameTime เดิมและใช้ฟังก์ชันใหม่
+    const duplicateCheck = checkDuplicateInSameTimeForCourseCard(
+      draggedCourseCard, 
+      targetRow.day, 
+      slotIndex, 
+      scheduleData
+    );
     
-    if (checkDuplicateInSameTime()) {
-      message.warning(`ไม่สามารถวางวิชา "${draggedCourseCard.subject}" section ${draggedCourseCard.section} ซ้ำในเวลาเดียวกันได้`);
+    if (duplicateCheck.isDuplicate) {
+      console.log('❌ Course Card Duplicate Detected:', {
+        courseCard: {
+          subject: draggedCourseCard.subject,
+          section: draggedCourseCard.section,
+          courseCode: draggedCourseCard.courseCode
+        },
+        conflictingSubCell: duplicateCheck.conflictingSubCell ? {
+          subject: duplicateCheck.conflictingSubCell.classData.subject,
+          section: duplicateCheck.conflictingSubCell.classData.section,
+          time: `${duplicateCheck.conflictingSubCell.startTime}-${duplicateCheck.conflictingSubCell.endTime}`
+        } : null
+      });
+      
+      message.warning(`ไม่สามารถวางวิชา "${draggedCourseCard.subject}" หมู่ ${draggedCourseCard.section} ซ้ำในเวลาเดียวกันได้`);
       setDraggedCourseCard(null);
       setDragPreview(null);
       return;
     }
+    // ============= จบส่วนที่แทนที่ =============
     
     const classInfo: ClassInfo = {
       subject: draggedCourseCard.subject,
@@ -1611,6 +1642,7 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     
     const newSubCell = createSubCell(classInfo, targetRow.day, startTime, endTime, draggedCourseCard.scheduleId);
     
+    // ตรวจสอบความขัดแย้งอื่นๆ (อาจารย์, ห้อง)
     const conflictInfo = checkConflictsAcrossAllRows(newSubCell, scheduleData);
     
     if (conflictInfo.hasConflict) {
@@ -1620,6 +1652,7 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
       return;
     }
     
+    // ตรวจสอบว่าวิชานี้ใช้ครบแล้วหรือไม่
     const usageInfo = getCourseCardUsageInfo(draggedCourseCard);
     if (usageInfo.usedDuration >= draggedCourseCard.duration) {
       message.warning(`วิชา "${draggedCourseCard.subject}" ถูกใช้ครบ ${draggedCourseCard.duration} คาบแล้ว`);
@@ -1628,8 +1661,8 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
       return;
     }
     
-    // ======== แก้ไขส่วนนี้ - ส่ง targetRow ไปด้วย ========
-    addSubCellToSpecificRow(targetRow, newSubCell);  // ใช้ฟังก์ชันใหม่
+    // เพิ่ม SubCell ลงในแถวเฉพาะ
+    addSubCellToSpecificRow(targetRow, newSubCell);
     setDraggedCourseCard(null);
     setDragPreview(null);
     
@@ -1643,7 +1676,7 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     }
     
   } else if (draggedSubCell) {
-    // ส่วน draggedSubCell เหมือนเดิม
+    // ส่วน draggedSubCell ยังคงเดิม (ไม่เปลี่ยนแปลง)
     const duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
     const newStartTime = slotIndexToTime(slotIndex);
     const newEndTime = slotIndexToTime(slotIndex + duration);
@@ -1673,6 +1706,65 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     message.success(`ย้ายวิชา ${draggedSubCell.classData.subject} สำเร็จ`);
   }
 };
+
+// =================== ADDITIONAL DEBUGGING FUNCTION ===================
+
+// ฟังก์ชันช่วยสำหรับ debug การทำงานของ Course Card
+const debugCourseCardDrop = (
+  courseCard: CourseCard, 
+  targetDay: string, 
+  slotIndex: number,
+  scheduleData: ExtendedScheduleData[]
+) => {
+  console.log('🎯 Course Card Drop Debug:', {
+    courseCard: {
+      id: courseCard.id,
+      subject: courseCard.subject,
+      section: courseCard.section,
+      courseCode: courseCard.courseCode,
+      teacher: courseCard.teacher
+    },
+    target: {
+      day: targetDay,
+      slot: slotIndex,
+      time: `${slotIndexToTime(slotIndex)}-${slotIndexToTime(slotIndex + 1)}`
+    }
+  });
+
+  // แสดงรายการ SubCell ที่มีอยู่ในวันนั้น
+  const dayRows = scheduleData.filter(row => row.day === targetDay);
+  const existingSubCells: any[] = [];
+  
+  dayRows.forEach(row => {
+    if (row.subCells) {
+      row.subCells.forEach(subCell => {
+        existingSubCells.push({
+          id: subCell.id,
+          subject: subCell.classData.subject,
+          section: subCell.classData.section,
+          courseCode: subCell.classData.courseCode,
+          time: `${subCell.startTime}-${subCell.endTime}`,
+          timeSlots: `${subCell.position.startSlot}-${subCell.position.endSlot}`
+        });
+      });
+    }
+  });
+  
+  console.log('📋 Existing SubCells in target day:', existingSubCells);
+  
+  // ตรวจสอบการทับซ้อน
+  const duplicateCheck = checkDuplicateInSameTimeForCourseCard (
+    courseCard, 
+    targetDay, 
+    slotIndex, 
+    scheduleData
+  );
+  
+  console.log('🔍 Duplicate Check Result:', duplicateCheck);
+  
+  return duplicateCheck;
+};
+
 
   // =================== RENDER REMOVED COURSE ===================
   const renderRemovedCourse = (removedCourse: RemovedCourse) => {
@@ -2721,6 +2813,32 @@ const isTimeFixedCourse = (schedule: ScheduleInterface): boolean => {
 };
 
   // =================== CONFLICT DETECTION FUNCTIONS ===================
+const checkSameTeacher = (teacher1?: string, teacher2?: string): boolean => {
+  if (!teacher1 || !teacher2 || teacher1.trim() === "" || teacher2.trim() === "") {
+    return false;
+  }
+  
+  // แยกชื่ออาจารย์ที่คั่นด้วย comma หรือ /
+  const teachers1 = teacher1.split(/[,\/]/).map(name => name.trim()).filter(name => name !== '');
+  const teachers2 = teacher2.split(/[,\/]/).map(name => name.trim()).filter(name => name !== '');
+  
+  // ตรวจสอบว่ามีอาจารย์คนใดคนหนึ่งเหมือนกันหรือไม่
+  return teachers1.some(t1 => teachers2.some(t2 => t1 === t2));
+};
+
+const checkSameRoom = (room1?: string, room2?: string): boolean => {
+  if (!room1 || !room2 || room1.trim() === "" || room2.trim() === "") {
+    return false;
+  }
+  
+  // ไม่ตรวจสอบความขัดแย้งของห้อง TBA
+  if (room1.toUpperCase().includes('TBA') || room2.toUpperCase().includes('TBA')) {
+    return false;
+  }
+  
+  return room1.trim() === room2.trim();
+};
+
 
 // ฟังก์ชันตรวจสอบขัดแย้งแบบครอบคลุม
 const checkAllConflicts = (
@@ -2737,50 +2855,112 @@ const checkAllConflicts = (
 
   const conflicts: ('time' | 'room' | 'teacher')[] = [];
 
+  console.log('🔍 Starting conflict check:', {
+    newSubCell: {
+      id: newSubCell.id,
+      subject: newSubCell.classData.subject,
+      section: newSubCell.classData.section,
+      teacher: newSubCell.classData.teacher,
+      time: `${newSubCell.startTime}-${newSubCell.endTime}`,
+      day: newSubCell.day
+    },
+    excludeSubCellId,
+    existingCount: existingSubCells.length
+  });
+
   for (const existingSubCell of existingSubCells) {
-    // ข้าม SubCell ที่เป็นตัวเดียวกัน
+    // ข้าม SubCell ที่เป็นตัวเดียวกัน (เมื่อเป็นการย้าย)
     if (excludeSubCellId && existingSubCell.id === excludeSubCellId) {
+      console.log('⏭️ Skipping excluded SubCell:', existingSubCell.id);
       continue;
     }
 
     // ตรวจสอบการทับซ้อนของเวลาก่อน
     const timeOverlap = doSubCellsOverlap(newSubCell, existingSubCell);
     
+    console.log('⏰ Time overlap check:', {
+      existing: {
+        id: existingSubCell.id,
+        subject: existingSubCell.classData.subject,
+        section: existingSubCell.classData.section,
+        time: `${existingSubCell.startTime}-${existingSubCell.endTime}`
+      },
+      hasOverlap: timeOverlap
+    });
+
     if (timeOverlap) {
+      // ตัวแปรสำหรับเปรียบเทียบ
       const isSameSubject = newSubCell.classData.subject === existingSubCell.classData.subject;
-      const isSameTeacher = newSubCell.classData.teacher && existingSubCell.classData.teacher &&
-                           newSubCell.classData.teacher.trim() !== "" && existingSubCell.classData.teacher.trim() !== "" &&
-                           newSubCell.classData.teacher === existingSubCell.classData.teacher;
-      const isSameCourseCode = newSubCell.classData.courseCode && existingSubCell.classData.courseCode &&
-                              newSubCell.classData.courseCode === existingSubCell.classData.courseCode;
+      const isSameCourseCode = newSubCell.classData.courseCode === existingSubCell.classData.courseCode;
+      const isSameSection = newSubCell.classData.section === existingSubCell.classData.section;
+      
+      // ตรวจสอบอาจารย์ (รองรับหลายชื่อคั่นด้วย comma)
+      const isSameTeacher = checkSameTeacher(newSubCell.classData.teacher, existingSubCell.classData.teacher);
+      
+      console.log('📊 Comparison results:', {
+        isSameSubject,
+        isSameCourseCode,
+        isSameSection,
+        isSameTeacher,
+        newSection: newSubCell.classData.section,
+        existingSection: existingSubCell.classData.section
+      });
 
-      // เงื่อนไข 1: ถ้าเป็นวิชาเดียวกัน + รหัสเดียวกัน = ไม่ขัดแย้ง (คนละ section)
-      if (isSameSubject && isSameCourseCode) {
-        console.log('✅ ไม่ขัดแย้ง: วิชาเดียวกัน section ต่างกัน', {
-          subject: newSubCell.classData.subject,
-          courseCode: newSubCell.classData.courseCode,
-          newSection: newSubCell.classData.section,
-          existingSection: existingSubCell.classData.section
-        });
-        continue;
-      }
-
-      // เงื่อนไข 2: ตรวจสอบอาจารย์ขัดแย้ง (เอาเงื่อนไขห้องออกแล้ว)
-      if (isSameTeacher && !isSameSubject) {
-        // อาจารย์เดียวกัน + วิชาต่างกัน = ขัดแย้ง
+      // **เงื่อนไข 1 (ที่สำคัญที่สุด)**: วิชาเดียวกัน + รหัสเดียวกัน + section เดียวกัน = ขัดแย้ง
+      if (isSameSubject && isSameCourseCode && isSameSection) {
+        console.log('❌ CONFLICT: Same subject, same section in same time');
+        
         if (!conflictInfo.conflictingSubCells.includes(existingSubCell)) {
           conflictInfo.conflictingSubCells.push(existingSubCell);
         }
+        
+        conflictInfo.conflictDetails.time = {
+          conflictingSubCell: existingSubCell,
+          reason: `วิชา "${newSubCell.classData.subject}" หมู่ ${newSubCell.classData.section} ห้ามจัดซ้ำในเวลาเดียวกัน`
+        };
+        
+        if (!conflicts.includes('time')) conflicts.push('time');
+        continue; // ไปตรวจสอบรายการถัดไป
+      }
+
+      // **เงื่อนไข 2**: วิชาเดียวกัน + รหัสเดียวกัน + section ต่างกัน = ไม่ขัดแย้ง
+      if (isSameSubject && isSameCourseCode && !isSameSection) {
+        console.log('✅ ALLOWED: Same subject, different sections');
+        continue; // อนุญาตให้วางได้
+      }
+
+      // **เงื่อนไข 3**: อาจารย์เดียวกัน + วิชาต่างกัน = ขัดแย้ง
+      if (isSameTeacher && !isSameSubject) {
+        console.log('❌ CONFLICT: Same teacher, different subjects');
+        
+        if (!conflictInfo.conflictingSubCells.includes(existingSubCell)) {
+          conflictInfo.conflictingSubCells.push(existingSubCell);
+        }
+        
         conflictInfo.conflictDetails.teacher = {
           conflictingSubCell: existingSubCell,
           teacher: existingSubCell.classData.teacher
         };
+        
         if (!conflicts.includes('teacher')) conflicts.push('teacher');
-        console.log('❌ ขัดแย้ง: อาจารย์เดียวกัน วิชาต่างกัน', {
-          teacher: newSubCell.classData.teacher,
-          newSubject: newSubCell.classData.subject,
-          existingSubject: existingSubCell.classData.subject
-        });
+      }
+
+      // **เงื่อนไข 4**: ห้องเรียนขัดแย้ง (ถ้าไม่ใช่ TBA)
+      const isSameRoom = checkSameRoom(newSubCell.classData.room, existingSubCell.classData.room);
+      
+      if (isSameRoom && !isSameSubject && !isSameTeacher) {
+        console.log('⚠️ CONFLICT: Same room usage');
+        
+        if (!conflictInfo.conflictingSubCells.includes(existingSubCell)) {
+          conflictInfo.conflictingSubCells.push(existingSubCell);
+        }
+        
+        conflictInfo.conflictDetails.room = {
+          conflictingSubCell: existingSubCell,
+          room: existingSubCell.classData.room
+        };
+        
+        if (!conflicts.includes('room')) conflicts.push('room');
       }
     }
   }
@@ -2793,10 +2973,19 @@ const checkAllConflicts = (
     } else {
       conflictInfo.conflictType = 'multiple';
     }
+    
+    console.log('🚨 CONFLICTS DETECTED:', {
+      conflictType: conflictInfo.conflictType,
+      conflictDetails: conflictInfo.conflictDetails,
+      conflictingCount: conflictInfo.conflictingSubCells.length
+    });
+  } else {
+    console.log('✅ NO CONFLICTS FOUND');
   }
 
   return conflictInfo;
 };
+
 
 const showConflictModal = (conflictInfo: ConflictInfo, newSubCell: SubCell) => {
   console.log('🚨 showConflictModal called!', conflictInfo);
@@ -2806,6 +2995,11 @@ const showConflictModal = (conflictInfo: ConflictInfo, newSubCell: SubCell) => {
   let conflictDetails: string[] = [];
 
   // สร้างข้อความตามประเภทขัดแย้ง
+  if (conflictInfo.conflictDetails.time) {
+    const timeConflict = conflictInfo.conflictDetails.time;
+    conflictDetails.push(`⏰ ${timeConflict.reason}`);
+  }
+
   if (conflictInfo.conflictDetails.room) {
     const roomConflict = conflictInfo.conflictDetails.room;
     conflictDetails.push(`🏢 ห้อง "${roomConflict.room}" ถูกใช้โดยวิชาอื่นในเวลาดังกล่าว`);
@@ -2817,7 +3011,23 @@ const showConflictModal = (conflictInfo: ConflictInfo, newSubCell: SubCell) => {
   }
 
   // กำหนด title และเนื้อหาตามประเภทขัดแย้ง
-  if (conflictInfo.conflictType === 'multiple') {
+  if (conflictInfo.conflictType === 'time') {
+    title = '⏰ ตารางเรียนซ้ำซ้อน';
+    htmlContent = `<div style="text-align: left; font-family: Sarabun, sans-serif;">
+      <p>ไม่สามารถวางวิชา <strong>"${newSubCell.classData.subject}"</strong> ได้ เนื่องจาก:</p>
+      <div style="background-color: #fff3cd; padding: 12px; border-radius: 6px; border: 1px solid #ffeaa7; margin: 10px 0;">
+        <strong>📋 ${conflictInfo.conflictDetails.time?.reason}</strong>
+      </div>
+      <div style="margin-top: 15px; padding: 12px; background-color: #e8f5e8; border-radius: 6px; border: 1px solid #c3e6c3;">
+        <strong style="color: #2d5a2d;">✅ กฎการจัดตารางเรียนที่ถูกต้อง:</strong><br>
+        <ul style="margin: 8px 0; padding-left: 20px; color: #2d5a2d; font-size: 12px;">
+          <li>วิชาเดียวกัน หมู่เดียวกัน: <strong>ห้ามจัดในเวลาเดียวกัน</strong></li>
+          <li>วิชาเดียวกัน หมู่ต่างกัน: <strong>จัดในเวลาเดียวกันได้</strong></li>
+          <li>อาจารย์คนเดียวกัน วิชาต่างกัน: <strong>ห้ามในเวลาเดียวกัน</strong></li>
+        </ul>
+      </div>
+    </div>`;
+  } else if (conflictInfo.conflictType === 'multiple') {
     title = '⚠️ พบการขัดแย้งหลายประการ';
     htmlContent = `<div style="text-align: left; font-family: Sarabun, sans-serif;">
       <p>ไม่สามารถวางวิชา <strong>"${newSubCell.classData.subject}"</strong> ได้ เนื่องจาก:</p>
@@ -2879,7 +3089,9 @@ const showConflictModal = (conflictInfo: ConflictInfo, newSubCell: SubCell) => {
 
   // สร้างคำแนะนำ
   let suggestions = '';
-  if (conflictInfo.conflictType === 'room') {
+  if (conflictInfo.conflictType === 'time') {
+    suggestions = 'ลองเลือกเวลาอื่น หรือตรวจสอบว่าหมู่เรียนถูกต้องหรือไม่';
+  } else if (conflictInfo.conflictType === 'room') {
     suggestions = 'ลองเปลี่ยนห้องเรียน หรือเลือกเวลาอื่น';
   } else if (conflictInfo.conflictType === 'teacher') {
     suggestions = 'ลองเลือกเวลาอื่น หรือตรวจสอบตารางสอนของอาจารย์';
@@ -2933,6 +3145,16 @@ const checkConflictsAcrossAllRows = (
         allSubCellsInDay.push(...row.subCells);
       }
     });
+
+  console.log('🔍 Checking conflicts across all rows:', {
+    newSubCell: {
+      id: newSubCell.id,
+      subject: newSubCell.classData.subject,
+      section: newSubCell.classData.section
+    },
+    excludeSubCellId,
+    totalSubCellsInDay: allSubCellsInDay.length
+  });
 
   return checkAllConflicts(newSubCell, allSubCellsInDay, excludeSubCellId);
 };
@@ -3131,23 +3353,35 @@ const removeSubCell = (subCellId: string) => {
 };
 
 const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, newStartSlot: number) => {
+  console.log('🚀 Starting move operation:', {
+    subCellId,
+    targetDay: targetRow.day,
+    newStartSlot,
+    newTime: slotIndexToTime(newStartSlot)
+  });
+
   setScheduleData(prevData => {
     const newData = [...prevData];
     let subCellToMove: SubCell | null = null;
+    let originalRowData: ExtendedScheduleData | null = null;
     
-    // ค้นหาและลบ sub-cell
+    // ค้นหา SubCell ที่จะย้าย (แต่ยังไม่ลบ)
     for (const dayData of newData) {
       const cellIndex = (dayData.subCells || []).findIndex(cell => cell.id === subCellId);
       if (cellIndex !== -1) {
         subCellToMove = dayData.subCells![cellIndex];
-        dayData.subCells!.splice(cellIndex, 1);
+        originalRowData = dayData;
+        console.log('📦 Found SubCell to move from:', dayData.day);
         break;
       }
     }
     
-    if (!subCellToMove) return prevData;
+    if (!subCellToMove || !originalRowData) {
+      console.error('❌ SubCell not found:', subCellId);
+      return prevData;
+    }
     
-    // คำนวณตำแหน่งใหม่
+    // คำนวดตำแหน่งใหม่
     const duration = subCellToMove.position.endSlot - subCellToMove.position.startSlot;
     const newEndSlot = newStartSlot + duration;
     
@@ -3157,7 +3391,7 @@ const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, ne
       return prevData;
     }
     
-    // สร้าง sub-cell ที่ถูกย้าย
+    // สร้าง SubCell ที่จะย้ายไปตำแหน่งใหม่
     const movedSubCell: SubCell = {
       ...subCellToMove,
       day: targetRow.day,
@@ -3169,26 +3403,115 @@ const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, ne
       }
     };
     
-    // ตรวจสอบขัดแย้งก่อนเพิ่มลงในแถวเป้าหมาย
-    const conflictInfo = checkConflictsAcrossAllRows(movedSubCell, newData, subCellId);
+    console.log('🎯 Created moved SubCell:', {
+      id: movedSubCell.id,
+      subject: movedSubCell.classData.subject,
+      section: movedSubCell.classData.section,
+      day: movedSubCell.day,
+      time: `${movedSubCell.startTime}-${movedSubCell.endTime}`
+    });
     
-    if (conflictInfo.hasConflict) {
-      // แสดง Modal แจ้งเตือน
-      showConflictModal(conflictInfo, movedSubCell);
-      
-      // ใส่ SubCell กลับไปที่เดิม (rollback)
-      for (const dayData of newData) {
-        if (dayData.day === subCellToMove.day) {
-          if (!dayData.subCells) dayData.subCells = [];
-          dayData.subCells.push(subCellToMove);
-          break;
+    // ===== การตรวจสอบความขัดแย้งแบบเข้มงวด =====
+    
+    // 1. ตรวจสอบการซ้อนทับในตำแหน่งเป้าหมาย
+    const targetDayRows = newData.filter(row => row.day === targetRow.day);
+    let hasConflictInTarget = false;
+    let conflictingSubCell: SubCell | null = null;
+    
+    for (const row of targetDayRows) {
+      if (row.subCells) {
+        for (const existingSubCell of row.subCells) {
+          // ข้าม SubCell ที่เป็นตัวเดียวกัน (กรณีย้ายในวันเดียวกัน)
+          if (existingSubCell.id === subCellId) {
+            continue;
+          }
+          
+          // ตรวจสอบการทับซ้อนของเวลา
+          const timeOverlap = doSubCellsOverlap(movedSubCell, existingSubCell);
+          
+          if (timeOverlap) {
+            const isSameSubject = movedSubCell.classData.subject === existingSubCell.classData.subject;
+            const isSameCourseCode = movedSubCell.classData.courseCode === existingSubCell.classData.courseCode;
+            const isSameSection = movedSubCell.classData.section === existingSubCell.classData.section;
+            
+            console.log('🔍 Checking overlap with existing SubCell:', {
+              existing: {
+                id: existingSubCell.id,
+                subject: existingSubCell.classData.subject,
+                section: existingSubCell.classData.section,
+                time: `${existingSubCell.startTime}-${existingSubCell.endTime}`
+              },
+              comparison: {
+                isSameSubject,
+                isSameCourseCode,
+                isSameSection
+              }
+            });
+            
+            // ตรวจสอบเงื่อนไขห้ามซ้ำ: วิชาเดียวกัน + section เดียวกัน
+            if (isSameSubject && isSameCourseCode && isSameSection) {
+              hasConflictInTarget = true;
+              conflictingSubCell = existingSubCell;
+              console.log('❌ CONFLICT DETECTED: Same subject, same section in target position');
+              break;
+            }
+            
+            // ตรวจสอบอาจารย์ซ้ำ
+            const isSameTeacher = checkSameTeacher(
+              movedSubCell.classData.teacher, 
+              existingSubCell.classData.teacher
+            );
+            
+            if (isSameTeacher && !isSameSubject) {
+              hasConflictInTarget = true;
+              conflictingSubCell = existingSubCell;
+              console.log('❌ TEACHER CONFLICT DETECTED: Same teacher, different subjects');
+              break;
+            }
+          }
         }
+        
+        if (hasConflictInTarget) break;
       }
-      
-      return newData;
     }
     
-    // เพิ่มลงในแถวเป้าหมาย
+    // 2. หากพบความขัดแย้ง ให้แสดง Modal และไม่ย้าย
+    if (hasConflictInTarget && conflictingSubCell) {
+      console.log('🚨 Move operation blocked due to conflict');
+      
+      // สร้าง ConflictInfo สำหรับแสดง Modal
+      const conflictInfo: ConflictInfo = {
+        hasConflict: true,
+        conflictType: 'time',
+        conflictDetails: {
+          time: {
+            conflictingSubCell: conflictingSubCell,
+            reason: `ไม่สามารถย้ายวิชา "${movedSubCell.classData.subject}" หมู่ ${movedSubCell.classData.section} ไปซ้อนกับตำแหน่งเดิมได้`
+          }
+        },
+        conflictingSubCells: [conflictingSubCell]
+      };
+      
+      // แสดง Modal แจ้งเตือน
+      setTimeout(() => {
+        showConflictModal(conflictInfo, movedSubCell);
+      }, 100);
+      
+      // ไม่ย้าย SubCell (คืนค่า prevData เดิม)
+      return prevData;
+    }
+    
+    // 3. หากไม่มีความขัดแย้ง ดำเนินการย้าย
+    console.log('✅ No conflicts detected, proceeding with move');
+    
+    // ลบ SubCell จากตำแหน่งเดิม
+    const originalCellIndex = (originalRowData.subCells || []).findIndex(cell => cell.id === subCellId);
+    if (originalCellIndex !== -1) {
+      originalRowData.subCells!.splice(originalCellIndex, 1);
+      console.log('🗑️ Removed SubCell from original position');
+    }
+    
+    // เพิ่ม SubCell ไปยังตำแหน่งใหม่
     const targetRowIndex = newData.findIndex(r => r.key === targetRow.key);
     if (targetRowIndex !== -1) {
       if (!newData[targetRowIndex].subCells) {
@@ -3196,7 +3519,9 @@ const moveSubCellToRow = (subCellId: string, targetRow: ExtendedScheduleData, ne
       }
       newData[targetRowIndex].subCells!.push(movedSubCell);
       
-      // เช็คว่าย้ายไปแถวสุดท้ายหรือไม่ และสร้าง empty row ใหม่ถ้าจำเป็น
+      console.log('✅ Successfully moved SubCell to target row');
+      
+      // จัดการ empty row ถ้าจำเป็น
       const dayRows = newData.filter(row => row.day === targetRow.day);
       const isTargetLastRow = targetRowIndex === Math.max(...dayRows.map(row => newData.findIndex(r => r.key === row.key)));
       const targetRowHasOnlyMovedCell = newData[targetRowIndex].subCells!.length === 1;
