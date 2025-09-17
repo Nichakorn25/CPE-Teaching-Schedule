@@ -45,7 +45,8 @@ import {
 } from "../../../services/https/SchedulerPageService";
 import { AllTeacher } from "../../../interfaces/Adminpage";
 import { getAllTeachers } from "../../../services/https/AdminPageServices";
-import * as XLSX from "xlsx";
+import { OpenCourseInterface, LaboratoryInterface } from "../../../interfaces/Adminpage"; 
+import { getOfferedCoursesByMajor, getLaboratory } from "../../../services/https/GetService";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
 import Swal from "sweetalert2";
@@ -124,7 +125,7 @@ interface ScheduleBatchUpdate {
 // =================== FILTER TYPES ===================
 interface FilterTag {
   id: string;
-  type: 'teacher' | 'studentYear' | 'subject' | 'courseCode' | 'room';
+  type: 'teacher' | 'studentYear' | 'subject' | 'courseCode' | 'room' | 'laboratory';
   value: string;
   label: string;
   color: string;
@@ -136,6 +137,7 @@ interface FilterOptions {
   subjects: string[];
   courseCodes: string[];
   rooms: string[];
+  laboratories: string[];
 }
 
 // =================== NEW COURSE CARD TYPES ===================
@@ -218,7 +220,8 @@ const FILTER_TAG_COLORS = {
   studentYear: '#1890ff',
   subject: '#722ed1',
   courseCode: '#f5222d',
-  room: '#fa8c16'
+  room: '#fa8c16',
+  laboratory: '#13c2c2'
 };
 
 // =================== CELL CONFIG ===================
@@ -329,7 +332,8 @@ const Schedulepage: React.FC = () => {
     studentYears: [],
     subjects: [],
     courseCodes: [],
-    rooms: []
+    rooms: [],
+    laboratories: []
   });
   const [searchValue, setSearchValue] = useState("");
   const [filterVisible, setFilterVisible] = useState(false);
@@ -393,6 +397,254 @@ useEffect(() => {
   fetchAllTeachers();
 }, []);
 
+const loadInitialFilterData = async () => {
+  const currentMajor = localStorage.getItem("major_name");
+  const currentAcademicYear = localStorage.getItem("academicYear");
+  const currentTerm = localStorage.getItem("term");
+
+  // ถ้าไม่มีข้อมูลที่จำเป็น ให้ข้าม
+  if (!currentMajor || !currentAcademicYear || !currentTerm) {
+    console.log('Missing required data for initial filter load:', { 
+      currentMajor, 
+      currentAcademicYear, 
+      currentTerm 
+    });
+    return;
+  }
+
+  try {
+    console.log('🔄 Loading initial filter data from APIs...');
+    
+    // Promise.allSettled เพื่อโหลดข้อมูลพร้อมกันและไม่ให้ error หนึ่งตัวทำให้ตัวอื่นล้มเหลว
+    const results = await Promise.allSettled([
+      // 1. ดึงข้อมูลวิชาที่เปิดสอน
+      getOfferedCoursesByMajor(currentMajor, parseInt(currentAcademicYear), parseInt(currentTerm)),
+      // 2. ดึงข้อมูลห้องแลปทั้งหมด
+      getLaboratory()
+    ]);
+
+    const subjects = new Set<string>();
+    const courseCodes = new Set<string>();
+    const teachers = new Set<string>();
+    const rooms = new Set<string>();
+    const studentYears = new Set<string>();
+    const laboratories = new Set<string>();
+
+    // ประมวลผลข้อมูลจาก OpenCourse API
+    if (results[0].status === 'fulfilled' && results[0].value?.status === 200) {
+      const openCourses: OpenCourseInterface[] = results[0].value.data;
+      
+      openCourses.forEach(course => {
+        // เพิ่มชื่อวิชา
+        if (course.CourseName) {
+          subjects.add(course.CourseName);
+        }
+        
+        // เพิ่มรหัสวิชา
+        if (course.Code) {
+          courseCodes.add(course.Code);
+        }
+        
+        // เพิ่มอาจารย์
+        if (course.Teachers && course.Teachers.length > 0) {
+          course.Teachers.forEach(teacher => {
+            const fullName = `${teacher.Title || ''} ${teacher.Firstname} ${teacher.Lastname}`.trim();
+            if (fullName) {
+              teachers.add(fullName);
+            }
+          });
+        }
+        
+        // เพิ่มห้องเรียนจาก GroupInfos
+        if (course.GroupInfos && course.GroupInfos.length > 0) {
+          course.GroupInfos.forEach(group => {
+            if (group.Room && group.Room.trim() !== '') {
+              rooms.add(group.Room.trim());
+            }
+          });
+        }
+        
+        // เพิ่มชั้นปี (ดึงจากรหัสวิชา)
+        if (course.Code) {
+          const yearMatch = course.Code.match(/[A-Z]+(\d)/);
+          if (yearMatch && yearMatch[1]) {
+            const year = yearMatch[1];
+            if (['1', '2', '3', '4'].includes(year)) {
+              studentYears.add(year);
+            }
+          }
+        }
+      });
+
+      console.log('✅ OpenCourse data loaded:', {
+        subjects: subjects.size,
+        courseCodes: courseCodes.size, 
+        teachers: teachers.size,
+        rooms: rooms.size,
+        studentYears: studentYears.size,
+        totalCourses: openCourses.length
+      });
+    } else {
+      console.warn('Failed to load OpenCourse data or no data available');
+    }
+
+    // ประมวลผลข้อมูลจาก Laboratory API
+    if (results[1].status === 'fulfilled' && results[1].value?.status === 200) {
+      const laboratoryData: LaboratoryInterface[] = results[1].value.data;
+      
+      laboratoryData.forEach(lab => {
+        if (lab.Room && lab.Room.trim() !== '') {
+          // สามารถเพิ่มทั้ง Room และ Building ได้ หรือรวมกัน
+          laboratories.add(lab.Room.trim());
+          
+          // หรือถ้าต้องการแสดงทั้ง Room และ Building
+          // laboratories.add(`${lab.Room} (${lab.Building})`);
+        }
+      });
+
+      console.log('✅ Laboratory data loaded:', {
+        laboratories: laboratories.size,
+        totalLabs: laboratoryData.length
+      });
+    } else {
+      console.warn('Failed to load Laboratory data or no data available');
+    }
+
+    // อัปเดต filterOptions ทันที
+    setFilterOptions(prevOptions => ({
+      ...prevOptions,
+      subjects: Array.from(subjects).filter(Boolean).sort(),
+      courseCodes: Array.from(courseCodes).filter(Boolean).sort(),
+      rooms: Array.from(rooms).filter(Boolean).sort(),
+      studentYears: Array.from(studentYears).sort(),
+      laboratories: Array.from(laboratories).filter(Boolean).sort(),
+      // รวมอาจารย์จาก API และ allTeachers
+      teachers: [
+        ...extractTeachersFromAPI(),
+        ...Array.from(teachers).filter(Boolean)
+      ].filter((teacher, index, array) => array.indexOf(teacher) === index).sort(), // remove duplicates
+    }));
+    
+    console.log('✅ All initial filter data loaded successfully');
+    
+  } catch (error) {
+    console.error('❌ Error loading initial filter data:', error);
+  }
+};
+useEffect(() => {
+  loadInitialFilterData();
+}, []);
+
+const extractTeachersFromAPI = () => {
+  const teachers = new Set<string>();
+  const currentMajor = localStorage.getItem("major_name");
+  
+  allTeachers.forEach(teacher => {
+    const fullName = `${teacher.Firstname} ${teacher.Lastname}`.trim();
+    
+    // เช็คว่าอาจารย์มีสาขาตรงกับ currentMajor หรือไม่มีสาขา (SutAdmin)
+    const shouldInclude = !currentMajor || 
+                         !teacher.Major || 
+                         teacher.Major === currentMajor ||
+                         teacher.Major === "" ||
+                         teacher.Major === "SutAdmin";
+    
+    if (fullName && fullName !== '' && shouldInclude) {
+      teachers.add(fullName);
+    }
+  });
+
+  return Array.from(teachers).filter(Boolean).sort();
+};
+
+const extractAPIBasedOptions = () => {
+  const teachers = new Set<string>();
+  const studentYears = new Set<string>();
+  const subjects = new Set<string>();
+  const courseCodes = new Set<string>();
+  const rooms = new Set<string>();
+  const laboratories = new Set<string>();
+
+  // Extract teachers from API
+  const teachersFromAPI = extractTeachersFromAPI();
+  teachersFromAPI.forEach(teacher => teachers.add(teacher));
+
+  // Extract from original schedule data if available
+  if (originalScheduleData && originalScheduleData.length > 0) {
+    originalScheduleData.forEach((schedule: any) => {
+      // Student years
+      if (schedule.OfferedCourses?.AllCourses?.AcademicYear?.AcademicYearID) {
+        const academicYearId = schedule.OfferedCourses.AllCourses.AcademicYear.AcademicYearID;
+        studentYears.add(academicYearId.toString());
+      }
+      
+      if (schedule.OfferedCourses?.AllCourses?.AcademicYear?.Level) {
+        const level = schedule.OfferedCourses.AllCourses.AcademicYear.Level;
+        if (level && level !== 'เรียนได้ทุกชั้นปี') {
+          const yearMatch = level.match(/ปีที่\s*(\d+)/);
+          if (yearMatch) {
+            studentYears.add(yearMatch[1]);
+          } else if (!level.includes('ปีที่')) {
+            studentYears.add(level);
+          }
+        }
+      }
+
+      // Subjects and course codes
+      const subject = schedule.OfferedCourses?.AllCourses?.ThaiName ||
+                      schedule.OfferedCourses?.AllCourses?.EnglishName;
+      if (subject) subjects.add(subject);
+
+      const courseCode = schedule.OfferedCourses?.AllCourses?.Code;
+      if (courseCode) courseCodes.add(courseCode);
+
+      // Laboratory rooms
+      const labRoom = schedule?.OfferedCourses?.Laboratory?.Room;
+      if (labRoom && labRoom.trim() !== "") {
+        laboratories.add(labRoom.trim());
+      }
+
+      // Regular rooms (if available in API)
+      if (schedule.TimeFixedCourses && schedule.TimeFixedCourses.length > 0) {
+        schedule.TimeFixedCourses.forEach((tc: any) => {
+          if (tc.RoomFix && tc.RoomFix.trim() !== "") {
+            rooms.add(tc.RoomFix.trim());
+          }
+        });
+      }
+    });
+  }
+
+  // กรองเฉพาะตัวเลข 1-9
+  const validYears = Array.from(studentYears).filter(year => {
+    const num = parseInt(year);
+    return !isNaN(num) && num >= 1 && num <= 9;
+  });
+
+  return {
+    teachers: Array.from(teachers).filter(Boolean).sort(),
+    studentYears: validYears.sort((a, b) => parseInt(a) - parseInt(b)),
+    subjects: Array.from(subjects).filter(Boolean).sort(),
+    courseCodes: Array.from(courseCodes).filter(Boolean).sort(),
+    rooms: Array.from(rooms).filter(Boolean).sort(),
+    laboratories: Array.from(laboratories).filter(Boolean).sort()
+  };
+};
+useEffect(() => {
+  if (allTeachers.length > 0) {
+    // อัปเดตเฉพาะส่วนอาจารย์
+    setFilterOptions(prevOptions => ({
+      ...prevOptions,
+      teachers: [
+        ...extractTeachersFromAPI(),
+        ...prevOptions.teachers.filter(teacher => 
+          !extractTeachersFromAPI().includes(teacher)
+        )
+      ].filter((teacher, index, array) => array.indexOf(teacher) === index).sort() // remove duplicates
+    }));
+  }
+}, [allTeachers]);
+
   // =================== SIDEBAR FILTER FUNCTIONS ===================
   const addSidebarFilterTag = (type: FilterTag['type'], value: string) => {
     if (!value || sidebarFilterTags.some(tag => tag.type === type && tag.value === value)) {
@@ -419,57 +671,98 @@ useEffect(() => {
     setSidebarSearchValue("");
   };
 
-  const applySidebarFilters = () => {
-    if (sidebarFilterTags.length === 0 && !sidebarSearchValue) {
-      setFilteredCourseCards(courseCards);
-      return;
-    }
+const applySidebarFilters = () => {
+  if (sidebarFilterTags.length === 0 && !sidebarSearchValue) {
+    setFilteredCourseCards(courseCards);
+    return;
+  }
 
-    const filtered = courseCards.filter(courseCard => {
-      // Apply tag filters
-      const tagMatch = sidebarFilterTags.length === 0 || sidebarFilterTags.every(tag => {
-        switch (tag.type) {
-          case 'teacher':
-            return courseCard.teacher
-              .toLowerCase()
-              .includes(tag.value.toLowerCase());
-          case 'studentYear':
-            return courseCard.studentYear === tag.value;
-          case 'subject':
-            return courseCard.subject
-              .toLowerCase()
-              .includes(tag.value.toLowerCase());
-          case 'courseCode':
-            return courseCard.courseCode
-              .toLowerCase()
-              .includes(tag.value.toLowerCase());
-          case 'room':
-            return courseCard.room
-              .toLowerCase()
-              .includes(tag.value.toLowerCase());
-          default:
-            return true;
-        }
-      });
-
-      // Apply search filter
-      const searchMatch = !sidebarSearchValue || 
-        courseCard.teacher.toLowerCase().includes(sidebarSearchValue.toLowerCase()) ||
-        courseCard.subject.toLowerCase().includes(sidebarSearchValue.toLowerCase()) ||
-        courseCard.courseCode.toLowerCase().includes(sidebarSearchValue.toLowerCase());
-
-      return tagMatch && searchMatch;
+  const filtered = courseCards.filter(courseCard => {
+    // Apply tag filters
+    const tagMatch = sidebarFilterTags.length === 0 || sidebarFilterTags.every(tag => {
+      switch (tag.type) {
+        case 'teacher':
+          return courseCard.teacher
+            .toLowerCase()
+            .includes(tag.value.toLowerCase());
+        case 'studentYear':
+          return courseCard.studentYear === tag.value;
+        case 'subject':
+          return courseCard.subject
+            .toLowerCase()
+            .includes(tag.value.toLowerCase());
+        case 'courseCode':
+          return courseCard.courseCode
+            .toLowerCase()
+            .includes(tag.value.toLowerCase());
+        case 'room':
+          return courseCard.room
+            .toLowerCase()
+            .includes(tag.value.toLowerCase());
+        case 'laboratory':
+          // ตรวจสอบห้องแลปสำหรับ course card
+          if (courseCard.scheduleIds && Array.isArray(courseCard.scheduleIds)) {
+            return courseCard.scheduleIds.some(scheduleId => {
+              const originalSchedule = originalScheduleData.find(
+                (schedule: any) => schedule.ID === scheduleId
+              );
+              const labRoom = originalSchedule?.OfferedCourses?.Laboratory?.Room;
+              return labRoom && labRoom.toLowerCase().includes(tag.value.toLowerCase());
+            });
+          } else if (courseCard.scheduleId) {
+            const originalSchedule = originalScheduleData.find(
+              (schedule: any) => schedule.ID === courseCard.scheduleId
+            );
+            const labRoom = originalSchedule?.OfferedCourses?.Laboratory?.Room;
+            return labRoom && labRoom.toLowerCase().includes(tag.value.toLowerCase());
+          }
+          return false;
+        default:
+          return true;
+      }
     });
 
-    setFilteredCourseCards(filtered);
-  };
+    // Apply search filter
+    const searchMatch = !sidebarSearchValue || 
+      courseCard.teacher.toLowerCase().includes(sidebarSearchValue.toLowerCase()) ||
+      courseCard.subject.toLowerCase().includes(sidebarSearchValue.toLowerCase()) ||
+      courseCard.courseCode.toLowerCase().includes(sidebarSearchValue.toLowerCase());
+
+    return tagMatch && searchMatch;
+  });
+
+  setFilteredCourseCards(filtered);
+};
+
+
+useEffect(() => {
+  if (originalScheduleData.length > 0) {
+    // อัปเดตเฉพาะข้อมูลห้องแลป
+    const laboratories = new Set<string>();
+    
+    originalScheduleData.forEach((schedule: any) => {
+      const labRoom = schedule?.OfferedCourses?.Laboratory?.Room;
+      if (labRoom && labRoom.trim() !== "") {
+        laboratories.add(labRoom.trim());
+      }
+    });
+
+    if (laboratories.size > 0) {
+      setFilterOptions(prevOptions => ({
+        ...prevOptions,
+        laboratories: [
+          ...Array.from(laboratories),
+          ...prevOptions.laboratories
+        ].filter(Boolean).sort()
+      }));
+    }
+  }
+}, [originalScheduleData]);
 
   // Apply sidebar filters whenever sidebarFilterTags or sidebarSearchValue changes
-  useEffect(() => {
+useEffect(() => {
   applySidebarFilters();
-}, [sidebarFilterTags, sidebarSearchValue, courseCards, scheduleData]); // เพิ่ม scheduleData
-
-
+}, [sidebarFilterTags, sidebarSearchValue, courseCards, scheduleData]);
 
   // =================== REMOVED COURSES FUNCTIONS ===================
   const addToRemovedCourses = (subCell: SubCell) => {
@@ -1554,7 +1847,7 @@ const renderAvailableCourses = () => {
         borderRadius: "6px", 
         border: "1px solid #e8e8e8",
         marginBottom: "16px",
-        flexShrink: 0  // ป้องกันไม่ให้ส่วนนี้ถูกบีบ
+        flexShrink: 0
       }}>
         {/* Filter Header */}
         <div style={{ 
@@ -1708,6 +2001,40 @@ const renderAvailableCourses = () => {
                 }
               />
             </div>
+
+            {/* Room Filter */}
+            <div>
+              <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                ห้อง:
+              </label>
+              <AutoComplete
+                placeholder="เลือกห้อง"
+                options={filterOptions.rooms.map(room => ({ value: room }))}
+                onSelect={(value) => addSidebarFilterTag('room', value)}
+                style={{ width: "100%" }}
+                size="small"
+                filterOption={(inputValue, option) =>
+                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                }
+              />
+            </div>
+
+            {/* Laboratory Filter */}
+            <div>
+              <label style={{ fontSize: "10px", color: "#666", marginBottom: "2px", display: "block" }}>
+                ห้องแลป:
+              </label>
+              <AutoComplete
+                placeholder="เลือกห้องแลป"
+                options={filterOptions.laboratories.map(lab => ({ value: lab }))}
+                onSelect={(value) => addSidebarFilterTag('laboratory', value)}
+                style={{ width: "100%" }}
+                size="small"
+                filterOption={(inputValue, option) =>
+                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+                }
+              />
+            </div>
           </div>
         )}
       </div>
@@ -1731,9 +2058,9 @@ const renderAvailableCourses = () => {
 
       {/* Course Cards List */}
       <div style={{ 
-        flex: 1, // ใช้พื้นที่ที่เหลือทั้งหมด
+        flex: 1,
         overflowY: "auto",
-        paddingRight: "4px" // เพิ่ม padding เล็กน้อยสำหรับ scrollbar
+        paddingRight: "4px"
       }}>
         {filteredCourseCards.length === 0 ? (
           <div style={{ 
@@ -1865,28 +2192,22 @@ const renderAvailableCourses = () => {
   };
 
   // =================== FILTER FUNCTIONS ===================
-  // ปรับปรุง extractFilterOptions function
 const extractFilterOptions = (data: ExtendedScheduleData[]) => {
-  const teachers = new Set<string>();
-  const studentYears = new Set<string>();
-  const subjects = new Set<string>();
-  const courseCodes = new Set<string>();
-  const rooms = new Set<string>();
+  // เริ่มจากข้อมูล API ก่อน
+  const apiOptions = extractAPIBasedOptions();
+  
+  const teachers = new Set(apiOptions.teachers);
+  const studentYears = new Set(apiOptions.studentYears);
+  const subjects = new Set(apiOptions.subjects);
+  const courseCodes = new Set(apiOptions.courseCodes);
+  const rooms = new Set(apiOptions.rooms);
+  const laboratories = new Set(apiOptions.laboratories);
 
-  // เพิ่มข้อมูลอาจารย์จาก API
-  allTeachers.forEach(teacher => {
-    const fullName = `${teacher.Firstname} ${teacher.Lastname}`.trim();
-    if (fullName && fullName !== '') {
-      teachers.add(fullName);
-    }
-  });
-
-  // เพิ่มข้อมูลจาก schedule data เช่นเดิม
+  // เพิ่มข้อมูลจาก schedule data (เพื่อความสมบูรณ์)
   data.forEach(dayData => {
     dayData.subCells?.forEach(subCell => {
-      // เพิ่มอาจารย์จาก subCell ด้วย (เผื่อมีอาจารย์ที่ไม่อยู่ใน API)
+      // เพิ่มอาจารย์จาก subCell
       if (subCell.classData.teacher) {
-        // แยกอาจารย์หลายคนที่คั่นด้วย comma
         const teacherNames = subCell.classData.teacher.split(',').map(name => name.trim());
         teacherNames.forEach(name => {
           if (name && name !== '') {
@@ -1907,32 +2228,22 @@ const extractFilterOptions = (data: ExtendedScheduleData[]) => {
       if (subCell.classData.room) {
         rooms.add(subCell.classData.room);
       }
-    });
-  });
 
-  // Extract student years from original API data เช่นเดิม
-  if (originalScheduleData && originalScheduleData.length > 0) {
-    originalScheduleData.forEach((schedule: any) => {
-      if (schedule.OfferedCourses?.AllCourses?.AcademicYear?.AcademicYearID) {
-        const academicYearId = schedule.OfferedCourses.AllCourses.AcademicYear.AcademicYearID;
-        studentYears.add(academicYearId.toString());
-      }
-      
-      if (schedule.OfferedCourses?.AllCourses?.AcademicYear?.Level) {
-        const level = schedule.OfferedCourses.AllCourses.AcademicYear.Level;
-        if (level && level !== 'เรียนได้ทุกชั้นปี') {
-          const yearMatch = level.match(/ปีที่\s*(\d+)/);
-          if (yearMatch) {
-            studentYears.add(yearMatch[1]);
-          } else if (!level.includes('ปีที่')) {
-            studentYears.add(level);
-          }
+      // เพิ่มข้อมูลห้องแลปจาก subCell
+      if (subCell.scheduleId && originalScheduleData) {
+        const originalSchedule = originalScheduleData.find(
+          (schedule: any) => schedule.ID === subCell.scheduleId
+        );
+        
+        const labRoom = originalSchedule?.OfferedCourses?.Laboratory?.Room;
+        if (labRoom && labRoom.trim() !== "") {
+          laboratories.add(labRoom.trim());
         }
       }
     });
-  }
-  
-  // กรองเฉพาะตัวเลข 1-9 (เผื่อมีปีอื่นๆ ในอนาคต)
+  });
+
+  // กรองเฉพาะตัวเลข 1-9 สำหรับปีการศึกษา
   const validYears = Array.from(studentYears).filter(year => {
     const num = parseInt(year);
     return !isNaN(num) && num >= 1 && num <= 9;
@@ -1943,18 +2254,34 @@ const extractFilterOptions = (data: ExtendedScheduleData[]) => {
     studentYears: validYears.sort((a, b) => parseInt(a) - parseInt(b)),
     subjects: Array.from(subjects).filter(Boolean).sort(),
     courseCodes: Array.from(courseCodes).filter(Boolean).sort(),
-    rooms: Array.from(rooms).filter(Boolean).sort()
+    rooms: Array.from(rooms).filter(Boolean).sort(),
+    laboratories: Array.from(laboratories).filter(Boolean).sort()
   });
 
   console.log('🎯 Filter options updated:', {
     teachersCount: Array.from(teachers).length,
+    laboratoriesCount: Array.from(laboratories).length,
     fromAPI: allTeachers.length,
-    fromSchedule: data.length
+    fromSchedule: data.length,
+    currentMajor: localStorage.getItem("major_name")
   });
 };
 useEffect(() => {
   extractFilterOptions(scheduleData);
-}, [scheduleData, allTeachers]); // เพิ่ม allTeachers เป็น dependency
+}, [scheduleData, allTeachers]);
+// ⭐ ใหม่: โหลด filter options ทันทีที่ allTeachers โหลดเสร็จ
+useEffect(() => {
+  if (allTeachers.length > 0) {
+    extractFilterOptions(scheduleData);
+  }
+}, [allTeachers]);
+
+// ⭐ ใหม่: โหลด filter options ทันทีที่ originalScheduleData มีข้อมูล  
+useEffect(() => {
+  if (originalScheduleData.length > 0 || allTeachers.length > 0) {
+    extractFilterOptions(scheduleData);
+  }
+}, [originalScheduleData]);
 
   const addFilterTag = (type: FilterTag['type'], value: string) => {
     if (!value || filterTags.some(tag => tag.type === type && tag.value === value)) {
@@ -1981,18 +2308,18 @@ useEffect(() => {
     setSearchValue("");
   };
 
-  const getFilterTypeLabel = (type: FilterTag['type']): string => {
-    switch (type) {
-      case 'teacher': return 'อาจารย์';
-      case 'studentYear': return 'ชั้นปี';
-      case 'subject': return 'วิชา';
-      case 'courseCode': return 'รหัสวิชา';
-      case 'room': return 'ห้อง';
-      default: return type;
-    }
-  };
+const getFilterTypeLabel = (type: FilterTag['type']): string => {
+  switch (type) {
+    case 'teacher': return 'อาจารย์';
+    case 'studentYear': return 'ชั้นปี';
+    case 'subject': return 'วิชา';
+    case 'courseCode': return 'รหัสวิชา';
+    case 'room': return 'ห้อง';
+    case 'laboratory': return 'ห้องแลป';
+    default: return type;
+  }
+};
 
-// ปรับปรุง applyFilters function
 const applyFilters = () => {
   if (filterTags.length === 0 && !searchValue) {
     setFilteredScheduleData(scheduleData);
@@ -2005,16 +2332,13 @@ const applyFilters = () => {
       const tagMatch = filterTags.length === 0 || filterTags.every(tag => {
         switch (tag.type) {
           case 'teacher':
-            // ปรับปรุงการค้นหาอาจารย์เพื่อรองรับหลายคน
             if (!subCell.classData.teacher) return false;
             
-            // แยกชื่ออาจารย์หลายคนที่คั่นด้วย comma หรือ /
             const teacherNames = subCell.classData.teacher
               .split(/[,\/]/)
               .map(name => name.trim())
               .filter(name => name !== '');
             
-            // ตรวจสอบว่าชื่ออาจารย์ที่ต้องการค้นหาอยู่ในรายชื่อหรือไม่
             return teacherNames.some(teacherName => 
               teacherName.toLowerCase().includes(tag.value.toLowerCase())
             );
@@ -2062,6 +2386,20 @@ const applyFilters = () => {
               .toLowerCase()
               .includes(tag.value.toLowerCase());
 
+          case 'laboratory':
+            // ตรวจสอบห้องแลปจาก originalScheduleData
+            if (subCell.scheduleId && originalScheduleData) {
+              const originalSchedule = originalScheduleData.find(
+                (schedule: any) => schedule.ID === subCell.scheduleId
+              );
+              
+              const labRoom = originalSchedule?.OfferedCourses?.Laboratory?.Room;
+              if (labRoom && labRoom.trim() !== "") {
+                return labRoom.toLowerCase().includes(tag.value.toLowerCase());
+              }
+            }
+            return false;
+
           default:
             return true;
         }
@@ -2071,7 +2409,6 @@ const applyFilters = () => {
       const searchMatch = !searchValue || (() => {
         if (!subCell.classData.teacher) return false;
         
-        // ปรับปรุงการค้นหาด้วย search value เพื่อรองรับอาจารย์หลายคน
         const teacherNames = subCell.classData.teacher
           .split(/[,\/]/)
           .map(name => name.trim())
@@ -2093,7 +2430,6 @@ const applyFilters = () => {
 
   setFilteredScheduleData(filtered);
 
-  // Log การ filter เพื่อ debug
   const totalOriginal = scheduleData.reduce((acc, day) => acc + (day.subCells?.length || 0), 0);
   const totalFiltered = filtered.reduce((acc, day) => acc + (day.subCells?.length || 0), 0);
   
@@ -2104,11 +2440,10 @@ const applyFilters = () => {
     search: searchValue ? 'yes' : 'no'
   });
 };
+useEffect(() => {
+  applyFilters();
+}, [filterTags, searchValue, scheduleData]);
 
-  // Apply filters whenever filterTags or searchValue changes
-  useEffect(() => {
-    applyFilters();
-  }, [filterTags, searchValue, scheduleData]);
 
   // Extract filter options whenever scheduleData changes
   useEffect(() => {
@@ -3334,6 +3669,11 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
       message.error("เกิดข้อผิดพลาดในการโหลดตาราง");
     }
   };
+  useEffect(() => {
+  if (academicYear && term && major_name) {
+    getSchedules();
+  }
+}, [academicYear, term, major_name]);
 
   const getAllNameTable = async () => {
     try {
@@ -3828,192 +4168,207 @@ const handleReset = () => {
   };
 
   // =================== RENDER FILTER SECTION ===================
-  const renderFilterSection = () => {
-    return (
+const renderFilterSection = () => {
+  return (
+    <div style={{ 
+      backgroundColor: "#fafafa", 
+      padding: "16px", 
+      borderRadius: "8px", 
+      border: "1px solid #d9d9d9",
+      marginBottom: "16px" 
+    }}>
+      {/* Filter Header */}
       <div style={{ 
-        backgroundColor: "#fafafa", 
-        padding: "16px", 
-        borderRadius: "8px", 
-        border: "1px solid #d9d9d9",
-        marginBottom: "16px" 
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "center", 
+        marginBottom: "12px" 
       }}>
-        {/* Filter Header */}
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center", 
-          marginBottom: "12px" 
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <FilterOutlined style={{ color: "#1890ff" }} />
-            <span style={{ fontWeight: "bold", color: "#333" }}>
-              กรองข้อมูล ({filteredScheduleData.length} แถว)
-            </span>
-            {filterTags.length > 0 && (
-              <Tag color="blue">{filterTags.length} ตัวกรอง</Tag>
-            )}
-          </div>
-          <div style={{ display: "flex", gap: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <FilterOutlined style={{ color: "#1890ff" }} />
+          <span style={{ fontWeight: "bold", color: "#333" }}>
+            กรองข้อมูล ({filteredScheduleData.length} แถว)
+          </span>
+          {filterTags.length > 0 && (
+            <Tag color="blue">{filterTags.length} ตัวกรอง</Tag>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <Button
+            size="small"
+            icon={<SearchOutlined />}
+            type={filterVisible ? "primary" : "default"}
+            onClick={() => setFilterVisible(!filterVisible)}
+          >
+            {filterVisible ? "ซ่อนการกรอง" : "แสดงการกรอง"}
+          </Button>
+          {(filterTags.length > 0 || searchValue) && (
             <Button
               size="small"
-              icon={<SearchOutlined />}
-              type={filterVisible ? "primary" : "default"}
-              onClick={() => setFilterVisible(!filterVisible)}
+              icon={<ClearOutlined />}
+              onClick={clearAllFilters}
+              danger
             >
-              {filterVisible ? "ซ่อนการกรอง" : "แสดงการกรอง"}
+              ล้างทั้งหมด
             </Button>
-            {(filterTags.length > 0 || searchValue) && (
-              <Button
-                size="small"
-                icon={<ClearOutlined />}
-                onClick={clearAllFilters}
-                danger
-              >
-                ล้างทั้งหมด
-              </Button>
-            )}
-          </div>
+          )}
         </div>
-
-        {/* Search Bar */}
-        <div style={{ marginBottom: "12px" }}>
-          <Input
-            placeholder="ค้นหาอาจารย์..."
-            prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            allowClear
-            style={{ width: "100%" }}
-          />
-        </div>
-
-        {/* Filter Tags Display */}
-        {filterTags.length > 0 && (
-          <div style={{ marginBottom: "12px" }}>
-            <div style={{ fontSize: "12px", color: "#666", marginBottom: "6px" }}>
-              ตัวกรองที่เลือก:
-            </div>
-            <Space wrap>
-              {filterTags.map(tag => (
-                <Tag
-                  key={tag.id}
-                  color={tag.color}
-                  closable
-                  onClose={() => removeFilterTag(tag.id)}
-                  style={{ marginBottom: "4px" }}
-                >
-                  {tag.label}
-                </Tag>
-              ))}
-            </Space>
-          </div>
-        )}
-
-        {/* Filter Controls */}
-        {filterVisible && (
-          <div style={{ 
-            display: "grid", 
-            gridTemplateColumns: "1fr 1fr 1fr", 
-            gap: "16px",
-            borderTop: "1px solid #e8e8e8",
-            paddingTop: "12px"
-          }}>
-            {/* Teacher Filter */}
-            <div>
-              <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
-                🧑‍🏫 อาจารย์:
-              </label>
-              <AutoComplete
-                placeholder="เลือกอาจารย์"
-                options={filterOptions.teachers.map(teacher => ({ value: teacher }))}
-                onSelect={(value) => addFilterTag('teacher', value)}
-                style={{ width: "100%" }}
-                size="small"
-                filterOption={(inputValue, option) =>
-                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
-                }
-              />
-            </div>
-
-            {/* Student Year Filter */}
-            <div>
-              <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
-                🎓 ชั้นปี:
-              </label>
-              <Select
-                placeholder="เลือกชั้นปี"
-                onSelect={(value) => addFilterTag('studentYear', value)}
-                style={{ width: "100%" }}
-                size="small"
-                showSearch
-                filterOption={(input, option) =>
-                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                }
-                options={filterOptions.studentYears.map(year => ({ 
-                  label: `ปีที่ ${year}`, 
-                  value: year 
-                }))}
-              />
-            </div>
-
-            {/* Subject Filter */}
-            <div>
-              <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
-                📚 วิชา:
-              </label>
-              <AutoComplete
-                placeholder="เลือกวิชา"
-                options={filterOptions.subjects.map(subject => ({ value: subject }))}
-                onSelect={(value) => addFilterTag('subject', value)}
-                style={{ width: "100%" }}
-                size="small"
-                filterOption={(inputValue, option) =>
-                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
-                }
-              />
-            </div>
-
-            {/* Course Code Filter */}
-            <div>
-              <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
-                🏷️ รหัสวิชา:
-              </label>
-              <AutoComplete
-                placeholder="เลือกรหัสวิชา"
-                options={filterOptions.courseCodes.map(code => ({ value: code }))}
-                onSelect={(value) => addFilterTag('courseCode', value)}
-                style={{ width: "100%" }}
-                size="small"
-                filterOption={(inputValue, option) =>
-                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
-                }
-              />
-            </div>
-
-            {/* Room Filter */}
-            <div>
-              <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
-                🏢 ห้อง:
-              </label>
-              <AutoComplete
-                placeholder="เลือกห้อง"
-                options={filterOptions.rooms.map(room => ({ value: room }))}
-                onSelect={(value) => addFilterTag('room', value)}
-                style={{ width: "100%" }}
-                size="small"
-                filterOption={(inputValue, option) =>
-                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
-                }
-              />
-            </div>
-
-            {/* Empty cell to balance the grid */}
-            <div></div>
-          </div>
-        )}
       </div>
-    );
-  };
+
+      {/* Search Bar */}
+      <div style={{ marginBottom: "12px" }}>
+        <Input
+          placeholder="ค้นหาอาจารย์..."
+          prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          allowClear
+          style={{ width: "100%" }}
+        />
+      </div>
+
+      {/* Filter Tags Display */}
+      {filterTags.length > 0 && (
+        <div style={{ marginBottom: "12px" }}>
+          <div style={{ fontSize: "12px", color: "#666", marginBottom: "6px" }}>
+            ตัวกรองที่เลือก:
+          </div>
+          <Space wrap>
+            {filterTags.map(tag => (
+              <Tag
+                key={tag.id}
+                color={tag.color}
+                closable
+                onClose={() => removeFilterTag(tag.id)}
+                style={{ marginBottom: "4px" }}
+              >
+                {tag.label}
+              </Tag>
+            ))}
+          </Space>
+        </div>
+      )}
+
+      {/* Filter Controls */}
+      {filterVisible && (
+        <div style={{ 
+          display: "grid", 
+          gridTemplateColumns: "1fr 1fr 1fr", 
+          gap: "16px",
+          borderTop: "1px solid #e8e8e8",
+          paddingTop: "12px"
+        }}>
+          {/* Teacher Filter */}
+          <div>
+            <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
+              🧑‍🏫 อาจารย์:
+            </label>
+            <AutoComplete
+              placeholder="เลือกอาจารย์"
+              options={filterOptions.teachers.map(teacher => ({ value: teacher }))}
+              onSelect={(value) => addFilterTag('teacher', value)}
+              style={{ width: "100%" }}
+              size="small"
+              filterOption={(inputValue, option) =>
+                option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+              }
+            />
+          </div>
+
+          {/* Student Year Filter */}
+          <div>
+            <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
+              🎓 ชั้นปี:
+            </label>
+            <Select
+              placeholder="เลือกชั้นปี"
+              onSelect={(value) => addFilterTag('studentYear', value)}
+              style={{ width: "100%" }}
+              size="small"
+              showSearch
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              options={filterOptions.studentYears.map(year => ({ 
+                label: `ปีที่ ${year}`, 
+                value: year 
+              }))}
+            />
+          </div>
+
+          {/* Subject Filter */}
+          <div>
+            <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
+              📚 วิชา:
+            </label>
+            <AutoComplete
+              placeholder="เลือกวิชา"
+              options={filterOptions.subjects.map(subject => ({ value: subject }))}
+              onSelect={(value) => addFilterTag('subject', value)}
+              style={{ width: "100%" }}
+              size="small"
+              filterOption={(inputValue, option) =>
+                option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+              }
+            />
+          </div>
+
+          {/* Course Code Filter */}
+          <div>
+            <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
+              🏷️ รหัสวิชา:
+            </label>
+            <AutoComplete
+              placeholder="เลือกรหัสวิชา"
+              options={filterOptions.courseCodes.map(code => ({ value: code }))}
+              onSelect={(value) => addFilterTag('courseCode', value)}
+              style={{ width: "100%" }}
+              size="small"
+              filterOption={(inputValue, option) =>
+                option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+              }
+            />
+          </div>
+
+          {/* Room Filter */}
+          <div>
+            <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
+              🏢 ห้อง:
+            </label>
+            <AutoComplete
+              placeholder="เลือกห้อง"
+              options={filterOptions.rooms.map(room => ({ value: room }))}
+              onSelect={(value) => addFilterTag('room', value)}
+              style={{ width: "100%" }}
+              size="small"
+              filterOption={(inputValue, option) =>
+                option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+              }
+            />
+          </div>
+
+          {/* Laboratory Filter */}
+          <div>
+            <label style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "block" }}>
+              🔬 ห้องแลป:
+            </label>
+            <AutoComplete
+              placeholder="เลือกห้องแลป"
+              options={filterOptions.laboratories.map(lab => ({ value: lab }))}
+              onSelect={(value) => addFilterTag('laboratory', value)}
+              style={{ width: "100%" }}
+              size="small"
+              filterOption={(inputValue, option) =>
+                option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
+              }
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 
 const exportPDF = async () => {
   const node = tableRef.current;
@@ -4614,11 +4969,6 @@ const exportScheduleToXLSX = async () => {
 
   // =================== EFFECTS ===================
   // แก้ไข useEffect สำหรับการโหลดอัตโนมัติ
-  useEffect(() => {
-    if (academicYear && term && major_name) {
-      getSchedules();
-    }
-  }, [academicYear, term, major_name]);
 
   useEffect(() => {
     getAllNameTable();
