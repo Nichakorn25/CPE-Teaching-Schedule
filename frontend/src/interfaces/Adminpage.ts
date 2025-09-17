@@ -30,6 +30,8 @@ export interface AllCourseInterface {
 
 
 export interface AllCourseinOpenCourseInterface {
+  Laboratory: undefined;
+  Sections: any;
   ID: number;
   CourseCode: string;
   EnglishCourseName: string;

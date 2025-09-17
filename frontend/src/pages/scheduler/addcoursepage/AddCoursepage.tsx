@@ -22,9 +22,9 @@ import { upCreateOfferedCourse } from "../../../services/https/SchedulerPageServ
 
 const { Option } = Select;
 
-//เปรียบเทียบชื่อสาขา
+// เปรียบเทียบชื่อสาขา
 const normalize = (s?: string | null) => (s ?? "").trim().toLowerCase();
-//ดึงชื่อสาขาจาก curriculum
+// ดึงชื่อสาขาจาก curriculum
 const getCurriculumMajorName = (c: any): string =>
   c?.Major?.MajorName ??
   c?.major?.MajorName ??
@@ -38,15 +38,11 @@ const AddCoursepage: React.FC = () => {
   const [form] = Form.useForm();
 
   // ───────────────── state ─────────────────
-  const [allCurriculums, setAllCurriculums] = useState<CurriculumInterface[]>(
-    []
-  );
-  const [curriculums, setCurriculums] = useState<CurriculumInterface[]>([]); // ← หลังกรองตามสาขาผู้ใช้
+  const [allCurriculums, setAllCurriculums] = useState<CurriculumInterface[]>([]);
+  const [curriculums, setCurriculums] = useState<CurriculumInterface[]>([]);
   const [courses, setCourses] = useState<AllCourseinOpenCourseInterface[]>([]);
   const [lab, setLab] = useState<LaboratoryInterface[]>([]);
-  const [selectedCurriculumID, setSelectedCurriculumID] = useState<
-    number | null
-  >(null);
+  const [selectedCurriculumID, setSelectedCurriculumID] = useState<number | null>(null);
 
   const [academicYear, setAcademicYear] = useState<number>(0);
   const [term, setTerm] = useState<number>(0);
@@ -58,7 +54,7 @@ const AddCoursepage: React.FC = () => {
     const year = localStorage.getItem("academicYear");
     const semester = localStorage.getItem("term");
     const uid = localStorage.getItem("user_id");
-    const majorName = localStorage.getItem("major_name"); //ชื่อสาขาผู้ใช้
+    const majorName = localStorage.getItem("major_name");
 
     if (year) setAcademicYear(parseInt(year));
     if (semester) setTerm(parseInt(semester));
@@ -81,32 +77,28 @@ const AddCoursepage: React.FC = () => {
     fetchLab();
   }, []);
 
-  // ───────────────── โหลดหลักสูตรทั้งหมด (ยังไม่กรอง) ─────────────────
+  // ───────────────── โหลดหลักสูตรทั้งหมด ─────────────────
   useEffect(() => {
     const fetchCurriculums = async () => {
       const response = await getAllCurriculum();
-      if (response.status === 200) {
-        setAllCurriculums(response.data);
-      }
+      if (response.status === 200) setAllCurriculums(response.data);
     };
     fetchCurriculums();
   }, []);
 
-  // ───────────────── กรองหลักสูตรให้ “ตรงกับสาขาผู้ใช้เท่านั้น” ─────────────────
+  // ───────────────── กรองหลักสูตรตามสาขาผู้ใช้ ─────────────────
   useEffect(() => {
     if (!allCurriculums.length) return;
 
     const filtered =
       userMajor && normalize(userMajor).length > 0
         ? allCurriculums.filter(
-            (c: any) =>
-              normalize(getCurriculumMajorName(c)) === normalize(userMajor)
+            (c: any) => normalize(getCurriculumMajorName(c)) === normalize(userMajor)
           )
-        : allCurriculums; // ถ้าไม่รู้สาขาผู้ใช้ -> แสดงทั้งหมด
+        : allCurriculums;
 
     setCurriculums(filtered);
 
-    // ถ้าค่าที่เลือกอยู่ไม่อยู่ในชุดที่กรองแล้ว → เคลียร์ค่า + รายวิชา
     const current = form.getFieldValue("curriculum");
     if (current && !filtered.some((x) => x.ID === current)) {
       form.setFieldsValue({ curriculum: undefined, courseCode: undefined });
@@ -114,24 +106,14 @@ const AddCoursepage: React.FC = () => {
       setCourses([]);
     }
 
-    // Auto-select ถ้าเหลือรายการเดียว
     if (!form.getFieldValue("curriculum") && filtered.length === 1) {
       form.setFieldsValue({ curriculum: filtered[0].ID });
       setSelectedCurriculumID(filtered[0].ID);
       handleCurriculumChange(filtered[0].ID);
     }
+  }, [allCurriculums, userMajor]);
 
-    // Debug
-    console.table(
-      filtered.slice(0, 20).map((c: any) => ({
-        id: c.ID,
-        curriculumName: c.CurriculumName,
-        majorName: getCurriculumMajorName(c),
-      }))
-    );
-  }, [allCurriculums, userMajor, form]);
-
-  // ───────────────── เปลี่ยนหลักสูตร → โหลดรายวิชาในหลักสูตรนั้น ─────────────────
+  // ───────────────── เปลี่ยนหลักสูตร → โหลดรายวิชา ─────────────────
   const handleCurriculumChange = async (value: number) => {
     setSelectedCurriculumID(value);
     const response = await getAllCourses();
@@ -141,18 +123,16 @@ const AddCoursepage: React.FC = () => {
           course.CurriculumID === value && course.Ismain === false
       );
       setCourses(filtered);
-      // เคลียร์รหัสวิชาที่เลือกไว้ก่อนหน้า
       form.setFieldsValue({ courseCode: undefined });
     }
   };
 
-  // ───────────────── เปลี่ยนรหัสวิชา → เติมชื่อ/credit ตาม real-time ─────────────────
+  // ───────────────── เลือกรหัสวิชา → เติมชื่อ/credit ─────────────────
   const handleCourseCodeChange = async (courseId: number) => {
     const selectedCourse = courses.find((course) => course.ID === courseId);
     if (!selectedCourse) return;
 
     const response = await getCoursebyid(courseId);
-    console.log("Subject now: ", response);
     if (response.status === 200) {
       const course = response.data;
       form.setFieldsValue({
@@ -167,15 +147,63 @@ const AddCoursepage: React.FC = () => {
     }
   };
 
+  // ───────────────── useEffect โหลดข้อมูลเก่า (edit mode) ─────────────────
+  useEffect(() => {
+    const fetchInitialCourse = async () => {
+      if (!id) return;
+
+      try {
+        const res = await getOfferedCoursesByMajorbyID(Number(id));
+        if (res.status === 200 && res.data?.length > 0) {
+          const course: OfferedCourseDetailInterface = res.data[0];
+
+          // โหลดรายวิชาใน Curriculum
+          const allCoursesRes = await getAllCourses();
+          let filteredCourses: AllCourseinOpenCourseInterface[] = [];
+          if (allCoursesRes.status === 200) {
+            filteredCourses = allCoursesRes.data.filter(
+              (c: AllCourseinOpenCourseInterface) =>
+                c.CurriculumID === course.CurriculumID && c.Ismain === false
+            );
+            setCourses(filteredCourses);
+          }
+
+          // หา selectedCourse → เอา ID
+          const selectedCourse = filteredCourses.find(
+            (c) => c.CourseCode === course.Code
+          );
+
+          setSelectedCurriculumID(course.CurriculumID);
+
+          form.setFieldsValue({
+            curriculum: course.CurriculumID ?? null,
+            courseCode: selectedCourse?.ID,
+            courseNameTh: course.ThaiCourseName ?? "",
+            courseNameEn: course.EnglishCourseName ?? "",
+            credits: parseInt(course.Credit, 10) || 0,
+            labRoom: course.Laboratory,
+            groupCount: course.TotalSections ?? 0,
+            studentsPerGroup: course.Sections?.[0]?.Capacity ?? 0,
+          });
+        }
+      } catch (error) {
+        console.error("โหลดข้อมูลรายวิชาไม่สำเร็จ:", error);
+      }
+    };
+
+    fetchInitialCourse();
+  }, [id]);
+
   // ───────────────── บันทึก ─────────────────
-  const handleSubmit = async (values: any) => {
+const handleSubmit = async (values: any) => {
+  try {
     const selectedCourse = courses.find((c) => c.ID === values.courseCode);
     if (!selectedCourse || selectedCourse.ID === undefined) {
       Swal.fire("ไม่พบข้อมูลรายวิชา", "กรุณาเลือกรายวิชาอีกครั้ง", "error");
       return;
     }
 
-    // ถ้ามี userMajor ให้กันผู้ใช้เลือก “หลักสูตรที่ไม่ตรงสาขา” เผื่อหลุดมาได้
+    // ตรวจสอบหลักสูตรตรงกับสาขาผู้ใช้
     const selectedCurric = curriculums.find((c) => c.ID === values.curriculum);
     if (
       userMajor &&
@@ -186,16 +214,28 @@ const AddCoursepage: React.FC = () => {
       return;
     }
 
+    // เตรียม payload
     const payload = {
       Year: academicYear,
       Term: term,
-      Section: values.groupCount,
-      Capacity: values.studentsPerGroup,
+      Section: values.groupCount, // จำนวนกลุ่มเรียน
+      Capacity: values.studentsPerGroup, // นักศึกษาต่อกลุ่ม
       UserID: userID!,
       AllCoursesID: selectedCourse.ID,
-      LaboratoryID: values.labRoom || undefined,
+      LaboratoryID: selectedCourse.Laboratory || undefined,
+      Sections: selectedCourse.Sections?.map((s:any) => ({
+        SectionNumber: s.SectionNumber,
+        DayOfWeek: s.DayOfWeek,
+        Time: s.Time,
+        Capacity: s.Capacity,
+        Room: s.Room,
+        InstructorNames: s.InstructorNames,
+      })),
     };
 
+    console.log("Payload จะส่ง:", payload);
+
+    // ส่งไป backend
     let res;
     if (id) {
       res = await upCreateOfferedCourse(Number(id), payload); // PUT
@@ -207,56 +247,19 @@ const AddCoursepage: React.FC = () => {
       Swal.fire(
         "สำเร็จ",
         id
-          ? `แก้ไขข้อมูลวิชา <b>${selectedCourse.EnglishCourseName} - ${selectedCourse.ThaiCourseName} </b> แล้ว`
+          ? `แก้ไขข้อมูลวิชา <b>${selectedCourse.EnglishCourseName} - ${selectedCourse.ThaiCourseName}</b> แล้ว`
           : `เพิ่มวิชา <b>${selectedCourse.EnglishCourseName} - ${selectedCourse.ThaiCourseName}</b><br>เป็นรายวิชาที่เปิดสอนใน <b>เทอม ${term} ปีการศึกษา ${academicYear}</b> เรียบร้อยแล้ว`,
         "success"
       ).then(() => navigate("/all-open-course"));
     } else {
       Swal.fire("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้", "error");
     }
-  };
+  } catch (error) {
+    console.error("Error handleSubmit:", error);
+    Swal.fire("ผิดพลาด", "เกิดข้อผิดพลาดระหว่างบันทึกข้อมูล", "error");
+  }
+};
 
-  useEffect(() => {
-    const fetchCourse = async () => {
-      if (!id) return;
-
-      try {
-        const res = await getOfferedCoursesByMajorbyID(Number(id));
-        console.log(res);
-        if (res.status === 200 && res.data?.length > 0) {
-          const course: OfferedCourseDetailInterface = res.data[0]; // ← เอาตัวแรกของ array
-
-          // โหลดรายวิชาใน Curriculum ก่อน
-          await handleCurriculumChange(course.CurriculumID);
-
-          form.setFieldsValue({
-            curriculum: course.CurriculumID ?? null,
-            courseCode: course.Code
-              ? `${course.Code} - ${course.EnglishCourseName} ${course.ThaiCourseName}`
-              : null,
-            courseNameTh: course.ThaiCourseName ?? "",
-            courseNameEn: course.EnglishCourseName ?? "",
-            credits: parseInt(course.Credit, 10) || 0,
-            labRoom: course.Laboratory,
-            groupCount: course.TotalSections ?? 0,
-            studentsPerGroup: course.Sections?.[0]?.Capacity ?? 0,
-            sections:
-              course.Sections?.map((s) => ({
-                sectionNumber: s.SectionNumber ?? 1,
-                dayOfWeek: s.DayOfWeek ?? "",
-                time: s.Time ?? "",
-                capacity: s.Capacity ?? 0,
-                instructorNames: s.InstructorNames ?? [],
-              })) ?? [],
-          });
-        }
-      } catch (error) {
-        console.error("โหลดข้อมูลรายวิชาไม่สำเร็จ:", error);
-      }
-    };
-
-    fetchCourse();
-  }, [id]);
 
   // ───────────────── UI ─────────────────
   return (
@@ -350,34 +353,27 @@ const AddCoursepage: React.FC = () => {
 
               {/* ── Course Code ── */}
               <Form.Item
-                label={
-                  <span style={{ color: "#F26522", fontWeight: "bold" }}>
-                    รหัสวิชา
-                  </span>
-                }
-                name="courseCode"
-                rules={[{ required: true, message: "กรุณาเลือกรหัสวิชา" }]}
-              >
-                <Select
-                  placeholder={
-                    selectedCurriculumID
-                      ? "เลือกรหัสวิชาตามหลักสูตร"
-                      : "กรุณาเลือกหลักสูตรก่อน"
-                  }
-                  size="large"
-                  onChange={handleCourseCodeChange}
-                  showSearch
-                  optionFilterProp="children"
-                  allowClear
-                  disabled={!selectedCurriculumID}
-                >
-                  {courses.map((c) => (
-                    <Option key={c.ID} value={c.ID}>
-                      {c.CourseCode} - {c.EnglishCourseName} {c.ThaiCourseName}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
+  label="รหัสวิชา"
+  name="courseCode"
+  rules={[{ required: true, message: "กรุณาเลือกรหัสวิชา" }]}
+>
+  <Select
+    placeholder={selectedCurriculumID ? "เลือกรหัสวิชาตามหลักสูตร" : "กรุณาเลือกหลักสูตรก่อน"}
+    size="large"
+    onChange={handleCourseCodeChange}
+    showSearch
+    optionFilterProp="children"
+    allowClear
+    disabled={!selectedCurriculumID}
+  >
+    {courses.map((c) => (
+      <Option key={c.ID} value={c.ID}>
+        {c.CourseCode} - {c.EnglishCourseName} {c.ThaiCourseName} {/* ข้อความแสดง */}
+      </Option>
+    ))}
+  </Select>
+</Form.Item>
+
 
               {/* ── Names ── */}
               <div
