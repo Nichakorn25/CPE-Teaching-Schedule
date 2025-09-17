@@ -4962,15 +4962,13 @@ const exportScheduleToXLSX = async () => {
   const hide = message.loading("กำลังสร้าง Excel...", 0);
 
   try {
-    // ---------- 1) Ensure Buffer exists in browser ----------
+    // Buffer polyfill (เหมือนเดิม)
     if (typeof (window as any).Buffer === "undefined") {
       try {
-        // ถ้าติดตั้ง buffer เป็น dependency จะ import ได้
         // @ts-ignore
         const bufferMod = await import("buffer");
         (window as any).Buffer = bufferMod?.Buffer || (bufferMod as any)?.default?.Buffer;
       } catch (e) {
-        // ถ้า import ไม่ได้ ให้โหลด polyfill จาก CDN เป็น fallback
         await new Promise<void>((resolve, reject) => {
           const s = document.createElement("script");
           s.src = "https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.js";
@@ -4981,70 +4979,13 @@ const exportScheduleToXLSX = async () => {
       }
     }
 
-    // ---------- 2) Load browser build of xlsx-populate ----------
+    // load xlsx-populate browser build
     // @ts-ignore
     const XlsxPopulateModule = await import("xlsx-populate/browser/xlsx-populate.min.js");
     const XlsxPopulate: any = XlsxPopulateModule?.default || XlsxPopulateModule || (window as any).XlsxPopulate;
     if (!XlsxPopulate) throw new Error("ไม่สามารถโหลด xlsx-populate (browser build) ได้");
 
-    // ---------- 3) Build allSubjects map ----------
-    interface SubjectInfo {
-      subject: string;
-      courseCode: string;
-      teacher: string;
-      section: string;
-      studentYear: string;
-      room: string;
-      capacity: number;
-      schedule: Map<string, Array<{ startTime: string; endTime: string; room: string }>>;
-      isTimeFixed: boolean;
-    }
-
-    const allSubjects = new Map<string, SubjectInfo>();
-
-    scheduleData.forEach((dayData: any) => {
-      if (dayData.subCells && dayData.subCells.length > 0) {
-        dayData.subCells.forEach((subCell: any) => {
-          const key = `${subCell.classData.courseCode || "NO_CODE"}-${subCell.classData.section || "1"}`;
-          let capacity = null;
-          if (subCell.scheduleId && originalScheduleData) {
-            const originalSchedule = originalScheduleData.find((s: any) => s.ID === subCell.scheduleId);
-            if (originalSchedule?.OfferedCourses?.Capacity !== undefined) {
-              capacity = originalSchedule.OfferedCourses.Capacity;
-            }
-            allSubjects.set(key, {
-              subject: subCell.classData.subject || "ไม่ระบุวิชา",
-              courseCode: subCell.classData.courseCode || "N/A",
-              teacher: subCell.classData.teacher || "ไม่ระบุอาจารย์",
-              section: subCell.classData.section || "1",
-              studentYear: subCell.classData.studentYear || "", // keep as string
-              room: subCell.classData.room || "ไม่ระบุห้อง",
-              capacity,
-              schedule: new Map<string, Array<{ startTime: string; endTime: string; room: string }>>(),
-              isTimeFixed: !!subCell.isTimeFixed,
-            });
-          }
-          const subjectData = allSubjects.get(key)!;
-          if (!subjectData.schedule.has(subCell.day)) subjectData.schedule.set(subCell.day, []);
-          subjectData.schedule.get(subCell.day)!.push({
-            startTime: subCell.startTime,
-            endTime: subCell.endTime,
-            room: subCell.classData.room || "ไม่ระบุห้อง",
-          });
-        });
-      }
-    });
-
-    if (allSubjects.size === 0) {
-      hide();
-      message.warning("ไม่มีวิชาที่สามารถส่งออกได้");
-      return;
-    }
-
-    // ---------- 4) Prepare workbook ----------
-    const workbook: any = await XlsxPopulate.fromBlankAsync();
-
-    // helper col index -> letter
+    // helpers
     const colToLetter = (col: number) => {
       let s = "";
       let n = col;
@@ -5061,7 +5002,63 @@ const exportScheduleToXLSX = async () => {
       "13-14","14-15","15-16","16-17","17-18","18-19","19-20","20-21"
     ];
 
-    // --- pre-assign colors so color mapping consistent across sheets ---
+    // build allSubjects (reuse logic ของคุณ)
+    interface SubjectInfo {
+      subject: string;
+      courseCode: string;
+      teacher: string;
+      section: string;
+      studentYear: string;
+      room: string;
+      capacity: number;
+      schedule: Map<string, Array<{ startTime: string; endTime: string; room: string }>>;
+      isTimeFixed: boolean;
+    }
+
+    const allSubjects = new Map<string, SubjectInfo>();
+    scheduleData.forEach((dayData: any) => {
+      if (dayData.subCells && dayData.subCells.length > 0) {
+        dayData.subCells.forEach((subCell: any) => {
+          const key = `${subCell.classData.courseCode || "NO_CODE"}-${subCell.classData.section || "1"}`;
+          if (!allSubjects.has(key)) {
+            let capacity = 30;
+            if (subCell.scheduleId && originalScheduleData) {
+              const originalSchedule = originalScheduleData.find((s: any) => s.ID === subCell.scheduleId);
+              if (originalSchedule?.OfferedCourses?.Capacity !== undefined) capacity = originalSchedule.OfferedCourses.Capacity;
+            }
+            allSubjects.set(key, {
+              subject: subCell.classData.subject || "ไม่ระบุวิชา",
+              courseCode: subCell.classData.courseCode || "N/A",
+              teacher: subCell.classData.teacher || "ไม่ระบุอาจารย์",
+              section: subCell.classData.section || "1",
+              studentYear: subCell.classData.studentYear || "",
+              room: subCell.classData.room || "ไม่ระบุห้อง",
+              capacity,
+              schedule: new Map<string, Array<{ startTime: string; endTime: string; room: string }>>(),
+              isTimeFixed: !!subCell.isTimeFixed,
+            });
+          }
+          const s = allSubjects.get(key)!;
+          if (!s.schedule.has(subCell.day)) s.schedule.set(subCell.day, []);
+          s.schedule.get(subCell.day)!.push({
+            startTime: subCell.startTime,
+            endTime: subCell.endTime,
+            room: subCell.classData.room || "ไม่ระบุห้อง",
+          });
+        });
+      }
+    });
+
+    if (allSubjects.size === 0) {
+      hide();
+      message.warning("ไม่มีวิชาที่สามารถส่งออกได้");
+      return;
+    }
+
+    // workbook
+    const workbook: any = await XlsxPopulate.fromBlankAsync();
+
+    // color map
     const exportSubjectColors = [
       "FFE5E5","E5F3FF","E5FFE5","FFF5E5","F5E5FF","E5FFF5",
       "FFE5F5","F5FFE5","E5E5FF","FFF5F5","FFE5CC","CCFFE5",
@@ -5071,16 +5068,13 @@ const exportScheduleToXLSX = async () => {
     ];
     const exportSubjectColorMap = new Map<string, string>();
     let exportColorIndex = 0;
-    // assign color per courseCode (or key)
-    for (const [k, sInfo] of Array.from(allSubjects.entries())) {
-      if (!exportSubjectColorMap.has(k)) {
-        exportSubjectColorMap.set(k, exportSubjectColors[exportColorIndex % exportSubjectColors.length]);
-        exportColorIndex++;
-      }
+    for (const k of Array.from(allSubjects.keys())) {
+      exportSubjectColorMap.set(k, exportSubjectColors[exportColorIndex % exportSubjectColors.length]);
+      exportColorIndex++;
     }
     const getExportSubjectColor = (key: string) => exportSubjectColorMap.get(key) || "FFFFFF";
 
-    // ---------- 5) split subjects into 5 groups in order requested ----------
+    // split groups (same as before)
     const fixedSubjects: Array<[string, SubjectInfo]> = [];
     const year2: Array<[string, SubjectInfo]> = [];
     const year3: Array<[string, SubjectInfo]> = [];
@@ -5096,7 +5090,6 @@ const exportScheduleToXLSX = async () => {
       else others.push(entry);
     }
 
-    // sheet definitions in order
     const sheetsDef: { name: string; items: Array<[string, SubjectInfo]> }[] = [
       { name: "Fixed Time", items: fixedSubjects },
       { name: "Year 2", items: year2 },
@@ -5105,10 +5098,14 @@ const exportScheduleToXLSX = async () => {
       { name: "Others", items: others },
     ];
 
-    // helper to create/populate a sheet
+    // constants
+    const TIME_COL_WIDTH = 7; // ปรับตามต้องการ
+    const LINE_HEIGHT = 12;
+    const MIN_ROW_HEIGHT = 16;
+
+    // create sheet fn (modified)
     const createSheetFromItems = (sheet: any, items: Array<[string, SubjectInfo]>) => {
-      // headers
-      const DAYS_LOCAL = DAYS; // use existing DAYS array
+      const DAYS_LOCAL = DAYS;
       const header1: string[] = ['วิชา', 'กลุ่ม', 'คน/กลุ่ม', 'อาจารย์'];
       DAYS_LOCAL.forEach((day: string) => {
         header1.push(day);
@@ -5116,7 +5113,6 @@ const exportScheduleToXLSX = async () => {
       });
       const header2: string[] = ['รหัส/ชื่อวิชา', 'Section', 'Capacity', 'Teacher'];
       DAYS_LOCAL.forEach(() => compactTimeSlots.forEach(t => header2.push(t)));
-
       const totalColumns = 4 + (DAYS_LOCAL.length * compactTimeSlots.length);
 
       // write headers
@@ -5134,55 +5130,62 @@ const exportScheduleToXLSX = async () => {
         curCol = endCol + 1;
       }
 
-      // column widths & row heights
+      // widths/heights
       sheet.column("A").width(30);
       sheet.column("B").width(8);
       sheet.column("C").width(8);
-      sheet.column("D").width(18);
-      for (let c = 5; c <= totalColumns; c++) sheet.column(colToLetter(c)).width(6);
-      sheet.row(1).height(25);
-      sheet.row(2).height(20);
+      sheet.column("D").width(22);
+      for (let c = 5; c <= totalColumns; c++) sheet.column(colToLetter(c)).width(TIME_COL_WIDTH);
+      sheet.row(1).height(28);
+      sheet.row(2).height(18);
 
-      // header row1 style (only row1)
+      // style header1
       const lastColLetter = colToLetter(totalColumns);
       sheet.range(`A1:${lastColLetter}1`).style('fill', 'E3F2FD');
       sheet.range(`A1:${lastColLetter}1`).style('bold', true);
       sheet.range(`A1:${lastColLetter}1`).style('horizontalAlignment', 'center');
       sheet.range(`A1:${lastColLetter}1`).style('verticalAlignment', 'center');
 
-      // if no items, write a "No data" row
       if (items.length === 0) {
-        sheet.cell(`A3`).value("ไม่มีข้อมูลใน sheet นี้");
+        sheet.cell("A3").value("ไม่มีข้อมูลใน sheet นี้");
+        sheet.range(`A1:${lastColLetter}4`).style('border', true);
         return;
       }
 
-      // write each subject (2 rows per subject)
+      // write subjects, but MERGE A and D across the pair rows and put code/name + teachers inside
       let rowPtr = 3;
       for (const [key, subjectInfo] of items) {
-        // row1
-        sheet.cell(`A${rowPtr}`).value(subjectInfo.courseCode.length > 12 ? subjectInfo.courseCode.substring(0,12) + "..." : subjectInfo.courseCode);
-        sheet.cell(`B${rowPtr}`).value(subjectInfo.section);
-        sheet.cell(`C${rowPtr}`).value(subjectInfo.capacity);
-        sheet.cell(`D${rowPtr}`).value("");
-        // row2
-        const subjNameShort = subjectInfo.subject.length > 25 ? subjectInfo.subject.substring(0,25) + "..." : subjectInfo.subject;
-        sheet.cell(`A${rowPtr + 1}`).value(subjNameShort);
-        sheet.cell(`D${rowPtr + 1}`).value((() => {
-          let t = subjectInfo.teacher || "";
-          if (t.includes(",")) {
-            const arr = t.split(",").map((s: string) => s.trim());
-            t = arr.length > 2 ? arr.slice(0,2).join(', ') + " +" + (arr.length - 2) : arr.join(', ');
-          }
-          return t.length > 20 ? t.substring(0,20) + "..." : t;
-        })());
+        // prepare text
+        const courseCodeText = subjectInfo.courseCode.length > 12 ? subjectInfo.courseCode.substring(0,12) + "..." : subjectInfo.courseCode;
+        const courseNameText = subjectInfo.subject.length > 25 ? subjectInfo.subject.substring(0,25) + "..." : subjectInfo.subject;
+        const aText = `${courseCodeText}\n${courseNameText}`;
 
-        // merge B and C vertically
+        // teachers split to lines
+        const teacherRaw = subjectInfo.teacher || "";
+        const teacherLines = teacherRaw.split(",").map((s: string) => s.trim()).filter(Boolean);
+        const teacherText = teacherLines.join("\n") || "";
+
+        // MERGE A and D across two rows
+        sheet.range(`A${rowPtr}:A${rowPtr + 1}`).merged(true);
+        sheet.cell(`A${rowPtr}`).value(aText).style('wrapText', true).style('horizontalAlignment', 'left');
+
+        sheet.range(`D${rowPtr}:D${rowPtr + 1}`).merged(true);
+        sheet.cell(`D${rowPtr}`).value(teacherText).style('wrapText', true).style('horizontalAlignment', 'left');
+
+        // B and C merged vertically as before
         sheet.range(`B${rowPtr}:B${rowPtr + 1}`).merged(true);
         sheet.range(`C${rowPtr}:C${rowPtr + 1}`).merged(true);
-        sheet.row(rowPtr).height(20);
-        sheet.row(rowPtr + 1).height(20);
+        sheet.cell(`B${rowPtr}`).value(subjectInfo.section);
+        sheet.cell(`C${rowPtr}`).value(subjectInfo.capacity);
 
-        // fill times and color SEC cells using global mapping
+        // compute required height: at least show 2 lines for A (code+name) and teacherLines
+        const linesNeeded = Math.max(2, teacherLines.length || 1);
+        const totalHeight = Math.max(MIN_ROW_HEIGHT * 2, LINE_HEIGHT * linesNeeded + 8); // padding
+        const perRow = Math.max(MIN_ROW_HEIGHT, Math.ceil(totalHeight / 2));
+        sheet.row(rowPtr).height(perRow);
+        sheet.row(rowPtr + 1).height(perRow);
+
+        // fill times into the first row of the pair (and keep second row empty)
         let col = 5;
         for (const day of DAYS_LOCAL) {
           const daySchedule = subjectInfo.schedule.get(day) || [];
@@ -5191,45 +5194,66 @@ const exportScheduleToXLSX = async () => {
             const startHour = Number(tslot.split("-")[0]);
             if (daySchedule && daySchedule.length > 0) {
               for (const sch of daySchedule) {
-                const sh = parseInt(sch.startTime.split(":" )[0], 10);
-                const eh = parseInt(sch.endTime.split(":" )[0], 10);
+                const sh = parseInt(sch.startTime.split(":")[0], 10);
+                const eh = parseInt(sch.endTime.split(":")[0], 10);
                 if (startHour >= sh && startHour < eh) {
                   cellValue = `SEC:${subjectInfo.section}`;
                   break;
                 }
               }
             }
-            const cell1 = sheet.cell(`${colToLetter(col)}${rowPtr}`);
-            const cell2 = sheet.cell(`${colToLetter(col)}${rowPtr + 1}`);
-            cell1.value(cellValue);
-            cell2.value("");
+            const crefTop = `${colToLetter(col)}${rowPtr}`;
+            const crefBottom = `${colToLetter(col)}${rowPtr + 1}`;
+            sheet.cell(crefTop).value(cellValue).style('horizontalAlignment', 'center').style('verticalAlignment', 'center');
+            sheet.cell(crefBottom).value("");
 
             if (cellValue && cellValue.includes("SEC:")) {
-              const colorHex = getExportSubjectColor(key); // e.g. "FFE5E5"
-              cell1.style("fill", colorHex);
-              cell1.style("bold", true);
-              cell1.style("horizontalAlignment", "center");
-              cell1.style("verticalAlignment", "center");
-            } else {
-              cell1.style("horizontalAlignment", "center");
-              cell1.style("verticalAlignment", "center");
+              const colorHex = getExportSubjectColor(key);
+              sheet.cell(crefTop).style('fill', colorHex).style('bold', true);
             }
             col++;
           }
         }
 
-        // NOTE: removed fill for subject rows per your request (no blue there)
         rowPtr += 2;
+      } // end items
+
+      // apply borders: grid + outer thick + separators
+      const lastRow = (rowPtr - 1);
+      const fullRange = `A1:${lastColLetter}${lastRow}`;
+      sheet.range(fullRange).style('border', true);
+
+      // outer thick border
+      sheet.range(`A1:${lastColLetter}1`).style({ topBorder: 'thick' });
+      sheet.range(`A${lastRow}:${lastColLetter}${lastRow}`).style({ bottomBorder: 'thick' });
+      sheet.range(`A1:A${lastRow}`).style({ leftBorder: 'thick' });
+      sheet.range(`${lastColLetter}1:${lastColLetter}${lastRow}`).style({ rightBorder: 'thick' });
+
+      // thick separation between main info and time grid
+      sheet.range(`D1:D${lastRow}`).style({ rightBorder: 'thick' });
+
+      // medium borders between days
+      let dayColStart = 5;
+      for (let d = 0; d < DAYS_LOCAL.length; d++) {
+        const dayStart = dayColStart;
+        const dayEnd = dayStart + compactTimeSlots.length - 1;
+        const dayEndLetter = colToLetter(dayEnd);
+        sheet.range(`${dayEndLetter}1:${dayEndLetter}${lastRow}`).style({ rightBorder: 'medium' });
+        const dayStartLetter = colToLetter(dayStart);
+        sheet.range(`${dayStartLetter}1:${dayStartLetter}${lastRow}`).style({ leftBorder: 'medium' });
+        dayColStart = dayEnd + 1;
       }
+
+      // format header row2 smaller, centered
+      sheet.range(`A2:${lastColLetter}2`).style({ bold: true, horizontalAlignment: 'center', verticalAlignment: 'center' });
     };
 
-    // ---------- 6) Create sheets in order ----------
-    // Use the initial sheet (sheet 0) for the first group, then add others
+    // create sheets (same logic)
     let first = true;
     for (const def of sheetsDef) {
       if (first) {
         const sheet = workbook.sheet(0);
-        try { sheet.name(def.name); } catch(e) { /* ignore if API differs */ }
+        try { sheet.name(def.name); } catch (e) { /* ignore */ }
         createSheetFromItems(sheet, def.items);
         first = false;
       } else {
@@ -5238,9 +5262,9 @@ const exportScheduleToXLSX = async () => {
       }
     }
 
-    // ---------- 7) Output blob and download ----------
+    // output
     const now = new Date();
-    const filename = `ตารางสอน_multiSheets_${now.toISOString().slice(0,19).replace(/[-:]/g,'').replace('T','_')}.xlsx`;
+    const filename = `ตารางสอน_formatted_${now.toISOString().slice(0,19).replace(/[-:]/g,'').replace('T','_')}.xlsx`;
     const outputBlob: Blob = await workbook.outputAsync({ type: "blob" });
     const url = URL.createObjectURL(outputBlob);
     const a = document.createElement("a");
@@ -5259,6 +5283,7 @@ const exportScheduleToXLSX = async () => {
     message.error("เกิดข้อผิดพลาดในการสร้างไฟล์ Excel");
   }
 };
+
 
   // =================== TABLE COLUMNS WITH FIXED ROW GROUPING ===================
   const columns: ColumnsType<ExtendedScheduleData> = [
