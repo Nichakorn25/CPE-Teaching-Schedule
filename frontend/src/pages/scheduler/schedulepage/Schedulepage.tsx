@@ -45,7 +45,7 @@ import {
 } from "../../../services/https/SchedulerPageService";
 import { AllTeacher } from "../../../interfaces/Adminpage";
 import { getAllTeachers } from "../../../services/https/AdminPageServices";
-import { OpenCourseInterface, LaboratoryInterface } from "../../../interfaces/Adminpage"; 
+import { OpenCourseInterface, LaboratoryInterface,AcademicYearInterface } from "../../../interfaces/Adminpage"; 
 import { getOfferedCoursesByMajor, getLaboratory } from "../../../services/https/GetService";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
@@ -397,6 +397,60 @@ useEffect(() => {
   fetchAllTeachers();
 }, []);
 
+const getDisplayStudentYear = (level: string): string => {
+  if (!level) return "ทุกชั้นปี";
+  
+  const normalizedLevel = normalizeStudentYear(level);
+  
+  // ถ้าเป็นตัวเลข ให้แสดงเป็น "ปีที่ X"
+  if (/^\d+$/.test(normalizedLevel)) {
+    return `ปีที่ ${normalizedLevel}`;
+  }
+  
+  // ถ้าเป็น "ทุกชั้นปี" ให้แสดงตามที่เป็น
+  if (normalizedLevel === "ทุกชั้นปี") {
+    return "ทุกชั้นปี";
+  }
+  
+  // กรณีอื่นๆ
+  return normalizedLevel;
+};
+
+const normalizeStudentYear = (level: string | number): string => {
+  if (!level && level !== 0) return "ทุกชั้นปี";
+  
+  // แปลงเป็น string ก่อน
+  const levelStr = String(level).trim();
+  
+  // กรณีที่เป็นตัวเลขธรรมดา "1", "2", "3", "4" จาก backend
+  if (/^\d+$/.test(levelStr)) {
+    const num = parseInt(levelStr);
+    if (num >= 1 && num <= 9) {
+      return levelStr; // return "1", "2", "3", "4"
+    }
+  }
+  
+  // กรณีที่เป็น "เรียนได้ทุกชั้นปี" (อาจมีใน backend บางกรณี)
+  if (levelStr === 'เรียนได้ทุกชั้นปี') {
+    return "ทุกชั้นปี";
+  }
+  
+  // กรณีที่เป็นรูปแบบ "ปีที่ X" (fallback)
+  const yearMatch = levelStr.match(/ปีที่\s*(\d+)/);
+  if (yearMatch) {
+    return yearMatch[1];
+  }
+  
+  // กรณีอื่นๆ
+  if (levelStr === "0" || levelStr.toLowerCase() === "all") {
+    return "ทุกชั้นปี";
+  }
+  
+  // fallback: return ตามที่ได้รับ
+  return levelStr;
+};
+
+
 const loadInitialFilterData = async () => {
   const currentMajor = localStorage.getItem("major_name");
   const currentAcademicYear = localStorage.getItem("academicYear");
@@ -556,18 +610,45 @@ useEffect(() => {
       const studentYears = new Set<string>();
       const laboratories = new Set<string>();
 
+      // เพิ่ม "ทุกชั้นปี" เป็นตัวเลือกเริ่มต้น (เพราะอาจมีวิชาที่เรียนได้ทุกชั้นปี)
+      studentYears.add("ทุกชั้นปี");
+
       // ประมวลผลข้อมูลจาก OpenCourse API
       if (results[0].status === 'fulfilled' && results[0].value?.status === 200) {
         const openCourses: OpenCourseInterface[] = results[0].value.data;
         
         openCourses.forEach(course => {
+          // เพิ่มชื่อวิชา
           if (course.CourseName) {
             subjects.add(course.CourseName);
           }
           
+          // เพิ่มรหัสวิชา
           if (course.Code) {
             courseCodes.add(course.Code);
-            // เพิ่มชั้นปี
+          }
+          
+          // เพิ่มอาจารย์
+          if (course.Teachers && course.Teachers.length > 0) {
+            course.Teachers.forEach(teacher => {
+              const fullName = `${teacher.Title || ''} ${teacher.Firstname} ${teacher.Lastname}`.trim();
+              if (fullName) {
+                // Note: teachers จะถูกจัดการแยกใน useEffect อื่น
+              }
+            });
+          }
+          
+          // เพิ่มห้องเรียนจาก GroupInfos
+          if (course.GroupInfos && course.GroupInfos.length > 0) {
+            course.GroupInfos.forEach(group => {
+              if (group.Room && group.Room.trim() !== '') {
+                rooms.add(group.Room.trim());
+              }
+            });
+          }
+          
+          // เพิ่มชั้นปีจาก Code pattern matching (OpenCourse API ไม่มี AcademicYear.Level)
+          if (course.Code) {
             const yearMatch = course.Code.match(/[A-Z]+(\d)/);
             if (yearMatch && yearMatch[1]) {
               const year = yearMatch[1];
@@ -576,16 +657,18 @@ useEffect(() => {
               }
             }
           }
-          
-          // เพิ่มห้องเรียน
-          if (course.GroupInfos && course.GroupInfos.length > 0) {
-            course.GroupInfos.forEach(group => {
-              if (group.Room && group.Room.trim() !== '') {
-                rooms.add(group.Room.trim());
-              }
-            });
-          }
         });
+
+        console.log('✅ OpenCourse data loaded:', {
+          subjects: subjects.size,
+          courseCodes: courseCodes.size, 
+          rooms: rooms.size,
+          studentYears: studentYears.size,
+          studentYearsList: Array.from(studentYears),
+          totalCourses: openCourses.length
+        });
+      } else {
+        console.warn('Failed to load OpenCourse data or no data available');
       }
 
       // ประมวลผลข้อมูลจาก Laboratory API
@@ -597,6 +680,13 @@ useEffect(() => {
             laboratories.add(lab.Room.trim());
           }
         });
+
+        console.log('✅ Laboratory data loaded:', {
+          laboratories: laboratories.size,
+          totalLabs: laboratoryData.length
+        });
+      } else {
+        console.warn('Failed to load Laboratory data or no data available');
       }
 
       // อัปเดต filterOptions ทันที (ไม่รอ scheduleData)
@@ -605,30 +695,35 @@ useEffect(() => {
         subjects: Array.from(subjects).filter(Boolean).sort(),
         courseCodes: Array.from(courseCodes).filter(Boolean).sort(),
         rooms: Array.from(rooms).filter(Boolean).sort(),
-        studentYears: Array.from(studentYears).sort(),
+        studentYears: Array.from(studentYears).sort((a, b) => {
+          // เรียงลำดับ: ตัวเลข 1-9 ก่อน, แล้วตาม "ทุกชั้นปี"
+          if (a === "ทุกชั้นปี") return 1;
+          if (b === "ทุกชั้นปี") return -1;
+          const numA = parseInt(a);
+          const numB = parseInt(b);
+          if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+          return a.localeCompare(b);
+        }),
         laboratories: Array.from(laboratories).filter(Boolean).sort(),
+        // รวมอาจารย์จาก API และ allTeachers
+        teachers: [
+          ...extractTeachersFromAPI(),
+          ...prevOptions.teachers.filter(teacher => 
+            !extractTeachersFromAPI().includes(teacher)
+          )
+        ].filter((teacher, index, array) => array.indexOf(teacher) === index).sort(), // remove duplicates
       }));
       
-      console.log('✅ Filter options updated immediately from APIs:', {
-        subjectsCount: subjects.size,
-        courseCodesCount: courseCodes.size,
-        roomsCount: rooms.size,
-        studentYearsCount: studentYears.size,
-        laboratoriesCount: laboratories.size
-      });
+      console.log('✅ All initial filter data loaded successfully');
       
     } catch (error) {
-      console.error('❌ Error updating initial filter options:', error);
+      console.error('❌ Error loading initial filter data:', error);
     }
   };
 
   // เรียกใช้ทันทีเมื่อ component mount และเมื่อ localStorage เปลี่ยน
   updateInitialFilterOptions();
-}, [academicYear, term, major_name]); // dependency ตาม localStorage values
-useEffect(() => {
-  loadInitialFilterData();
-}, []);
-
+}, [academicYear, term, major_name]);
 const extractTeachersFromAPI = () => {
   const teachers = new Set<string>();
   const currentMajor = localStorage.getItem("major_name");
@@ -666,22 +761,11 @@ const extractAPIBasedOptions = () => {
   // Extract from original schedule data if available
   if (originalScheduleData && originalScheduleData.length > 0) {
     originalScheduleData.forEach((schedule: any) => {
-      // Student years
-      if (schedule.OfferedCourses?.AllCourses?.AcademicYear?.AcademicYearID) {
-        const academicYearId = schedule.OfferedCourses.AllCourses.AcademicYear.AcademicYearID;
-        studentYears.add(academicYearId.toString());
-      }
-      
+      // ใช้ Level เป็นหลัก
       if (schedule.OfferedCourses?.AllCourses?.AcademicYear?.Level) {
         const level = schedule.OfferedCourses.AllCourses.AcademicYear.Level;
-        if (level && level !== 'เรียนได้ทุกชั้นปี') {
-          const yearMatch = level.match(/ปีที่\s*(\d+)/);
-          if (yearMatch) {
-            studentYears.add(yearMatch[1]);
-          } else if (!level.includes('ปีที่')) {
-            studentYears.add(level);
-          }
-        }
+        const normalizedLevel = normalizeStudentYear(level);
+        studentYears.add(normalizedLevel);
       }
 
       // Subjects and course codes
@@ -709,15 +793,24 @@ const extractAPIBasedOptions = () => {
     });
   }
 
-  // กรองเฉพาะตัวเลข 1-9
+  // กรองเฉพาะชั้นปีที่เป็นตัวเลข 1-9 และ "ทุกชั้นปี"
   const validYears = Array.from(studentYears).filter(year => {
+    if (year === "ทุกชั้นปี") return true;
     const num = parseInt(year);
     return !isNaN(num) && num >= 1 && num <= 9;
   });
 
   return {
     teachers: Array.from(teachers).filter(Boolean).sort(),
-    studentYears: validYears.sort((a, b) => parseInt(a) - parseInt(b)),
+    studentYears: validYears.sort((a, b) => {
+      // เรียงลำดับ: ตัวเลข 1-9 ก่อน, แล้วตาม "ทุกชั้นปี"
+      if (a === "ทุกชั้นปี") return 1;
+      if (b === "ทุกชั้นปี") return -1;
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.localeCompare(b);
+    }),
     subjects: Array.from(subjects).filter(Boolean).sort(),
     courseCodes: Array.from(courseCodes).filter(Boolean).sort(),
     rooms: Array.from(rooms).filter(Boolean).sort(),
@@ -742,21 +835,7 @@ useEffect(() => {
 }, [allTeachers]);
 
   // =================== SIDEBAR FILTER FUNCTIONS ===================
-  const addSidebarFilterTag = (type: FilterTag['type'], value: string) => {
-    if (!value || sidebarFilterTags.some(tag => tag.type === type && tag.value === value)) {
-      return;
-    }
-
-    const newTag: FilterTag = {
-      id: `sidebar-${type}-${value}-${Date.now()}`,
-      type,
-      value,
-      label: `${getFilterTypeLabel(type)}: ${value}`,
-      color: FILTER_TAG_COLORS[type]
-    };
-
-    setSidebarFilterTags(prev => [...prev, newTag]);
-  };
+  
 
   const removeSidebarFilterTag = (tagId: string) => {
     setSidebarFilterTags(prev => prev.filter(tag => tag.id !== tagId));
@@ -781,22 +860,58 @@ const applySidebarFilters = () => {
           return courseCard.teacher
             .toLowerCase()
             .includes(tag.value.toLowerCase());
+            
         case 'studentYear':
+          // ใช้ Level จาก originalScheduleData สำหรับ sidebar filter
+          if (courseCard.scheduleIds && Array.isArray(courseCard.scheduleIds)) {
+            return courseCard.scheduleIds.some(scheduleId => {
+              const originalSchedule = originalScheduleData.find(
+                (schedule: any) => schedule.ID === scheduleId
+              );
+              
+              if (originalSchedule) {
+                const level = originalSchedule?.OfferedCourses?.AllCourses?.AcademicYear?.Level;
+                if (level) {
+                  const normalizedLevel = normalizeStudentYear(level);
+                  return normalizedLevel === tag.value;
+                }
+              }
+              return false;
+            });
+          } else if (courseCard.scheduleId) {
+            const originalSchedule = originalScheduleData.find(
+              (schedule: any) => schedule.ID === courseCard.scheduleId
+            );
+            
+            if (originalSchedule) {
+              const level = originalSchedule?.OfferedCourses?.AllCourses?.AcademicYear?.Level;
+              if (level) {
+                const normalizedLevel = normalizeStudentYear(level);
+                return normalizedLevel === tag.value;
+              }
+            }
+          }
+          
+          // fallback: ใช้จาก courseCard.studentYear
           return courseCard.studentYear === tag.value;
+          
         case 'subject':
           return courseCard.subject
             .toLowerCase()
             .includes(tag.value.toLowerCase());
+            
         case 'courseCode':
           return courseCard.courseCode
             .toLowerCase()
             .includes(tag.value.toLowerCase());
+            
         case 'room':
           return courseCard.room
             .toLowerCase()
             .includes(tag.value.toLowerCase());
+            
         case 'laboratory':
-          // ตรวจสอบห้องแลปสำหรับ course card
+          // ตรวจสอบห้องแล็บสำหรับ course card
           if (courseCard.scheduleIds && Array.isArray(courseCard.scheduleIds)) {
             return courseCard.scheduleIds.some(scheduleId => {
               const originalSchedule = originalScheduleData.find(
@@ -813,6 +928,7 @@ const applySidebarFilters = () => {
             return labRoom && labRoom.toLowerCase().includes(tag.value.toLowerCase());
           }
           return false;
+          
         default:
           return true;
       }
@@ -1091,7 +1207,6 @@ const addSubCellToSpecificRow = (targetRow: ExtendedScheduleData, subCell: SubCe
 const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
   const cards: CourseCard[] = [];
   
-  // เก็บข้อมูลวิชาทั้งหมดจาก API ก่อน (ไม่กรอง)
   const allCourseData: Array<{
     subject: string;
     courseCode: string;
@@ -1102,9 +1217,9 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
     studentYear: string;
     scheduleId: number;
     duration: number;
-    dayOfWeek: string; // เพิ่มเพื่อแยกแต่ละคาบ
-    startTime: string; // เพิ่มเพื่อแยกแต่ละคาบ
-    endTime: string;   // เพิ่มเพื่อแยกแต่ละคาบ
+    dayOfWeek: string;
+    startTime: string;
+    endTime: string;
   }> = [];
 
   schedules.forEach((schedule, index) => {
@@ -1135,34 +1250,18 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
       return "TBA";
     };
 
-    const getStudentYear = (schedule: ScheduleInterface): string => {
-      const academicYear = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear;
-
-      if (academicYear?.Level && academicYear.Level !== 'เรียนได้ทุกชั้นปี') {
-        if (/^\d+$/.test(academicYear.Level)) return academicYear.Level;
-        const yearMatch = academicYear.Level.match(/ปีที่\s*(\d+)/);
-        if (yearMatch) return yearMatch[1];
-      }
-
-      const academicYearId = academicYear?.AcademicYearID;
-      if (academicYearId) {
-        switch (academicYearId) {
-          case 2: return "1";
-          case 3: return "2";
-          case 4: return "3";
-          default:
-            if (academicYearId >= 5 && academicYearId <= 10) return (academicYearId - 1).toString();
-        }
-      }
-
-      if (schedule.OfferedCourses?.AllCourses?.Code) {
-        const code = schedule.OfferedCourses.AllCourses.Code;
-        const codeYearMatch1 = code.match(/[A-Z]{2,4}\d+\s+(\d)/);
-        if (codeYearMatch1) return codeYearMatch1[1];
-        const codeYearMatch2 = code.match(/[A-Z]{2,4}(\d)/);
-        if (codeYearMatch2) return codeYearMatch2[1];
-      }
-      return "1";
+    // ใช้ Level ที่เป็นตัวเลขจาก backend
+    const getStudentYearFromLevel = (schedule: ScheduleInterface): string => {
+      const level = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.Level;
+      const normalized = normalizeStudentYear(level);
+      
+      console.log('🎓 Course studentYear:', {
+        courseCode: schedule.OfferedCourses?.AllCourses?.Code,
+        originalLevel: level,
+        normalizedLevel: normalized
+      });
+      
+      return normalized;
     };
 
     const getTeacherInfo = (schedule: ScheduleInterface) => {
@@ -1223,7 +1322,7 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
     const teacherIds = teacherInfo.ids;
     const room = getRoomInfo(schedule);
     const section = schedule.SectionNumber?.toString() || "";
-    const studentYear = getStudentYear(schedule);
+    const studentYear = getStudentYearFromLevel(schedule);
 
     const getTimeString = (time: string | Date): string => {
       if (typeof time === 'string') {
@@ -1256,13 +1355,13 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
       studentYear,
       scheduleId: schedule.ID,
       duration: Math.max(1, duration),
-      dayOfWeek: schedule.DayOfWeek, // เพิ่ม
-      startTime: startTime, // เพิ่ม
-      endTime: endTime // เพิ่ม
+      dayOfWeek: schedule.DayOfWeek,
+      startTime: startTime,
+      endTime: endTime
     });
   });
 
-  // กรุ๊ปตามข้อมูลที่เหมือนกัน (ยกเว้นเวลาและวัน)
+  // กรุ๊ปข้อมูลที่เหมือนกัน
   const courseGroups = new Map<string, typeof allCourseData>();
   
   allCourseData.forEach(courseData => {
@@ -1279,19 +1378,15 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
   courseGroups.forEach((group, groupKey) => {
     const firstCourse = group[0];
     
-    // **แก้ไขการคำนวณ totalDuration ให้ถูกต้อง**
-    // แทนที่จะรวม duration ของทุก record ให้นับเฉพาะคาบที่ไม่ซ้ำกัน
     const uniquePeriods = new Set<string>();
-    
     group.forEach(course => {
-      // สร้าง unique key สำหรับแต่ละคาบ (วัน + เวลา)
       for (let slot = timeToSlotIndex(course.startTime); slot < timeToSlotIndex(course.endTime); slot++) {
         const periodKey = `${course.dayOfWeek}-${slot}`;
         uniquePeriods.add(periodKey);
       }
     });
     
-    const totalDuration = uniquePeriods.size; // นับจากจำนวนคาบที่ไม่ซ้ำกัน
+    const totalDuration = uniquePeriods.size;
 
     const card: CourseCard = {
       id: `course-card-${groupKey}`,
@@ -1302,7 +1397,7 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
       room: firstCourse.room,
       section: firstCourse.section,
       studentYear: firstCourse.studentYear,
-      duration: totalDuration, // ใช้ค่าที่คำนวณใหม่
+      duration: totalDuration,
       color: getSubjectColor(firstCourse.subject, firstCourse.courseCode),
       scheduleId: firstCourse.scheduleId,
       scheduleIds: group.map(course => course.scheduleId)
@@ -1310,12 +1405,13 @@ const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
 
     cards.push(card);
     
-    console.log(`📊 Created CourseCard: ${firstCourse.subject} with ${totalDuration} periods from ${group.length} records, scheduleIds:`, card.scheduleIds);
+    console.log(`📊 Created CourseCard: ${firstCourse.subject} (Year: ${getDisplayStudentYear(firstCourse.studentYear)}) with ${totalDuration} periods`);
   });
 
   setCourseCards(cards);
   setFilteredCourseCards(cards);
 };
+
 
 // เพิ่ม function ใหม่หลังจาก isCourseCardUsed
 const getCourseCardUsageInfo = (courseCard: CourseCard): { usedDuration: number; totalDuration: number; isFullyUsed: boolean } => {
@@ -2310,9 +2406,21 @@ const extractFilterOptions = (data: ExtendedScheduleData[]) => {
         });
       }
       
-      if (subCell.classData.studentYear) {
-        studentYears.add(subCell.classData.studentYear);
+      // เพิ่มชั้นปีจาก Level ใน originalScheduleData
+      if (subCell.scheduleId && originalScheduleData) {
+        const originalSchedule = originalScheduleData.find(
+          (schedule: any) => schedule.ID === subCell.scheduleId
+        );
+        
+        if (originalSchedule) {
+          const level = originalSchedule?.OfferedCourses?.AllCourses?.AcademicYear?.Level;
+          if (level) {
+            const normalizedLevel = normalizeStudentYear(level);
+            studentYears.add(normalizedLevel);
+          }
+        }
       }
+      
       if (subCell.classData.subject) {
         subjects.add(subCell.classData.subject);
       }
@@ -2337,8 +2445,9 @@ const extractFilterOptions = (data: ExtendedScheduleData[]) => {
     });
   });
 
-  // กรองเฉพาะตัวเลข 1-9 สำหรับปีการศึกษา
+  // กรองเฉพาะตัวเลข 1-9 และ "ทุกชั้นปี" สำหรับปีการศึกษา
   const validYears = Array.from(studentYears).filter(year => {
+    if (year === "ทุกชั้นปี") return true;
     const num = parseInt(year);
     return !isNaN(num) && num >= 1 && num <= 9;
   });
@@ -2346,7 +2455,15 @@ const extractFilterOptions = (data: ExtendedScheduleData[]) => {
   // อัปเดตเฉพาะที่เพิ่มขึ้น ไม่เขียนทับของเดิม
   setFilterOptions(prevOptions => ({
     teachers: Array.from(teachers).filter(Boolean).sort(),
-    studentYears: validYears.sort((a, b) => parseInt(a) - parseInt(b)),
+    studentYears: validYears.sort((a, b) => {
+      // เรียงลำดับ: ตัวเลข 1-9 ก่อน, แล้วตาม "ทุกชั้นปี"
+      if (a === "ทุกชั้นปี") return 1;
+      if (b === "ทุกชั้นปี") return -1;
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.localeCompare(b);
+    }),
     subjects: Array.from(subjects).filter(Boolean).sort(),
     courseCodes: Array.from(courseCodes).filter(Boolean).sort(),
     rooms: Array.from(rooms).filter(Boolean).sort(),
@@ -2355,6 +2472,8 @@ const extractFilterOptions = (data: ExtendedScheduleData[]) => {
 
   console.log('🎯 Filter options merged with schedule data:', {
     teachersCount: teachers.size,
+    studentYearsCount: validYears.length,
+    studentYears: Array.from(validYears),
     subjectsCount: subjects.size,
     laboratoriesCount: laboratories.size,
   });
@@ -2371,26 +2490,58 @@ useEffect(() => {
 
 // ⭐ ใหม่: โหลด filter options ทันทีที่ originalScheduleData มีข้อมูล  
 useEffect(() => {
-  if (originalScheduleData.length > 0 || allTeachers.length > 0) {
+  if (originalScheduleData.length > 0) {
+    console.log('🔍 Debug originalScheduleData for studentYears:');
+    originalScheduleData.forEach((schedule: any, index) => {
+      const level = schedule?.OfferedCourses?.AllCourses?.AcademicYear?.Level;
+      const normalizedLevel = normalizeStudentYear(level);
+      const courseCode = schedule?.OfferedCourses?.AllCourses?.Code;
+      
+      console.log(`Schedule ${index + 1}:`, {
+        courseCode,
+        originalLevel: level,
+        normalizedLevel: normalizedLevel
+      });
+    });
+    
+    // รีเฟรช filter options
     extractFilterOptions(scheduleData);
   }
 }, [originalScheduleData]);
 
   const addFilterTag = (type: FilterTag['type'], value: string) => {
-    if (!value || filterTags.some(tag => tag.type === type && tag.value === value)) {
-      return;
-    }
+  if (!value || filterTags.some(tag => tag.type === type && tag.value === value)) {
+    return;
+  }
 
-    const newTag: FilterTag = {
-      id: `${type}-${value}-${Date.now()}`,
-      type,
-      value,
-      label: `${getFilterTypeLabel(type)}: ${value}`,
-      color: FILTER_TAG_COLORS[type]
-    };
-
-    setFilterTags(prev => [...prev, newTag]);
+  const newTag: FilterTag = {
+    id: `${type}-${value}-${Date.now()}`,
+    type,
+    value,
+    label: `${getFilterTypeLabel(type)}: ${value}`,
+    color: FILTER_TAG_COLORS[type]
   };
+
+  console.log('🏷️ Adding filter tag:', newTag);
+  setFilterTags(prev => [...prev, newTag]);
+};
+
+const addSidebarFilterTag = (type: FilterTag['type'], value: string) => {
+  if (!value || sidebarFilterTags.some(tag => tag.type === type && tag.value === value)) {
+    return;
+  }
+
+  const newTag: FilterTag = {
+    id: `sidebar-${type}-${value}-${Date.now()}`,
+    type,
+    value,
+    label: `${getFilterTypeLabel(type)}: ${value}`,
+    color: FILTER_TAG_COLORS[type]
+  };
+
+  console.log('🏷️ Adding sidebar filter tag:', newTag);
+  setSidebarFilterTags(prev => [...prev, newTag]);
+};
 
   const removeFilterTag = (tagId: string) => {
     setFilterTags(prev => prev.filter(tag => tag.id !== tagId));
@@ -2442,26 +2593,31 @@ const applyFilters = () => {
             );
 
             if (scheduleFromOriginal) {
-              const academicYearId =
-                (scheduleFromOriginal.OfferedCourses?.AllCourses as any)
-                  ?.AcademicYear?.AcademicYearID;
+              const level = scheduleFromOriginal.OfferedCourses?.AllCourses?.AcademicYear?.Level;
 
-              if (academicYearId) {
-                return academicYearId.toString() === tag.value;
-              }
-
-              const level =
-                (scheduleFromOriginal.OfferedCourses?.AllCourses as any)
-                  ?.AcademicYear?.Level;
-              if (level && level !== 'เรียนได้ทุกชั้นปี') {
+              if (level) {
+                // กรณี "เรียนได้ทุกชั้นปี" 
+                if (level === 'เรียนได้ทุกชั้นปี') {
+                  return tag.value === "ทุกชั้นปี";
+                }
+                
+                // กรณีตัวเลขธรรมดา
+                if (/^\d+$/.test(level)) {
+                  return level === tag.value;
+                }
+                
+                // กรณี "ปีที่ X"
                 const yearMatch = level.match(/ปีที่\s*(\d+)/);
                 if (yearMatch) {
                   return yearMatch[1] === tag.value;
                 }
+                
+                // กรณีอื่นๆ
                 return level === tag.value;
               }
             }
 
+            // fallback: ใช้จาก subCell.classData.studentYear
             return subCell.classData.studentYear === tag.value;
 
           case 'subject':
@@ -2480,7 +2636,7 @@ const applyFilters = () => {
               .includes(tag.value.toLowerCase());
 
           case 'laboratory':
-            // ตรวจสอบห้องแลปจาก originalScheduleData
+            // ตรวจสอบห้องแล็บจาก originalScheduleData
             if (subCell.scheduleId && originalScheduleData) {
               const originalSchedule = originalScheduleData.find(
                 (schedule: any) => schedule.ID === subCell.scheduleId
@@ -3114,10 +3270,8 @@ const renderSubCell = (subCell: SubCell) => {
   const isScheduler = role === "Scheduler";
   const isTimeFixed = subCell.isTimeFixed;
 
-  // เพิ่มการเช็คสถานะ drag เพื่อซ่อน tooltip
   const isDragging = draggedSubCell !== null || draggedCourseCard !== null;
 
-  // เพิ่ม function สำหรับดึงข้อมูลห้องแลป
   const getLaboratoryRoom = (subCell: SubCell): string => {
     if (subCell.scheduleId && originalScheduleData) {
       const originalSchedule = originalScheduleData.find(
@@ -3130,7 +3284,24 @@ const renderSubCell = (subCell: SubCell) => {
     return "";
   };
 
+  // ดึงปีที่แท้จริงจาก Level และแสดงในรูปแบบ "ปีที่ X"
+  const getRealStudentYearDisplay = (subCell: SubCell): string => {
+    if (subCell.scheduleId && originalScheduleData) {
+      const originalSchedule = originalScheduleData.find(
+        (schedule: any) => schedule.ID === subCell.scheduleId
+      );
+      
+      if (originalSchedule) {
+        const level = originalSchedule?.OfferedCourses?.AllCourses?.AcademicYear?.Level;
+        return getDisplayStudentYear(level);
+      }
+    }
+    // fallback
+    return getDisplayStudentYear(subCell.classData.studentYear ?? "");
+  };
+
   const laboratoryRoom = getLaboratoryRoom(subCell);
+  const realStudentYearDisplay = getRealStudentYearDisplay(subCell);
 
   return (
     <div
@@ -3188,14 +3359,13 @@ const renderSubCell = (subCell: SubCell) => {
             </div>
             <p><b>🏷️ รหัสวิชา:</b> {subCell.classData.courseCode || "ไม่ระบุ"}</p>
             <p><b>📖 ชื่อวิชา:</b> {subCell.classData.subject || "ไม่ระบุ"}</p>
-            <p><b>🎓 ชั้นปี:</b> {subCell.classData.studentYear ? `ปีที่ ${subCell.classData.studentYear}` : "ไม่ระบุ"}</p>
+            <p><b>🎓 ชั้นปี:</b> {realStudentYearDisplay}</p>
             <p><b>📄 หมู่เรียน:</b> {subCell.classData.section || "ไม่ระบุ"}</p>
             <p><b>👩‍🏫 อาจารย์:</b> {subCell.classData.teacher || "ไม่ระบุ"}</p>
             <p><b>🏢 ห้องเรียน:</b> {subCell.classData.room || "ไม่ระบุ"}</p>
             
-            {/* เพิ่มบรรทัดห้องแลป */}
             {laboratoryRoom && (
-              <p><b>🔬 ห้องแลป:</b> {laboratoryRoom}</p>
+              <p><b>🔬 ห้องแล็บ:</b> {laboratoryRoom}</p>
             )}
             
             <p><b>📅 วัน:</b> {subCell.day}</p>
@@ -3214,8 +3384,8 @@ const renderSubCell = (subCell: SubCell) => {
         }
         placement="top"
         overlayStyle={{ maxWidth: "400px", backgroundColor: "white", color: "black" }}
-        trigger={isDragging ? [] : ["hover"]} // แก้ไขให้ซ่อนขณะ drag
-        open={isDragging ? false : undefined} // บังคับซ่อนขณะ drag
+        trigger={isDragging ? [] : ["hover"]}
+        open={isDragging ? false : undefined}
       >
         <div style={{
           flex: 1,
@@ -3270,7 +3440,7 @@ const renderSubCell = (subCell: SubCell) => {
         </div>
       </Tooltip>
 
-      {/* TimeFixed Course Lock Icon */}
+      {/* มี icon และส่วนอื่นๆ เหมือนเดิม */}
       {isTimeFixed && (
         <div
           style={{
@@ -3296,7 +3466,6 @@ const renderSubCell = (subCell: SubCell) => {
         </div>
       )}
 
-      {/* "ใช้แล้ว" Badge for TimeFixed */}
       {isTimeFixed && (
         <div
           style={{
@@ -3316,7 +3485,6 @@ const renderSubCell = (subCell: SubCell) => {
         </div>
       )}
 
-      {/* Delete Button for Scheduler */}
       {isScheduler && !isTimeFixed && (
         <div
           style={{
@@ -3353,7 +3521,6 @@ const renderSubCell = (subCell: SubCell) => {
         </div>
       )}
 
-      {/* Duration Display */}
       <div style={{
         position: "absolute",
         bottom: "4px",
@@ -3369,7 +3536,6 @@ const renderSubCell = (subCell: SubCell) => {
         {duration}คาบ
       </div>
 
-      {/* Bottom Color Strip */}
       <div style={{
         position: "absolute",
         left: "0",
@@ -3380,7 +3546,6 @@ const renderSubCell = (subCell: SubCell) => {
         borderRadius: "0 0 6px 6px"
       }} />
       
-      {/* Hours Display for Multi-hour Classes */}
       {duration > 1 && (
         <div style={{
           position: "absolute",
@@ -3400,6 +3565,7 @@ const renderSubCell = (subCell: SubCell) => {
     </div>
   );
 };
+
 
 
   // เพิ่ม helper function สำหรับสร้าง empty row
@@ -3434,7 +3600,6 @@ const createEmptyDayRow = (day: string, dayIndex: number, rowIndex: number, tota
   return emptyRowData;
 };
 
-// ปรับปรุงการเรียกใช้ใน transformScheduleDataWithRowSeparation (ลบการ merge)
 const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[]): ExtendedScheduleData[] => {
   const result: ExtendedScheduleData[] = [];
 
@@ -3442,12 +3607,9 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
   const getTeacherInfoFromSchedule = (schedule: ScheduleInterface) => {
     const offeredAny = (schedule.OfferedCourses as any) ?? {};
 
-    // 1) UserAllCourses อาจอยู่ใน AllCourses
     const uaFromAll = offeredAny?.AllCourses?.UserAllCourses;
-    // 2) หรืออาจอยู่ตรง OfferedCourses
     const uaFromOffered = offeredAny?.UserAllCourses;
 
-    // รวมทั้งสองที่ (ถ้ามี)
     const combined = [
       ...(Array.isArray(uaFromAll) ? uaFromAll : []),
       ...(Array.isArray(uaFromOffered) ? uaFromOffered : []),
@@ -3471,7 +3633,6 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
       return { namesJoined: uniqueNames.join(", "), ids };
     }
 
-    // fallback: ถ้ามี OfferedCourses.User (structure เก่า)
     const offeredUser = offeredAny?.User;
     if (offeredUser) {
       const id = offeredUser.ID ?? offeredAny?.UserID ?? undefined;
@@ -3492,7 +3653,6 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
       result.push(firstRow, secondRow);
     } else {
       const subCells: SubCell[] = daySchedules.map((item: ScheduleInterface, index: number) => {
-        // แยกเวลา fixed
         const isTimeFixed = isTimeFixedCourse(item);
 
         const timeFixedCourse = item.TimeFixedCourses && item.TimeFixedCourses.length > 0 ?
@@ -3515,51 +3675,10 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
           return "TBA";
         };
 
-        const getStudentYear = (schedule: ScheduleInterface): string => {
-          const academicYear = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear;
-
-          if (academicYear?.Level && academicYear.Level !== 'เรียนได้ทุกชั้นปี') {
-            if (/^\d+$/.test(academicYear.Level)) {
-              return academicYear.Level;
-            }
-
-            const yearMatch = academicYear.Level.match(/ปีที่\s*(\d+)/);
-            if (yearMatch) {
-              return yearMatch[1];
-            }
-          }
-
-          const academicYearId = academicYear?.AcademicYearID;
-          if (academicYearId) {
-            switch (academicYearId) {
-              case 2: return "1";
-              case 3: return "2";
-              case 4: return "3";
-              case 1:
-                break;
-              default:
-                if (academicYearId >= 5 && academicYearId <= 10) {
-                  return (academicYearId - 1).toString();
-                }
-                break;
-            }
-          }
-
-          if (schedule.OfferedCourses?.AllCourses?.Code) {
-            const code = schedule.OfferedCourses.AllCourses.Code;
-
-            const codeYearMatch1 = code.match(/[A-Z]{2,4}\d+\s+(\d)/);
-            if (codeYearMatch1) {
-              return codeYearMatch1[1];
-            }
-
-            const codeYearMatch2 = code.match(/[A-Z]{2,4}(\d)/);
-            if (codeYearMatch2) {
-              return codeYearMatch2[1];
-            }
-          }
-
-          return "1";
+        // ใช้เฉพาะ Level จาก AcademicYear
+        const getStudentYearFromLevel = (schedule: ScheduleInterface): string => {
+          const level = (schedule.OfferedCourses?.AllCourses as any)?.AcademicYear?.Level;
+          return normalizeStudentYear(level);
         };
 
         // ดึงชื่ออาจารย์จากตำแหน่งที่ถูกต้อง
@@ -3575,7 +3694,7 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
           room: getRoomInfo(item),
           section: item.SectionNumber?.toString() || "",
           courseCode: item.OfferedCourses?.AllCourses?.Code || "",
-          studentYear: getStudentYear(item),
+          studentYear: getStudentYearFromLevel(item), // ใช้ Level เป็นหลัก
           offeredCoursesId: item.OfferedCoursesID ?? item.OfferedCourses?.ID ?? null,
         };
 
