@@ -4138,15 +4138,15 @@ const transformScheduleDataWithRowSeparation = (rawSchedules: ScheduleInterface[
   };
 
   // =================== FUNCTION TO CHECK SUB-CELL OVERLAP ===================
-  // แก้ไขฟังก์ชัน doSubCellsOverlap - จัดการ duplicate อย่างระเอียด
+// แทนที่ฟังก์ชันเดิมด้วยอันนี้
 const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
   // ถ้าเป็น SubCell เดียวกัน (ID เดียวกัน) ให้ return false
   if (subCell1.id === subCell2.id) {
     return false;
   }
 
-  // ตรวจสอบ TimeFixedCourse ที่เหมือนกันทุกประการ - ให้ถือว่าเป็น duplicate
-  const isExactDuplicate = 
+  // ตรวจสอบว่าเป็น "exact duplicate" (เนื้อหาเดียวกัน + เวลาเดียวกัน + วันเดียวกัน)
+  const isExactDuplicate =
     subCell1.classData.subject === subCell2.classData.subject &&
     subCell1.classData.courseCode === subCell2.classData.courseCode &&
     subCell1.classData.section === subCell2.classData.section &&
@@ -4157,20 +4157,22 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
     subCell1.endTime === subCell2.endTime &&
     subCell1.day === subCell2.day;
 
+  // ถ้าเป็น exact duplicate และเป็นคนละ object (id ต่างกัน) -> ถือว่า "ซ้อนทับ" (conflict)
   if (isExactDuplicate) {
-    return false; // ถือว่าไม่ซ้อนทับ เพื่อป้องกัน infinite loop
+    return true;
   }
 
-  // ตรวจสอบการทับซ้อนของเวลาปกติ
+  // ตรวจสอบการทับซ้อนของเวลาปกติ (slot-based)
   const start1 = subCell1.position.startSlot;
   const end1 = subCell1.position.endSlot;
   const start2 = subCell2.position.startSlot;
   const end2 = subCell2.position.endSlot;
-  
+
   const overlap = !(end1 <= start2 || end2 <= start1);
-  
+
   return overlap;
 };
+
 
   // =================== API FUNCTIONS ===================
   // แก้ไขฟังก์ชัน getSchedules ให้เรียก API ด้วย parameters ที่ถูกต้อง
