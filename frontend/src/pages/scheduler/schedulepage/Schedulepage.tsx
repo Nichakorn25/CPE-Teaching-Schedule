@@ -1204,103 +1204,172 @@ const clearAllRemovedCourses = () => {
     }
   });
 };
-const addSubCellToSpecificRow = (targetRow: ExtendedScheduleData, subCell: SubCell) => {
+const reconstructDaySchedule = (day: string, allSubCells: SubCell[]): ExtendedScheduleData[] => {
+  // ใช้ logic เดียวกันกับ transformScheduleDataWithRowSeparation
+  const daySubCells = allSubCells.filter(subCell => subCell.day === day);
+  
+  if (daySubCells.length === 0) {
+    // สร้าง 2 แถวว่างเหมือน Auto-Generate
+    const dayIndex = DAYS.findIndex(d => d === day);
+    const firstRow = createEmptyDayRow(day, dayIndex, 0, 2);
+    const secondRow = createEmptyDayRow(day, dayIndex, 1, 2);
+    secondRow.isFirstRowOfDay = false;
+    return [firstRow, secondRow];
+  }
+
+  // ใช้ separateOverlappingSubCells เหมือน Auto-Generate
+  const rowGroups = separateOverlappingSubCells(daySubCells);
+  const totalRowsForThisDay = rowGroups.length + 1; // +1 สำหรับ empty row
+  const dayIndex = DAYS.findIndex(d => d === day);
+  const result: ExtendedScheduleData[] = [];
+
+  // สร้างแถวจาก rowGroups
+  rowGroups.forEach((rowSubCells, rowIndex) => {
+    const dayData: ExtendedScheduleData = {
+      key: `day-${dayIndex}-row-${rowIndex}`,
+      day: day,
+      dayIndex: dayIndex,
+      rowIndex: rowIndex,
+      isFirstRowOfDay: rowIndex === 0,
+      totalRowsInDay: totalRowsForThisDay,
+      subCells: rowSubCells
+    };
+
+    // เพิ่ม time slots
+    TIME_SLOTS.forEach((time) => {
+      const matched = rowSubCells.filter(subCell =>
+        isTimeInSlot(subCell.startTime, subCell.endTime, time)
+      );
+
+      if (matched.length > 0) {
+        dayData[time] = {
+          backgroundColor: getSubjectColor(matched[0].classData.subject, matched[0].classData.courseCode),
+          classes: matched.map(subCell => ({
+            subject: subCell.classData.subject,
+            teacher: subCell.classData.teacher,
+            room: subCell.classData.room,
+          })),
+        };
+      } else if (time === "12:00-13:00") {
+        dayData[time] = {
+          content: "พักเที่ยง",
+          backgroundColor: "#FFF5E5",
+          isBreak: true,
+        };
+      } else {
+        dayData[time] = {
+          content: "",
+          backgroundColor: "#f9f9f9",
+          classes: [],
+        };
+      }
+    });
+
+    result.push(dayData);
+  });
+
+  // เพิ่ม empty row
+  const emptyRowIndex = rowGroups.length;
+  const emptyRow = createEmptyDayRow(day, dayIndex, emptyRowIndex, totalRowsForThisDay);
+  emptyRow.isFirstRowOfDay = false;
+  result.push(emptyRow);
+
+  return result;
+};
+
+// แทนที่ addSubCellToSpecificRow ด้วยฟังก์ชันใหม่
+const addSubCellToDay = (day: string, subCell: SubCell) => {
   setScheduleData(prevData => {
     const newData = [...prevData];
     
-    // หา index ของแถวเป้าหมาย
-    const targetRowIndex = newData.findIndex(row => row.key === targetRow.key);
+    // ตรวจสอบขัดแย้งก่อนเพิ่ม
+    const conflictInfo = checkConflictsAcrossAllRows(subCell, prevData);
     
-    if (targetRowIndex === -1) {
-      console.error('Target row not found');
-      return prevData;
+    if (conflictInfo.hasConflict) {
+      showConflictModal(conflictInfo, subCell);
+      return prevData; // ไม่เพิ่มถ้ามีขัดแย้ง
     }
     
-    // ตรวจสอบว่าแถวเป้าหมายมีการทับซ้อนหรือไม่
-    const hasConflictInTargetRow = (newData[targetRowIndex].subCells || []).some(existingSubCell => 
-      doSubCellsOverlap(subCell, existingSubCell)
-    );
+    // รวบรวม SubCell ทั้งหมดในวันนั้น รวมกับ SubCell ใหม่
+    const allDaySubCells: SubCell[] = [];
     
-    if (hasConflictInTargetRow) {
-      // ถ้าแถวเป้าหมายมีการทับซ้อน ให้สร้างแถวใหม่
-      const dayIndex = DAYS.findIndex(d => d === subCell.day);
-      const dayRows = newData.filter(row => row.day === subCell.day);
-      const newRowIndex = dayRows.length;
-      const newTotalRows = dayRows.length + 1;
-      
-      const newRowData: ExtendedScheduleData = {
-        key: `day-${dayIndex}-row-${newRowIndex}`,
-        day: subCell.day,
-        dayIndex: dayIndex,
-        rowIndex: newRowIndex,
-        isFirstRowOfDay: false,
-        totalRowsInDay: newTotalRows,
-        subCells: [subCell]
-      };
-      
-      // เพิ่ม time slots
-      TIME_SLOTS.forEach((time) => {
-        if (time === "12:00-13:00") {
-          newRowData[time] = {
-            content: "พักเที่ยง",
-            backgroundColor: "#FFF5E5",
-            isBreak: true,
-          };
-        } else {
-          newRowData[time] = {
-            content: "",
-            backgroundColor: "#f9f9f9",
-            classes: [],
-          };
-        }
-      });
-      
-      // อัปเดต totalRowsInDay ของแถวอื่นในวันเดียวกัน
-      newData.forEach(row => {
-        if (row.day === subCell.day) {
-          row.totalRowsInDay = newTotalRows;
-        }
-      });
-      
-      newData.push(newRowData);
-      
-    } else {
-      // ถ้าแถวเป้าหมายไม่มีการทับซ้อน ให้เพิ่มลงในแถวนั้นเลย
-      if (!newData[targetRowIndex].subCells) {
-        newData[targetRowIndex].subCells = [];
+    // เก็บ SubCell จากแถวเดิม
+    newData.forEach(row => {
+      if (row.day === day && row.subCells && row.subCells.length > 0) {
+        allDaySubCells.push(...row.subCells);
       }
-      newData[targetRowIndex].subCells.push(subCell);
-      
-      // ตรวจสอบว่าต้องเพิ่ม empty row หรือไม่
-      const dayRows = newData.filter(row => row.day === subCell.day);
-      const isLastRowOfDay = targetRowIndex === Math.max(...dayRows.map(row => newData.findIndex(r => r.key === row.key)));
-      const targetRowHasOnlyNewCell = newData[targetRowIndex].subCells.length === 1;
-      
-      if (isLastRowOfDay && !targetRowHasOnlyNewCell) {
-        // สร้าง empty row ใหม่
-        const dayIndex = DAYS.findIndex(d => d === subCell.day);
-        const newEmptyRowIndex = dayRows.length;
-        const newTotalRows = dayRows.length + 1;
-        
-        const newEmptyRow = createEmptyDayRow(subCell.day, dayIndex, newEmptyRowIndex, newTotalRows);
-        newEmptyRow.isFirstRowOfDay = false;
-        
-        // อัปเดต totalRowsInDay
-        newData.forEach(row => {
-          if (row.day === subCell.day) {
-            row.totalRowsInDay = newTotalRows;
-          }
-        });
-        
-        newData.push(newEmptyRow);
-      }
-    }
+    });
     
-    return newData;
+    // เพิ่ม SubCell ใหม่
+    allDaySubCells.push(subCell);
+    
+    // ลบแถวเดิมของวันนั้น
+    const filteredData = newData.filter(row => row.day !== day);
+    
+    // สร้างแถวใหม่ด้วย logic เดียวกับ Auto-Generate
+    const newDayRows = reconstructDaySchedule(day, allDaySubCells);
+    
+    // รวมข้อมูล: วันอื่น + วันที่สร้างใหม่
+    const finalData = [...filteredData, ...newDayRows];
+    
+    // เรียงลำดับตาม dayIndex และ rowIndex
+    finalData.sort((a, b) => {
+      if (a.dayIndex !== b.dayIndex) {
+        return (a.dayIndex || 0) - (b.dayIndex || 0);
+      }
+      return (a.rowIndex || 0) - (b.rowIndex || 0);
+    });
+    
+    return finalData;
   });
 };
 
+// แทนที่ addSubCellToSpecificRow ในส่วน handleCellDrop
+const addSubCellToSpecificRow = (targetRow: ExtendedScheduleData, subCell: SubCell) => {
+  // ใช้ addSubCellToDay แทน เพื่อให้ได้ logic เดียวกันกับ Auto-Generate
+  addSubCellToDay(targetRow.day, subCell);
+};
 
+// เพิ่ม helper function สำหรับ debug การสร้างแถวใหม่
+const debugRowCreation = (day: string, subCells: SubCell[]) => {
+  console.log(`🔧 Reconstructing ${day}:`, {
+    totalSubCells: subCells.length,
+    subCells: subCells.map(sc => ({
+      subject: sc.classData.subject,
+      time: `${sc.startTime}-${sc.endTime}`,
+      startSlot: sc.position.startSlot,
+      endSlot: sc.position.endSlot
+    }))
+  });
+  
+  const rowGroups = separateOverlappingSubCells(subCells);
+  console.log(`📋 Row groups for ${day}:`, rowGroups.map((group, index) => ({
+    rowIndex: index,
+    subCells: group.map(sc => sc.classData.subject)
+  })));
+};
+const debugTableStructure = (data: ExtendedScheduleData[]) => {
+  DAYS.forEach(day => {
+    const dayRows = data.filter(row => row.day === day);
+    const sortedRows = dayRows.sort((a, b) => (a.rowIndex || 0) - (b.rowIndex || 0));
+    
+    console.log(`📋 ${day}:`, {
+      totalRows: dayRows.length,
+      rows: sortedRows.map(row => ({
+        rowIndex: row.rowIndex,
+        isFirst: row.isFirstRowOfDay,
+        totalRowsInDay: row.totalRowsInDay,
+        subCellsCount: row.subCells?.length || 0
+      }))
+    });
+  });
+};
+useEffect(() => {
+  if (scheduleData.length > 0) {
+    console.log('🔍 Current table structure:');
+    debugTableStructure(scheduleData);
+  }
+}, [scheduleData]);
 
   // =================== COURSE CARD FUNCTIONS ==================
 const generateCourseCardsFromAPI = (schedules: ScheduleInterface[]) => {
@@ -1763,14 +1832,7 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
       showSwalWarning(
         'วิชาซ้ำในเวลาเดียวกัน',
         `ไม่สามารถวางวิชา <strong>"${draggedCourseCard.subject}"</strong><br>
-         หมู่ <strong>${draggedCourseCard.section}</strong> ซ้ำในเวลาเดียวกันได้<br><br>
-         <div style="background: #fff3cd; padding: 8px; border-radius: 4px; margin-top: 10px;">
-           <small style="color: #856404;">
-             💡 <strong>คำแนะนำ:</strong><br>
-             • เลือกเวลาอื่นที่ไม่ซ้ำกัน<br>
-             • ตรวจสอบตารางที่มีอยู่แล้ว
-           </small>
-         </div>`
+         หมู่ <strong>${draggedCourseCard.section}</strong> ซ้ำในเวลาเดียวกันได้`
       );
       setDraggedCourseCard(null);
       setDragPreview(null);
@@ -1789,7 +1851,7 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     
     const newSubCell = createSubCell(classInfo, targetRow.day, startTime, endTime, draggedCourseCard.scheduleId);
     
-    // ตรวจสอบความขัดแย้งอื่นๆ
+    // ตรวจสอบความขัดแยง
     const conflictInfo = checkConflictsAcrossAllRows(newSubCell, scheduleData);
     
     if (conflictInfo.hasConflict) {
@@ -1799,22 +1861,23 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
       return;
     }
     
-    // ตรวจสอบว่าวิชานี้ใช้ครบแล้วหรือไม่
+    // ตรวจสอบ usage
     const usageInfo = getCourseCardUsageInfo(draggedCourseCard);
     if (usageInfo.usedDuration >= draggedCourseCard.duration) {
       showSwalWarning(
         'วิชาใช้ครบแล้ว',
-        `วิชา <strong>"${draggedCourseCard.subject}"</strong><br>
-         ถูกใช้ครบ ${draggedCourseCard.duration} คาบแล้ว<br><br>
-         <small style="color: #666;">📊 ไม่สามารถเพิ่มเข้าตารางได้อีก</small>`
+        `วิชา <strong>"${draggedCourseCard.subject}"</strong> ถูกใช้ครบ ${draggedCourseCard.duration} คาบแล้ว`
       );
       setDraggedCourseCard(null);
       setDragPreview(null);
       return;
     }
     
-    // เพิ่ม SubCell ลงในแถวเฉพาะ
-    addSubCellToSpecificRow(targetRow, newSubCell);
+    console.log(`🚀 Adding SubCell to ${targetRow.day} using Auto-Generate logic`);
+    
+    // ใช้ addSubCellToDay ที่ใช้ logic เดียวกันกับ Auto-Generate
+    addSubCellToDay(targetRow.day, newSubCell);
+    
     setDraggedCourseCard(null);
     setDragPreview(null);
     
@@ -1825,26 +1888,21 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
       showSwalSuccess(
         'เพิ่มวิชาสำเร็จ',
         `วิชา <strong>${draggedCourseCard.subject}</strong><br>
-         <div style="margin: 8px 0; padding: 6px; background: #e8f5e8; border-radius: 4px;">
-           📊 ใช้ไปแล้ว: ${newUsageInfo.usedDuration}/${draggedCourseCard.duration} คาบ<br>
-           ⏰ เหลืออีก: <strong>${remainingPeriods} คาบ</strong>
-         </div>`,
+         ใช้ไปแล้ว: ${newUsageInfo.usedDuration}/${draggedCourseCard.duration} คาบ<br>
+         เหลืออีก: <strong>${remainingPeriods} คาบ</strong>`,
         2000
       );
     } else {
       showSwalSuccess(
         'เพิ่มวิชาครบแล้ว ✅',
         `วิชา <strong>${draggedCourseCard.subject}</strong><br>
-         <div style="margin: 8px 0; padding: 6px; background: #e8f5e8; border-radius: 4px;">
-           🎉 ใช้ครบ ${draggedCourseCard.duration} คาบแล้ว<br>
-           <small style="color: #4CAF50;">วิชานี้พร้อมใช้งานในตาราง</small>
-         </div>`,
+         ใช้ครบ ${draggedCourseCard.duration} คาบแล้ว`,
         2500
       );
     }
     
   } else if (draggedSubCell) {
-    // ส่วน draggedSubCell ยังคงเดิม (ไม่เปลี่ยนแปลง)
+    // ส่วน draggedSubCell ใช้ moveSubCellToRow เดิม (ไม่เปลี่ยน)
     const duration = draggedSubCell.position.endSlot - draggedSubCell.position.startSlot;
     const newStartTime = slotIndexToTime(slotIndex);
     const newEndTime = slotIndexToTime(slotIndex + duration);
@@ -1877,7 +1935,6 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     );
   }
 };
-
 // =================== ADDITIONAL DEBUGGING FUNCTION ===================
 
 // ฟังก์ชันช่วยสำหรับ debug การทำงานของ Course Card
@@ -3259,115 +3316,6 @@ const checkConflictsAcrossAllRows = (
     };
   };
 
-const addSubCellToDay = (day: string, subCell: SubCell) => {
-  setScheduleData(prevData => {
-    // ตรวจสอบขัดแย้งก่อนเพิ่ม
-    const conflictInfo = checkConflictsAcrossAllRows(subCell, prevData);
-    
-    if (conflictInfo.hasConflict) {
-      showConflictModal(conflictInfo, subCell);
-      return prevData; // ไม่เพิ่มถ้ามีขัดแย้ง
-    }
-    
-    // หาแถวของวันที่เหมาะสม (ไม่มีการซ้อนทับเวลา)
-    const dayRows = prevData.filter(row => row.day === day);
-    
-    let targetRowIndex = -1;
-    for (let i = 0; i < dayRows.length; i++) {
-      const row = dayRows[i];
-      const hasTimeOverlap = (row.subCells || []).some(existingSubCell => 
-        doSubCellsOverlap(subCell, existingSubCell)
-      );
-      
-      if (!hasTimeOverlap) {
-        targetRowIndex = prevData.findIndex(r => r.key === row.key);
-        break;
-      }
-    }
-    
-    const newData = [...prevData];
-    
-    if (targetRowIndex !== -1) {
-      // เพิ่มลงในแถวที่มีอยู่
-      newData[targetRowIndex] = {
-        ...newData[targetRowIndex],
-        subCells: [...(newData[targetRowIndex].subCells || []), subCell]
-      };
-      
-      // เช็คว่าเพิ่มลงในแถวสุดท้ายของวันหรือไม่
-      const isLastRowOfDay = targetRowIndex === dayRows.length - 1;
-      const isEmptyRow = (newData[targetRowIndex].subCells || []).length === 1;
-      
-      if (isLastRowOfDay && !isEmptyRow) {
-        // สร้าง empty row ใหม่หลังจากแถวสุดท้าย
-        const dayIndex = DAYS.findIndex(d => d === day);
-        const newEmptyRowIndex = dayRows.length;
-        const newTotalRows = dayRows.length + 1;
-        
-        const newEmptyRow = createEmptyDayRow(day, dayIndex, newEmptyRowIndex, newTotalRows);
-        newEmptyRow.isFirstRowOfDay = false;
-        
-        // อัปเดต totalRowsInDay ของแถวอื่นในวันเดียวกัน
-        newData.forEach(row => {
-          if (row.day === day) {
-            row.totalRowsInDay = newTotalRows;
-          }
-        });
-        
-        newData.push(newEmptyRow);
-      }
-    } else {
-      // สร้างแถวใหม่
-      const dayIndex = DAYS.findIndex(d => d === day);
-      const newRowIndex = dayRows.length;
-      const newTotalRows = dayRows.length + 2; // +2 เพราะจะมีแถวใหม่ + empty row
-      
-      const newRowData: ExtendedScheduleData = {
-        key: `day-${dayIndex}-row-${newRowIndex}`,
-        day: day,
-        dayIndex: dayIndex,
-        rowIndex: newRowIndex,
-        isFirstRowOfDay: newRowIndex === 0,
-        totalRowsInDay: newTotalRows,
-        subCells: [subCell]
-      };
-      
-      // เพิ่ม time slots
-      TIME_SLOTS.forEach((time) => {
-        if (time === "12:00-13:00") {
-          newRowData[time] = {
-            content: "พักเที่ยง",
-            backgroundColor: "#FFF5E5",
-            isBreak: true,
-          };
-        } else {
-          newRowData[time] = {
-            content: "",
-            backgroundColor: "#f9f9f9",
-            classes: [],
-          };
-        }
-      });
-      
-      newData.push(newRowData);
-      
-      // เพิ่ม empty row หลังจากแถวใหม่
-      const emptyRowIndex = newRowIndex + 1;
-      const emptyRow = createEmptyDayRow(day, dayIndex, emptyRowIndex, newTotalRows);
-      emptyRow.isFirstRowOfDay = false;
-      newData.push(emptyRow);
-      
-      // อัปเดต totalRowsInDay ของแถวอื่นในวันเดียวกัน
-      newData.forEach(row => {
-        if (row.day === day) {
-          row.totalRowsInDay = newTotalRows;
-        }
-      });
-    }
-    
-    return newData;
-  });
-};
 
   // =================== MODIFIED REMOVE SUB CELL FUNCTION ===================
 const removeSubCell = (subCellId: string) => {
