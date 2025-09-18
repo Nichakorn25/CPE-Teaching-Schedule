@@ -1,6 +1,22 @@
 /* Import Sarabun font from Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
 
+/* เพิ่มใน CSS file หรือ styled-components */
+.swal-success-toast {
+  font-family: 'Sarabun', sans-serif !important;
+}
+
+.swal-warning-popup,
+.swal-error-popup,
+.swal-info-popup {
+  font-family: 'Sarabun', sans-serif !important;
+}
+
+.swal-warning-title,
+.swal-error-title {
+  color: #333 !important;
+}
+
 /* Global font family */
 * {
     font-family: 'Sarabun', sans-serif;

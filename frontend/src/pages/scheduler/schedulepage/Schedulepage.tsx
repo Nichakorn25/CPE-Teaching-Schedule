@@ -194,6 +194,71 @@ interface ConflictInfo {
   conflictingSubCells: SubCell[];
 }
 
+const showSwalSuccess = (title: string, html?: string, timer: number = 1500) => {
+  Swal.fire({
+    title,
+    html,
+    icon: 'success',
+    timer,
+    timerProgressBar: true,
+    showConfirmButton: false,
+    toast: true,
+    position: 'top-end',
+    customClass: {
+      popup: 'swal-success-toast'
+    }
+  });
+};
+
+const showSwalWarning = (title: string, html: string) => {
+  Swal.fire({
+    title,
+    html,
+    icon: 'warning',
+    confirmButtonText: 'เข้าใจแล้ว',
+    confirmButtonColor: '#ff9800',
+    width: '420px',
+    padding: '20px',
+    customClass: {
+      popup: 'swal-warning-popup',
+      title: 'swal-warning-title'
+    }
+  });
+};
+
+const showSwalError = (title: string, html: string) => {
+  Swal.fire({
+    title,
+    html,
+    icon: 'error',
+    confirmButtonText: 'ปิด',
+    confirmButtonColor: '#f44336',
+    width: '420px',
+    padding: '20px',
+    customClass: {
+      popup: 'swal-error-popup',
+      title: 'swal-error-title'
+    }
+  });
+};
+
+const showSwalInfo = (title: string, html: string, timer?: number) => {
+  Swal.fire({
+    title,
+    html,
+    icon: 'info',
+    timer: timer || undefined,
+    timerProgressBar: timer ? true : false,
+    confirmButtonText: 'เข้าใจแล้ว',
+    confirmButtonColor: '#2196F3',
+    width: '420px',
+    padding: '20px',
+    customClass: {
+      popup: 'swal-info-popup'
+    }
+  });
+};
+
 // =================== CONSTANTS ===================
 const TIME_SLOTS = [
   "8:00-9:00", "9:00-10:00", "10:00-11:00", "11:00-12:00", "12:00-13:00",
@@ -1016,61 +1081,75 @@ useEffect(() => {
     console.log('✅ Added to removed courses:', removedCourse.subject);
   };
 
-  const restoreRemovedCourse = (removedCourse: RemovedCourse) => {
-    // ตรวจสอบ role ก่อน
-    if (role !== "Scheduler") {
-      message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถกู้คืนวิชาได้");
-      return;
-    }
-
-    // สร้าง ClassInfo จาก removed course
-    const classInfo: ClassInfo = {
-      subject: removedCourse.subject,
-      teacher: removedCourse.teacher,
-      room: removedCourse.room,
-      section: removedCourse.section,
-      courseCode: removedCourse.courseCode,
-      studentYear: removedCourse.studentYear,
-      color: removedCourse.color
-    };
-
-    // สร้าง SubCell ใหม่
-    const newSubCell = createSubCell(
-      classInfo, 
-      removedCourse.originalDay, 
-      removedCourse.originalStartTime, 
-      removedCourse.originalEndTime,
-      removedCourse.scheduleId
+const restoreRemovedCourse = (removedCourse: RemovedCourse) => {
+  // ตรวจสอบ role ก่อน
+  if (role !== "Scheduler") {
+    showSwalWarning(
+      'ไม่มีสิทธิ์กู้คืน',
+      'เฉพาะ <strong>Scheduler</strong> เท่านั้นที่สามารถกู้คืนวิชาได้'
     );
+    return;
+  }
 
-    // หา row ที่เหมาะสมในวันเดิม
-    const dayRows = scheduleData.filter(row => row.day === removedCourse.originalDay);
-    let canRestore = false;
-    let targetRow: ExtendedScheduleData | null = null;
-
-    // ตรวจสอบว่ามี row ว่างในช่วงเวลาเดิมหรือไม่
-    for (const row of dayRows) {
-      const hasConflict = (row.subCells || []).some(existingSubCell => 
-        doSubCellsOverlap(newSubCell, existingSubCell)
-      );
-      
-      if (!hasConflict) {
-        targetRow = row;
-        canRestore = true;
-        break;
-      }
-    }
-
-    if (canRestore && targetRow) {
-      addSubCellToDay(removedCourse.originalDay, newSubCell);
-      // ลบออกจาก removed courses
-      setRemovedCourses(prev => prev.filter(course => course.id !== removedCourse.id));
-      message.success(`กู้คืนวิชา "${removedCourse.subject}" สำเร็จ`);
-    } else {
-      message.warning("ไม่สามารถกู้คืนได้ เนื่องจากมีการซ้อนทับเวลาในตำแหน่งเดิม");
-    }
+  const classInfo: ClassInfo = {
+    subject: removedCourse.subject,
+    teacher: removedCourse.teacher,
+    room: removedCourse.room,
+    section: removedCourse.section,
+    courseCode: removedCourse.courseCode,
+    studentYear: removedCourse.studentYear,
+    color: removedCourse.color
   };
 
+  const newSubCell = createSubCell(
+    classInfo, 
+    removedCourse.originalDay, 
+    removedCourse.originalStartTime, 
+    removedCourse.originalEndTime,
+    removedCourse.scheduleId
+  );
+
+  const dayRows = scheduleData.filter(row => row.day === removedCourse.originalDay);
+  let canRestore = false;
+  let targetRow: ExtendedScheduleData | null = null;
+
+  for (const row of dayRows) {
+    const hasConflict = (row.subCells || []).some(existingSubCell => 
+      doSubCellsOverlap(newSubCell, existingSubCell)
+    );
+    
+    if (!hasConflict) {
+      targetRow = row;
+      canRestore = true;
+      break;
+    }
+  }
+
+  if (canRestore && targetRow) {
+    addSubCellToDay(removedCourse.originalDay, newSubCell);
+    setRemovedCourses(prev => prev.filter(course => course.id !== removedCourse.id));
+    showSwalSuccess(
+      'กู้คืนสำเร็จ ✅',
+      `วิชา <strong>"${removedCourse.subject}"</strong><br>
+       ถูกกู้คืนกลับเข้าตารางแล้ว<br><br>
+       <small style="color: #4CAF50;">📅 วัน: ${removedCourse.originalDay} | ⏰ เวลา: ${removedCourse.originalStartTime}-${removedCourse.originalEndTime}</small>`,
+      2500
+    );
+  } else {
+    showSwalWarning(
+      'ไม่สามารถกู้คืนได้',
+      `วิชา <strong>"${removedCourse.subject}"</strong> ไม่สามารถกู้คืนได้<br><br>
+       <div style="background: #fff3cd; padding: 8px; border-radius: 4px; margin-top: 10px;">
+         <small style="color: #856404;">
+           ⚠️ <strong>สาเหตุ:</strong> มีการซ้อนทับเวลาในตำแหน่งเดิม<br><br>
+           💡 <strong>แนะนำ:</strong><br>
+           • ลบวิชาที่ซ้อนทับก่อน<br>
+           • หรือเลือกเวลาใหม่สำหรับวิชานี้
+         </small>
+       </div>`
+    );
+  }
+};
   const deleteRemovedCoursePermanently = (removedCourseId: string) => {
     const removedCourse = removedCourses.find(course => course.id === removedCourseId);
     if (!removedCourse) return;
@@ -1088,26 +1167,43 @@ useEffect(() => {
     });
   };
 
-  const clearAllRemovedCourses = () => {
-    if (removedCourses.length === 0) {
-      message.info("ไม่มีรายการวิชาที่ถูกลบ");
-      return;
+const clearAllRemovedCourses = () => {
+  if (removedCourses.length === 0) {
+    showSwalInfo(
+      'ไม่มีรายการ',
+      'ไม่มีวิชาที่ถูกลบให้ล้างข้อมูล<br><br><small style="color: #666;">📝 รายการว่างเปล่า</small>',
+      1500
+    );
+    return;
+  }
+
+  Swal.fire({
+    title: 'ยืนยันการล้างรายการ',
+    html: `คุณต้องการลบรายการวิชาที่ถูกลบทั้งหมด<br>
+           <strong>${removedCourses.length} รายการ</strong> หรือไม่?<br><br>
+           <div style="background: #ffebee; padding: 8px; border-radius: 4px; margin-top: 10px;">
+             <small style="color: #c62828;">
+               ⚠️ การดำเนินการนี้ไม่สามารถยกเลิกได้
+             </small>
+           </div>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'ล้างทั้งหมด',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#f44336',
+    cancelButtonColor: '#6c757d'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      setRemovedCourses([]);
+      setRemovedSearchValue("");
+      showSwalSuccess(
+        'ล้างข้อมูลสำเร็จ ✅',
+        'ล้างรายการวิชาที่ถูกลบทั้งหมดแล้ว',
+        1500
+      );
     }
-
-    Modal.confirm({
-      title: 'ยืนยันการล้างรายการทั้งหมด',
-      content: `คุณต้องการลบรายการวิชาที่ถูกลบทั้งหมด ${removedCourses.length} รายการหรือไม่? การดำเนินการนี้ไม่สามารถยกเลิกได้`,
-      okText: 'ล้างทั้งหมด',
-      okType: 'danger',
-      cancelText: 'ยกเลิก',
-      onOk() {
-        setRemovedCourses([]);
-        setRemovedSearchValue("");
-        message.success("ล้างรายการวิชาที่ถูกลบทั้งหมดแล้ว");
-      }
-    });
-  };
-
+  });
+};
 const addSubCellToSpecificRow = (targetRow: ExtendedScheduleData, subCell: SubCell) => {
   setScheduleData(prevData => {
     const newData = [...prevData];
@@ -1493,14 +1589,23 @@ const handleCourseCardDragStart = (e: React.DragEvent, courseCard: CourseCard) =
   // ตรวจสอบ role ก่อน
   if (role !== "Scheduler") {
     e.preventDefault();
-    message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลากวิชาไปใส่ในตารางได้");
+    showSwalWarning(
+      'ไม่มีสิทธิ์เข้าถึง',
+      `เฉพาะ <strong>Scheduler</strong> เท่านั้นที่สามารถลากวิชาไปใส่ในตารางได้<br><br>
+       <small style="color: #666;">💡 กรุณาติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์</small>`
+    );
     return;
   }
 
   // ตรวจสอบว่าวิชาถูกใช้แล้วหรือไม่
   if (isCourseCardUsed(courseCard)) {
     e.preventDefault();
-    message.warning(`วิชา "${courseCard.subject}" ถูกใช้ในตารางแล้ว`);
+    showSwalWarning(
+      'วิชาถูกใช้แล้ว',
+      `วิชา <strong>"${courseCard.subject}"</strong><br>
+       ถูกใช้ในตารางครบแล้ว ไม่สามารถลากได้อีก<br><br>
+       <small style="color: #666;">📊 สถานะ: ใช้ครบ ${courseCard.duration} คาบ</small>`
+    );
     return;
   }
 
@@ -1554,6 +1659,17 @@ const checkDuplicateInSameTimeForCourseCard = (
   slotIndex: number,
   scheduleData: ExtendedScheduleData[]
 ): { isDuplicate: boolean; conflictingSubCell?: SubCell } => {
+  console.log('🔍 Checking Course Card Duplicate:', {
+    courseCard: {
+      subject: draggedCourseCard.subject,
+      courseCode: draggedCourseCard.courseCode,
+      section: draggedCourseCard.section
+    },
+    targetDay,
+    slotIndex,
+    targetTime: `${slotIndexToTime(slotIndex)}-${slotIndexToTime(slotIndex + 1)}`
+  });
+
   const dayRows = scheduleData.filter(row => row.day === targetDay);
   
   for (const row of dayRows) {
@@ -1566,19 +1682,51 @@ const checkDuplicateInSameTimeForCourseCard = (
         
         const timeOverlap = !(newEnd <= existingStart || existingEnd <= newStart);
         
+        console.log('⏰ Time overlap check:', {
+          existing: {
+            subject: existingSubCell.classData.subject,
+            courseCode: existingSubCell.classData.courseCode,
+            section: existingSubCell.classData.section,
+            time: `${existingSubCell.startTime}-${existingSubCell.endTime}`,
+            timeSlots: `${existingStart}-${existingEnd}`
+          },
+          new: {
+            subject: draggedCourseCard.subject,
+            courseCode: draggedCourseCard.courseCode,
+            section: draggedCourseCard.section,
+            timeSlots: `${newStart}-${newEnd}`
+          },
+          timeOverlap
+        });
+        
         if (timeOverlap) {
           const isSameSubject = existingSubCell.classData.subject === draggedCourseCard.subject;
           const isSameCourseCode = existingSubCell.classData.courseCode === draggedCourseCard.courseCode;
           const isSameSection = existingSubCell.classData.section === draggedCourseCard.section;
           
+          console.log('🔍 Detailed comparison:', {
+            isSameSubject,
+            isSameCourseCode,
+            isSameSection,
+            existingSubject: existingSubCell.classData.subject,
+            draggedSubject: draggedCourseCard.subject,
+            existingCourseCode: existingSubCell.classData.courseCode,
+            draggedCourseCode: draggedCourseCard.courseCode,
+            existingSection: existingSubCell.classData.section,
+            draggedSection: draggedCourseCard.section
+          });
+          
           // วิชาเดียวกัน รหัสเดียวกัน section เดียวกัน = ห้ามซ้ำ
           if (isSameSubject && isSameCourseCode && isSameSection) {
+            console.log('❌ DUPLICATE DETECTED: Same subject, same course code, same section in same time');
             return { isDuplicate: true, conflictingSubCell: existingSubCell };
           }
         }
       }
     }
   }
+  
+  console.log('✅ No duplicates found for Course Card');
   return { isDuplicate: false };
 };
 
@@ -1587,7 +1735,10 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
   e.preventDefault();
   
   if (role !== "Scheduler") {
-    message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถย้ายตารางเรียนได้");
+    showSwalWarning(
+      'ไม่มีสิทธิ์แก้ไข',
+      'เฉพาะ <strong>Scheduler</strong> เท่านั้นที่สามารถย้ายตารางเรียนได้'
+    );
     setDraggedCourseCard(null);
     setDraggedSubCell(null);
     setDragPreview(null);
@@ -1600,8 +1751,7 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     const startTime = slotIndexToTime(slotIndex);
     const endTime = slotIndexToTime(slotIndex + 1);
     
-    // ============= แทนที่ส่วนนี้ =============
-    // ลบฟังก์ชัน checkDuplicateInSameTime เดิมและใช้ฟังก์ชันใหม่
+    // ตรวจสอบการซ้ำ
     const duplicateCheck = checkDuplicateInSameTimeForCourseCard(
       draggedCourseCard, 
       targetRow.day, 
@@ -1610,25 +1760,22 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     );
     
     if (duplicateCheck.isDuplicate) {
-      console.log('❌ Course Card Duplicate Detected:', {
-        courseCard: {
-          subject: draggedCourseCard.subject,
-          section: draggedCourseCard.section,
-          courseCode: draggedCourseCard.courseCode
-        },
-        conflictingSubCell: duplicateCheck.conflictingSubCell ? {
-          subject: duplicateCheck.conflictingSubCell.classData.subject,
-          section: duplicateCheck.conflictingSubCell.classData.section,
-          time: `${duplicateCheck.conflictingSubCell.startTime}-${duplicateCheck.conflictingSubCell.endTime}`
-        } : null
-      });
-      
-      message.warning(`ไม่สามารถวางวิชา "${draggedCourseCard.subject}" หมู่ ${draggedCourseCard.section} ซ้ำในเวลาเดียวกันได้`);
+      showSwalWarning(
+        'วิชาซ้ำในเวลาเดียวกัน',
+        `ไม่สามารถวางวิชา <strong>"${draggedCourseCard.subject}"</strong><br>
+         หมู่ <strong>${draggedCourseCard.section}</strong> ซ้ำในเวลาเดียวกันได้<br><br>
+         <div style="background: #fff3cd; padding: 8px; border-radius: 4px; margin-top: 10px;">
+           <small style="color: #856404;">
+             💡 <strong>คำแนะนำ:</strong><br>
+             • เลือกเวลาอื่นที่ไม่ซ้ำกัน<br>
+             • ตรวจสอบตารางที่มีอยู่แล้ว
+           </small>
+         </div>`
+      );
       setDraggedCourseCard(null);
       setDragPreview(null);
       return;
     }
-    // ============= จบส่วนที่แทนที่ =============
     
     const classInfo: ClassInfo = {
       subject: draggedCourseCard.subject,
@@ -1642,7 +1789,7 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     
     const newSubCell = createSubCell(classInfo, targetRow.day, startTime, endTime, draggedCourseCard.scheduleId);
     
-    // ตรวจสอบความขัดแย้งอื่นๆ (อาจารย์, ห้อง)
+    // ตรวจสอบความขัดแย้งอื่นๆ
     const conflictInfo = checkConflictsAcrossAllRows(newSubCell, scheduleData);
     
     if (conflictInfo.hasConflict) {
@@ -1655,7 +1802,12 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     // ตรวจสอบว่าวิชานี้ใช้ครบแล้วหรือไม่
     const usageInfo = getCourseCardUsageInfo(draggedCourseCard);
     if (usageInfo.usedDuration >= draggedCourseCard.duration) {
-      message.warning(`วิชา "${draggedCourseCard.subject}" ถูกใช้ครบ ${draggedCourseCard.duration} คาบแล้ว`);
+      showSwalWarning(
+        'วิชาใช้ครบแล้ว',
+        `วิชา <strong>"${draggedCourseCard.subject}"</strong><br>
+         ถูกใช้ครบ ${draggedCourseCard.duration} คาบแล้ว<br><br>
+         <small style="color: #666;">📊 ไม่สามารถเพิ่มเข้าตารางได้อีก</small>`
+      );
       setDraggedCourseCard(null);
       setDragPreview(null);
       return;
@@ -1670,9 +1822,25 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     const remainingPeriods = draggedCourseCard.duration - newUsageInfo.usedDuration;
     
     if (remainingPeriods > 0) {
-      message.success(`เพิ่มวิชา ${draggedCourseCard.subject} (คาบที่ ${newUsageInfo.usedDuration}/${draggedCourseCard.duration}) เหลืออีก ${remainingPeriods} คาบ`);
+      showSwalSuccess(
+        'เพิ่มวิชาสำเร็จ',
+        `วิชา <strong>${draggedCourseCard.subject}</strong><br>
+         <div style="margin: 8px 0; padding: 6px; background: #e8f5e8; border-radius: 4px;">
+           📊 ใช้ไปแล้ว: ${newUsageInfo.usedDuration}/${draggedCourseCard.duration} คาบ<br>
+           ⏰ เหลืออีก: <strong>${remainingPeriods} คาบ</strong>
+         </div>`,
+        2000
+      );
     } else {
-      message.success(`เพิ่มวิชา ${draggedCourseCard.subject} ครบ ${draggedCourseCard.duration} คาบแล้ว`);
+      showSwalSuccess(
+        'เพิ่มวิชาครบแล้ว ✅',
+        `วิชา <strong>${draggedCourseCard.subject}</strong><br>
+         <div style="margin: 8px 0; padding: 6px; background: #e8f5e8; border-radius: 4px;">
+           🎉 ใช้ครบ ${draggedCourseCard.duration} คาบแล้ว<br>
+           <small style="color: #4CAF50;">วิชานี้พร้อมใช้งานในตาราง</small>
+         </div>`,
+        2500
+      );
     }
     
   } else if (draggedSubCell) {
@@ -1703,7 +1871,10 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     moveSubCellToRow(draggedSubCell.id, targetRow, slotIndex);
     setDraggedSubCell(null);
     setDragPreview(null);
-    message.success(`ย้ายวิชา ${draggedSubCell.classData.subject} สำเร็จ`);
+    showSwalSuccess(
+      'ย้ายวิชาสำเร็จ',
+      `ย้ายวิชา <strong>${draggedSubCell.classData.subject}</strong> แล้ว`
+    );
   }
 };
 
@@ -2991,142 +3162,34 @@ const showConflictModal = (conflictInfo: ConflictInfo, newSubCell: SubCell) => {
   console.log('🚨 showConflictModal called!', conflictInfo);
   
   let title = '';
-  let htmlContent = '';
-  let conflictDetails: string[] = [];
+  let mainMessage = '';
 
-  // สร้างข้อความตามประเภทขัดแย้ง
-  if (conflictInfo.conflictDetails.time) {
-    const timeConflict = conflictInfo.conflictDetails.time;
-    conflictDetails.push(`⏰ ${timeConflict.reason}`);
-  }
-
-  if (conflictInfo.conflictDetails.room) {
-    const roomConflict = conflictInfo.conflictDetails.room;
-    conflictDetails.push(`🏢 ห้อง "${roomConflict.room}" ถูกใช้โดยวิชาอื่นในเวลาดังกล่าว`);
-  }
-
-  if (conflictInfo.conflictDetails.teacher) {
-    const teacherConflict = conflictInfo.conflictDetails.teacher;
-    conflictDetails.push(`👩‍🏫 อาจารย์ "${teacherConflict.teacher}" มีการสอนวิชาอื่นในเวลาดังกล่าวแล้ว`);
-  }
-
-  // กำหนด title และเนื้อหาตามประเภทขัดแย้ง
+  // กำหนดข้อความตามประเภทขัดแย้ง - แบบเรียบง่าย
   if (conflictInfo.conflictType === 'time') {
-    title = '⏰ ตารางเรียนซ้ำซ้อน';
-    htmlContent = `<div style="text-align: left; font-family: Sarabun, sans-serif;">
-      <p>ไม่สามารถวางวิชา <strong>"${newSubCell.classData.subject}"</strong> ได้ เนื่องจาก:</p>
-      <div style="background-color: #fff3cd; padding: 12px; border-radius: 6px; border: 1px solid #ffeaa7; margin: 10px 0;">
-        <strong>📋 ${conflictInfo.conflictDetails.time?.reason}</strong>
-      </div>
-      <div style="margin-top: 15px; padding: 12px; background-color: #e8f5e8; border-radius: 6px; border: 1px solid #c3e6c3;">
-        <strong style="color: #2d5a2d;">✅ กฎการจัดตารางเรียนที่ถูกต้อง:</strong><br>
-        <ul style="margin: 8px 0; padding-left: 20px; color: #2d5a2d; font-size: 12px;">
-          <li>วิชาเดียวกัน หมู่เดียวกัน: <strong>ห้ามจัดในเวลาเดียวกัน</strong></li>
-          <li>วิชาเดียวกัน หมู่ต่างกัน: <strong>จัดในเวลาเดียวกันได้</strong></li>
-          <li>อาจารย์คนเดียวกัน วิชาต่างกัน: <strong>ห้ามในเวลาเดียวกัน</strong></li>
-        </ul>
-      </div>
-    </div>`;
-  } else if (conflictInfo.conflictType === 'multiple') {
-    title = '⚠️ พบการขัดแย้งหลายประการ';
-    htmlContent = `<div style="text-align: left; font-family: Sarabun, sans-serif;">
-      <p>ไม่สามารถวางวิชา <strong>"${newSubCell.classData.subject}"</strong> ได้ เนื่องจาก:</p>
-      <ul style="margin: 10px 0; padding-left: 20px;">
-        ${conflictDetails.map(detail => `<li>${detail}</li>`).join('')}
-      </ul>
-    </div>`;
-  } else if (conflictInfo.conflictType === 'room') {
-    title = '🏢 ห้องเรียนขัดแย้ง';
-    htmlContent = `<div style="text-align: left; font-family: Sarabun, sans-serif;">
-      <p>ไม่สามารถวางวิชา <strong>"${newSubCell.classData.subject}"</strong> ได้</p>
-      <p>ห้อง "${conflictInfo.conflictDetails.room?.room}" กำลังถูกใช้โดยวิชาอื่นในช่วงเวลานี้</p>
-    </div>`;
+    title = 'วิชาซ้ำในเวลาเดียวกัน';
+    mainMessage = `ไม่สามารถวางวิชา <strong>"${newSubCell.classData.subject}"</strong><br>หมู่ ${newSubCell.classData.section} ซ้ำในเวลาเดียวกันได้`;
   } else if (conflictInfo.conflictType === 'teacher') {
-    title = '👩‍🏫 อาจารย์ขัดแย้ง';
-    htmlContent = `<div style="text-align: left; font-family: Sarabun, sans-serif;">
-      <p>ไม่สามารถวางวิชา <strong>"${newSubCell.classData.subject}"</strong> ได้</p>
-      <p>อาจารย์ "${conflictInfo.conflictDetails.teacher?.teacher}" กำลังสอนวิชาอื่นในช่วงเวลานี้</p>
-    </div>`;
-  } else {
-    title = '⏰ เวลาขัดแย้ง';
-    htmlContent = `<div style="text-align: left; font-family: Sarabun, sans-serif;">
-      <p>ไม่สามารถวางวิชา <strong>"${newSubCell.classData.subject}"</strong> ได้ เนื่องจากมีการขัดแย้งเกี่ยวกับเวลา</p>
-    </div>`;
-  }
-
-  // เพิ่มข้อมูลรายละเอียดวิชาที่ขัดแย้ง
-  if (conflictInfo.conflictingSubCells.length > 0) {
-    htmlContent += `<div style="margin-top: 15px;">
-      <h4 style="color: #1890ff; margin-bottom: 10px;">📚 วิชาที่ขัดแย้ง:</h4>
-      <div style="background-color: #f5f5f5; padding: 10px; border-radius: 5px;">`;
-    
-    conflictInfo.conflictingSubCells.forEach((subCell, index) => {
-      htmlContent += `<div style="margin-bottom: 8px; padding: 8px; background-color: white; border-radius: 4px; border-left: 3px solid #ff4d4f;">
-        <strong>${index + 1}. ${subCell.classData.subject}</strong>`;
-      
-      if (subCell.classData.courseCode) {
-        htmlContent += ` <span style="color: #666;">(${subCell.classData.courseCode})</span>`;
-      }
-      
-      htmlContent += `<br>
-        <span style="font-size: 12px; color: #666;">
-          👩‍🏫 ${subCell.classData.teacher}<br>
-          🕐 ${subCell.startTime} - ${subCell.endTime}`;
-      
-      if (subCell.classData.room) {
-        htmlContent += ` | 🏢 ${subCell.classData.room}`;
-      }
-      
-      if (subCell.classData.section) {
-        htmlContent += ` | กลุ่ม ${subCell.classData.section}`;
-      }
-      
-      htmlContent += `</span></div>`;
-    });
-    
-    htmlContent += `</div></div>`;
-  }
-
-  // สร้างคำแนะนำ
-  let suggestions = '';
-  if (conflictInfo.conflictType === 'time') {
-    suggestions = 'ลองเลือกเวลาอื่น หรือตรวจสอบว่าหมู่เรียนถูกต้องหรือไม่';
+    title = 'อาจารย์ขัดแย้ง';
+    mainMessage = `อาจารย์ <strong>"${conflictInfo.conflictDetails.teacher?.teacher}"</strong><br>มีการสอนวิชาอื่นในเวลาเดียวกันแล้ว`;
   } else if (conflictInfo.conflictType === 'room') {
-    suggestions = 'ลองเปลี่ยนห้องเรียน หรือเลือกเวลาอื่น';
-  } else if (conflictInfo.conflictType === 'teacher') {
-    suggestions = 'ลองเลือกเวลาอื่น หรือตรวจสอบตารางสอนของอาจารย์';
-  } else if (conflictInfo.conflictType === 'multiple') {
-    suggestions = 'ลองเลือกเวลาอื่น หรือเปลี่ยนห้องเรียน หรือตรวจสอบตารางอาจารย์';
+    title = 'ห้องเรียนขัดแย้ง';
+    mainMessage = `ห้อง <strong>"${conflictInfo.conflictDetails.room?.room}"</strong><br>ถูกใช้โดยวิชาอื่นในเวลาเดียวกัน`;
   } else {
-    suggestions = 'ลองเลือกช่วงเวลาที่ไม่ทับซ้อนกัน';
+    title = 'ตารางเรียนขัดแย้ง';
+    mainMessage = `มีการขัดแย้งในการจัดตาราง<br>ไม่สามารถวางวิชานี้ได้`;
   }
 
-  // เพิ่มคำแนะนำและหมายเหตุ
-  htmlContent += `
-    <div style="margin-top: 15px; padding: 12px; background-color: #fff2e8; border-radius: 6px; border: 1px solid #ffec3d;">
-      <strong style="color: #d46b08;">💡 คำแนะนำ:</strong> 
-      <span style="color: #d46b08; font-size: 12px;">${suggestions}</span>
-    </div>
-    <div style="margin-top: 8px; padding: 12px; background-color: #e6f7ff; border-radius: 6px; border: 1px solid #91d5ff;">
-      <strong style="color: #1890ff;">ℹ️ หมายเหตุ:</strong> 
-      <span style="color: #1890ff; font-size: 11px;">วิชาเดียวกัน + อาจารย์เดียวกัน + ห้องเดียวกัน + เวลาเดียวกัน = สามารถวางได้ (กลุ่มต่างกัน)</span>
-    </div>
-  `;
-
-  // แสดง SweetAlert
-  Swal.fire({
-    title: title,
-    html: htmlContent,
-    icon: 'error',
-    confirmButtonText: 'เข้าใจแล้ว',
-    confirmButtonColor: '#ff4d4f',
-    width: '600px',
-    padding: '20px',
-    customClass: {
-      popup: 'swal-custom-popup',
-      title: 'swal-custom-title'
-    }
-  });
+  showSwalWarning(
+    title,
+    `${mainMessage}<br><br>
+     <div style="background: #fff3cd; padding: 12px; border-radius: 6px; border: 1px solid #ffeaa7; margin: 15px 0;">
+       <span style="color: #856404;">💡 <strong>คำแนะนำ:</strong></span><br>
+       <small style="color: #856404;">
+         • เลือกเวลาอื่นที่ไม่ซ้ำกัน<br>
+         • ตรวจสอบตารางที่มีอยู่แล้ว
+       </small>
+     </div>`
+  );
 };
 
 // ฟังก์ชันตรวจสอบขัดแย้งสำหรับทั้งแถว (ครอบคลุมทุกแถวในวันเดียวกัน)
@@ -3309,7 +3372,10 @@ const addSubCellToDay = (day: string, subCell: SubCell) => {
   // =================== MODIFIED REMOVE SUB CELL FUNCTION ===================
 const removeSubCell = (subCellId: string) => {
   if (role !== "Scheduler") {
-    message.warning("เฉพาะ Scheduler เท่านั้นที่สามารถลบวิชาได้");
+    showSwalWarning(
+      'ไม่มีสิทธิ์ลบ',
+      'เฉพาะ <strong>Scheduler</strong> เท่านั้นที่สามารถลบวิชาได้<br><br><small style="color: #666;">🔒 กรุณาติดต่อผู้ดูแลระบบ</small>'
+    );
     return;
   }
 
@@ -3324,9 +3390,15 @@ const removeSubCell = (subCellId: string) => {
   }
 
   if (targetSubCell?.isTimeFixed) {
-    message.error(
-      `ไม่สามารถลบวิชา "${targetSubCell.classData.subject}" ได้ เพราะเป็น Time Fixed Course`,
-      3
+    showSwalError(
+      'ไม่สามารถลบได้',
+      `วิชา <strong>"${targetSubCell.classData.subject}"</strong><br>
+       เป็น <strong>Time Fixed Course</strong><br><br>
+       <div style="background: #ffebee; padding: 8px; border-radius: 4px; margin-top: 8px;">
+         <small style="color: #c62828;">
+           🔒 วิชานี้ถูกล็อกไว้ ไม่สามารถลบหรือแก้ไขได้
+         </small>
+       </div>`
     );
     return;
   }
@@ -3345,7 +3417,16 @@ const removeSubCell = (subCellId: string) => {
     }
     
     if (wasRemoved) {
-      message.success("ลบวิชาออกจากตารางแล้ว (วิชาจะกลับมาพร้อมใช้งานใน sidebar)");
+      showSwalSuccess(
+        'ลบวิชาสำเร็จ',
+        `วิชาถูกลบออกจากตารางแล้ว<br>
+         <div style="margin: 8px 0; padding: 6px; background: #e8f5e8; border-radius: 4px;">
+           <small style="color: #4CAF50;">
+             📚 วิชาจะกลับมาพร้อมใช้งานใน sidebar
+           </small>
+         </div>`,
+        2000
+      );
     }
     
     return newData;
@@ -4554,20 +4635,16 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
   };
 
   // =================== RESET FUNCTION ===================
-  // ปรับปรุง handleReset function ใหม่
 const handleReset = () => {
   // เก็บเฉพาะ TimeFixed Courses ไว้
   const newScheduleData: ExtendedScheduleData[] = [];
   
-  // วนลูปผ่าน scheduleData เพื่อหา TimeFixed courses
   DAYS.forEach((day, dayIndex) => {
-    // หา TimeFixed courses ในวันนี้
     const timeFixedSubCells: SubCell[] = [];
     
     scheduleData.forEach(dayData => {
       if (dayData.day === day && dayData.subCells) {
         dayData.subCells.forEach(subCell => {
-          // เก็บเฉพาะ SubCell ที่เป็น TimeFixed Course
           if (subCell.isTimeFixed === true) {
             timeFixedSubCells.push(subCell);
           }
@@ -4576,7 +4653,6 @@ const handleReset = () => {
     });
 
     if (timeFixedSubCells.length > 0) {
-      // สร้างแถวสำหรับ TimeFixed courses
       const rowGroups = separateOverlappingSubCells(timeFixedSubCells);
       const totalRowsForThisDay = rowGroups.length + 1;
 
@@ -4591,7 +4667,6 @@ const handleReset = () => {
           subCells: rowSubCells
         };
 
-        // สร้าง time slots
         TIME_SLOTS.forEach((time) => {
           const matched = rowSubCells.filter(subCell =>
             isTimeInSlot(subCell.startTime, subCell.endTime, time)
@@ -4624,13 +4699,11 @@ const handleReset = () => {
         newScheduleData.push(dayData);
       });
 
-      // เพิ่ม empty row
       const emptyRowIndex = rowGroups.length;
       const emptyRow = createEmptyDayRow(day, dayIndex, emptyRowIndex, totalRowsForThisDay);
       emptyRow.isFirstRowOfDay = false;
       newScheduleData.push(emptyRow);
     } else {
-      // ถ้าไม่มี TimeFixed courses ในวันนี้ ให้สร้าง empty rows
       const firstRow = createEmptyDayRow(day, dayIndex, 0, 2);
       const secondRow = createEmptyDayRow(day, dayIndex, 1, 2);
       secondRow.isFirstRowOfDay = false;
@@ -4638,34 +4711,40 @@ const handleReset = () => {
     }
   });
 
-  // อัปเดต schedule data
   setScheduleData(newScheduleData);
-  
-  // ล้างข้อมูลอื่นๆ
   setCurrentTableName("");
   setIsTableFromAPI(false);
   setOriginalScheduleData([]);
   
-  // *** ไม่ลบ course cards ออก ให้คงไว้ทั้งหมด ***
-  // courseCards จะยังคงอยู่ แต่ isCourseCardUsed() จะตรวจสอบใหม่จาก newScheduleData
-  // ทำให้วิชาที่ไม่ใช่ TimeFixed จะเปลี่ยนเป็นสถานะ "ใช้งานได้" อัตโนมัติ
-  
-  // ล้าง filters
   clearAllFilters();
   clearAllSidebarFilters();
   
-  // นับจำนวน TimeFixed courses ที่เหลืออยู่
   const timeFixedCount = newScheduleData.reduce((count, dayData) => 
     count + (dayData.subCells?.filter(subCell => subCell.isTimeFixed).length || 0), 0
   );
   
-  // นับจำนวนวิชาปกติที่กลับมาใช้ได้
   const availableCourses = courseCards.filter(card => !isCourseCardUsed(card));
   
   if (timeFixedCount > 0) {
-    message.success(`รีเซตตารางสำเร็จ (เก็บ TimeFixed Courses ไว้ ${timeFixedCount} วิชา, วิชาปกติ ${availableCourses.length} วิชา กลับมาพร้อมใช้งาน)`);
+    showSwalSuccess(
+      'รีเซตสำเร็จ ✅',
+      `รีเซตตารางเสร็จแล้ว<br>
+       <div style="margin: 8px 0; padding: 8px; background: #e3f2fd; border-radius: 4px;">
+         🔒 <strong>TimeFixed Courses:</strong> ${timeFixedCount} วิชา (เก็บไว้)<br>
+         📚 <strong>วิชาปกติ:</strong> ${availableCourses.length} วิชา (พร้อมใช้งาน)
+       </div>`,
+      2500
+    );
   } else {
-    message.success(`รีเซตตารางสำเร็จ (วิชาทั้งหมด ${courseCards.length} วิชา กลับมาพร้อมใช้งาน)`);
+    showSwalSuccess(
+      'รีเซตสำเร็จ ✅',
+      `รีเซตตารางเสร็จแล้ว<br>
+       <div style="margin: 8px 0; padding: 8px; background: #e3f2fd; border-radius: 4px;">
+         📚 <strong>วิชาทั้งหมด:</strong> ${courseCards.length} วิชา<br>
+         <small style="color: #1976D2;">พร้อมใช้งานใน sidebar</small>
+       </div>`,
+      2000
+    );
   }
 
   console.log(`🔄 Reset completed. TimeFixed courses preserved: ${timeFixedCount}, Available courses: ${availableCourses.length}`);
