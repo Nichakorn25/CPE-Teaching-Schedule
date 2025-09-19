@@ -22,21 +22,8 @@ import {
 } from "../../../interfaces/Adminpage";
 import Swal from "sweetalert2";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  Button,
-  Input,
-  Select,
-  Card,
-  Form,
-  Row,
-  Col,
-  message,
-} from "antd";
-import {
-  SaveOutlined,
-  PlusOutlined,
-  DeleteOutlined,
-} from "@ant-design/icons";
+import { Button, Input, Select, Card, Form, Row, Col, message } from "antd";
+import { SaveOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
@@ -196,141 +183,155 @@ const ManageCourse: React.FC = () => {
   };
 
   const isFormValid = () => {
-    if (id) return true;
+    const values = form.getFieldsValue();
     return (
-      courseType &&
-      courseCode &&
-      credit &&
-      thaiName &&
-      englishName &&
-      hours.lecture &&
-      hours.practice &&
-      hours.selfStudy &&
+      selectedCurriculum &&
+      selectedAcademicYear &&
+      values.TypeOfCoursesID &&
+      values.Code &&
+      values.Credit &&
+      values.ThaiName &&
+      values.EnglishName &&
+      values.Lecture !== undefined &&
+      values.Lab !== undefined &&
+      values.Self !== undefined &&
       teachers.length > 0 &&
       teachers.every((t) => t.ID)
     );
   };
 
+// ────────────────── โหลดข้อมูล ──────────────────
 useEffect(() => {
-  const fetchCourseData = async () => {
+  const fetchInitialCourse = async () => {
     if (!id) return;
 
     try {
+      // ดึงข้อมูลรายวิชา
       const res = await getCoursebyid(Number(id));
-      if (res.status === 200 && res.data) {
-        const data = res.data;
+      if (res.status !== 200 || !res.data) return;
 
-        // map UserAllCourses เป็น teacher objects
-        const fullTeacherObjects: AllTeacher[] = data.UserAllCourses?.map(
-          (item: { User: any }) => {
-            const user = item.User!;
-            const major = user.Major as MajorInterface;
-            const department = major.Department as DepartmentInterface;
+      const data = res.data;
 
-            return {
-              ID: user.ID,
-              Title: user.Title?.Title || "",
-              Firstname: user.Firstname,
-              Lastname: user.Lastname,
-              Email: user.Email,
-              EmpId: user.EmpId,
-              Department: department,
-              Major: major,
-              Position: user.Position,
-              Status: user.Status,
-              Role: user.Role,
-            };
-          }
-        ) || [];
+      // แปลง UserAllCourses → teacher objects
+      const fullTeacherObjects: AllTeacher[] =
+        data.UserAllCourses?.map((item: { User: any }) => {
+          const user = item.User!;
+          const major = user.Major as MajorInterface;
+          const department = major.Department as DepartmentInterface;
 
-        setTeachers(fullTeacherObjects);
-        setTeacherOptions(fullTeacherObjects);
+          return {
+            ID: user.ID,
+            Title: user.Title?.Title || "",
+            Firstname: user.Firstname,
+            Lastname: user.Lastname,
+            Email: user.Email,
+            EmpId: user.EmpId,
+            Department: department,
+            Major: major,
+            Position: user.Position,
+            Status: user.Status,
+            Role: user.Role,
+          };
+        }) || [];
 
-        // ถ้ามี teacher อย่างน้อย 1 คน
-        if (fullTeacherObjects.length > 0) {
-          const firstTeacher = fullTeacherObjects[0];
-          const department = firstTeacher.Department as unknown as DepartmentInterface;
-          const major = firstTeacher.Major as unknown as MajorInterface;
+      // เลือก department & major จาก teacher คนแรก (ถ้ามี)
+      if (fullTeacherObjects.length > 0) {
+        const firstTeacher = fullTeacherObjects[0];
+        const departmentID = firstTeacher.Department.ID;
+        const majorID = firstTeacher.Major.ID;
 
-          // auto select department
-          setSelectedDepartmentID(department.ID);
+        setSelectedDepartmentID(departmentID);
 
-          // filter majors ของ department นั้น
-          const majorsOfDepartment = majors.filter(
-            (m) => m.DepartmentID === department.ID
-          );
-          setFilteredMajors(majorsOfDepartment);
-
-          // auto select major ของ teacher
-          setSelectedMajorID(major.ID);
-        }
-
-        // set form fields
-        form.setFieldsValue({
-          ThaiName: data.ThaiName,
-          EnglishName: data.EnglishName,
-          Code: data.Code,
-          Credit: data.Credit?.Unit?.toString(),
-          Lecture: data.Credit?.Lecture?.toString(),
-          Lab: data.Credit?.Lab?.toString(),
-          Self: data.Credit?.Self?.toString(),
-          TypeOfCoursesID: data.TypeOfCoursesID?.toString(),
-          CurriculumID: data.CurriculumID,
-          AcademicYearID: data.AcademicYearID,
-          UserIDs: fullTeacherObjects.map((t) => t.ID),
-        });
+        const majorsOfDepartment = majors.filter(
+          (m) => m.DepartmentID === departmentID
+        );
+        setFilteredMajors(majorsOfDepartment);
+        setSelectedMajorID(majorID);
       }
+
+      // set teachers + options
+      setTeachers(fullTeacherObjects);
+      setTeacherOptions(fullTeacherObjects);
+
+      // set form fields
+      form.setFieldsValue({
+        ThaiName: data.ThaiName,
+        EnglishName: data.EnglishName,
+        Code: data.Code,
+        Credit: data.Credit?.Unit?.toString(),
+        Lecture: data.Credit?.Lecture?.toString(),
+        Lab: data.Credit?.Lab?.toString(),
+        Self: data.Credit?.Self?.toString(),
+        TypeOfCoursesID: data.TypeOfCoursesID?.toString(),
+        CurriculumID: data.CurriculumID,
+        AcademicYearID: data.AcademicYearID,
+        UserIDs: fullTeacherObjects.map((t) => t.ID),
+      });
     } catch (error) {
+      console.error("โหลดข้อมูลรายวิชาไม่สำเร็จ:", error);
       message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลรายวิชา");
-      console.error(error);
     }
   };
 
-  fetchCourseData();
+  fetchInitialCourse();
 }, [id, form, majors]);
 
+// ────────────────── บันทึกข้อมูล ──────────────────
+const handleSubmit = async (values?: any) => {
+  const formValues = values || form.getFieldsValue();
 
+  if (!selectedCurriculum || !selectedAcademicYear) {
+    message.error("กรุณากรอกข้อมูลให้ครบถ้วน");
+    return;
+  }
 
-  const handleSubmit = async () => {
-    if (!selectedCurriculum || !selectedAcademicYear) {
-      message.error("กรุณากรอกข้อมูลให้ครบถ้วน");
-      return;
-    }
+  if (teachers.length === 0 || teachers.some((t) => !t.ID)) {
+    message.error("กรุณาเลือกอาจารย์ผู้สอนให้ครบถ้วน");
+    return;
+  }
 
-    const data: CreateCourseInteface = {
-      Code: courseCode,
-      EnglishName: englishName,
-      ThaiName: thaiName,
-      CurriculumID: selectedCurriculum.ID,
-      AcademicYearID: selectedAcademicYear.ID,
-      TypeOfCoursesID: parseInt(courseType),
-      Unit: parseInt(credit),
-      Lecture: parseInt(hours.lecture),
-      Lab: parseInt(hours.practice),
-      Self: parseInt(hours.selfStudy),
-      UserIDs: teachers.map((t) => t.ID).filter((id) => id && id !== 0),
-    };
-
-    try {
-      setLoading(true);
-      let response;
-      if (id) {
-        response = await putUpdateCourse(Number(id), data);
-      } else {
-        response = await postCreateCourse(data);
-      }
-
-      if (response.status === 200) {
-        message.success(id ? "แก้ไขรายวิชาเรียบร้อย" : "เพิ่มรายวิชาเรียบร้อย");
-        navigate("/all-course");
-      }
-    } catch (error: any) {
-      message.error(error?.response?.data?.message || "ไม่สามารถดำเนินการได้");
-      console.error("Error submitting course", error);
-    } finally {
-      setLoading(false);
-    }
+  const payload: CreateCourseInteface = {
+    Code: formValues.Code || "",
+    EnglishName: formValues.EnglishName || "",
+    ThaiName: formValues.ThaiName || "",
+    CurriculumID: selectedCurriculum.ID,
+    AcademicYearID: selectedAcademicYear.ID,
+    TypeOfCoursesID: parseInt(formValues.TypeOfCoursesID || "0"),
+    Unit: parseInt(formValues.Credit || "0"),
+    Lecture: parseInt(formValues.Lecture || "0"),
+    Lab: parseInt(formValues.Lab || "0"),
+    Self: parseInt(formValues.Self || "0"),
+    UserIDs: teachers.map((t) => t.ID),
   };
+
+  try {
+    setLoading(true);
+    const response = id
+      ? await putUpdateCourse(Number(id), payload)
+      : await postCreateCourse(payload);
+
+    if (response.status === 200 || response.status === 201) {
+      Swal.fire(
+        "สำเร็จ",
+        id
+          ? `แก้ไขข้อมูลวิชา <b>${formValues.EnglishName} - ${formValues.ThaiName}</b> เรียบร้อยแล้ว`
+          : `เพิ่มวิชา <b>${formValues.EnglishName} - ${formValues.ThaiName}</b> เป็นรายวิชาที่เปิดสอนเรียบร้อยแล้ว`,
+        "success"
+      ).then(() => navigate("/all-course"));
+    } else {
+      Swal.fire("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้", "error");
+    }
+  } catch (error: any) {
+    Swal.fire(
+      "ผิดพลาด",
+      error?.response?.data?.message || "ไม่สามารถดำเนินการได้",
+      "error"
+    );
+    console.error("Error submitting course", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Generate number options
   const generateNumberOptions = (max: number) => {
