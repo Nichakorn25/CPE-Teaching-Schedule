@@ -51,6 +51,61 @@ func ConnectionDB() {
 	db = database
 }
 
+// func loadEnv() {
+// 	err := godotenv.Load()
+// 	if err != nil {
+// 		log.Println("No .env file found, using system environment variables")
+// 	}
+// }
+
+// func getDSN(withDB bool) string {
+// 	host := os.Getenv("DB_HOST")
+// 	user := os.Getenv("DB_USER")
+// 	password := os.Getenv("DB_PASSWORD")
+// 	port := os.Getenv("DB_PORT")
+// 	sslmode := os.Getenv("DB_SSLMODE")
+// 	timezone := os.Getenv("DB_TIMEZONE")
+
+// 	if withDB {
+// 		dbname := os.Getenv("DB_NAME")
+// 		return fmt.Sprintf(
+// 			"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
+// 			host, user, password, dbname, port, sslmode, timezone,
+// 		)
+// 	}
+
+// 	return fmt.Sprintf("host=%s user=%s password=%s dbname=postgres port=%s sslmode=%s", host, user, password, port, sslmode)
+// }
+
+// func CreateDatabase() {
+// 	dbSQL, err := sql.Open("postgres", getDSN(false))
+// 	if err != nil {
+// 		log.Fatal("Failed to connect to PostgreSQL:", err)
+// 	}
+// 	defer dbSQL.Close()
+
+// 	dbName := os.Getenv("DB_NAME")
+// 	_, err = dbSQL.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
+// 	if err != nil {
+// 		fmt.Println("Database may already exist:", err)
+// 	} else {
+// 		fmt.Println("Database created successfully")
+// 	}
+// }
+
+// func ConnectionDB() {
+// 	loadEnv()
+// 	CreateDatabase()
+
+// 	database, err := gorm.Open(postgres.Open(getDSN(true)), &gorm.Config{})
+// 	if err != nil {
+// 		panic("failed to connect database")
+// 	}
+
+// 	fmt.Println("connected to database")
+// 	db = database
+// }
+
 func SetupDatabase() {
 	err := db.AutoMigrate(
 		&entity.Title{},

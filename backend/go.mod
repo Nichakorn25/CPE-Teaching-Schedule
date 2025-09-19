@@ -12,7 +12,10 @@ require (
 	gorm.io/gorm v1.30.0
 )
 
-require github.com/google/go-cmp v0.7.0 // indirect
+require (
+	github.com/google/go-cmp v0.7.0 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
+)
 
 require (
 	github.com/bytedance/sonic v1.13.2 // indirect

@@ -7,6 +7,7 @@ import {
 import { TeachingAssistantInterface } from "../../interfaces/TeachingAssistant";
 import { OpenCourseInterface } from "../../interfaces/OpenCourse";
 import { TimeFixedCoursesIn } from "../../interfaces/TimeFix";
+import {UpdateFixedCourse} from "../../interfaces/UpFixedCourse";
 import axios from "axios";
 
 const apiUrl = "http://localhost:8080";
@@ -191,6 +192,19 @@ async function postCreateCurriculum(data: CreateCurriculumInterface) {
     .catch((e) => e.response);
 }
 
+/////////////////////////////
+async function putUpdateFixedCourse(
+  id: number,
+  data: UpdateFixedCourse
+) {
+  try {
+    const res = await axios.put(`${apiUrl}/up-fixed/${id}`, data, requestOptions);
+    return res.data;
+  } catch (e: any) {
+    return e.response?.data || { error: "เกิดข้อผิดพลาด" };
+  }
+}
+
 export {
   getCoursebyid, //used
   getAllCourses, //used
@@ -215,4 +229,6 @@ export {
   postCreateSchduleTeachingAssistant,
   postCreateLaboratory,
   postCreateCurriculum,
+
+  putUpdateFixedCourse,
 };

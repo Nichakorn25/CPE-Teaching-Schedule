@@ -63,6 +63,7 @@ func main() {
 
 		///////////////////// TimeFixedCourses /////////////////////////
 		r.POST("/offered-courses/fixed", controllers.CreateFixedCourse)
+		r.PUT("/up-fixed/:id", controllers.UpdateFixedCourse)
 
 		///////////////////// Schedules /////////////////////////
 		r.GET("/schedules", controllers.GetScheduleByNameTable)
