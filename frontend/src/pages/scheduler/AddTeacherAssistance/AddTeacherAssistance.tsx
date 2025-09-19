@@ -8,10 +8,9 @@ import {
   getAllTeachers,
   getAllTeachingAssistants,
 } from "../../../services/https/AdminPageServices";
-
 import { postCreateTA } from "../../../services/https/SchedulerPageService";
 import { TeachingAssistantInterface } from "../../../interfaces/TeachingAssistant";
-import { OpenCourseInterface } from "../../../interfaces/Adminpage";
+import { OpenCourseForAddTA } from "../../../interfaces/Adminpage";
 import { getOfferedCoursesByMajor } from "../../../services/https/GetService";
 
 const { Option } = Select;
@@ -142,21 +141,15 @@ const buildGroupDayRows = (gis: any[]): GroupDayRow[] => {
 };
 
 /** ---------- helpers สำหรับฟิลเตอร์ ---------- */
-const normalize = (s?: string | null) => (s ?? "").trim().toLowerCase();
-const isTimeFixed = (c: any) =>
-  c?.IsFixCourses === true ||
-  c?.is_fix_courses === true ||
-  c?.TimeFixCourse === true ||
-  c?.timefixcourse === true;
 
 const AddTeachingAssistant: React.FC = () => {
   const [form] = Form.useForm();
-  const [courses, setCourses] = useState<OpenCourseInterface[]>([]);
+  const [courses, setCourses] = useState<OpenCourseForAddTA[]>([]);
   const [assistants, setAssistants] = useState<TeachingAssistantInterface[]>(
     []
   );
   const [selectedCourse, setSelectedCourse] =
-    useState<OpenCourseInterface | null>(null);
+    useState<OpenCourseForAddTA | null>(null);
 
   const [userMajor, setUserMajor] = useState<string>("");
 
@@ -203,7 +196,7 @@ const AddTeachingAssistant: React.FC = () => {
         console.log("esdrui:", courseRes);
 
         if (courseRes.status === 200) {
-          const raw: OpenCourseInterface[] = Array.isArray(courseRes.data?.data)
+          const raw: OpenCourseForAddTA[] = Array.isArray(courseRes.data?.data)
             ? courseRes.data.data
             : courseRes.data ?? [];
 
@@ -216,14 +209,13 @@ const AddTeachingAssistant: React.FC = () => {
           console.log("raw:", raw?.length ?? 0, "userMajor:", major);
           console.log("filtered:", filtered.length);
           console.table(
-           filtered.slice(0, 20).map((x: any) => ({
-  id: x.ID,
-  code: x.Code,
-  name: x.CourseName, // <-- แก้ตรงนี้
-  major: x.Major,
-  IsFixCourses: x.IsFixCourses,
-}))
-
+            filtered.slice(0, 20).map((x: any) => ({
+              id: x.ID,
+              code: x.Code,
+              name: x.CourseName, // <-- แก้ตรงนี้
+              major: x.Major,
+              IsFixCourses: x.IsFixCourses,
+            }))
           );
           console.groupEnd();
 
@@ -258,21 +250,40 @@ const AddTeachingAssistant: React.FC = () => {
   );
 
   const handleCourseChange = (courseID: number) => {
-    const course = courses.find((c) => c.ID === courseID) || null;
-    setSelectedCourse(course);
+  const course = courses.find((c) => c.ID === courseID) || null;
+  if (!course) {
+    setSelectedCourse(null);
+    form.setFieldsValue({ assistantsPerGroup: [] });
+    return;
+  }
 
-    if (course) {
-      const rows = buildGroupDayRows((course as any).GroupInfos || []);
-      const init = rows.map((r) => ({
-        group: r.group,
-        day: r.day,
-        assistantIDs: [],
-      }));
-      form.setFieldsValue({ assistantsPerGroup: init });
-    } else {
-      form.setFieldsValue({ assistantsPerGroup: [] });
-    }
-  };
+  // สร้าง GroupInfos จาก Sections (กรอง Section ที่มีเวลาและวัน)
+  const groupInfos = course.Sections
+    ?.filter((s: any) => s.Time && s.DayOfWeek)
+    .map((s: any) => ({
+      Group: s.SectionNumber,
+      Day: s.DayOfWeek,
+      TimeSpan: s.Time,
+      Room: s.Room,
+    })) || [];
+
+  // อัพเดต selectedCourse พร้อม GroupInfos
+  setSelectedCourse({ ...course, GroupInfos: groupInfos });
+
+  // สร้างแถว group/day สำหรับ Form
+  const rows = buildGroupDayRows(groupInfos);
+
+  // สร้างค่าเริ่มต้นให้ Form สำหรับผู้ช่วยสอน
+  const initFormValues = rows.map((r) => ({
+    group: r.group,
+    day: r.day,
+    assistantIDs: [],
+  }));
+
+  form.setFieldsValue({ assistantsPerGroup: initFormValues });
+};
+
+
 
   const handleSubmit = async (values: any) => {
     if (!selectedCourse) {
@@ -415,7 +426,7 @@ const AddTeachingAssistant: React.FC = () => {
               >
                 {courses.map((c) => (
                   <Option key={c.ID} value={c.ID}>
-                    {c.Code} - {c.CourseName}
+                    {c.Code} - {c.EnglishCourseName} {c.ThaiCourseName}
                   </Option>
                 ))}
               </Select>
@@ -431,12 +442,16 @@ const AddTeachingAssistant: React.FC = () => {
                   header: { backgroundColor: "#f8f9fa", fontWeight: "bold" },
                 }}
               >
-                {selectedCourse.Teachers?.length ? (
+                {selectedCourse.Sections?.length ? (
                   <ul style={{ margin: 0, paddingLeft: 18 }}>
-                    {(selectedCourse.Teachers as any[]).map((t) => (
-                      <li key={t.ID}>
-                        {t.Title} {t.Firstname} {t.Lastname}
-                      </li>
+                    {Array.from(
+                      new Set(
+                        selectedCourse.Sections.flatMap(
+                          (s) => s.InstructorNames
+                        )
+                      )
+                    ).map((t, i) => (
+                      <li key={i}>{t}</li>
                     ))}
                   </ul>
                 ) : (

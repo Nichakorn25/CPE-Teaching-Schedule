@@ -338,6 +338,7 @@ type OfferedCoursesDetail struct {
 	Credit            string
 	TypeOfCourse      string
 	TotalSections     uint
+	IsFixCourses   bool
 	Sections          []SectionDetail
 }
 
@@ -422,6 +423,7 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 				Credit:            credit,
 				TypeOfCourse:      oc.AllCourses.TypeOfCourses.TypeName,
 				TotalSections:     oc.Section,
+				IsFixCourses:     oc.IsFixCourses,
 				Sections: []SectionDetail{
 					{
 						SectionNumber:   oc.Section,
