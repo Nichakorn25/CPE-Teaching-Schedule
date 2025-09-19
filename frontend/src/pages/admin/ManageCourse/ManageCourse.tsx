@@ -30,14 +30,12 @@ import {
   Form,
   Row,
   Col,
-  Divider,
   message,
 } from "antd";
 import {
   SaveOutlined,
   PlusOutlined,
   DeleteOutlined,
-  ArrowLeftOutlined,
 } from "@ant-design/icons";
 
 const { Option } = Select;
@@ -54,7 +52,6 @@ const ManageCourse: React.FC = () => {
   >(null);
   const [selectedMajorID, setSelectedMajorID] = useState<number | null>(null);
   const [filteredMajors, setFilteredMajors] = useState<MajorInterface[]>([]);
-  const [selectedMajorName, setSelectedMajorName] = useState("");
   const [allTeachers, setAllTeachers] = useState<AllTeacher[]>([]);
   const [teacherOptions, setTeacherOptions] = useState<AllTeacher[]>([]);
   const [teachers, setTeachers] = useState<AllTeacher[]>([]);

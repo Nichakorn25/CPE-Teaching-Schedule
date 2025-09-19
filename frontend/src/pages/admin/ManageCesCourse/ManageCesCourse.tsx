@@ -15,6 +15,7 @@ import { SaveOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import {
   getAllCurriculum,
   getLaboratory,
+  getOfferedCoursesByMajorbyID,
 } from "../../../services/https/GetService";
 import {
   getCoursebyid,
@@ -88,14 +89,6 @@ const ManageCesCourse: React.FC = () => {
   const [nameTables, setNameTables] = useState<string[]>([]);
   const [selectedNameTable, setSelectedNameTable] = useState<string>("");
 
-  // Form data for class schedule
-  // const [dayOfWeek, setDayOfWeek] = useState<string>("");
-  // const [startTime, setStartTime] = useState<string>("");
-  // const [endTime, setEndTime] = useState<string>("");
-  // const [roomFix, setRoomFix] = useState<string>("");
-  // const [sectionInFixed, setSectionInFixed] = useState<number>(1);
-
-  // Load data from localStorage - same as AddCoursepage
   useEffect(() => {
     const year = localStorage.getItem("academicYear");
     const semester = localStorage.getItem("term");
@@ -152,33 +145,53 @@ const ManageCesCourse: React.FC = () => {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    if (id) {
-      const fetchExistingCourse = async () => {
-        try {
-          const res = await getCoursebyid(Number(id));
-          if (res.status === 200) {
-            const course = res.data;
-            form.setFieldsValue({
-              curriculum: course.CurriculumID,
-              courseCode: course.ID,
-              courseNameTh: course.ThaiName,
-              courseNameEn: course.EnglishName,
-              labRoom: course.Laboratory?.ID || null,
-              groupCount: course.Section || 1,
-              studentsPerGroup: course.Capacity || 0,
-            });
+ useEffect(() => {
+  const fetchCourseData = async () => {
+    if (!id) return;
 
-            await handleCurriculumChange(course.CurriculumID);
-          }
-        } catch (error) {
-          message.error("ไม่สามารถโหลดข้อมูลรายวิชาได้");
-          navigate("/all-open-course");
+    try {
+      const res = await getOfferedCoursesByMajorbyID(Number(id));
+      if (res.status === 200 && res.data && res.data.length > 0) {
+        const course = res.data[0]; // response เป็น array
+
+        // 1. ตั้งค่า curriculum และ courseCode
+        setSelectedCurriculumID(course.CurriculumID);
+        setCourses([course]); // ให้ courseCode select มีตัวเลือกเดียว
+        form.setFieldsValue({
+          curriculum: course.CurriculumID,
+          courseCode: course.ID,
+          courseNameTh: course.ThaiCourseName,
+          courseNameEn: course.EnglishCourseName,
+          labRoom: course.Laboratory !== "ไม่มีการสอนปฏิบัติการ" ? course.Laboratory : "ไม่มีการสอนปฏิบัติการ",
+          groupCount: course.TotalSections || 1,
+          studentsPerGroup: course.Sections?.[0]?.Capacity || 30,
+        });
+
+        // 2. ตั้งค่า fixedSections
+        if (course.Sections && course.Sections.length > 0) {
+          setFixedSections(
+            course.Sections.map((s: any, index: number) => {
+              const [startTime, endTime] = s.Time.split(" - ");
+              return {
+                sectionInFixed: index + 1,
+                dayOfWeek: s.DayOfWeek,
+                startTime: startTime,
+                endTime: endTime,
+                roomFix: s.Room || "",
+              };
+            })
+          );
         }
-      };
-      fetchExistingCourse();
+      }
+    } catch (error) {
+      message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลรายวิชา");
+      console.error(error);
     }
-  }, [id, form, navigate]);
+  };
+
+  fetchCourseData();
+}, [id, form]);
+
 
   const handleCurriculumChange = async (value: number) => {
     setSelectedCurriculumID(value);
@@ -200,7 +213,7 @@ const ManageCesCourse: React.FC = () => {
     const selectedCourse = courses.find((course) => course.ID === courseId);
     if (selectedCourse) {
       try {
-        const response = await getCoursebyid(courseId);
+        const response = await getOfferedCoursesByMajorbyID(courseId);
         if (response.status === 200) {
           const course = response.data;
           form.setFieldsValue({
@@ -409,7 +422,7 @@ const ManageCesCourse: React.FC = () => {
                   >
                     {courses.map((c) => (
                       <Option key={c.ID} value={c.ID}>
-                        {c.CourseCode} - {c.CourseName}
+                        {c.CourseCode} - {c.EnglishCourseName} {c.ThaiCourseName}
                       </Option>
                     ))}
                   </Select>

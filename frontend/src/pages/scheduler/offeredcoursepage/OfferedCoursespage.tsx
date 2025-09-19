@@ -320,75 +320,68 @@ const OfferedCoursespage: React.FC = () => {
     return result;
   };
 
-  // Filter courses based on search
-  const filteredCourses = useMemo(() => {
-    let data = getExpandedTableData();
+ const filteredCourses = useMemo(() => {
+  let data = getExpandedTableData();
 
-    // filter ตาม searchText
-    if (searchText) {
-      const searchLower = searchText.toLowerCase();
-      data = data.filter((course: any) => {
-        if (course.isChild) return true; // Always show child rows if parent matches
-        return (
-          course.Code?.toLowerCase().includes(searchLower) ||
-          course.CourseName?.toLowerCase().includes(searchLower) ||
-          course.TypeOfCourse?.toLowerCase().includes(searchLower) ||
-          course.Sections?.[0]?.InstructorName?.toLowerCase().includes(
-            searchLower
+  // Normalize function for names
+  const normalizeName = (name: string) =>
+    name.replace(/\s+/g, "").replace(/\./g, "").toLowerCase();
+
+  // Full name ของผู้ใช้ปัจจุบัน
+  const title = localStorage.getItem("title") || "";
+  const firstName = localStorage.getItem("first_name") || "";
+  const lastName = localStorage.getItem("last_name") || "";
+  const fullName = `${title}${firstName} ${lastName}`.trim();
+
+  // 1. Filter ตาม searchText (รหัส, ชื่อไทย/อังกฤษ, อาจารย์ทุก Section)
+  if (searchText) {
+    const searchLower = searchText.toLowerCase();
+    data = data.filter((course: any) => {
+      if (course.isChild) return true;
+
+      const matchesCode = course.Code?.toLowerCase().includes(searchLower);
+      const matchesNameEng = course.EnglishCourseName?.toLowerCase().includes(searchLower);
+      const matchesNameThai = course.ThaiCourseName?.toLowerCase().includes(searchLower);
+
+      const matchesInstructor =
+        course.Sections?.some((s: any) =>
+          Array.isArray(s.InstructorNames) &&
+          s.InstructorNames.some((inst: string) =>
+            inst.toLowerCase().includes(searchLower)
           )
         );
-      });
-    }
 
-    function normalizeName(name: string) {
-      return name
-        .replace(/\s+/g, "") // ลบช่องว่างทั้งหมด
-        .replace(/\./g, "") // ลบจุด
-        .toLowerCase();
-    }
-
-    // ดึงชื่อเต็มของผู้ใช้ปัจจุบัน
-    const title = localStorage.getItem("title") || "";
-    const firstName = localStorage.getItem("first_name") || "";
-    const lastName = localStorage.getItem("last_name") || "";
-    const fullName = `${title}${firstName} ${lastName}`.trim();
-
-    if (showonlyMine) {
-      data = data.filter((course: any) => {
-        if (course.isChild) return true;
-
-        return course.Sections?.some(
-          (s: any) =>
-            Array.isArray(s.InstructorNames) &&
-            s.InstructorNames.some((instructor: string) => {
-              const match =
-                normalizeName(instructor) === normalizeName(fullName);
-
-              if (match) {
-                console.log("เจอ match:", instructor, "==>", fullName);
-              } else {
-                console.log("ไม่ match:", instructor, "!==", fullName);
-              }
-
-              return match;
-            })
-        );
-      });
-
-      console.log("Data หลัง filter:", data);
-    }
-
-    // sort ตาม dropdown
-    data.sort((a: any, b: any) => {
-      if (sortBy === "Code") return a.Code.localeCompare(b.Code);
-      if (sortBy === "Name") return a.CourseName.localeCompare(b.CourseName);
-      if (sortBy === "TypeName")
-        return a.TypeOfCourse.localeCompare(b.TypeOfCourse);
-      return 0;
+      return matchesCode || matchesNameEng || matchesNameThai || matchesInstructor;
     });
+  }
 
-    return data;
-  }, [courses, searchText, expandedRowKeys, sortBy, showonlyMine]);
+  // 2. Filter เฉพาะของผู้ใช้ ถ้า showonlyMine = true
+  if (showonlyMine) {
+    data = data.filter((course: any) => {
+      if (course.isChild) return true;
+
+      return course.Sections?.some((s: any) =>
+        Array.isArray(s.InstructorNames) &&
+        s.InstructorNames.some((inst: string) =>
+          normalizeName(inst) === normalizeName(fullName)
+        )
+      );
+    });
+  }
+
+  // 3. Sort ตาม dropdown
+  data.sort((a: any, b: any) => {
+    if (sortBy === "Code") return (a.Code || "").localeCompare(b.Code || "");
+    if (sortBy === "Name")
+      return (a.EnglishCourseName || "").localeCompare(b.EnglishCourseName || "");
+    if (sortBy === "TypeName")
+      return (a.TypeOfCourse || "").localeCompare(b.TypeOfCourse || "");
+    return 0;
+  });
+
+  return data;
+}, [courses, searchText, expandedRowKeys, sortBy, showonlyMine]);
+
 
   // Calculate pagination
   const totalItems = filteredCourses.filter((course) => !course.isChild).length;
