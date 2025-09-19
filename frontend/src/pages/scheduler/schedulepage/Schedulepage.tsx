@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "./Schedulepage.css";
 import {
   Button,
@@ -13,11 +13,7 @@ import {
   Select,
   Tag,
   Space,
-  Divider,
   AutoComplete,
-  Drawer,
-  Tabs,
-  Badge,
   Empty,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -33,7 +29,6 @@ import {
   HistoryOutlined,
 } from "@ant-design/icons";
 import {
-  OfferedCoursesInterface,
   ScheduleInterface,
 } from "../../../interfaces/Dash";
 import {
@@ -45,7 +40,7 @@ import {
 } from "../../../services/https/SchedulerPageService";
 import { AllTeacher } from "../../../interfaces/Adminpage";
 import { getAllTeachers } from "../../../services/https/AdminPageServices";
-import { OpenCourseInterface, LaboratoryInterface,AcademicYearInterface } from "../../../interfaces/Adminpage"; 
+import { OpenCourseInterface, LaboratoryInterface } from "../../../interfaces/Adminpage"; 
 import { getOfferedCoursesByMajor, getLaboratory } from "../../../services/https/GetService";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
@@ -364,16 +359,16 @@ const isTimeInSlot = (startTime: string, endTime: string, slot: string): boolean
 // =================== MAIN COMPONENT ===================
 const Schedulepage: React.FC = () => {
   // =================== STATES ===================
-  const [academicYear, setAcademicYear] = useState(() => 
+  const [academicYear] = useState(() => 
     localStorage.getItem("academicYear") || ""
   );
-  const [term, setTerm] = useState(() => 
+  const [term] = useState(() => 
     localStorage.getItem("term") || ""
   );
- const [major_name, setmajor_name] = useState(() => 
+ const [major_name] = useState(() => 
     localStorage.getItem("major_name") || ""
   );
-  const [role, setrole] = useState(() => 
+  const [role] = useState(() => 
     localStorage.getItem("role") || ""
   );
 
@@ -411,7 +406,7 @@ const Schedulepage: React.FC = () => {
   const [courseCards, setCourseCards] = useState<CourseCard[]>([]);
   const [filteredCourseCards, setFilteredCourseCards] = useState<CourseCard[]>([]);
   const [draggedCourseCard, setDraggedCourseCard] = useState<CourseCard | null>(null);
-  const [sidebarWidth, setSidebarWidth] = useState(350);
+  const [sidebarWidth] = useState(350);
   
   // Sidebar Filter States
   const [sidebarFilterTags, setSidebarFilterTags] = useState<FilterTag[]>([]);
@@ -422,7 +417,6 @@ const Schedulepage: React.FC = () => {
   const [removedCourses, setRemovedCourses] = useState<RemovedCourse[]>([]);
   const [filteredRemovedCourses, setFilteredRemovedCourses] = useState<RemovedCourse[]>([]);
   const [removedSearchValue, setRemovedSearchValue] = useState("");
-  const [activeTab, setActiveTab] = useState("available"); // "available" | "removed"
 
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -519,140 +513,6 @@ const normalizeStudentYear = (level: string | number): string => {
 };
 
 
-const loadInitialFilterData = async () => {
-  const currentMajor = localStorage.getItem("major_name");
-  const currentAcademicYear = localStorage.getItem("academicYear");
-  const currentTerm = localStorage.getItem("term");
-
-  // ถ้าไม่มีข้อมูลที่จำเป็น ให้ข้าม
-  if (!currentMajor || !currentAcademicYear || !currentTerm) {
-    console.log('Missing required data for initial filter load:', { 
-      currentMajor, 
-      currentAcademicYear, 
-      currentTerm 
-    });
-    return;
-  }
-
-  try {
-    console.log('🔄 Loading initial filter data from APIs...');
-    
-    // Promise.allSettled เพื่อโหลดข้อมูลพร้อมกันและไม่ให้ error หนึ่งตัวทำให้ตัวอื่นล้มเหลว
-    const results = await Promise.allSettled([
-      // 1. ดึงข้อมูลวิชาที่เปิดสอน
-      getOfferedCoursesByMajor(currentMajor, parseInt(currentAcademicYear), parseInt(currentTerm)),
-      // 2. ดึงข้อมูลห้องแลปทั้งหมด
-      getLaboratory()
-    ]);
-
-    const subjects = new Set<string>();
-    const courseCodes = new Set<string>();
-    const teachers = new Set<string>();
-    const rooms = new Set<string>();
-    const studentYears = new Set<string>();
-    const laboratories = new Set<string>();
-
-    // ประมวลผลข้อมูลจาก OpenCourse API
-    if (results[0].status === 'fulfilled' && results[0].value?.status === 200) {
-      const openCourses: OpenCourseInterface[] = results[0].value.data;
-      
-      openCourses.forEach(course => {
-        // เพิ่มชื่อวิชา
-        if (course.CourseName) {
-          subjects.add(course.CourseName);
-        }
-        
-        // เพิ่มรหัสวิชา
-        if (course.Code) {
-          courseCodes.add(course.Code);
-        }
-        
-        // เพิ่มอาจารย์
-        if (course.Teachers && course.Teachers.length > 0) {
-          course.Teachers.forEach(teacher => {
-            const fullName = `${teacher.Title || ''} ${teacher.Firstname} ${teacher.Lastname}`.trim();
-            if (fullName) {
-              teachers.add(fullName);
-            }
-          });
-        }
-        
-        // เพิ่มห้องเรียนจาก GroupInfos
-        if (course.GroupInfos && course.GroupInfos.length > 0) {
-          course.GroupInfos.forEach(group => {
-            if (group.Room && group.Room.trim() !== '') {
-              rooms.add(group.Room.trim());
-            }
-          });
-        }
-        
-        // เพิ่มชั้นปี (ดึงจากรหัสวิชา)
-        if (course.Code) {
-          const yearMatch = course.Code.match(/[A-Z]+(\d)/);
-          if (yearMatch && yearMatch[1]) {
-            const year = yearMatch[1];
-            if (['1', '2', '3', '4'].includes(year)) {
-              studentYears.add(year);
-            }
-          }
-        }
-      });
-
-      console.log('✅ OpenCourse data loaded:', {
-        subjects: subjects.size,
-        courseCodes: courseCodes.size, 
-        teachers: teachers.size,
-        rooms: rooms.size,
-        studentYears: studentYears.size,
-        totalCourses: openCourses.length
-      });
-    } else {
-      console.warn('Failed to load OpenCourse data or no data available');
-    }
-
-    // ประมวลผลข้อมูลจาก Laboratory API
-    if (results[1].status === 'fulfilled' && results[1].value?.status === 200) {
-      const laboratoryData: LaboratoryInterface[] = results[1].value.data;
-      
-      laboratoryData.forEach(lab => {
-        if (lab.Room && lab.Room.trim() !== '') {
-          // สามารถเพิ่มทั้ง Room และ Building ได้ หรือรวมกัน
-          laboratories.add(lab.Room.trim());
-          
-          // หรือถ้าต้องการแสดงทั้ง Room และ Building
-          // laboratories.add(`${lab.Room} (${lab.Building})`);
-        }
-      });
-
-      console.log('✅ Laboratory data loaded:', {
-        laboratories: laboratories.size,
-        totalLabs: laboratoryData.length
-      });
-    } else {
-      console.warn('Failed to load Laboratory data or no data available');
-    }
-
-    // อัปเดต filterOptions ทันที
-    setFilterOptions(prevOptions => ({
-      ...prevOptions,
-      subjects: Array.from(subjects).filter(Boolean).sort(),
-      courseCodes: Array.from(courseCodes).filter(Boolean).sort(),
-      rooms: Array.from(rooms).filter(Boolean).sort(),
-      studentYears: Array.from(studentYears).sort(),
-      laboratories: Array.from(laboratories).filter(Boolean).sort(),
-      // รวมอาจารย์จาก API และ allTeachers
-      teachers: [
-        ...extractTeachersFromAPI(),
-        ...Array.from(teachers).filter(Boolean)
-      ].filter((teacher, index, array) => array.indexOf(teacher) === index).sort(), // remove duplicates
-    }));
-    
-    console.log('✅ All initial filter data loaded successfully');
-    
-  } catch (error) {
-    console.error('❌ Error loading initial filter data:', error);
-  }
-};
 useEffect(() => {
   const updateInitialFilterOptions = async () => {
     const currentMajor = localStorage.getItem("major_name");
@@ -1045,41 +905,6 @@ useEffect(() => {
 }, [sidebarFilterTags, sidebarSearchValue, courseCards, scheduleData]);
 
   // =================== REMOVED COURSES FUNCTIONS ===================
-  const addToRemovedCourses = (subCell: SubCell) => {
-    // สร้าง unique identifier เพื่อตรวจสอบการซ้ำกันก่อนเพิ่ม
-    const uniqueKey = `${subCell.classData.subject}-${subCell.classData.courseCode}-${subCell.classData.section}-${subCell.classData.teacher}-${subCell.day}-${subCell.startTime}-${subCell.endTime}`;
-    
-    // ตรวจสอบว่ามีวิชานี้ใน removed courses แล้วหรือไม่
-    const isDuplicate = removedCourses.some(existing => {
-      const existingKey = `${existing.subject}-${existing.courseCode}-${existing.section}-${existing.teacher}-${existing.originalDay}-${existing.originalStartTime}-${existing.originalEndTime}`;
-      return existingKey === uniqueKey;
-    });
-
-    if (isDuplicate) {
-      console.warn('🚫 Duplicate course detected, not adding to removed courses:', uniqueKey);
-      return;
-    }
-
-    const removedCourse: RemovedCourse = {
-      id: `removed-${Date.now()}-${Math.random()}`,
-      subject: subCell.classData.subject,
-      courseCode: subCell.classData.courseCode || "",
-      teacher: subCell.classData.teacher,
-      room: subCell.classData.room,
-      section: subCell.classData.section || "",
-      studentYear: subCell.classData.studentYear || "",
-      duration: subCell.position.endSlot - subCell.position.startSlot,
-      color: subCell.classData.color || getSubjectColor(subCell.classData.subject),
-      scheduleId: subCell.scheduleId,
-      removedAt: new Date(),
-      originalDay: subCell.day,
-      originalStartTime: subCell.startTime,
-      originalEndTime: subCell.endTime
-    };
-
-    setRemovedCourses(prev => [removedCourse, ...prev]);
-    console.log('✅ Added to removed courses:', removedCourse.subject);
-  };
 
 const restoreRemovedCourse = (removedCourse: RemovedCourse) => {
   // ตรวจสอบ role ก่อน
@@ -1324,30 +1149,8 @@ const addSubCellToDay = (day: string, subCell: SubCell) => {
   });
 };
 
-// แทนที่ addSubCellToSpecificRow ในส่วน handleCellDrop
-const addSubCellToSpecificRow = (targetRow: ExtendedScheduleData, subCell: SubCell) => {
-  // ใช้ addSubCellToDay แทน เพื่อให้ได้ logic เดียวกันกับ Auto-Generate
-  addSubCellToDay(targetRow.day, subCell);
-};
 
 // เพิ่ม helper function สำหรับ debug การสร้างแถวใหม่
-const debugRowCreation = (day: string, subCells: SubCell[]) => {
-  console.log(`🔧 Reconstructing ${day}:`, {
-    totalSubCells: subCells.length,
-    subCells: subCells.map(sc => ({
-      subject: sc.classData.subject,
-      time: `${sc.startTime}-${sc.endTime}`,
-      startSlot: sc.position.startSlot,
-      endSlot: sc.position.endSlot
-    }))
-  });
-  
-  const rowGroups = separateOverlappingSubCells(subCells);
-  console.log(`📋 Row groups for ${day}:`, rowGroups.map((group, index) => ({
-    rowIndex: index,
-    subCells: group.map(sc => sc.classData.subject)
-  })));
-};
 const debugTableStructure = (data: ExtendedScheduleData[]) => {
   DAYS.forEach(day => {
     const dayRows = data.filter(row => row.day === day);
@@ -1935,64 +1738,6 @@ const handleCellDrop = (e: React.DragEvent, targetRow: ExtendedScheduleData, tim
     );
   }
 };
-// =================== ADDITIONAL DEBUGGING FUNCTION ===================
-
-// ฟังก์ชันช่วยสำหรับ debug การทำงานของ Course Card
-const debugCourseCardDrop = (
-  courseCard: CourseCard, 
-  targetDay: string, 
-  slotIndex: number,
-  scheduleData: ExtendedScheduleData[]
-) => {
-  console.log('🎯 Course Card Drop Debug:', {
-    courseCard: {
-      id: courseCard.id,
-      subject: courseCard.subject,
-      section: courseCard.section,
-      courseCode: courseCard.courseCode,
-      teacher: courseCard.teacher
-    },
-    target: {
-      day: targetDay,
-      slot: slotIndex,
-      time: `${slotIndexToTime(slotIndex)}-${slotIndexToTime(slotIndex + 1)}`
-    }
-  });
-
-  // แสดงรายการ SubCell ที่มีอยู่ในวันนั้น
-  const dayRows = scheduleData.filter(row => row.day === targetDay);
-  const existingSubCells: any[] = [];
-  
-  dayRows.forEach(row => {
-    if (row.subCells) {
-      row.subCells.forEach(subCell => {
-        existingSubCells.push({
-          id: subCell.id,
-          subject: subCell.classData.subject,
-          section: subCell.classData.section,
-          courseCode: subCell.classData.courseCode,
-          time: `${subCell.startTime}-${subCell.endTime}`,
-          timeSlots: `${subCell.position.startSlot}-${subCell.position.endSlot}`
-        });
-      });
-    }
-  });
-  
-  console.log('📋 Existing SubCells in target day:', existingSubCells);
-  
-  // ตรวจสอบการทับซ้อน
-  const duplicateCheck = checkDuplicateInSameTimeForCourseCard (
-    courseCard, 
-    targetDay, 
-    slotIndex, 
-    scheduleData
-  );
-  
-  console.log('🔍 Duplicate Check Result:', duplicateCheck);
-  
-  return duplicateCheck;
-};
-
 
   // =================== RENDER REMOVED COURSE ===================
   const renderRemovedCourse = (removedCourse: RemovedCourse) => {
@@ -2046,7 +1791,6 @@ const debugCourseCardDrop = (
             </div>
           }
           placement="left"
-          overlayStyle={{ maxWidth: "350px" }}
         >
           <div>
             <div style={{ fontWeight: "bold", fontSize: "12px", marginBottom: "4px", color: "#666" }}>
@@ -2185,7 +1929,6 @@ const renderCourseCard = (courseCard: CourseCard) => {
           </div>
         }
         placement="left"
-        overlayStyle={{ maxWidth: "350px" }}
         trigger={isDragging ? [] : ["hover"]} // แก้ไขให้ซ่อนขณะ drag
         open={isDragging ? false : undefined} // บังคับซ่อนขณะ drag
       >
@@ -2604,104 +2347,6 @@ const renderAvailableCourses = () => {
     </div>
   );
 };
-
-  // =================== RENDER REMOVED COURSES TAB ===================
-  const renderRemovedCourses = () => {
-    return (
-      <div style={{ height: "100%" }}>
-        {/* Removed Courses Header */}
-        <div style={{ 
-          backgroundColor: "#fff1f0", 
-          padding: "12px", 
-          borderRadius: "6px", 
-          border: "1px solid #ffccc7",
-          marginBottom: "16px" 
-        }}>
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center", 
-            marginBottom: "8px" 
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <HistoryOutlined style={{ color: "#ff4d4f", fontSize: "12px" }} />
-              <span style={{ fontWeight: "bold", color: "#333", fontSize: "12px" }}>
-                วิชาที่ลบแล้ว ({filteredRemovedCourses.length})
-              </span>
-            </div>
-            {removedCourses.length > 0 && (
-              <Button
-                size="small"
-                icon={<DeleteOutlined />}
-                onClick={clearAllRemovedCourses}
-                danger
-                style={{ fontSize: "10px", height: "24px" }}
-              >
-                ล้างทั้งหมด
-              </Button>
-            )}
-          </div>
-
-          {/* Search Bar for Removed Courses */}
-          <div style={{ marginBottom: "8px" }}>
-            <Input
-              placeholder="ค้นหาวิชาที่ลบแล้ว..."
-              prefix={<SearchOutlined style={{ color: "#bfbfbf" }} />}
-              value={removedSearchValue}
-              onChange={(e) => setRemovedSearchValue(e.target.value)}
-              allowClear
-              size="small"
-              style={{ width: "100%" }}
-            />
-          </div>
-        </div>
-
-        {/* Removed Courses Count */}
-        <div style={{ 
-          backgroundColor: "#fff1f0", 
-          padding: "8px 12px", 
-          borderRadius: "6px",
-          marginBottom: "16px",
-          border: "1px solid #ffccc7"
-        }}>
-          <div style={{ fontSize: "12px", color: "#ff4d4f" }}>
-            📊 วิชาที่ถูกลบ: <strong>{filteredRemovedCourses.length}</strong> รายการ
-          </div>
-          <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>
-            💡 สามารถกู้คืนหรือลบถาวรได้
-          </div>
-        </div>
-
-        {/* Removed Courses List */}
-        <div style={{ maxHeight: "calc(100vh - 500px)", overflowY: "auto" }}>
-          {filteredRemovedCourses.length === 0 ? (
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description={
-                <div>
-                  <div style={{ color: "#999", marginBottom: "4px" }}>
-                    {removedCourses.length === 0 
-                      ? "ยังไม่มีวิชาที่ถูกลบ" 
-                      : "ไม่มีวิชาที่ตรงกับการค้นหา"
-                    }
-                  </div>
-                  <div style={{ fontSize: "11px", color: "#ccc" }}>
-                    {removedCourses.length === 0 
-                      ? "วิชาที่ลบออกจากตารางจะปรากฏที่นี่"
-                      : "ลองใช้คำค้นหาอื่น"
-                    }
-                  </div>
-                </div>
-              }
-              style={{ padding: "40px 20px" }}
-            />
-          ) : (
-            filteredRemovedCourses.map(removedCourse => renderRemovedCourse(removedCourse))
-          )}
-        </div>
-      </div>
-    );
-  };
 
   // =================== FILTER FUNCTIONS ===================
 const extractFilterOptions = (data: ExtendedScheduleData[]) => {
@@ -3737,7 +3382,6 @@ const renderSubCell = (subCell: SubCell) => {
           </div>
         }
         placement="top"
-        overlayStyle={{ maxWidth: "400px", backgroundColor: "white", color: "black" }}
         trigger={isDragging ? [] : ["hover"]}
         open={isDragging ? false : undefined}
       >
@@ -4480,7 +4124,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
   }
 };
 
-  // =================== UPDATE EXISTING SCHEDULE ===================
+  // =================== UPDATE EXISTING SCHEDULE ===================http://localhost:8080"
   const updateExistingSchedule = async () => {
     const hide = message.loading("กำลังอัปเดตตาราง...", 0);
     
@@ -5394,7 +5038,7 @@ const exportScheduleToXLSX = async () => {
           }
         };
       },
-      render: (text: string, record: ExtendedScheduleData) => {
+      render: (_text: string, record: ExtendedScheduleData) => {
         const timeSlotIndex = timeSlotToSlotIndex(time);
         
         // หาวิชาที่เริ่มในช่องนี้
@@ -5505,58 +5149,6 @@ const exportScheduleToXLSX = async () => {
       },
     })),
   ];
-
-  // =================== DEMO FUNCTIONS ===================
-  const addTestSubCell = () => {
-    const testSubCell = createSubCell(
-      {
-        subject: "วิชาทดสอบ Sub-Cell",
-        teacher: "อ.ทดสอบ",
-        room: "ห้องทดสอบ",
-        studentYear: "1"
-      },
-      "จันทร์",
-      "09:00",
-      "11:00"
-    );
-    
-    addSubCellToDay("จันทร์", testSubCell);
-    message.success("เพิ่มวิชาทดสอบ (2 ชั่วโมง) สำเร็จ!");
-  };
-
-  const addTestSubCell3Hours = () => {
-    const testSubCell = createSubCell(
-      {
-        subject: "วิชาทดสอบ 3 ชั่วโมง",
-        teacher: "อ.ทดสอบยาว",
-        room: "ห้องใหญ่",
-        studentYear: "2"
-      },
-      "จันทร์",
-      "09:00",
-      "12:00"
-    );
-    
-    addSubCellToDay("จันทร์", testSubCell);
-    message.success("เพิ่มวิชาทดสอบ (3 ชั่วโมง) สำเร็จ!");
-  };
-
-  const addTestSubCell1Hour = () => {
-    const testSubCell = createSubCell(
-      {
-        subject: "วิชาสั้น 1 ชม.",
-        teacher: "อ.สั้น",
-        room: "ห้องเล็ก",
-        studentYear: "3"
-      },
-      "พุธ",
-      "14:00",
-      "15:00"
-    );
-    
-    addSubCellToDay("พุธ", testSubCell);
-    message.success("เพิ่มวิชาทดสอบ (1 ชั่วโมง) สำเร็จ!");
-  };
 
   // =================== EFFECTS ===================
   // แก้ไข useEffect สำหรับการโหลดอัตโนมัติ
