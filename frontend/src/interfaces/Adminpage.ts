@@ -270,3 +270,34 @@ export interface AllCourseInterfaceForAllcourse {
     DepartmentName: string;
   };
 }
+
+export interface Section {
+  ID: number;
+  SectionNumber: number;
+  DayOfWeek: string;
+  Time: string;
+  Room: string;
+  Capacity: number;
+  ID_user: number;
+  InstructorNames: string[];
+}
+
+export interface OpenCourseForAddTA {
+  ID: number;
+  Curriculum: string;
+  Code: string;
+  ThaiCourseName: string;
+  EnglishCourseName: string;
+  Credit: string;
+  TypeOfCourse: string;
+  TotalSections: number;
+  Laboratory: string;
+  IsFixCourses: boolean;
+  GroupInfos?: {
+    Group: number | string;
+    Day: string;
+    TimeSpan: string;
+    Room: string;
+  }[];
+  Sections: Section[];
+}
