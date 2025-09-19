@@ -18,7 +18,7 @@ import {
   getOfferedCoursesByMajorbyID,
 } from "../../../services/https/GetService";
 import {
-  getCoursebyid,
+  putUpdateFixedCourse,
   getAllCourses,
   postCreateTimeFixedCourses,
 } from "../../../services/https/AdminPageServices";
@@ -29,6 +29,7 @@ import {
 } from "../../../interfaces/Adminpage";
 import { TimeFixedCoursesIn } from "../../../interfaces/TimeFix";
 import { getNameTable } from "../../../services/https/SchedulerPageService";
+import { UpdateFixedCourse } from "../../../interfaces/UpFixedCourse";
 
 const { Option } = Select;
 
@@ -46,6 +47,7 @@ const ManageCesCourse: React.FC = () => {
       roomFix: "",
     },
   ]);
+  const [editingCourseID, setEditingCourseID] = useState<number | null>(null);
 
   const handleAddSection = () => {
     const newSection = {
@@ -145,7 +147,7 @@ const ManageCesCourse: React.FC = () => {
     fetchData();
   }, []);
 
- useEffect(() => {
+  useEffect(() => {
   const fetchCourseData = async () => {
     if (!id) return;
 
@@ -153,21 +155,22 @@ const ManageCesCourse: React.FC = () => {
       const res = await getOfferedCoursesByMajorbyID(Number(id));
       if (res.status === 200 && res.data && res.data.length > 0) {
         const course = res.data[0]; // response เป็น array
-
-        // 1. ตั้งค่า curriculum และ courseCode
+        setEditingCourseID(course.ID); // <- บันทึก ID ที่จะแก้ไข
         setSelectedCurriculumID(course.CurriculumID);
-        setCourses([course]); // ให้ courseCode select มีตัวเลือกเดียว
+        setCourses([course]);
         form.setFieldsValue({
           curriculum: course.CurriculumID,
           courseCode: course.ID,
           courseNameTh: course.ThaiCourseName,
           courseNameEn: course.EnglishCourseName,
-          labRoom: course.Laboratory !== "ไม่มีการสอนปฏิบัติการ" ? course.Laboratory : "ไม่มีการสอนปฏิบัติการ",
+          labRoom:
+            course.Laboratory !== "ไม่มีการสอนปฏิบัติการ"
+              ? course.Laboratory
+              : "ไม่มีการสอนปฏิบัติการ",
           groupCount: course.TotalSections || 1,
           studentsPerGroup: course.Sections?.[0]?.Capacity || 30,
         });
 
-        // 2. ตั้งค่า fixedSections
         if (course.Sections && course.Sections.length > 0) {
           setFixedSections(
             course.Sections.map((s: any, index: number) => {
@@ -191,7 +194,6 @@ const ManageCesCourse: React.FC = () => {
 
   fetchCourseData();
 }, [id, form]);
-
 
   const handleCurriculumChange = async (value: number) => {
     setSelectedCurriculumID(value);
@@ -309,6 +311,51 @@ const ManageCesCourse: React.FC = () => {
     }
   };
 
+const handleUpdate = async (values: any, courseID: number) => {
+  if (!validateForm()) {
+    message.warning("กรุณากรอกข้อมูลให้ครบถ้วนก่อนบันทึก");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // สร้าง payload ตามรูปแบบ server ต้องการ
+    const payload: UpdateFixedCourse = {
+      TotalSection: fixedSections.length,
+      Capacity: values.studentsPerGroup,
+      LaboratoryID: values.labRoom === "ไม่มีการสอนปฏิบัติการ" ? null : values.labRoom,
+      Groups: fixedSections.map((section, index) => ({
+        DayOfWeek: section.dayOfWeek,
+        StartTime: section.startTime,
+        EndTime: section.endTime,
+        RoomFix: section.roomFix,
+        Section: index + 1,
+        Capacity: values.studentsPerGroup,
+      })),
+    };
+
+    console.log("Payload to update:", payload);
+
+    const res = await putUpdateFixedCourse(courseID, payload);
+
+    console.log("Update response:", res);
+
+    if (res && !res.error) {
+      message.success("อัพเดตข้อมูลสำเร็จ");
+      navigate("/all-open-course");
+    } else {
+      message.error(res.error || "เกิดข้อผิดพลาดในการอัพเดต");
+    }
+  } catch (error) {
+    console.error(error);
+    message.error("เกิดข้อผิดพลาดในการอัพเดต");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
   return (
     <div
       style={{
@@ -422,7 +469,8 @@ const ManageCesCourse: React.FC = () => {
                   >
                     {courses.map((c) => (
                       <Option key={c.ID} value={c.ID}>
-                        {c.CourseCode} - {c.EnglishCourseName} {c.ThaiCourseName}
+                        {c.CourseCode} - {c.EnglishCourseName}{" "}
+                        {c.ThaiCourseName}
                       </Option>
                     ))}
                   </Select>
@@ -717,21 +765,28 @@ const ManageCesCourse: React.FC = () => {
               ยกเลิก
             </Button>
 
-            <Button
-              type="primary"
-              size="large"
-              icon={<SaveOutlined />}
-              onClick={() => form.submit()}
-              loading={loading}
-              disabled={!validateForm()}
-              style={{
-                backgroundColor: validateForm() ? "#F26522" : undefined,
-                borderColor: validateForm() ? "#F26522" : undefined,
-                width: isMobile ? "100%" : "auto",
-              }}
-            >
-              {loading ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
-            </Button>
+           <Button
+  type="primary"
+  size="large"
+  icon={<SaveOutlined />}
+  onClick={async () => {
+    const values = form.getFieldsValue();
+    if (editingCourseID) {
+      await handleUpdate(values, editingCourseID);
+    } else {
+      await handleSubmit(values);
+    }
+  }}
+  loading={loading}
+  disabled={!validateForm()}
+  style={{
+    backgroundColor: validateForm() ? "#F26522" : undefined,
+    borderColor: validateForm() ? "#F26522" : undefined,
+    width: isMobile ? "100%" : "auto",
+  }}
+>
+  {loading ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+</Button>
           </div>
         </Form>
       </Card>
