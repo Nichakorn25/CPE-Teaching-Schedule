@@ -39,10 +39,6 @@ const AllCourse: React.FC = () => {
   >([]);
   const [loading, setLoading] = useState(false);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
-  // NEW: hovered row state for hover effect
-  const [hoveredRowKey, setHoveredRowKey] = useState<string | number | null>(
-    null
-  );
   // State
   const [department, setDepartment] = useState<
     DepartmentInterfaceForAllcourse[]
@@ -550,12 +546,6 @@ const AllCourse: React.FC = () => {
     return columns;
   };
 
-  // Row class for hover
-  const getRowClassName = (record: any) => {
-    const isHovered = hoveredRowKey === record.key;
-    return `normal-row ${isHovered ? "row-hovered" : ""}`;
-  };
-
   return (
     <div 
       style={{
@@ -564,27 +554,6 @@ const AllCourse: React.FC = () => {
         margin: 0,
       }}
     >
-      {/* Custom hover CSS (matches other pages) */}
-      <style>
-        {`
-          .custom-table .ant-table-tbody > tr.normal-row {
-            background-color: #ffffff !important;
-            transition: background-color 0.2s ease;
-          }
-
-          .custom-table .ant-table-tbody > tr.normal-row:hover,
-          .custom-table .ant-table-tbody > tr.normal-row.row-hovered {
-            background-color: #6b7280 !important; /* สีเทาเข้ม เมื่อ hover */
-            color: white !important;
-          }
-
-          /* ปิด hover default ของ antd เพื่อให้ rule ของเราได้ผล */
-          .custom-table .ant-table-tbody > tr:hover > td {
-            background-color: transparent !important;
-          }
-        `}
-      </style>
-
       {/* Page Title */}
       <div
         style={{
@@ -903,13 +872,6 @@ const AllCourse: React.FC = () => {
             fontSize: isMobile ? "11px" : "12px",
             fontFamily: "Sarabun, sans-serif",
           }}
-          className="custom-table"
-          // ADD: hover support
-          rowClassName={getRowClassName}
-          onRow={(record) => ({
-            onMouseEnter: () => setHoveredRowKey((record as any).key),
-            onMouseLeave: () => setHoveredRowKey(null),
-          })}
           locale={{
             emptyText: (
               <div

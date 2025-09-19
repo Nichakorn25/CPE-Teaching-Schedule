@@ -43,12 +43,9 @@ const TeacherList: React.FC = () => {
   const [selectedDepartmentID, setSelectedDepartmentID] = useState<number | "all">("all");
   const [selectedMajorID, setSelectedMajorID] = useState<number | "all">("all");
 
-  // ── NEW: role & userMajor ───────────────────────────────────────────────
+  // ── NEW: role & userMajor ────────────────────────────────────────────────────
   const [role, setRole] = useState<string>("");
   const [userMajor, setUserMajor] = useState<string>("");
-
-  // ── NEW: hover state for rows
-  const [hoveredRowKey, setHoveredRowKey] = useState<string | number | null>(null);
 
   const isSmallScreen = containerWidth < 1400;
   const isMobile = containerWidth < 768;
@@ -62,7 +59,7 @@ const TeacherList: React.FC = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ── Load role & major from localStorage ─────────────────────────────────
+  // ── Load role & major from localStorage ──────────────────────────────────────
   useEffect(() => {
     const r =
       (localStorage.getItem("role") ||
@@ -127,7 +124,7 @@ const TeacherList: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role, userMajor]);
 
-  // ── Load departments & majors (ใช้กับฝั่ง admin เท่านั้น) ─────────────
+  // ── Load departments & majors (ใช้กับแค่ admin เท่านั้น) ─────────────────────
   useEffect(() => {
     const fetchDepartmentsAndMajors = async () => {
       const res = await getMajorOfDepathment();
@@ -157,7 +154,7 @@ const TeacherList: React.FC = () => {
     }
   }, [selectedDepartmentID, majors]);
 
-  // ── Filter (search + major dropdown) ────────────────────────────────────
+  // ── Filter (search + major dropdown) ────────────────────────────────────────
   const filteredTeachers = teacherData.filter((teacher) => {
     const q = searchText.toLowerCase();
     const matchesSearch =
@@ -175,7 +172,7 @@ const TeacherList: React.FC = () => {
     return matchesSearch && matchesMajor;
   });
 
-  // ── Table data & pagination ─────────────────────────────────────────────
+  // ── Table data & pagination ─────────────────────────────────────────────────
   const tableData: TeacherTableData[] = filteredTeachers.map((teacher, index) => ({
     ...teacher,
     key: teacher.DeleteID?.toString() || `${index}`,
@@ -230,7 +227,7 @@ const TeacherList: React.FC = () => {
     }
   };
 
-  // ── Columns: แยกตามหน้าจอ & role ───────────────────────────────────────
+  // ── Columns: แยกตามหน้าจอ & role ────────────────────────────────────────────
   const getColumns = (): ColumnsType<TeacherTableData> => {
     if (isMobile) {
       // Mobile layout (ไม่มี EmpId อยู่แล้ว) → ซ่อน "จัดการ" ถ้าไม่ใช่ admin
@@ -400,35 +397,8 @@ const TeacherList: React.FC = () => {
     return columns;
   };
 
-  // Row class for hover (simple)
-  const getRowClassName = (record: any) => {
-    const isHovered = hoveredRowKey === record.key;
-    return `normal-row ${isHovered ? "row-hovered" : ""}`;
-  };
-
   return (
     <div style={{ fontFamily: "Sarabun, sans-serif", padding: 0, margin: 0 }}>
-      {/* Custom CSS for hover (same style as other pages) */}
-      <style>
-        {`
-          .custom-table .ant-table-tbody > tr.normal-row {
-            background-color: #ffffff !important;
-            transition: background-color 0.2s ease;
-          }
-
-          .custom-table .ant-table-tbody > tr.normal-row:hover,
-          .custom-table .ant-table-tbody > tr.normal-row.row-hovered {
-            background-color: #6b7280 !important; /* สีเทาเข้ม เมื่อ hover */
-            color: white !important;
-          }
-
-          /* ปิด hover default ของ antd เพื่อให้ rule ของเราได้ผล */
-          .custom-table .ant-table-tbody > tr:hover > td {
-            background-color: transparent !important;
-          }
-        `}
-      </style>
-
       {/* Page Title */}
       <div style={{ marginBottom: 20, paddingBottom: 12, borderBottom: "2px solid #F26522" }}>
         <h2 style={{ margin: "0 0 8px 0", color: "#333", fontSize: isMobile ? 18 : 20, fontWeight: "bold" }}>
@@ -618,13 +588,6 @@ const TeacherList: React.FC = () => {
           scroll={{ x: isMobile ? 350 : isSmallScreen ? 1000 : 1800, y: isMobile ? 400 : 600 }}
           loading={loading}
           style={{ fontSize: isMobile ? 11 : 12 }}
-          className="custom-table"
-          // ADD: hover support
-          rowClassName={getRowClassName}
-          onRow={(record) => ({
-            onMouseEnter: () => setHoveredRowKey((record as any).key),
-            onMouseLeave: () => setHoveredRowKey(null),
-          })}
           locale={{
             emptyText: (
               <div style={{ padding: isMobile ? 20 : 40, textAlign: "center", color: "#999" }}>
@@ -660,7 +623,7 @@ const TeacherList: React.FC = () => {
             gap: isMobile ? 8 : 0,
           }}
         >
-          <div>💡 <strong>หมายเหตุ:</strong> ข้อมูลอาจารย์เหล่านี้ใช้สำหรับการจัดการระบบตารางเรียน</div>
+          <div>💡 <strong>หมายเหตุ:</strong> ข้อมูลอาจารย์เหล่านี้ใช้สำหรับการบริหารจัดการระบบตารางเรียน</div>
           <div>
             ข้อมูลล่าสุด: {new Date().toLocaleString("th-TH")} |
             <span

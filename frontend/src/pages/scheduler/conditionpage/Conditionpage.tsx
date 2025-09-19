@@ -24,9 +24,6 @@ const Conditionpage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [containerWidth, setContainerWidth] = useState(window.innerWidth);
 
-    // New: hover state for rows
-    const [hoveredRowKey, setHoveredRowKey] = useState<string | number | null>(null);
-
     // Monitor container width for responsive behavior
     useEffect(() => {
         const handleResize = () => {
@@ -170,12 +167,6 @@ const Conditionpage: React.FC = () => {
                 existingConditions: conditions
             }
         });
-    };
-
-    // Row class for hover
-    const getRowClassName = (record: any) => {
-        const isHovered = hoveredRowKey === record.key;
-        return `normal-row ${isHovered ? "row-hovered" : ""}`;
     };
 
     // Responsive columns configuration
@@ -378,35 +369,7 @@ const Conditionpage: React.FC = () => {
             }
         );
 
-        // Add dates columns for large screens
-        if (!isSmallScreen) {
-            columns.push(
-                {
-                    title: 'วันที่สร้าง',
-                    dataIndex: 'CreatedAt',
-                    key: 'CreatedAt',
-                    width: 120,
-                    align: 'center',
-                    render: (value: string) => (
-                        <span style={{ fontSize: '10px', color: '#666' }}>
-                            {value ? new Date(value).toLocaleDateString('th-TH') : '-'}
-                        </span>
-                    )
-                },
-                {
-                    title: 'แก้ไขล่าสุด',
-                    dataIndex: 'LastUpdatedAt',
-                    key: 'LastUpdatedAt',
-                    width: 120,
-                    align: 'center',
-                    render: (value: string) => (
-                        <span style={{ fontSize: '10px', color: '#666' }}>
-                            {value ? new Date(value).toLocaleDateString('th-TH') : '-'}
-                        </span>
-                    )
-                }
-            );
-        }
+
 
         // Add action column
         columns.push({
@@ -465,27 +428,6 @@ const Conditionpage: React.FC = () => {
             padding: 0,
             margin: 0
         }}>
-            {/* Custom CSS for hover (copied/adjusted from OfferedCoursespage) */}
-            <style>
-            {`
-              .custom-table .ant-table-tbody > tr.normal-row {
-                background-color: #ffffff !important;
-                transition: background-color 0.2s ease;
-              }
-
-              .custom-table .ant-table-tbody > tr.normal-row:hover,
-              .custom-table .ant-table-tbody > tr.normal-row.row-hovered {
-                background-color: #6b7280 !important; /* สีเทาเข้ม เมื่อ hover */
-                color: white !important;
-              }
-
-              /* ปิด hover default ของ antd เพื่อให้ rule ของเราได้ผล */
-              .custom-table .ant-table-tbody > tr:hover > td {
-                background-color: transparent !important;
-              }
-            `}
-            </style>
-
             {/* Page Title */}
             <div style={{ 
                 marginBottom: '20px',
@@ -722,7 +664,7 @@ const Conditionpage: React.FC = () => {
                     size="small"
                     bordered
                     scroll={{ 
-                        x: isMobile ? 350 : isSmallScreen ? 800 : 1600, 
+                        x: isMobile ? 350 : isSmallScreen ? 700 : 1200, 
                         y: isMobile ? 400 : 600 
                     }}
                     loading={loading}
@@ -730,13 +672,6 @@ const Conditionpage: React.FC = () => {
                         fontSize: isMobile ? '11px' : '12px',
                         fontFamily: 'Sarabun, sans-serif'
                     }}
-                    className="custom-table"
-                    // ADD: hover support
-                    rowClassName={getRowClassName}
-                    onRow={(record) => ({
-                      onMouseEnter: () => setHoveredRowKey(record.key),
-                      onMouseLeave: () => setHoveredRowKey(null),
-                    })}
                     locale={{
                         emptyText: (
                             <div style={{ 
@@ -814,7 +749,7 @@ const Conditionpage: React.FC = () => {
                     </div>
                     <div>
                         - แตะปุ่ม <strong>แก้ไข</strong> เพื่อแก้ไขเงื่อนไขของอาจารย์ <br />
-                        - แตะ <strong>รีเฟรช</strong> หากข้อมูลไม่อัพเดตทันที
+                        - แตะ <strong>รีเฟรช</strong> หากข้อมูลไม่อัพเดททันที
                     </div>
                 </div>
             )}
