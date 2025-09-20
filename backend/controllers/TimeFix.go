@@ -147,9 +147,12 @@ func UpdateFixedCourse(c *gin.Context) {
 		return
 	}
 
-	offered.Section = req.TotalSection
+	// อัปเดต Capacity และ LaboratoryID
 	offered.Capacity = req.Capacity
 	offered.LaboratoryID = req.LaboratoryID
+
+	// ใช้จำนวน req.Groups เป็น TotalSections อัตโนมัติ
+	offered.Section = uint(len(req.Groups))
 
 	if err := config.DB().Save(&offered).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถอัปเดต OfferedCourses ได้"})
@@ -159,6 +162,26 @@ func UpdateFixedCourse(c *gin.Context) {
 	var updatedSchedules []uint
 	var updatedTimeFixed []uint
 
+	// สร้าง map ของ SectionNumber สำหรับตรวจสอบ schedule ที่ต้องลบ
+	groupSections := make(map[uint]bool)
+	for _, g := range req.Groups {
+		groupSections[uint(g.Section)] = true
+	}
+
+	// ตรวจสอบ schedule เดิม ถ้าไม่มีใน groupSections ให้ลบ
+	var existingSchedules []entity.Schedule
+	if err := config.DB().Where("offered_courses_id = ?", offered.ID).Find(&existingSchedules).Error; err == nil {
+		for _, s := range existingSchedules {
+			if !groupSections[s.SectionNumber] {
+				// ลบ TimeFixedCourses ก่อน
+				config.DB().Where("schedule_id = ?", s.ID).Delete(&entity.TimeFixedCourses{})
+				// ลบ Schedule
+				config.DB().Delete(&s)
+			}
+		}
+	}
+
+	// อัปเดตหรือสร้าง schedule + time fixed ใหม่
 	for _, g := range req.Groups {
 		startDateTimeStr := fmt.Sprintf("%s %s", today, g.StartTime)
 		endDateTimeStr := fmt.Sprintf("%s %s", today, g.EndTime)
@@ -177,11 +200,6 @@ func UpdateFixedCourse(c *gin.Context) {
 
 		var schedule entity.Schedule
 		err = config.DB().Where("offered_courses_id = ? AND section_number = ?", offered.ID, g.Section).First(&schedule).Error
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเข้าถึง Schedule ได้"})
-			return
-		}
-
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// สร้างใหม่
 			schedule = entity.Schedule{
@@ -250,5 +268,6 @@ func UpdateFixedCourse(c *gin.Context) {
 		"offered_course_id":  offered.ID,
 		"schedules":          updatedSchedules,
 		"time_fixed_courses": updatedTimeFixed,
+		"total_sections":     offered.Section, // ส่งกลับจำนวน sections ล่าสุด
 	})
 }
