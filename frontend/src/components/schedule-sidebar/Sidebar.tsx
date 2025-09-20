@@ -119,7 +119,7 @@ const Sidebar: React.FC = () => {
       id: 12,
       label: "ห้องปฏิบัติการ",
       icon: "📚",
-      path: "/all-course",
+      path: "/laboratory-list",
       roles: ["Admin"],
     },
     {
