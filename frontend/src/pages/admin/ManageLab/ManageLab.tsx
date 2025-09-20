@@ -10,20 +10,18 @@ import {
 } from "../../../services/https/AdminPageServices";
 import { LaboratoryData } from "../../../interfaces/Lab";
 
-interface LaboratoryInterface {
-  ID?: number;
-  Room: string;
-  Building: string;
-  Capacity: string;
-}
-
 const ManageLab: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [formData, setFormData] = useState<LaboratoryData>();
+  const [formData, setFormData] = useState<LaboratoryData>({
+    id: undefined,
+    room: "",
+    building: "",
+    capacity: "",
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -32,13 +30,18 @@ const ManageLab: React.FC = () => {
         try {
           const res = await getLaboratoryById(id);
           if (res.status === 200) {
-            const data = res.data;
+            const data = res.data.data; // backend ส่งใน data
             setFormData({
-              room: data.room,
-              building: data.building,
-              capacity: data.capacity,
+              id: data.id,
+              room: data.room || "",
+              building: data.building || "",
+              capacity: data.capacity || "",
             });
-            form.setFieldsValue(data);
+            form.setFieldsValue({
+              room: data.room || "",
+              building: data.building || "",
+              capacity: data.capacity || "",
+            });
           } else {
             message.error("ไม่สามารถโหลดข้อมูลห้องปฏิบัติการได้");
             navigate("/laboratory-list");
@@ -51,7 +54,7 @@ const ManageLab: React.FC = () => {
     fetchData();
   }, [id, form, navigate]);
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: keyof LaboratoryData, value: any) => {
     setFormData({ ...formData, [field]: value });
   };
 
@@ -59,53 +62,58 @@ const ManageLab: React.FC = () => {
     return formData.room && formData.building && formData.capacity;
   };
 
-  const handleSubmit = async () => {
-    if (!validateForm()) {
-      message.warning("กรุณากรอกข้อมูลให้ครบทุกช่อง");
-      return;
+ const handleSubmit = async () => {
+  if (!validateForm()) {
+    message.warning("กรุณากรอกข้อมูลให้ครบทุกช่อง");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // เตรียม payload ให้ type-safe
+    const payload = {
+      room: formData.room || "",
+      building: formData.building || "",
+      capacity: String(formData.capacity || ""),
+    };
+
+    let res;
+
+    if (isEditMode && formData.id) {
+      // อัพเดต
+      res = await putUpdateLaboratory(formData.id, payload);
+    } else {
+      // เพิ่ม
+      res = await postCreateLaboratory(payload);
     }
 
-    try {
-      setLoading(true);
-      let res;
+    // แสดง success เสมอถ้าไม่มี error
+    await Swal.fire({
+      icon: "success",
+      title: "สำเร็จ!",
+      text: `${isEditMode ? "แก้ไข" : "เพิ่ม"}ห้องปฏิบัติการ ${payload.building} ${payload.room} เรียบร้อยแล้ว`,
+      confirmButtonText: "ตกลง",
+    });
 
-      if (isEditMode && formData.ID) {
-        res = await putUpdateLaboratory(formData.ID, formData);
-      } else {
-        res = await postCreateLaboratory(formData);
-      }
+    // กลับไปหน้า list
+    navigate("/laboratory-list");
 
-      if (res.status === 201 || res.status === 200) {
-        await Swal.fire({
-          icon: "success",
-          title: "สำเร็จ!",
-          text: `${
-            isEditMode ? "แก้ไข" : "เพิ่ม"
-          }ห้องปฏิบัติการ ${formData.Building} ${formData.Room} เรียบร้อยแล้ว`,
-          confirmButtonText: "ตกลง",
-        });
-        navigate("/laboratory-list");
-      } else {
-        await Swal.fire({
-          icon: "error",
-          title: "ไม่สำเร็จ",
-          text:
-            res?.data?.error ||
-            `ไม่สามารถ${isEditMode ? "แก้ไข" : "บันทึก"}ข้อมูลได้`,
-          confirmButtonText: "ตกลง",
-        });
-      }
-    } catch (error) {
-      await Swal.fire({
-        icon: "error",
-        title: "เกิดข้อผิดพลาด",
-        text: `เกิดข้อผิดพลาดในการ${isEditMode ? "แก้ไข" : "บันทึก"}ข้อมูล`,
-        confirmButtonText: "ตกลง",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (error: any) {
+    console.error("Submit error:", error);
+
+    // แสดง error ก็ต่อเมื่อ axios throw
+    await Swal.fire({
+      icon: "error",
+      title: "เกิดข้อผิดพลาด",
+      text: `เกิดข้อผิดพลาดในการ${isEditMode ? "แก้ไข" : "บันทึก"}ข้อมูล`,
+      confirmButtonText: "ตกลง",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div
@@ -135,28 +143,26 @@ const ManageLab: React.FC = () => {
             <Col xs={24} md={12}>
               <Form.Item
                 label="ชื่ออาคาร"
-                required
-                name="Building"
+                name="building"
                 rules={[{ required: true, message: "กรุณากรอกชื่ออาคาร" }]}
               >
                 <Input
                   placeholder="กรอกชื่ออาคาร"
-                  value={formData.Building}
-                  onChange={(e) => handleChange("Building", e.target.value)}
+                  value={formData.building}
+                  onChange={(e) => handleChange("building", e.target.value)}
                 />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item
                 label="ชื่อห้อง"
-                required
-                name="Room"
+                name="room"
                 rules={[{ required: true, message: "กรุณากรอกชื่อห้อง" }]}
               >
                 <Input
                   placeholder="กรอกชื่อห้อง"
-                  value={formData.Room}
-                  onChange={(e) => handleChange("Room", e.target.value)}
+                  value={formData.room}
+                  onChange={(e) => handleChange("room", e.target.value)}
                 />
               </Form.Item>
             </Col>
@@ -166,8 +172,7 @@ const ManageLab: React.FC = () => {
             <Col xs={24} md={12}>
               <Form.Item
                 label="ความจุ"
-                required
-                name="Capacity"
+                name="capacity"
                 rules={[
                   { required: true, message: "กรุณากรอกความจุ" },
                   {
@@ -178,8 +183,8 @@ const ManageLab: React.FC = () => {
               >
                 <Input
                   placeholder="กรอกความจุ (เช่น 60)"
-                  value={formData.Capacity}
-                  onChange={(e) => handleChange("Capacity", e.target.value)}
+                  value={formData.capacity}
+                  onChange={(e) => handleChange("capacity", e.target.value)}
                 />
               </Form.Item>
             </Col>

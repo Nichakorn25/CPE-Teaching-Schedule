@@ -181,17 +181,25 @@ async function postCreateSchduleTeachingAssistant(
 
 async function postCreateLaboratory(data: CreateLaboratoryInterface) {
   return await axios
-    .post(`${apiUrl}/api/v1/laboratories`, data, requestOptions)
+    .post(`${apiUrl}/lab`, data, requestOptions)
     .then((res) => res)
     .catch((e) => e.response);
 }
+
+async function getLaboratoryById(id: string) {
+  return await axios
+    .get(`${apiUrl}/lab/${id}`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 
 async function putUpdateLaboratory(
   id: number,
   data: LaboratoryData
 ) {
   try {
-    const res = await axios.put(`${apiUrl}/laboratory/${id}`, data, requestOptions);
+    const res = await axios.put(`${apiUrl}/lab/${id}`, data, requestOptions);
     return res.data;
   } catch (e: any) {
     return e.response?.data || { error: "เกิดข้อผิดพลาด" };
@@ -242,6 +250,7 @@ export {
   postCreateTimeFixedCourses,
   postCreateSchduleTeachingAssistant,
   postCreateLaboratory,
+  getLaboratoryById,
   putUpdateLaboratory,
   postCreateCurriculum,
 
