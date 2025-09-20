@@ -15,6 +15,7 @@ import ManageCourse from "./pages/admin/ManageCourse/ManageCourse";
 import ManageCesCourse from "./pages/admin/ManageCesCourse/ManageCesCourse";
 import ManageAssistance from "./pages/admin/ManageAssistance/ManageAssistance";
 import ManageLab from "./pages/admin/ManageLab/ManageLab";
+import ManageCurriculum from "./pages/admin/ManageCurriculum/ManageCurriculum";
 
 import AddCondition from "./pages/instructor/AddCondition/AddCondition";
 import EditConditionpage from "./pages/scheduler/addconditionpage/EditConditionpage";
@@ -61,6 +62,8 @@ const App: React.FC = () => {
           <Route path="manage-assistance/:id" element={<MainLayout><ManageAssistance /></MainLayout>} />
           <Route path="manage-lab" element={<MainLayout><ManageLab /></MainLayout>} />
           <Route path="manage-lab/:id" element={<MainLayout><ManageLab /></MainLayout>} />
+          <Route path="manage-curriculum" element={<MainLayout><ManageCurriculum /></MainLayout>} />
+          <Route path="manage-curriculum/:id" element={<MainLayout><ManageCurriculum /></MainLayout>} />
 
           <Route path="add-condition" element={<MainLayout><AddCondition /></MainLayout>} />
           <Route path="add-course" element={<MainLayout><AddCourse /></MainLayout>} />

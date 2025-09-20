@@ -92,6 +92,7 @@ func main() {
 		r.GET("/offered-course-filter/:major_id/:department_id/:toc_id", controllers.GetOpenCoursesByFilters) // แบบ path
 		
 		r.POST("/curriculum", controllers.CreateCurriculum)
+		r.GET("/curriculum/:id", controllers.GetCurriculumById)
 		r.POST("/curriculum-into-allcourse/:id", controllers.DuplicateAllCoursesIntoCurriculum)
 		r.PUT("/curriculum/:id", controllers.UpdateCurriculum)
 

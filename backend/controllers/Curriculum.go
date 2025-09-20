@@ -20,6 +20,41 @@ func GetAllCurriculum(c *gin.Context) {
     c.JSON(http.StatusOK, cur)
 }
 
+func GetCurriculumById(c *gin.Context) {
+	id := c.Param("id")
+
+	var cur entity.Curriculum
+	// ดึงข้อมูลหลักสูตร พร้อม Major และ Department ของ Major
+	if err := config.DB().
+		Preload("Major").
+		Preload("Major.Department").
+		First(&cur, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบหลักสูตรที่ต้องการ"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถโหลดข้อมูลหลักสูตรได้"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "โหลดข้อมูลหลักสูตรสำเร็จ",
+		"data": gin.H{
+			"id":             cur.ID,
+			"curriculumName": cur.CurriculumName,
+			"year":           cur.Year,
+			"started":        cur.Started,
+			"majorId":        cur.MajorID,
+			"majorName":      cur.Major.MajorName,
+			"departmentId":   cur.Major.Department.ID,
+			"departmentName": cur.Major.Department.DepartmentName,
+			"createdAt":      cur.CreatedAt,
+			"updatedAt":      cur.UpdatedAt,
+		},
+	})
+}
+
+
 
 // DTO
 type createCurriculumInput struct {
@@ -131,7 +166,6 @@ func UpdateCurriculum(c *gin.Context) {
 }
 
 
-
 func DuplicateAllCoursesIntoCurriculum(c *gin.Context) {
 	targetCurID := c.Param("id")
 
@@ -225,3 +259,4 @@ func DuplicateAllCoursesIntoCurriculum(c *gin.Context) {
 func normalizeCode(s string) string {
 	return strings.ReplaceAll(s, "*", "")
 }
+

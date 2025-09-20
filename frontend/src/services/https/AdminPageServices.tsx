@@ -10,6 +10,7 @@ import { TimeFixedCoursesIn } from "../../interfaces/TimeFix";
 import {UpdateFixedCourse} from "../../interfaces/UpFixedCourse";
 import axios from "axios";
 import { LaboratoryData } from "../../interfaces/Lab";
+import { Curriculum, CreateCurriculumInput, UpdateCurriculumInput } from "../../interfaces/Curriculum";
 
 const apiUrl = "http://localhost:8080";
 const Authorization = localStorage.getItem("token");
@@ -234,6 +235,47 @@ async function putUpdateFixedCourse(
   }
 }
 
+async function getCurriculumById(id: string | number): Promise<Curriculum | null> {
+  try {
+    const res = await axios.get(`${apiUrl}/curriculum/${id}`);
+    return res.data.data;
+  } catch (error: any) {
+    console.error("getCurriculumById error:", error.response || error.message);
+    return null;
+  }
+}
+
+async function createCurriculum(input: CreateCurriculumInput) {
+  try {
+    const res = await axios.post(`${apiUrl}/curriculum`, input);
+    return res.data.data;
+  } catch (error: any) {
+    console.error("createCurriculum error:", error.response || error.message);
+    throw error;
+  }
+}
+
+async function updateCurriculum(id: string | number, input: UpdateCurriculumInput) {
+  try {
+    const res = await axios.put(`${apiUrl}/curriculum/${id}`, input);
+    return res.data.data;
+  } catch (error: any) {
+    console.error("updateCurriculum error:", error.response || error.message);
+    throw error;
+  }
+}
+
+async function duplicateAllCourses(curriculumId: string | number) {
+  try {
+    const res = await axios.post(`${apiUrl}/curriculum-into-allcourse/${curriculumId}`);
+    return res.data.data;
+  } catch (error: any) {
+    console.error("duplicateAllCourses error:", error.response || error.message);
+    throw error;
+  }
+}
+
+
 export {
   getCoursebyid, //used
   getAllCourses, //used
@@ -261,6 +303,10 @@ export {
   putUpdateLaboratory,
   deleteLaboratory,
   postCreateCurriculum,
+  createCurriculum,
+  updateCurriculum,
+  getCurriculumById,
+  duplicateAllCourses,
 
   putUpdateFixedCourse,
 };
