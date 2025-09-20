@@ -369,8 +369,6 @@ const Conditionpage: React.FC = () => {
             }
         );
 
-
-
         // Add action column
         columns.push({
             title: 'จัดการ',
@@ -562,21 +560,6 @@ const Conditionpage: React.FC = () => {
                             <div style={{ flex: 1 }}></div>
                         </>
                     )}
-
-                    {/* Refresh Button */}
-                    <Button
-                        onClick={getAllUserConditions}
-                        disabled={loading}
-                        style={{ 
-                            fontSize: '12px',
-                            color: '#666',
-                            width: isMobile ? '100%' : 'auto',
-                            fontFamily: 'Sarabun, sans-serif'
-                        }}
-                        size="small"
-                    >
-                        🔄 รีเฟรช
-                    </Button>
                 </div>
 
                 {/* Mobile pagination */}
@@ -715,19 +698,7 @@ const Conditionpage: React.FC = () => {
                         💡 <strong>หมายเหตุ:</strong> เงื่อนไขเหล่านี้จะถูกนำไปใช้ในการจัดตารางเรียนอัตโนมัติ
                     </div>
                     <div>
-                        ข้อมูลล่าสุด: {new Date().toLocaleString('th-TH')} | 
-                        <span 
-                            style={{ 
-                                marginLeft: '8px', 
-                                cursor: 'pointer', 
-                                color: '#F26522',
-                                fontWeight: '500'
-                            }}
-                            onClick={getAllUserConditions}
-                            title="รีเฟรชข้อมูล"
-                        >
-                            🔄 รีเฟรช
-                        </span>
+                        ข้อมูลล่าสุด: {new Date().toLocaleString('th-TH')}
                     </div>
                 </div>
             </div>
@@ -748,8 +719,7 @@ const Conditionpage: React.FC = () => {
                         เคล็ดลับการใช้งานบนมือถือ
                     </div>
                     <div>
-                        - แตะปุ่ม <strong>แก้ไข</strong> เพื่อแก้ไขเงื่อนไขของอาจารย์ <br />
-                        - แตะ <strong>รีเฟรช</strong> หากข้อมูลไม่อัพเดททันที
+                        - แตะปุ่ม <strong>แก้ไข</strong> เพื่อแก้ไขเงื่อนไขของอาจารย์
                     </div>
                 </div>
             )}
