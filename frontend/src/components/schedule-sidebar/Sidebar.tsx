@@ -112,7 +112,7 @@ const Sidebar: React.FC = () => {
       id: 11,
       label: "หลักสูตรในระบบ",
       icon: "📚",
-      path: "/all-course",
+      path: "/curriculum-list",
       roles: ["Admin"],
     },
     {
