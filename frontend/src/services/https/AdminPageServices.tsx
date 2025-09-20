@@ -206,6 +206,13 @@ async function putUpdateLaboratory(
   }
 }
 
+async function deleteLaboratory(id: string) {
+  return await axios
+    .delete(`${apiUrl}/lab/${id}`, requestOptions)
+    .then((res) => res)
+    .catch((e) => e.response);
+}
+
 
 async function postCreateCurriculum(data: CreateCurriculumInterface) {
   return await axios
@@ -252,6 +259,7 @@ export {
   postCreateLaboratory,
   getLaboratoryById,
   putUpdateLaboratory,
+  deleteLaboratory,
   postCreateCurriculum,
 
   putUpdateFixedCourse,

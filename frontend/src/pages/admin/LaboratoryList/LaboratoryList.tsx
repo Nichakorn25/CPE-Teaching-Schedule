@@ -11,7 +11,7 @@ import {
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { getLaboratory } from "../../../services/https/GetService";
-import axios from "axios";
+import { deleteLaboratory } from "../../../services/https/AdminPageServices";
 
 interface Laboratory {
   ID: number;
@@ -68,7 +68,6 @@ const LaboratoryList: React.FC = () => {
     fetchLaboratory();
   }, []);
 
-  // ── Delete ──
   const handleDeleteLab = async (labId: number, room: string) => {
     const result = await Swal.fire({
       title: "คุณแน่ใจหรือไม่?",
@@ -84,19 +83,39 @@ const LaboratoryList: React.FC = () => {
     if (result.isConfirmed) {
       try {
         const loadingMsg = message.loading("กำลังลบข้อมูล...", 0);
-        const response = await axios.delete(`/api/laboratory/${labId}`);
-        loadingMsg();
 
-        if (response.status === 200) {
-          message.success(`ลบห้องปฏิบัติการ ${room} สำเร็จ`);
+        const response = await deleteLaboratory(String(labId));
+
+        loadingMsg(); // ปิด loading
+
+        if (response.status === 200 || response.status === 204) {
+          // แสดง Swal แทน message.success
+          await Swal.fire({
+            icon: "success",
+            title: "ลบสำเร็จ",
+            text: `ลบห้องปฏิบัติการ ${room} เรียบร้อยแล้ว`,
+            confirmButtonText: "ตกลง",
+          });
+
           setLabData((prev) => prev.filter((l) => l.ID !== labId));
           if (currentPage > 1 && labData.length === 1)
             setCurrentPage(currentPage - 1);
         } else {
-          message.error("ไม่สามารถลบห้องปฏิบัติการได้");
+          await Swal.fire({
+            icon: "error",
+            title: "ลบไม่สำเร็จ",
+            text: "ไม่สามารถลบห้องปฏิบัติการได้",
+            confirmButtonText: "ตกลง",
+          });
         }
       } catch (error) {
-        message.error("เกิดข้อผิดพลาดในการลบ กรุณาลองใหม่");
+        console.error("Delete error:", error);
+        await Swal.fire({
+          icon: "error",
+          title: "เกิดข้อผิดพลาด",
+          text: "เกิดข้อผิดพลาดในการลบ กรุณาลองใหม่",
+          confirmButtonText: "ตกลง",
+        });
       }
     }
   };
