@@ -10,7 +10,9 @@ import {
   message,
   Row,
   Col,
+  TimePicker,
 } from "antd";
+import dayjs from "dayjs";
 import { SaveOutlined, PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import {
   getAllCurriculum,
@@ -30,6 +32,7 @@ import {
 import { TimeFixedCoursesIn } from "../../../interfaces/TimeFix";
 import { getNameTable } from "../../../services/https/SchedulerPageService";
 import { UpdateFixedCourse } from "../../../interfaces/UpFixedCourse";
+import Swal from "sweetalert2";
 
 const { Option } = Select;
 
@@ -49,23 +52,6 @@ const ManageCesCourse: React.FC = () => {
   ]);
   const [editingCourseID, setEditingCourseID] = useState<number | null>(null);
 
-  const handleAddSection = () => {
-    const newSection = {
-      sectionInFixed: fixedSections.length + 1,
-      dayOfWeek: "",
-      startTime: "",
-      endTime: "",
-      roomFix: "",
-    };
-    setFixedSections([...fixedSections, newSection]);
-  };
-
-  const handleRemoveSection = (index: number) => {
-    const updated = fixedSections.filter((_, i) => i !== index);
-    setFixedSections(
-      updated.map((sec, i) => ({ ...sec, sectionInFixed: i + 1 }))
-    );
-  };
 
   // Monitor container width for responsive behavior
   useEffect(() => {
@@ -90,6 +76,7 @@ const ManageCesCourse: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [nameTables, setNameTables] = useState<string[]>([]);
   const [selectedNameTable, setSelectedNameTable] = useState<string>("");
+  const [groupCount, setGroupCount] = useState<number>(1);
 
   useEffect(() => {
     const year = localStorage.getItem("academicYear");
@@ -148,52 +135,52 @@ const ManageCesCourse: React.FC = () => {
   }, []);
 
   useEffect(() => {
-  const fetchCourseData = async () => {
-    if (!id) return;
+    const fetchCourseData = async () => {
+      if (!id) return;
 
-    try {
-      const res = await getOfferedCoursesByMajorbyID(Number(id));
-      if (res.status === 200 && res.data && res.data.length > 0) {
-        const course = res.data[0]; // response เป็น array
-        setEditingCourseID(course.ID); // <- บันทึก ID ที่จะแก้ไข
-        setSelectedCurriculumID(course.CurriculumID);
-        setCourses([course]);
-        form.setFieldsValue({
-          curriculum: course.CurriculumID,
-          courseCode: course.ID,
-          courseNameTh: course.ThaiCourseName,
-          courseNameEn: course.EnglishCourseName,
-          labRoom:
-            course.Laboratory !== "ไม่มีการสอนปฏิบัติการ"
-              ? course.Laboratory
-              : "ไม่มีการสอนปฏิบัติการ",
-          groupCount: course.TotalSections || 1,
-          studentsPerGroup: course.Sections?.[0]?.Capacity || 30,
-        });
+      try {
+        const res = await getOfferedCoursesByMajorbyID(Number(id));
+        if (res.status === 200 && res.data && res.data.length > 0) {
+          const course = res.data[0]; // response เป็น array
+          setEditingCourseID(course.ID); // <- บันทึก ID ที่จะแก้ไข
+          setSelectedCurriculumID(course.CurriculumID);
+          setCourses([course]);
+          form.setFieldsValue({
+            curriculum: course.CurriculumID,
+            Code: course.ID,
+            courseNameTh: course.ThaiCourseName,
+            courseNameEn: course.EnglishCourseName,
+            labRoom:
+              course.Laboratory !== "ไม่มีการสอนปฏิบัติการ"
+                ? course.Laboratory
+                : "ไม่มีการสอนปฏิบัติการ",
+            groupCount: course.TotalSections || 1,
+            studentsPerGroup: course.Sections?.[0]?.Capacity || 30,
+          });
 
-        if (course.Sections && course.Sections.length > 0) {
-          setFixedSections(
-            course.Sections.map((s: any, index: number) => {
-              const [startTime, endTime] = s.Time.split(" - ");
-              return {
-                sectionInFixed: index + 1,
-                dayOfWeek: s.DayOfWeek,
-                startTime: startTime,
-                endTime: endTime,
-                roomFix: s.Room || "",
-              };
-            })
-          );
+          if (course.Sections && course.Sections.length > 0) {
+            setFixedSections(
+              course.Sections.map((s: any, index: number) => {
+                const [startTime, endTime] = s.Time.split(" - ");
+                return {
+                  sectionInFixed: index + 1,
+                  dayOfWeek: s.DayOfWeek,
+                  startTime: startTime,
+                  endTime: endTime,
+                  roomFix: s.Room || "",
+                };
+              })
+            );
+          }
         }
+      } catch (error) {
+        message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลรายวิชา");
+        console.error(error);
       }
-    } catch (error) {
-      message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลรายวิชา");
-      console.error(error);
-    }
-  };
+    };
 
-  fetchCourseData();
-}, [id, form]);
+    fetchCourseData();
+  }, [id, form]);
 
   const handleCurriculumChange = async (value: number) => {
     setSelectedCurriculumID(value);
@@ -211,23 +198,72 @@ const ManageCesCourse: React.FC = () => {
     }
   };
 
-  const handleCourseCodeChange = async (courseId: number) => {
+  // เมื่อ fixedSections เปลี่ยน ให้ซิงค์ groupCount
+  useEffect(() => {
+    setGroupCount(fixedSections.length);
+  }, [fixedSections]);
+
+ // เพิ่ม/ลบ section และซิงค์กับ groupCount
+const handleAddSection = () => {
+  const newSection = {
+    sectionInFixed: fixedSections.length + 1,
+    dayOfWeek: "",
+    startTime: "",
+    endTime: "",
+    roomFix: "",
+  };
+  const updated = [...fixedSections, newSection];
+  setFixedSections(updated);
+  setGroupCount(updated.length); // ซิงค์กับ groupCount
+};
+
+const handleRemoveSection = (index: number) => {
+  const updated = fixedSections.filter((_, i) => i !== index)
+    .map((sec, i) => ({ ...sec, sectionInFixed: i + 1 })); // รีอัพเดตหมายเลขกลุ่ม
+  setFixedSections(updated);
+  setGroupCount(updated.length); // ซิงค์กับ groupCount
+};
+
+// เมื่อเปลี่ยนจำนวนกลุ่มเรียน ให้ซิงค์ fixedSections
+const handleGroupCountChange = (value: number | null) => {
+  if (value === null) return;
+
+  const currentLength = fixedSections.length;
+  if (value > currentLength) {
+    // เพิ่ม section
+    const newSections = Array.from(
+      { length: value - currentLength },
+      (_, i) => ({
+        sectionInFixed: currentLength + i + 1,
+        dayOfWeek: "",
+        startTime: "",
+        endTime: "",
+        roomFix: "",
+      })
+    );
+    setFixedSections([...fixedSections, ...newSections]);
+  } else if (value < currentLength) {
+    // ลด section
+    const updated = fixedSections.slice(0, value);
+    setFixedSections(updated);
+  }
+  setGroupCount(value); // อัปเดต groupCount
+};
+
+
+
+  const handleCourseCodeChange = (courseId: number) => {
     const selectedCourse = courses.find((course) => course.ID === courseId);
     if (selectedCourse) {
-      try {
-        const response = await getOfferedCoursesByMajorbyID(courseId);
-        if (response.status === 200) {
-          const course = response.data;
-          form.setFieldsValue({
-            courseCode: selectedCourse.ID,
-            courseNameTh: course.ThaiName,
-            courseNameEn: course.EnglishName,
-            labRoom: course.Laboratory?.ID || null,
-          });
-        }
-      } catch (error) {
-        message.error("เกิดข้อผิดพลาดในการโหลดรายละเอียดรายวิชา");
-      }
+      form.setFieldsValue({
+        Code: selectedCourse.ID,
+        courseNameTh: selectedCourse.ThaiCourseName,
+        courseNameEn: selectedCourse.EnglishCourseName,
+        labRoom:
+          selectedCourse.Laboratory !== "ไม่มีการสอนปฏิบัติการ"
+            ? selectedCourse.Laboratory
+            : "ไม่มีการสอนปฏิบัติการ",
+      });
     }
   };
 
@@ -235,7 +271,7 @@ const ManageCesCourse: React.FC = () => {
     const values = form.getFieldsValue();
     const requiredFields = [
       "curriculum",
-      "courseCode",
+      "Code",
       "courseNameTh",
       "courseNameEn",
       "groupCount",
@@ -259,13 +295,20 @@ const ManageCesCourse: React.FC = () => {
 
   const handleSubmit = async (values: any) => {
     if (!validateForm()) {
-      message.warning("กรุณากรอกข้อมูลให้ครบถ้วนก่อนบันทึก");
+      Swal.fire({
+        icon: "warning",
+        title: "กรุณากรอกข้อมูลให้ครบถ้วนก่อนบันทึก",
+      });
       return;
     }
 
-    const selectedCourse = courses.find((c) => c.ID === values.courseCode);
+    const selectedCourse = courses.find((c) => c.ID === values.Code);
     if (!selectedCourse || selectedCourse.ID === undefined) {
-      message.error("ไม่พบข้อมูลรายวิชา กรุณาเลือกรายวิชาอีกครั้ง");
+      Swal.fire({
+        icon: "error",
+        title: "ไม่พบข้อมูลรายวิชา",
+        text: "กรุณาเลือกรายวิชาอีกครั้ง",
+      });
       return;
     }
 
@@ -277,7 +320,7 @@ const ManageCesCourse: React.FC = () => {
         const payload: TimeFixedCoursesIn = {
           Year: academicYear,
           Term: term,
-          Section: values.groupCount,
+          Section: section.sectionInFixed,
           Capacity: values.studentsPerGroup,
           UserID: userID!,
           AllCoursesID: selectedCourse.ID,
@@ -297,64 +340,81 @@ const ManageCesCourse: React.FC = () => {
       }
 
       if (successCount === fixedSections.length) {
-        message.success(
-          `เพิ่มรายวิชาทั้งหมด ${fixedSections.length} กลุ่มเรียนเรียบร้อยแล้ว`
-        );
+        await Swal.fire({
+          icon: "success",
+          title: `เพิ่มรายวิชา ${selectedCourse.Code} - ${selectedCourse.EnglishCourseName} ${selectedCourse.ThaiCourseName} เรียบร้อยแล้ว`,
+        });
         navigate("/all-open-course");
       } else {
-        message.warning("บางกลุ่มไม่สามารถเพิ่มได้ กรุณาตรวจสอบ");
+        Swal.fire({
+          icon: "warning",
+          title: "บางกลุ่มไม่สามารถเพิ่มได้",
+          text: "กรุณาตรวจสอบ",
+        });
       }
     } catch (error) {
-      message.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาดในการบันทึกข้อมูล",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-const handleUpdate = async (values: any, courseID: number) => {
-  if (!validateForm()) {
-    message.warning("กรุณากรอกข้อมูลให้ครบถ้วนก่อนบันทึก");
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    // สร้าง payload ตามรูปแบบ server ต้องการ
-    const payload: UpdateFixedCourse = {
-      TotalSection: fixedSections.length,
-      Capacity: values.studentsPerGroup,
-      LaboratoryID: values.labRoom === "ไม่มีการสอนปฏิบัติการ" ? null : values.labRoom,
-      Groups: fixedSections.map((section, index) => ({
-        DayOfWeek: section.dayOfWeek,
-        StartTime: section.startTime,
-        EndTime: section.endTime,
-        RoomFix: section.roomFix,
-        Section: index + 1,
-        Capacity: values.studentsPerGroup,
-      })),
-    };
-
-    console.log("Payload to update:", payload);
-
-    const res = await putUpdateFixedCourse(courseID, payload);
-
-    console.log("Update response:", res);
-
-    if (res && !res.error) {
-      message.success("อัพเดตข้อมูลสำเร็จ");
-      navigate("/all-open-course");
-    } else {
-      message.error(res.error || "เกิดข้อผิดพลาดในการอัพเดต");
+  const handleUpdate = async (values: any, courseID: number) => {
+    if (!validateForm()) {
+      Swal.fire({
+        icon: "warning",
+        title: "กรุณากรอกข้อมูลให้ครบถ้วนก่อนบันทึก",
+      });
+      return;
     }
-  } catch (error) {
-    console.error(error);
-    message.error("เกิดข้อผิดพลาดในการอัพเดต");
-  } finally {
-    setLoading(false);
-  }
-};
 
+    const selectedCourse = courses.find((c) => c.ID === courseID);
+
+    try {
+      setLoading(true);
+
+      const payload: UpdateFixedCourse = {
+        TotalSection: fixedSections.length,
+        Capacity: values.studentsPerGroup,
+        LaboratoryID:
+          values.labRoom === "ไม่มีการสอนปฏิบัติการ" ? null : values.labRoom,
+        Groups: fixedSections.map((section, index) => ({
+          DayOfWeek: section.dayOfWeek,
+          StartTime: section.startTime,
+          EndTime: section.endTime,
+          RoomFix: section.roomFix,
+          Section: index + 1,
+          Capacity: values.studentsPerGroup,
+        })),
+      };
+
+      const res = await putUpdateFixedCourse(courseID, payload);
+
+      if (res && !res.error) {
+        await Swal.fire({
+          icon: "success",
+          title: `แก้ไขรายวิชา ${selectedCourse?.Code} ${selectedCourse?.EnglishCourseName} - ${selectedCourse?.ThaiCourseName} เรียบร้อยแล้ว`,
+        });
+        navigate("/all-open-course");
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "เกิดข้อผิดพลาดในการอัพเดต",
+          text: res.error || "",
+        });
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาดในการอัพเดต",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -455,7 +515,7 @@ const handleUpdate = async (values: any, courseID: number) => {
               <Col xs={24}>
                 <Form.Item
                   label="รหัสวิชา"
-                  name="courseCode"
+                  name="Code"
                   rules={[{ required: true, message: "กรุณาเลือกรหัสวิชา" }]}
                 >
                   <Select
@@ -469,8 +529,7 @@ const handleUpdate = async (values: any, courseID: number) => {
                   >
                     {courses.map((c) => (
                       <Option key={c.ID} value={c.ID}>
-                        {c.CourseCode} - {c.EnglishCourseName}{" "}
-                        {c.ThaiCourseName}
+                        {c.Code} - {c.EnglishCourseName} {c.ThaiCourseName}
                       </Option>
                     ))}
                   </Select>
@@ -557,15 +616,15 @@ const handleUpdate = async (values: any, courseID: number) => {
                   label="จำนวนกลุ่มเรียน"
                   name="groupCount"
                   rules={[
-                    { required: true, message: "กรุณากรอกจำนวนกลุ่มเรียน" },
+                    { required: true, message: "กรุณาระบุจำนวนกลุ่มเรียน" },
                   ]}
                 >
                   <InputNumber
-                    placeholder="1"
                     min={1}
                     max={50}
                     size="large"
                     style={{ width: "100%" }}
+                    onChange={handleGroupCountChange}
                   />
                 </Form.Item>
               </Col>
@@ -638,9 +697,11 @@ const handleUpdate = async (values: any, courseID: number) => {
                     <Select
                       placeholder="เลือกวันที่เรียน"
                       value={section.dayOfWeek}
-                      onChange={(val) => {
+                      onChange={(val: string | string[]) => {
                         const updated = [...fixedSections];
-                        updated[index].dayOfWeek = val;
+                        updated[index].dayOfWeek = Array.isArray(val)
+                          ? val[0]
+                          : val; // บังคับเป็น string
                         setFixedSections(updated);
                       }}
                       size="large"
@@ -664,30 +725,43 @@ const handleUpdate = async (values: any, courseID: number) => {
 
                 <Col xs={12} md={4}>
                   <Form.Item label="เวลาเริ่ม" required>
-                    <Input
-                      type="time"
-                      value={section.startTime}
-                      onChange={(e) => {
+                    <TimePicker
+                      value={
+                        section.startTime
+                          ? dayjs(section.startTime, "HH:mm")
+                          : null
+                      }
+                      onChange={(time, timeString) => {
                         const updated = [...fixedSections];
-                        updated[index].startTime = e.target.value;
+                        // ตรวจสอบว่า timeString เป็น array หรือไม่
+                        updated[index].startTime = Array.isArray(timeString)
+                          ? timeString[0]
+                          : timeString || "";
                         setFixedSections(updated);
                       }}
+                      format="HH:mm"
                       size="large"
+                      style={{ width: "100%" }}
                     />
                   </Form.Item>
                 </Col>
 
                 <Col xs={12} md={4}>
                   <Form.Item label="เวลาสิ้นสุด" required>
-                    <Input
-                      type="time"
-                      value={section.endTime}
-                      onChange={(e) => {
+                    <TimePicker
+                      value={
+                        section.endTime ? dayjs(section.endTime, "HH:mm") : null
+                      }
+                      onChange={(time, timeString) => {
                         const updated = [...fixedSections];
-                        updated[index].endTime = e.target.value;
+                        updated[index].endTime = Array.isArray(timeString)
+                          ? timeString[0]
+                          : timeString || "";
                         setFixedSections(updated);
                       }}
+                      format="HH:mm"
                       size="large"
+                      style={{ width: "100%" }}
                     />
                   </Form.Item>
                 </Col>
@@ -720,15 +794,7 @@ const handleUpdate = async (values: any, courseID: number) => {
               </Row>
             ))}
 
-            <Button
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={handleAddSection}
-              style={{ marginTop: 16 }}
-              block
-            >
-              เพิ่มกลุ่มเรียน
-            </Button>
+           
 
             <div
               style={{
@@ -738,7 +804,7 @@ const handleUpdate = async (values: any, courseID: number) => {
                 borderRadius: "6px",
                 border: "1px solid #91d5ff",
                 fontSize: "13px",
-                color: "#0958d9",
+                color: "#F26522",
               }}
             >
               <strong>💡 หมายเหตุ:</strong>{" "}
@@ -765,28 +831,27 @@ const handleUpdate = async (values: any, courseID: number) => {
               ยกเลิก
             </Button>
 
-           <Button
-  type="primary"
-  size="large"
-  icon={<SaveOutlined />}
-  onClick={async () => {
-    const values = form.getFieldsValue();
-    if (editingCourseID) {
-      await handleUpdate(values, editingCourseID);
-    } else {
-      await handleSubmit(values);
-    }
-  }}
-  loading={loading}
-  disabled={!validateForm()}
-  style={{
-    backgroundColor: validateForm() ? "#F26522" : undefined,
-    borderColor: validateForm() ? "#F26522" : undefined,
-    width: isMobile ? "100%" : "auto",
-  }}
->
-  {loading ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
-</Button>
+            <Button
+              type="primary"
+              size="large"
+              icon={<SaveOutlined />}
+              onClick={async () => {
+                const values = form.getFieldsValue();
+                if (editingCourseID) {
+                  await handleUpdate(values, editingCourseID);
+                } else {
+                  await handleSubmit(values);
+                }
+              }}
+              loading={loading}
+              style={{
+                backgroundColor: "#F26522",
+                borderColor: "#F26522",
+                color: "#fff",
+              }}
+            >
+              {loading ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+            </Button>
           </div>
         </Form>
       </Card>
