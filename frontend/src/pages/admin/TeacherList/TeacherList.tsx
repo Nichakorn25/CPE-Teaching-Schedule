@@ -45,7 +45,7 @@ const TeacherList: React.FC = () => {
   >("all");
   const [selectedMajorID, setSelectedMajorID] = useState<number | "all">("all");
 
-  // ── NEW: role & userMajor ────────────────────────────────────────────────────
+  // ── NEW: role & userMajor ──────────────────────────────────────────────────────────────────────────
   const [role, setRole] = useState<string>("");
   const [userMajor, setUserMajor] = useState<string>("");
 
@@ -63,7 +63,7 @@ const TeacherList: React.FC = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ── Load role & major from localStorage ──────────────────────────────────────
+  // ── Load role & major from localStorage ──────────────────────────────────────────────────────────
   useEffect(() => {
     const r = (
       localStorage.getItem("role") ||
@@ -129,7 +129,7 @@ const TeacherList: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role, userMajor]);
 
-  // ── Load departments & majors (ใช้กับแค่ admin เท่านั้น) ─────────────────────
+  // ── Load departments & majors (ใช้กับแค่ admin เท่านั้น) ──────────────────────────────────────────
   useEffect(() => {
     const fetchDepartmentsAndMajors = async () => {
       const res = await getMajorOfDepathment();
@@ -159,7 +159,7 @@ const TeacherList: React.FC = () => {
     }
   }, [selectedDepartmentID, majors]);
 
-  // ── Filter (search + department/major dropdown) ────────────────────────────────
+  // ── Filter (search + department/major dropdown) ──────────────────────────────────────────────────
   const filteredTeachers = teacherData.filter((teacher) => {
     const q = searchText.toLowerCase();
     const matchesSearch =
@@ -171,7 +171,7 @@ const TeacherList: React.FC = () => {
     // ถ้าไม่ใช่แอดมิน (เช่น scheduler) ใช้เฉพาะ search
     if (!isAdmin) return matchesSearch;
 
-    // ── สำหรับ Admin ─────────────────────────
+    // ── สำหรับ Admin ──────────────────────────────────────
     const selectedDepartmentName = departments.find(
       (d) => d.ID === selectedDepartmentID
     )?.DepartmentName;
@@ -191,7 +191,7 @@ const TeacherList: React.FC = () => {
     return matchesSearch && matchesDepartment && matchesMajor;
   });
 
-  // ── Table data & pagination ─────────────────────────────────────────────────
+  // ── Table data & pagination ───────────────────────────────────────────────────────────────────────
   const tableData: TeacherTableData[] = filteredTeachers.map(
     (teacher, index) => ({
       ...teacher,
@@ -249,7 +249,7 @@ const TeacherList: React.FC = () => {
     }
   };
 
-  // ── Columns: แยกตามหน้าจอ & role ────────────────────────────────────────────
+  // ── Columns: แยกตามหน้าจอ & role ───────────────────────────────────────────────────────────────────
   const getColumns = (): ColumnsType<TeacherTableData> => {
     if (isMobile) {
       // Mobile layout (ไม่มี EmpId อยู่แล้ว) → ซ่อน "จัดการ" ถ้าไม่ใช่ admin
@@ -494,6 +494,131 @@ const TeacherList: React.FC = () => {
     return columns;
   };
 
+  // ฟังก์ชันสำหรับสร้าง pagination ที่ปรับปรุงแล้ว
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const getPaginationRange = () => {
+      const delta = 2; // จำนวนหน้าที่แสดงข้างๆ หน้าปัจจุบัน
+      const range = [];
+      const rangeWithDots = [];
+
+      // คำนวณช่วงที่จะแสดง
+      const start = Math.max(1, currentPage - delta);
+      const end = Math.min(totalPages, currentPage + delta);
+
+      // เพิ่มหน้าแรกถ้าจำเป็น
+      if (start > 1) {
+        rangeWithDots.push(1);
+        if (start > 2) {
+          rangeWithDots.push('...');
+        }
+      }
+
+      // เพิ่มหน้าในช่วง
+      for (let i = start; i <= end; i++) {
+        rangeWithDots.push(i);
+      }
+
+      // เพิ่มหน้าสุดท้ายถ้าจำเป็น
+      if (end < totalPages) {
+        if (end < totalPages - 1) {
+          rangeWithDots.push('...');
+        }
+        rangeWithDots.push(totalPages);
+      }
+
+      return rangeWithDots;
+    };
+
+    const paginationRange = getPaginationRange();
+
+    return (
+      <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+        {/* ปุ่มก่อนหน้า */}
+        <span
+          style={{
+            backgroundColor: currentPage === 1 ? "#f5f5f5" : "#F26522",
+            color: currentPage === 1 ? "#ccc" : "white",
+            padding: "2px 6px",
+            borderRadius: "3px",
+            fontSize: "11px",
+            fontWeight: "bold",
+            minWidth: "18px",
+            textAlign: "center",
+            cursor: currentPage === 1 ? "not-allowed" : "pointer",
+            display: "inline-block",
+            fontFamily: "Sarabun, sans-serif",
+          }}
+          onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+        >
+          ‹
+        </span>
+
+        {/* หน้าต่างๆ */}
+        {paginationRange.map((page, index) => {
+          if (page === '...') {
+            return (
+              <span 
+                key={`dots-${index}`} 
+                style={{ 
+                  color: "#666", 
+                  fontSize: "11px", 
+                  padding: "2px 6px",
+                  fontFamily: "Sarabun, sans-serif",
+                }}
+              >
+                ...
+              </span>
+            );
+          }
+
+          return (
+            <span
+              key={page}
+              style={{
+                backgroundColor: currentPage === page ? "#F26522" : "transparent",
+                color: currentPage === page ? "white" : "#666",
+                padding: "2px 6px",
+                borderRadius: "3px",
+                fontSize: "11px",
+                fontWeight: currentPage === page ? "bold" : "normal",
+                minWidth: "18px",
+                textAlign: "center",
+                cursor: "pointer",
+                display: "inline-block",
+                fontFamily: "Sarabun, sans-serif",
+              }}
+              onClick={() => handlePageChange(page as number)}
+            >
+              {page}
+            </span>
+          );
+        })}
+
+        {/* ปุ่มถัดไป */}
+        <span
+          style={{
+            backgroundColor: currentPage === totalPages ? "#f5f5f5" : "#F26522",
+            color: currentPage === totalPages ? "#ccc" : "white",
+            padding: "2px 6px",
+            borderRadius: "3px",
+            fontSize: "11px",
+            fontWeight: "bold",
+            minWidth: "18px",
+            textAlign: "center",
+            cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+            display: "inline-block",
+            fontFamily: "Sarabun, sans-serif",
+          }}
+          onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+        >
+          ›
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div style={{ fontFamily: "Sarabun, sans-serif", padding: 0, margin: 0 }}>
       {/* Page Title */}
@@ -602,41 +727,8 @@ const TeacherList: React.FC = () => {
                 <Option value="50">50</Option>
               </Select>
 
-              {/* page buttons (simple preview of first 5 pages) */}
-              {totalPages > 1 && (
-                <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                  {[1, 2, 3, 4, 5].map(
-                    (page) =>
-                      page <= totalPages && (
-                        <span
-                          key={page}
-                          style={{
-                            backgroundColor:
-                              currentPage === page ? "#F26522" : "transparent",
-                            color: currentPage === page ? "white" : "#666",
-                            padding: "2px 6px",
-                            borderRadius: 3,
-                            fontSize: 11,
-                            fontWeight:
-                              currentPage === page ? "bold" : "normal",
-                            minWidth: 18,
-                            textAlign: "center",
-                            cursor: "pointer",
-                            display: "inline-block",
-                          }}
-                          onClick={() => handlePageChange(page)}
-                        >
-                          {page}
-                        </span>
-                      )
-                  )}
-                  {totalPages > 5 && (
-                    <span style={{ color: "#666", fontSize: 11 }}>
-                      ... {totalPages}
-                    </span>
-                  )}
-                </div>
-              )}
+              {/* ใช้ฟังก์ชัน pagination ใหม่ */}
+              {renderPagination()}
 
               <div style={{ flex: 1 }} />
             </>
@@ -780,19 +872,7 @@ const TeacherList: React.FC = () => {
             ข้อมูลอาจารย์เหล่านี้ใช้สำหรับการบริหารจัดการระบบตารางเรียน
           </div>
           <div>
-            ข้อมูลล่าสุด: {new Date().toLocaleString("th-TH")} |
-            <span
-              style={{
-                marginLeft: 8,
-                cursor: "pointer",
-                color: "#F26522",
-                fontWeight: 500,
-              }}
-              onClick={fetchAllTeachers}
-              title="รีเฟรชข้อมูล"
-            >
-              🔄 รีเฟรช
-            </span>
+            ข้อมูลล่าสุด: {new Date().toLocaleString("th-TH")}
           </div>
         </div>
       </div>

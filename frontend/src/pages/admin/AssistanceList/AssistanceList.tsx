@@ -400,6 +400,131 @@ const AssistanceList: React.FC = () => {
     return columns;
   };
 
+  // ฟังก์ชันสำหรับสร้าง pagination ที่ปรับปรุงแล้ว
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const getPaginationRange = () => {
+      const delta = 2; // จำนวนหน้าที่แสดงข้างๆ หน้าปัจจุบัน
+      const range = [];
+      const rangeWithDots = [];
+
+      // คำนวณช่วงที่จะแสดง
+      const start = Math.max(1, currentPage - delta);
+      const end = Math.min(totalPages, currentPage + delta);
+
+      // เพิ่มหน้าแรกถ้าจำเป็น
+      if (start > 1) {
+        rangeWithDots.push(1);
+        if (start > 2) {
+          rangeWithDots.push('...');
+        }
+      }
+
+      // เพิ่มหน้าในช่วง
+      for (let i = start; i <= end; i++) {
+        rangeWithDots.push(i);
+      }
+
+      // เพิ่มหน้าสุดท้ายถ้าจำเป็น
+      if (end < totalPages) {
+        if (end < totalPages - 1) {
+          rangeWithDots.push('...');
+        }
+        rangeWithDots.push(totalPages);
+      }
+
+      return rangeWithDots;
+    };
+
+    const paginationRange = getPaginationRange();
+
+    return (
+      <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+        {/* ปุ่มก่อนหน้า */}
+        <span
+          style={{
+            backgroundColor: currentPage === 1 ? "#f5f5f5" : "#F26522",
+            color: currentPage === 1 ? "#ccc" : "white",
+            padding: "2px 6px",
+            borderRadius: "3px",
+            fontSize: "11px",
+            fontWeight: "bold",
+            minWidth: "18px",
+            textAlign: "center",
+            cursor: currentPage === 1 ? "not-allowed" : "pointer",
+            display: "inline-block",
+            fontFamily: "Sarabun, sans-serif",
+          }}
+          onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+        >
+          ‹
+        </span>
+
+        {/* หน้าต่างๆ */}
+        {paginationRange.map((page, index) => {
+          if (page === '...') {
+            return (
+              <span 
+                key={`dots-${index}`} 
+                style={{ 
+                  color: "#666", 
+                  fontSize: "11px", 
+                  padding: "2px 6px",
+                  fontFamily: "Sarabun, sans-serif",
+                }}
+              >
+                ...
+              </span>
+            );
+          }
+
+          return (
+            <span
+              key={page}
+              style={{
+                backgroundColor: currentPage === page ? "#F26522" : "transparent",
+                color: currentPage === page ? "white" : "#666",
+                padding: "2px 6px",
+                borderRadius: "3px",
+                fontSize: "11px",
+                fontWeight: currentPage === page ? "bold" : "normal",
+                minWidth: "18px",
+                textAlign: "center",
+                cursor: "pointer",
+                display: "inline-block",
+                fontFamily: "Sarabun, sans-serif",
+              }}
+              onClick={() => handlePageChange(page as number)}
+            >
+              {page}
+            </span>
+          );
+        })}
+
+        {/* ปุ่มถัดไป */}
+        <span
+          style={{
+            backgroundColor: currentPage === totalPages ? "#f5f5f5" : "#F26522",
+            color: currentPage === totalPages ? "#ccc" : "white",
+            padding: "2px 6px",
+            borderRadius: "3px",
+            fontSize: "11px",
+            fontWeight: "bold",
+            minWidth: "18px",
+            textAlign: "center",
+            cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+            display: "inline-block",
+            fontFamily: "Sarabun, sans-serif",
+          }}
+          onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+        >
+          ›
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div
       style={{
@@ -495,50 +620,8 @@ const AssistanceList: React.FC = () => {
                 <Option value="50">50</Option>
               </Select>
 
-              {/* Page numbers */}
-              {totalPages > 1 && (
-                <div
-                  style={{ display: "flex", gap: "4px", alignItems: "center" }}
-                >
-                  {[1, 2, 3, 4, 5].map(
-                    (page) =>
-                      page <= totalPages && (
-                        <span
-                          key={page}
-                          style={{
-                            backgroundColor:
-                              currentPage === page ? "#F26522" : "transparent",
-                            color: currentPage === page ? "white" : "#666",
-                            padding: "2px 6px",
-                            borderRadius: "3px",
-                            fontSize: "11px",
-                            fontWeight:
-                              currentPage === page ? "bold" : "normal",
-                            minWidth: "18px",
-                            textAlign: "center",
-                            cursor: "pointer",
-                            display: "inline-block",
-                            fontFamily: "Sarabun, sans-serif",
-                          }}
-                          onClick={() => handlePageChange(page)}
-                        >
-                          {page}
-                        </span>
-                      )
-                  )}
-                  {totalPages > 5 && (
-                    <span
-                      style={{
-                        color: "#666",
-                        fontSize: "11px",
-                        fontFamily: "Sarabun, sans-serif",
-                      }}
-                    >
-                      ... {totalPages}
-                    </span>
-                  )}
-                </div>
-              )}
+              {/* ใช้ฟังก์ชัน pagination ใหม่ */}
+              {renderPagination()}
 
               <div style={{ flex: 1 }}></div>
             </>
@@ -711,19 +794,7 @@ const AssistanceList: React.FC = () => {
             ข้อมูลผู้ช่วยสอนเหล่านี้ใช้สำหรับการจัดการระบบตารางเรียน
           </div>
           <div>
-            ข้อมูลล่าสุด: {new Date().toLocaleString("th-TH")} |
-            <span
-              style={{
-                marginLeft: "8px",
-                cursor: "pointer",
-                color: "#F26522",
-                fontWeight: "500",
-              }}
-              onClick={fetchAllAssistants}
-              title="รีเฟรชข้อมูล"
-            >
-              🔄 รีเฟรช
-            </span>
+            ข้อมูลล่าสุด: {new Date().toLocaleString("th-TH")}
           </div>
         </div>
       </div>
