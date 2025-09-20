@@ -40,7 +40,9 @@ const TeacherList: React.FC = () => {
   const [departments, setDepartments] = useState<DepartmentInterface[]>([]);
   const [majors, setMajors] = useState<MajorInterface[]>([]);
   const [filteredMajors, setFilteredMajors] = useState<MajorInterface[]>([]);
-  const [selectedDepartmentID, setSelectedDepartmentID] = useState<number | "all">("all");
+  const [selectedDepartmentID, setSelectedDepartmentID] = useState<
+    number | "all"
+  >("all");
   const [selectedMajorID, setSelectedMajorID] = useState<number | "all">("all");
 
   // ── NEW: role & userMajor ────────────────────────────────────────────────────
@@ -50,8 +52,10 @@ const TeacherList: React.FC = () => {
   const isSmallScreen = containerWidth < 1400;
   const isMobile = containerWidth < 768;
 
-  const isAdmin = role === "admin" || role === "administrator" || role === "superadmin";
-  const isScheduler = role === "scheduler" || role === "schedule" || role === "coordinator";
+  const isAdmin =
+    role === "admin" || role === "administrator" || role === "superadmin";
+  const isScheduler =
+    role === "scheduler" || role === "schedule" || role === "coordinator";
 
   useEffect(() => {
     const handleResize = () => setContainerWidth(window.innerWidth);
@@ -61,11 +65,12 @@ const TeacherList: React.FC = () => {
 
   // ── Load role & major from localStorage ──────────────────────────────────────
   useEffect(() => {
-    const r =
-      (localStorage.getItem("role") ||
-        localStorage.getItem("user_role") ||
-        localStorage.getItem("role_name") ||
-        "").toLowerCase();
+    const r = (
+      localStorage.getItem("role") ||
+      localStorage.getItem("user_role") ||
+      localStorage.getItem("role_name") ||
+      ""
+    ).toLowerCase();
     const m = localStorage.getItem("major_name") || "";
     setRole(r);
     setUserMajor(m);
@@ -154,7 +159,7 @@ const TeacherList: React.FC = () => {
     }
   }, [selectedDepartmentID, majors]);
 
-  // ── Filter (search + major dropdown) ────────────────────────────────────────
+  // ── Filter (search + department/major dropdown) ────────────────────────────────
   const filteredTeachers = teacherData.filter((teacher) => {
     const q = searchText.toLowerCase();
     const matchesSearch =
@@ -163,21 +168,37 @@ const TeacherList: React.FC = () => {
       teacher.Email?.toLowerCase().includes(q) ||
       teacher.EmpId?.toLowerCase().includes(q);
 
-    // admin เท่านั้นที่ใช้ฟิลเตอร์สาขา/สำนักวิชา; scheduler ไม่ต้อง (ถูกจำกัดตั้งแต่ fetch)
+    // ถ้าไม่ใช่แอดมิน (เช่น scheduler) ใช้เฉพาะ search
     if (!isAdmin) return matchesSearch;
 
-    const selectedMajorName = majors.find((m) => m.ID === selectedMajorID)?.MajorName;
-    const matchesMajor = selectedMajorID === "all" || teacher.Major === selectedMajorName;
+    // ── สำหรับ Admin ─────────────────────────
+    const selectedDepartmentName = departments.find(
+      (d) => d.ID === selectedDepartmentID
+    )?.DepartmentName;
+    const selectedMajorName = majors.find(
+      (m) => m.ID === selectedMajorID
+    )?.MajorName;
 
-    return matchesSearch && matchesMajor;
+    const matchesDepartment =
+      selectedDepartmentID === "all" ||
+      teacher.Department === selectedDepartmentName;
+
+    const matchesMajor =
+      selectedMajorID === "all" || teacher.Major === selectedMajorName;
+
+    //ถ้าเลือกแค่สำนัก → กรองตามสำนักเลย
+    //ถ้าเลือกสาขาด้วย → ต้อง match ทั้งสำนักและสาขา
+    return matchesSearch && matchesDepartment && matchesMajor;
   });
 
   // ── Table data & pagination ─────────────────────────────────────────────────
-  const tableData: TeacherTableData[] = filteredTeachers.map((teacher, index) => ({
-    ...teacher,
-    key: teacher.DeleteID?.toString() || `${index}`,
-    order: (currentPage - 1) * pageSize + index + 1,
-  }));
+  const tableData: TeacherTableData[] = filteredTeachers.map(
+    (teacher, index) => ({
+      ...teacher,
+      key: teacher.DeleteID?.toString() || `${index}`,
+      order: (currentPage - 1) * pageSize + index + 1,
+    })
+  );
 
   const totalItems = tableData.length;
   const totalPages = Math.ceil(totalItems / pageSize);
@@ -216,7 +237,8 @@ const TeacherList: React.FC = () => {
         if (response.status === 200) {
           message.success(`ลบ ${title} ${fullName} สำเร็จ`);
           setTeacherData((prev) => prev.filter((t) => t.DeleteID !== deleteID));
-          if (currentData.length === 1 && currentPage > 1) setCurrentPage(currentPage - 1);
+          if (currentData.length === 1 && currentPage > 1)
+            setCurrentPage(currentPage - 1);
         } else {
           const errorMsg = response.data?.error || "ไม่สามารถลบอาจารย์ได้";
           message.error(`เกิดข้อผิดพลาด: ${errorMsg}`);
@@ -238,7 +260,9 @@ const TeacherList: React.FC = () => {
           key: "order",
           width: 40,
           align: "center",
-          render: (v: number) => <span style={{ fontWeight: "bold", fontSize: "10px" }}>{v}</span>,
+          render: (v: number) => (
+            <span style={{ fontWeight: "bold", fontSize: "10px" }}>{v}</span>
+          ),
         },
         {
           title: "อาจารย์",
@@ -246,10 +270,18 @@ const TeacherList: React.FC = () => {
           width: 160,
           render: (_, r) => (
             <div style={{ fontSize: "11px" }}>
-              <div style={{ fontWeight: "bold", color: "#1890ff", marginBottom: "2px" }}>
+              <div
+                style={{
+                  fontWeight: "bold",
+                  color: "#1890ff",
+                  marginBottom: "2px",
+                }}
+              >
                 {typeof r.Title === "string" ? r.Title : r.Title?.Title || "-"}
               </div>
-              <div style={{ fontWeight: 500 }}>{r.Firstname} {r.Lastname}</div>
+              <div style={{ fontWeight: 500 }}>
+                {r.Firstname} {r.Lastname}
+              </div>
               <div style={{ color: "#666", fontSize: "9px" }}>{r.Major}</div>
             </div>
           ),
@@ -266,19 +298,37 @@ const TeacherList: React.FC = () => {
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Button
                 size="small"
-                style={{ backgroundColor: "#F26522", borderColor: "#F26522", color: "white", fontSize: 9, padding: "1px 4px", height: 20, lineHeight: "18px" }}
+                style={{
+                  backgroundColor: "#F26522",
+                  borderColor: "#F26522",
+                  color: "white",
+                  fontSize: 9,
+                  padding: "1px 4px",
+                  height: 20,
+                  lineHeight: "18px",
+                }}
                 onClick={() => navigate(`/manage-teacher/${record.DeleteID}`)}
               >
                 แก้ไข
               </Button>
               <Button
                 size="small"
-                style={{ backgroundColor: "#ff4d4f", borderColor: "#ff4d4f", color: "white", fontSize: 9, padding: "1px 4px", height: 20, lineHeight: "18px" }}
+                style={{
+                  backgroundColor: "#ff4d4f",
+                  borderColor: "#ff4d4f",
+                  color: "white",
+                  fontSize: 9,
+                  padding: "1px 4px",
+                  height: 20,
+                  lineHeight: "18px",
+                }}
                 onClick={() =>
                   handleDeleteTeacher(
                     record.DeleteID,
                     `${record.Firstname} ${record.Lastname}`,
-                    typeof record.Title === "string" ? record.Title : record.Title?.Title || ""
+                    typeof record.Title === "string"
+                      ? record.Title
+                      : record.Title?.Title || ""
                   )
                 }
               >
@@ -317,7 +367,11 @@ const TeacherList: React.FC = () => {
         title: "ชื่อ-นามสกุล",
         key: "fullname",
         width: 200,
-        render: (_, r) => <span style={{ fontWeight: 500 }}>{r.Firstname} {r.Lastname}</span>,
+        render: (_, r) => (
+          <span style={{ fontWeight: 500 }}>
+            {r.Firstname} {r.Lastname}
+          </span>
+        ),
       },
     ];
 
@@ -339,7 +393,10 @@ const TeacherList: React.FC = () => {
         key: "Email",
         width: 220,
         render: (value: string) => (
-          <a href={`mailto:${value}`} style={{ color: "#1890ff", fontSize: 12 }}>
+          <a
+            href={`mailto:${value}`}
+            style={{ color: "#1890ff", fontSize: 12 }}
+          >
             {value}
           </a>
         ),
@@ -347,14 +404,38 @@ const TeacherList: React.FC = () => {
     }
 
     columns.push(
-      { title: "สำนักวิชา", dataIndex: "Department", key: "Department", width: isSmallScreen ? 120 : 160, align: "center" },
-      { title: "สาขาวิชา", dataIndex: "Major", key: "Major", width: isSmallScreen ? 140 : 180, align: "center" },
+      {
+        title: "สำนักวิชา",
+        dataIndex: "Department",
+        key: "Department",
+        width: isSmallScreen ? 120 : 160,
+        align: "center",
+      },
+      {
+        title: "สาขาวิชา",
+        dataIndex: "Major",
+        key: "Major",
+        width: isSmallScreen ? 140 : 180,
+        align: "center",
+      }
     );
 
     if (!isSmallScreen) {
       columns.push(
-        { title: "ตำแหน่ง", dataIndex: "Position", key: "Position", width: 150, align: "center" },
-        { title: "บทบาท", dataIndex: "Role", key: "Role", width: 100, align: "center" }
+        {
+          title: "ตำแหน่ง",
+          dataIndex: "Position",
+          key: "Position",
+          width: 150,
+          align: "center",
+        },
+        {
+          title: "บทบาท",
+          dataIndex: "Role",
+          key: "Role",
+          width: 100,
+          align: "center",
+        }
       );
     }
 
@@ -370,7 +451,14 @@ const TeacherList: React.FC = () => {
             <Button
               size="small"
               icon={<EditOutlined />}
-              style={{ backgroundColor: "#F26522", borderColor: "#F26522", color: "white", fontSize: 11, padding: "2px 8px", height: "auto" }}
+              style={{
+                backgroundColor: "#F26522",
+                borderColor: "#F26522",
+                color: "white",
+                fontSize: 11,
+                padding: "2px 8px",
+                height: "auto",
+              }}
               onClick={() => navigate(`/manage-teacher/${record.DeleteID}`)}
             >
               แก้ไข
@@ -378,12 +466,21 @@ const TeacherList: React.FC = () => {
             <Button
               size="small"
               icon={<DeleteOutlined />}
-              style={{ backgroundColor: "#ff4d4f", borderColor: "#ff4d4f", color: "white", fontSize: 11, padding: "2px 8px", height: "auto" }}
+              style={{
+                backgroundColor: "#ff4d4f",
+                borderColor: "#ff4d4f",
+                color: "white",
+                fontSize: 11,
+                padding: "2px 8px",
+                height: "auto",
+              }}
               onClick={() =>
                 handleDeleteTeacher(
                   record.DeleteID,
                   `${record.Firstname} ${record.Lastname}`,
-                  typeof record.Title === "string" ? record.Title : record.Title?.Title || ""
+                  typeof record.Title === "string"
+                    ? record.Title
+                    : record.Title?.Title || ""
                 )
               }
             >
@@ -400,8 +497,21 @@ const TeacherList: React.FC = () => {
   return (
     <div style={{ fontFamily: "Sarabun, sans-serif", padding: 0, margin: 0 }}>
       {/* Page Title */}
-      <div style={{ marginBottom: 20, paddingBottom: 12, borderBottom: "2px solid #F26522" }}>
-        <h2 style={{ margin: "0 0 8px 0", color: "#333", fontSize: isMobile ? 18 : 20, fontWeight: "bold" }}>
+      <div
+        style={{
+          marginBottom: 20,
+          paddingBottom: 12,
+          borderBottom: "2px solid #F26522",
+        }}
+      >
+        <h2
+          style={{
+            margin: "0 0 8px 0",
+            color: "#333",
+            fontSize: isMobile ? 18 : 20,
+            fontWeight: "bold",
+          }}
+        >
           รายชื่ออาจารย์ผู้สอน
         </h2>
         <p style={{ margin: 0, color: "#666", fontSize: isMobile ? 12 : 13 }}>
@@ -433,7 +543,7 @@ const TeacherList: React.FC = () => {
                 value={selectedDepartmentID}
                 onChange={(value) => {
                   setSelectedDepartmentID(value);
-                  setSelectedMajorID("all");
+                  setSelectedMajorID("all"); // รีเซ็ตให้เลือกได้ทุกสาขาของสำนักนั้น
                 }}
                 style={{ width: isMobile ? "100%" : 200 }}
                 size="small"
@@ -475,7 +585,9 @@ const TeacherList: React.FC = () => {
 
           {!isMobile && (
             <>
-              <span style={{ whiteSpace: "nowrap", fontSize: 12, color: "#666" }}>
+              <span
+                style={{ whiteSpace: "nowrap", fontSize: 12, color: "#666" }}
+              >
                 รายการที่แสดง
               </span>
               <Select
@@ -499,12 +611,14 @@ const TeacherList: React.FC = () => {
                         <span
                           key={page}
                           style={{
-                            backgroundColor: currentPage === page ? "#F26522" : "transparent",
+                            backgroundColor:
+                              currentPage === page ? "#F26522" : "transparent",
                             color: currentPage === page ? "white" : "#666",
                             padding: "2px 6px",
                             borderRadius: 3,
                             fontSize: 11,
-                            fontWeight: currentPage === page ? "bold" : "normal",
+                            fontWeight:
+                              currentPage === page ? "bold" : "normal",
                             minWidth: 18,
                             textAlign: "center",
                             cursor: "pointer",
@@ -517,7 +631,9 @@ const TeacherList: React.FC = () => {
                       )
                   )}
                   {totalPages > 5 && (
-                    <span style={{ color: "#666", fontSize: 11 }}>... {totalPages}</span>
+                    <span style={{ color: "#666", fontSize: 11 }}>
+                      ... {totalPages}
+                    </span>
                   )}
                 </div>
               )}
@@ -532,13 +648,16 @@ const TeacherList: React.FC = () => {
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => navigate("/manage-teacher")}
-              style={{ backgroundColor: "#52c41a", borderColor: "#52c41a", fontSize: 12 }}
+              style={{
+                backgroundColor: "#52c41a",
+                borderColor: "#52c41a",
+                fontSize: 12,
+              }}
               size="small"
             >
               เพิ่มอาจารย์
             </Button>
           )}
-
         </div>
 
         {/* Mobile pagination */}
@@ -554,7 +673,10 @@ const TeacherList: React.FC = () => {
               alignItems: "center",
             }}
           >
-            <Select value={pageSize.toString()} style={{ width: 70 }} size="small"
+            <Select
+              value={pageSize.toString()}
+              style={{ width: 70 }}
+              size="small"
               onChange={(value) => handlePageSizeChange(parseInt(value))}
             >
               <Option value="5">5</Option>
@@ -563,13 +685,21 @@ const TeacherList: React.FC = () => {
             </Select>
 
             <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-              <Button size="small" disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)}>
+              <Button
+                size="small"
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+              >
                 ←
               </Button>
               <span style={{ fontSize: 12, padding: "0 8px" }}>
                 {currentPage}/{totalPages}
               </span>
-              <Button size="small" disabled={currentPage === totalPages} onClick={() => handlePageChange(currentPage + 1)}>
+              <Button
+                size="small"
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+              >
                 →
               </Button>
             </div>
@@ -578,23 +708,45 @@ const TeacherList: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div style={{ backgroundColor: "white", border: "1px solid #d9d9d9", borderRadius: 6, overflow: "hidden" }}>
+      <div
+        style={{
+          backgroundColor: "white",
+          border: "1px solid #d9d9d9",
+          borderRadius: 6,
+          overflow: "hidden",
+        }}
+      >
         <Table
           columns={getColumns()}
           dataSource={currentData}
           pagination={false}
           size="small"
           bordered
-          scroll={{ x: isMobile ? 350 : isSmallScreen ? 1000 : 1800, y: isMobile ? 400 : 600 }}
+          scroll={{
+            x: isMobile ? 350 : isSmallScreen ? 1000 : 1800,
+            y: isMobile ? 400 : 600,
+          }}
           loading={loading}
           style={{ fontSize: isMobile ? 11 : 12 }}
           locale={{
             emptyText: (
-              <div style={{ padding: isMobile ? 20 : 40, textAlign: "center", color: "#999" }}>
-                <div style={{ fontSize: isMobile ? 32 : 48, marginBottom: 16 }}>👨‍🏫</div>
-                <div style={{ fontSize: isMobile ? 14 : 16, marginBottom: 8 }}>ไม่พบข้อมูลอาจารย์</div>
+              <div
+                style={{
+                  padding: isMobile ? 20 : 40,
+                  textAlign: "center",
+                  color: "#999",
+                }}
+              >
+                <div style={{ fontSize: isMobile ? 32 : 48, marginBottom: 16 }}>
+                  👨‍🏫
+                </div>
+                <div style={{ fontSize: isMobile ? 14 : 16, marginBottom: 8 }}>
+                  ไม่พบข้อมูลอาจารย์
+                </div>
                 <div style={{ fontSize: isMobile ? 12 : 14, color: "#ccc" }}>
-                  {isScheduler ? "ไม่พบอาจารย์ในสาขาของคุณ" : "ยังไม่มีข้อมูลอาจารย์ในระบบ"}
+                  {isScheduler
+                    ? "ไม่พบอาจารย์ในสาขาของคุณ"
+                    : "ยังไม่มีข้อมูลอาจารย์ในระบบ"}
                 </div>
               </div>
             ),
@@ -623,11 +775,19 @@ const TeacherList: React.FC = () => {
             gap: isMobile ? 8 : 0,
           }}
         >
-          <div>💡 <strong>หมายเหตุ:</strong> ข้อมูลอาจารย์เหล่านี้ใช้สำหรับการบริหารจัดการระบบตารางเรียน</div>
+          <div>
+            💡 <strong>หมายเหตุ:</strong>{" "}
+            ข้อมูลอาจารย์เหล่านี้ใช้สำหรับการบริหารจัดการระบบตารางเรียน
+          </div>
           <div>
             ข้อมูลล่าสุด: {new Date().toLocaleString("th-TH")} |
             <span
-              style={{ marginLeft: 8, cursor: "pointer", color: "#F26522", fontWeight: 500 }}
+              style={{
+                marginLeft: 8,
+                cursor: "pointer",
+                color: "#F26522",
+                fontWeight: 500,
+              }}
               onClick={fetchAllTeachers}
               title="รีเฟรชข้อมูล"
             >
