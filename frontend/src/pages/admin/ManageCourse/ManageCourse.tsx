@@ -182,29 +182,28 @@ const ManageCourse: React.FC = () => {
     setTeachers(teachers.filter((_, i) => i !== index));
   };
 
- const isFormValid = () => {
-  const values = form.getFieldsValue();
+  const isFormValid = () => {
+    const values = form.getFieldsValue();
 
-  // ถ้ามี id = แก้ไข ปล่อยผ่านได้
-  if (id) return true;
-  console.log("Validate id:", id);
+    // ถ้ามี id = แก้ไข ปล่อยผ่านได้
+    if (id) return true;
+    console.log("Validate id:", id);
 
-  return (
-    selectedCurriculum &&
-    selectedAcademicYear &&
-    values.TypeOfCoursesID &&
-    values.Code &&
-    values.Credit &&
-    values.ThaiName &&
-    values.EnglishName &&
-    values.Lecture !== undefined &&
-    values.Lab !== undefined &&
-    values.Self !== undefined &&
-    teachers.length > 0 &&
-    teachers.every((t) => t.ID)
-  );
-};
-
+    return (
+      selectedCurriculum &&
+      selectedAcademicYear &&
+      values.TypeOfCoursesID &&
+      values.Code &&
+      values.Credit &&
+      values.ThaiName &&
+      values.EnglishName &&
+      values.Lecture !== undefined &&
+      values.Lab !== undefined &&
+      values.Self !== undefined &&
+      teachers.length > 0 &&
+      teachers.every((t) => t.ID)
+    );
+  };
 
   useEffect(() => {
     const fetchCourseData = async () => {
@@ -262,7 +261,6 @@ const ManageCourse: React.FC = () => {
             setSelectedMajorID(majorID);
           }
 
-          // set form fields
           form.setFieldsValue({
             ThaiName: data.ThaiName,
             EnglishName: data.EnglishName,
@@ -276,6 +274,17 @@ const ManageCourse: React.FC = () => {
             AcademicYearID: data.AcademicYearID,
             UserIDs: fullTeacherObjects.map((t) => t.ID),
           });
+
+          // ✅ เพิ่มตรงนี้
+          const curriculumFound = curriculums.find(
+            (c) => c.ID === data.CurriculumID
+          );
+          if (curriculumFound) setSelectedCurriculum(curriculumFound);
+
+          const yearFound = academicYears.find(
+            (a) => a.ID === data.AcademicYearID
+          );
+          if (yearFound) setSelectedAcademicYear(yearFound);
         }
       } catch (error) {
         message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลรายวิชา");
@@ -286,66 +295,94 @@ const ManageCourse: React.FC = () => {
     fetchCourseData();
   }, [id, form, majors]);
 
- const handleSubmit = async () => {
-  if (!selectedCurriculum || !selectedAcademicYear) {
-    message.error("กรุณากรอกข้อมูลให้ครบถ้วน");
-    return;
-  }
+  console.log("useParams id:", id);
+  console.log("isFormValid:", isFormValid());
+  console.log("selectedCurriculum", selectedCurriculum);
+  console.log("selectedAcademicYear", selectedAcademicYear);
+  console.log("form values", form.getFieldsValue());
+  console.log("teachers", teachers);
 
-  const values = form.getFieldsValue();
-
-  // ตรวจ teacher แค่ตอน create
-  if (!id && (teachers.length === 0 || teachers.some((t) => !t.ID))) {
-    message.error("กรุณาเลือกอาจารย์ผู้สอนให้ครบถ้วน");
-    return;
-  }
-
-  const data: CreateCourseInteface = {
-    Code: values.Code || "",
-    EnglishName: values.EnglishName || "",
-    ThaiName: values.ThaiName || "",
-    CurriculumID: selectedCurriculum.ID,
-    AcademicYearID: selectedAcademicYear.ID,
-    TypeOfCoursesID: parseInt(values.TypeOfCoursesID || "0"),
-    Unit: parseInt(values.Credit || "0"),
-    Lecture: parseInt(values.Lecture || "0"),
-    Lab: parseInt(values.Lab || "0"),
-    Self: parseInt(values.Self || "0"),
-    UserIDs: teachers.map((t) => t.ID),
-  };
-
+ const handleCreateCourse = async (data: CreateCourseInteface) => {
   try {
     setLoading(true);
-    let response;
-    if (id) {
-      console.log("Submit id:", id, typeof id);
-      response = await putUpdateCourse(Number(id), data);
-    } else {
-      response = await postCreateCourse(data);
-    }
-
-    if (response.status === 200 || response.status === 201) {
+    const response = await postCreateCourse(data);
+    if (response.status === 201) {
       Swal.fire(
         "สำเร็จ",
-        id
-          ? `แก้ไขข้อมูลวิชา <b>${values.EnglishName} - ${values.ThaiName}</b> เรียบร้อยแล้ว`
-          : `เพิ่มวิชา <b>${values.EnglishName} - ${values.ThaiName}</b> เป็นรายวิชาที่เปิดสอนเรียบร้อยแล้ว`,
+        `เพิ่มรายวิชา ${data.Code} - ${data.EnglishName} ${data.ThaiName} เรียบร้อยแล้ว`,
         "success"
       ).then(() => navigate("/all-course"));
-    } else {
-      Swal.fire("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้", "error");
     }
-  } catch (error: any) {
+  } catch (error) {
     Swal.fire(
       "ผิดพลาด",
-      error?.response?.data?.message || "ไม่สามารถดำเนินการได้",
+      `ไม่สามารถเพิ่มรายวิชา ${data.Code} - ${data.EnglishName} ${data.ThaiName} ได้`,
       "error"
     );
-    console.error("Error submitting course", error);
   } finally {
     setLoading(false);
   }
 };
+
+const handleUpdateCourse = async (
+  courseId: number,
+  data: CreateCourseInteface
+) => {
+  try {
+    setLoading(true);
+    console.log("===== Sending Update =====", courseId, data);
+    const response = await putUpdateCourse(courseId, data);
+    console.log("===== Update Response =====", response);
+    if (response.status === 200) {
+      Swal.fire(
+        "สำเร็จ",
+        `แก้ไขรายวิชา ${data.Code} - ${data.EnglishName} ${data.ThaiName} เรียบร้อยแล้ว`,
+        "success"
+      ).then(() => navigate("/all-course"));
+    }
+  } catch (error) {
+    console.error(error);
+    Swal.fire(
+      "ผิดพลาด",
+      `ไม่สามารถแก้ไขรายวิชา ${data.Code} - ${data.EnglishName} ${data.ThaiName} ได้`,
+      "error"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const handleSubmit = async () => {
+    if (!selectedCurriculum || !selectedAcademicYear) {
+      message.error("กรุณากรอกข้อมูลให้ครบถ้วน");
+      return;
+    }
+
+    const values = form.getFieldsValue();
+    const data: CreateCourseInteface = {
+      Code: values.Code,
+      EnglishName: values.EnglishName,
+      ThaiName: values.ThaiName,
+      CurriculumID: Number(values.CurriculumID),
+      AcademicYearID: Number(values.AcademicYearID),
+      TypeOfCoursesID: parseInt(values.TypeOfCoursesID),
+      Unit: parseInt(values.Credit),
+      Lecture: parseInt(values.Lecture),
+      Lab: parseInt(values.Lab),
+      Self: parseInt(values.Self),
+      UserIDs: teachers.map((t) => t.ID),
+    };
+
+    console.log("===== DATA TO UPDATE =====");
+    console.log(data);
+
+    if (id) {
+      console.log("===== UPDATE COURSE ID =====", id);
+      await handleUpdateCourse(Number(id), data);
+    } else {
+      await handleCreateCourse(data);
+    }
+  };
 
   // Generate number options
   const generateNumberOptions = (max: number) => {
