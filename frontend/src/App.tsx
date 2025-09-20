@@ -7,6 +7,7 @@ import HomeTest from "./pages/home/Dash";
 
 import TeacherList from "./pages/admin/TeacherList/TeacherList";
 import LaboratoryList from "./pages/admin/LaboratoryList/LaboratoryList";
+import CurriculumList from "./pages/admin/CurriculumList/CurriculumList";
 import AssistanceList from "./pages/admin/AssistanceList/AssistanceList";
 import AllCourse from "./pages/admin/AllCourse/AllCourse";
 import ManageTeacher from "./pages/admin/ManageTeacher/ManageTeacher";
@@ -46,6 +47,7 @@ const App: React.FC = () => {
 
           <Route path="teacher-list" element={<MainLayout><TeacherList /></MainLayout>} />
           <Route path="laboratory-list" element={<MainLayout><LaboratoryList /></MainLayout>} />
+          <Route path="curriculum-list" element={<MainLayout><CurriculumList /></MainLayout>} />
           <Route path="assistance-list" element={<MainLayout><AssistanceList /></MainLayout>} />
           <Route path="all-course" element={<MainLayout><AllCourse /></MainLayout>} />
           <Route path="manage-teacher" element={<MainLayout><ManageTeacher /></MainLayout>} />
