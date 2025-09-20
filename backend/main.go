@@ -94,6 +94,7 @@ func main() {
 		r.POST("/curriculum", controllers.CreateCurriculum)
 
 		r.POST("/lab", controllers.CreateLaboratory)
+		r.GET("/lab/:id", controllers.GetLaboratoryByID)
 		r.PUT("/lab/:id", controllers.UpdateLaboratory)
 		r.DELETE("/lab/:id", controllers.DeleteLaboratory)
 	}

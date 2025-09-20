@@ -71,6 +71,39 @@ func CreateLaboratory(c *gin.Context) {
 	})
 }
 
+// GET /laboratories/:id
+func GetLaboratoryByID(c *gin.Context) {
+	// รับ id จาก path param
+	idParam := c.Param("id")
+	idUint64, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "รหัสไม่ถูกต้อง"})
+		return
+	}
+	id := uint(idUint64)
+
+	// ค้นหา record
+	var lab entity.Laboratory
+	if err := config.DB().First(&lab, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "ไม่พบห้องปฏิบัติการ"})
+		return
+	}
+
+	// ส่ง response กลับ
+	c.JSON(http.StatusOK, gin.H{
+		"message": "ดึงข้อมูลห้องปฏิบัติการสำเร็จ",
+		"data": gin.H{
+			"id":        lab.ID,
+			"room":      lab.Room,
+			"building":  lab.Building,
+			"capacity":  lab.Capacity,
+			"createdAt": lab.CreatedAt,
+			"updatedAt": lab.UpdatedAt,
+		},
+	})
+}
+
+
 type updateLaboratoryInput struct {
 	Room     string `json:"room" binding:"required"`
 	Building string `json:"building" binding:"required"`

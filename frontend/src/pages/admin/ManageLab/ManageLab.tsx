@@ -1,0 +1,215 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import Swal from "sweetalert2";
+import { Button, Input, Card, Form, Row, Col, message } from "antd";
+import { SaveOutlined } from "@ant-design/icons";
+import {
+  postCreateLaboratory,
+  putUpdateLaboratory,
+  getLaboratoryById,
+} from "../../../services/https/AdminPageServices";
+import { LaboratoryData } from "../../../interfaces/Lab";
+
+interface LaboratoryInterface {
+  ID?: number;
+  Room: string;
+  Building: string;
+  Capacity: string;
+}
+
+const ManageLab: React.FC = () => {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [formData, setFormData] = useState<LaboratoryData>();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (id) {
+        setIsEditMode(true);
+        try {
+          const res = await getLaboratoryById(id);
+          if (res.status === 200) {
+            const data = res.data;
+            setFormData({
+              room: data.room,
+              building: data.building,
+              capacity: data.capacity,
+            });
+            form.setFieldsValue(data);
+          } else {
+            message.error("ไม่สามารถโหลดข้อมูลห้องปฏิบัติการได้");
+            navigate("/laboratory-list");
+          }
+        } catch (error) {
+          message.error("เกิดข้อผิดพลาดในการโหลดข้อมูล");
+        }
+      }
+    };
+    fetchData();
+  }, [id, form, navigate]);
+
+  const handleChange = (field: string, value: any) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const validateForm = () => {
+    return formData.room && formData.building && formData.capacity;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      message.warning("กรุณากรอกข้อมูลให้ครบทุกช่อง");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      let res;
+
+      if (isEditMode && formData.ID) {
+        res = await putUpdateLaboratory(formData.ID, formData);
+      } else {
+        res = await postCreateLaboratory(formData);
+      }
+
+      if (res.status === 201 || res.status === 200) {
+        await Swal.fire({
+          icon: "success",
+          title: "สำเร็จ!",
+          text: `${
+            isEditMode ? "แก้ไข" : "เพิ่ม"
+          }ห้องปฏิบัติการ ${formData.Building} ${formData.Room} เรียบร้อยแล้ว`,
+          confirmButtonText: "ตกลง",
+        });
+        navigate("/laboratory-list");
+      } else {
+        await Swal.fire({
+          icon: "error",
+          title: "ไม่สำเร็จ",
+          text:
+            res?.data?.error ||
+            `ไม่สามารถ${isEditMode ? "แก้ไข" : "บันทึก"}ข้อมูลได้`,
+          confirmButtonText: "ตกลง",
+        });
+      }
+    } catch (error) {
+      await Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาด",
+        text: `เกิดข้อผิดพลาดในการ${isEditMode ? "แก้ไข" : "บันทึก"}ข้อมูล`,
+        confirmButtonText: "ตกลง",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        fontFamily: "Sarabun, sans-serif",
+        padding: "24px",
+        backgroundColor: "#f5f5f5",
+        minHeight: "100vh",
+      }}
+    >
+      {/* Header */}
+      <div style={{ marginBottom: "24px" }}>
+        <h1 style={{ margin: 0, color: "#333" }}>
+          {isEditMode ? "แก้ไขห้องปฏิบัติการ" : "เพิ่มห้องปฏิบัติการใหม่"}
+        </h1>
+        <p style={{ margin: 0, color: "#666" }}>
+          {isEditMode
+            ? "แก้ไขรายละเอียดห้องปฏิบัติการ"
+            : "กรอกรายละเอียดห้องปฏิบัติการใหม่"}
+        </p>
+      </div>
+
+      {/* Form */}
+      <Card>
+        <Form form={form} layout="vertical">
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="ชื่ออาคาร"
+                required
+                name="Building"
+                rules={[{ required: true, message: "กรุณากรอกชื่ออาคาร" }]}
+              >
+                <Input
+                  placeholder="กรอกชื่ออาคาร"
+                  value={formData.Building}
+                  onChange={(e) => handleChange("Building", e.target.value)}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="ชื่อห้อง"
+                required
+                name="Room"
+                rules={[{ required: true, message: "กรุณากรอกชื่อห้อง" }]}
+              >
+                <Input
+                  placeholder="กรอกชื่อห้อง"
+                  value={formData.Room}
+                  onChange={(e) => handleChange("Room", e.target.value)}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="ความจุ"
+                required
+                name="Capacity"
+                rules={[
+                  { required: true, message: "กรุณากรอกความจุ" },
+                  {
+                    pattern: /^[0-9]+$/,
+                    message: "กรุณากรอกความจุเป็นตัวเลข",
+                  },
+                ]}
+              >
+                <Input
+                  placeholder="กรอกความจุ (เช่น 60)"
+                  value={formData.Capacity}
+                  onChange={(e) => handleChange("Capacity", e.target.value)}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* Action Buttons */}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 16 }}>
+            <Button onClick={() => navigate("/laboratory-list")}>ยกเลิก</Button>
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={handleSubmit}
+              loading={loading}
+              disabled={!validateForm()}
+              style={{
+                backgroundColor: validateForm() ? "#F26522" : undefined,
+                borderColor: validateForm() ? "#F26522" : undefined,
+              }}
+            >
+              {loading
+                ? "กำลังบันทึก..."
+                : isEditMode
+                ? "บันทึกการแก้ไข"
+                : "เพิ่มห้องปฏิบัติการ"}
+            </Button>
+          </div>
+        </Form>
+      </Card>
+    </div>
+  );
+};
+
+export default ManageLab;

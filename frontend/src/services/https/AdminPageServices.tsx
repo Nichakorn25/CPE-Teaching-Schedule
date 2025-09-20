@@ -9,6 +9,7 @@ import { OpenCourseInterface } from "../../interfaces/OpenCourse";
 import { TimeFixedCoursesIn } from "../../interfaces/TimeFix";
 import {UpdateFixedCourse} from "../../interfaces/UpFixedCourse";
 import axios from "axios";
+import { LaboratoryData } from "../../interfaces/Lab";
 
 const apiUrl = "http://localhost:8080";
 const Authorization = localStorage.getItem("token");
@@ -185,6 +186,19 @@ async function postCreateLaboratory(data: CreateLaboratoryInterface) {
     .catch((e) => e.response);
 }
 
+async function putUpdateLaboratory(
+  id: number,
+  data: LaboratoryData
+) {
+  try {
+    const res = await axios.put(`${apiUrl}/laboratory/${id}`, data, requestOptions);
+    return res.data;
+  } catch (e: any) {
+    return e.response?.data || { error: "เกิดข้อผิดพลาด" };
+  }
+}
+
+
 async function postCreateCurriculum(data: CreateCurriculumInterface) {
   return await axios
     .post(`${apiUrl}/api/v1/curricula`, data, requestOptions)
@@ -228,6 +242,7 @@ export {
   postCreateTimeFixedCourses,
   postCreateSchduleTeachingAssistant,
   postCreateLaboratory,
+  putUpdateLaboratory,
   postCreateCurriculum,
 
   putUpdateFixedCourse,
