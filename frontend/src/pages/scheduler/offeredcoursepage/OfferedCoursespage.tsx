@@ -211,11 +211,6 @@ const OfferedCoursespage: React.FC = () => {
   const [userMajor, setUserMajor] = useState<string | null>(null);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
 
-  // เพิ่ม state สำหรับ hover
-  const [hoveredRowKey, setHoveredRowKey] = useState<string | number | null>(
-    null
-  );
-
   const navigate = useNavigate();
 
   // Monitor container width for responsive behavior
@@ -232,10 +227,16 @@ const OfferedCoursespage: React.FC = () => {
   const isSmallScreen = containerWidth < 1400;
   const isMobile = containerWidth < 768;
 
+  // แก้ไขฟังก์ชัน toggleExpandRow ให้ปิด dropdown ก่อนหน้า
   const toggleExpandRow = (id: number) => {
-    setExpandedRowKeys((prev) =>
-      prev.includes(id) ? prev.filter((key) => key !== id) : [...prev, id]
-    );
+    setExpandedRowKeys((prev) => {
+      // ถ้า ID นี้เปิดอยู่แล้ว ให้ปิด
+      if (prev.includes(id)) {
+        return prev.filter((key) => key !== id);
+      }
+      // ถ้าไม่ได้เปิดอยู่ ให้ปิดทุกอันแล้วเปิดแค่อันนี้
+      return [id];
+    });
   };
 
   // ปี/เทอมจาก localStorage
@@ -422,115 +423,6 @@ const OfferedCoursespage: React.FC = () => {
     }));
   })();
 
-  // ระบบสี 10 สีใหม่
-  const colorPalettes = [
-    {
-      lightBg: "#fed7aa",
-      darkBg: "#ea580c",
-      lightBorder: "#fb923c",
-      darkBorder: "#9a3412",
-    }, // Orange
-    {
-      lightBg: "#dbeafe",
-      darkBg: "#2563eb",
-      lightBorder: "#60a5fa",
-      darkBorder: "#1e40af",
-    }, // Blue
-    {
-      lightBg: "#dcfce7",
-      darkBg: "#16a34a",
-      lightBorder: "#4ade80",
-      darkBorder: "#166534",
-    }, // Green
-    {
-      lightBg: "#f3e8ff",
-      darkBg: "#9333ea",
-      lightBorder: "#a855f7",
-      darkBorder: "#6b21a8",
-    }, // Purple
-    {
-      lightBg: "#fce7f3",
-      darkBg: "#db2777",
-      lightBorder: "#f472b6",
-      darkBorder: "#be185d",
-    }, // Pink
-    {
-      lightBg: "#fef3c7",
-      darkBg: "#ca8a04",
-      lightBorder: "#facc15",
-      darkBorder: "#92400e",
-    }, // Yellow
-    {
-      lightBg: "#e0e7ff",
-      darkBg: "#4f46e5",
-      lightBorder: "#818cf8",
-      darkBorder: "#3730a3",
-    }, // Indigo
-    {
-      lightBg: "#fee2e2",
-      darkBg: "#dc2626",
-      lightBorder: "#f87171",
-      darkBorder: "#991b1b",
-    }, // Red
-    {
-      lightBg: "#ccfbf1",
-      darkBg: "#0d9488",
-      lightBorder: "#2dd4bf",
-      darkBorder: "#115e59",
-    }, // Teal
-    {
-      lightBg: "#cffafe",
-      darkBg: "#0891b2",
-      lightBorder: "#22d3ee",
-      darkBorder: "#155e75",
-    }, // Cyan
-  ];
-
-  // ใช้ useMemo เพื่อให้มั่นใจว่าสีจะ stable
-  const courseColorMap = useMemo(() => {
-    const map = new Map<number, number>();
-
-    // สร้างลำดับสีตาม expandedRowKeys โดยเรียงเฉพาะ numeric IDs
-    const numericExpandedKeys = expandedRowKeys
-      .filter((key): key is number => typeof key === "number")
-      .slice(); // copy array เพื่อไม่ให้กระทบ original
-
-    console.log("Expanded course IDs:", numericExpandedKeys);
-
-    numericExpandedKeys.forEach((courseId, index) => {
-      map.set(courseId, index % colorPalettes.length);
-      console.log(
-        `Course ${courseId} gets color index ${index % colorPalettes.length}`
-      );
-    });
-
-    return map;
-  }, [expandedRowKeys, colorPalettes.length]);
-
-  const currentDataWithColor = useMemo(() => {
-    return currentData.map((record) => {
-      if (record.isChild && record.SectionNumber != null) {
-        const colorIndex = courseColorMap.get(record.ID) ?? 0;
-        const palette = colorPalettes[colorIndex];
-
-        // section เลขคี่ = สีเข้ม, section เลขคู่ = สีอ่อน
-        const isOddSection = record.SectionNumber % 2 === 1;
-
-        console.log(
-          `Section ${record.SectionNumber} of course ${record.ID}: isOdd=${isOddSection}, colorIndex=${colorIndex}`
-        );
-
-        return {
-          ...record,
-          _colorIndex: colorIndex,
-          _isOddSection: isOddSection,
-          _palette: palette,
-        };
-      }
-      return record;
-    });
-  }, [currentData, courseColorMap, colorPalettes]);
-
   // Handle page change
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -542,66 +434,40 @@ const OfferedCoursespage: React.FC = () => {
     setCurrentPage(1);
   };
 
-  // ฟังก์ชันสำหรับกำหนดสี row พร้อม hover
+  // ฟังก์ชันสำหรับกำหนดสี row แบบเรียบง่าย (ไม่มี hover)
   const getRowClassName = (record: any) => {
-    const isHovered = hoveredRowKey === record.key;
-
     if (record.isChild) {
-      const isOdd = record._isOddSection;
-      const baseClass = isOdd ? "child-row-dark" : "child-row-light";
-      return `${baseClass} ${isHovered ? "row-hovered" : ""}`;
+      return "child-row";
     }
 
-    // ✅ แก้ไขสำหรับ parent row ที่ expand แล้ว
+    // ถ้า parent row ที่ expand แล้ว
     if (expandedRowKeys.includes(record.ID)) {
-      // ใช้สีเดียวกับ Section 1 ของ course นี้
-      const colorIndex = courseColorMap.get(record.ID) ?? 0;
-      const palette = colorPalettes[colorIndex];
-
-      // Section 1 เป็นเลขคี่ = สีเข้ม
-      return `expanded-row-with-color ${
-        isHovered ? "row-hovered-expanded" : ""
-      }`;
+      return "expanded-row";
     }
 
-    return `normal-row ${isHovered ? "row-hovered-normal" : ""}`;
+    return "normal-row";
   };
 
-  // ฟังก์ชันสำหรับกำหนด inline styles
+  // ฟังก์ชันสำหรับกำหนด inline styles (ใช้สีส้มอ่อนคงที่)
   const getRowStyle = (record: any) => {
-    // ✅ เพิ่มการจัดการสำหรับ parent row ที่ expand
+    // Parent row ที่ expand แสดงเป็นสีส้มอ่อน
     if (expandedRowKeys.includes(record.ID) && !record.isChild) {
-      const colorIndex = courseColorMap.get(record.ID) ?? 0;
-      const palette = colorPalettes[colorIndex];
-
-      // Parent row ที่ expand แสดง Section 1 (เลขคี่ = สีเข้ม)
       return {
-        backgroundColor: palette.darkBg,
-        borderLeft: `4px solid ${palette.darkBorder}`,
-        color: "white",
+        backgroundColor: "#fed7aa", // สีส้มอ่อน
+        borderLeft: "4px solid #fb923c",
+        color: "#9a3412", // สีข้อความเข้ม
       };
     }
 
-    if (record.isChild && record._palette) {
-      const isOdd = record._isOddSection;
-      const palette = record._palette;
-
-      if (isOdd) {
-        // Section เลขคี่ = สีเข้ม
-        return {
-          backgroundColor: palette.darkBg,
-          borderLeft: `4px solid ${palette.darkBorder}`,
-          color: "white",
-        };
-      } else {
-        // Section เลขคู่ = สีอ่อน
-        return {
-          backgroundColor: palette.lightBg,
-          borderLeft: `4px solid ${palette.lightBorder}`,
-          color: "black",
-        };
-      }
+    // Child rows ใช้สีส้มอ่อนเช่นกัน
+    if (record.isChild) {
+      return {
+        backgroundColor: "#fed7aa", // สีส้มอ่อน
+        borderLeft: "4px solid #fb923c",
+        color: "#9a3412", // สีข้อความเข้ม
+      };
     }
+
     return {};
   };
 
@@ -882,60 +748,26 @@ const OfferedCoursespage: React.FC = () => {
         margin: 0,
       }}
     >
-      {/* Custom CSS */}
+      {/* Custom CSS - เรียบง่ายตามตัวอย่าง */}
       <style>
         {`
           .custom-table .ant-table-tbody > tr.normal-row {
             background-color: #ffffff !important;
-            transition: background-color 0.2s ease;
           }
           
-          .custom-table .ant-table-tbody > tr.normal-row:hover,
-          .custom-table .ant-table-tbody > tr.normal-row.row-hovered-normal {
-            background-color: #6b7280 !important; /* สีเทาเข้ม */
-            color: white !important;
+          .custom-table .ant-table-tbody > tr.expanded-row {
+            background-color: #fed7aa !important;
+            color: #9a3412 !important;
           }
           
-          .custom-table .ant-table-tbody > tr.expanded-row-with-color {
-            transition: background-color 0.2s ease;
-          }
-          
-          .custom-table .ant-table-tbody > tr.expanded-row-with-color:hover,
-          .custom-table .ant-table-tbody > tr.expanded-row-with-color.row-hovered-expanded {
-            background-color: #6b7280 !important; /* สีเทาเข้ม */
-            color: white !important;
-          }
-          
-          /* Child rows จะใช้ inline styles แทน */
-          .custom-table .ant-table-tbody > tr.child-row-light,
-          .custom-table .ant-table-tbody > tr.child-row-dark {
-            transition: background-color 0.2s ease;
-          }
-          
-          .custom-table .ant-table-tbody > tr.child-row-light:hover,
-          .custom-table .ant-table-tbody > tr.child-row-light.row-hovered,
-          .custom-table .ant-table-tbody > tr.child-row-dark:hover,
-          .custom-table .ant-table-tbody > tr.child-row-dark.row-hovered {
-            background-color: #6b7280 !important; /* สีเทาเข้ม */
-            color: white !important;
+          .custom-table .ant-table-tbody > tr.child-row {
+            background-color: #fed7aa !important;
+            color: #9a3412 !important;
           }
 
-          /* Override Antd's default hover */
+          /* ลบ hover effects ทั้งหมด */
           .custom-table .ant-table-tbody > tr:hover > td {
             background-color: transparent !important;
-          }
-
-          /* เพิ่ม rule สำหรับ expanded row แบบเก่า */
-          .custom-table .ant-table-tbody > tr.expanded-row {
-            background-color: #ea580c !important;
-            color: white !important;
-            transition: background-color 0.2s ease;
-          }
-          
-          .custom-table .ant-table-tbody > tr.expanded-row:hover,
-          .custom-table .ant-table-tbody > tr.expanded-row.row-hovered-expanded {
-            background-color: #6b7280 !important; /* สีเทาเข้ม */
-            color: white !important;
           }
         `}
       </style>
@@ -1194,7 +1026,7 @@ const OfferedCoursespage: React.FC = () => {
       >
         <Table
           columns={getColumns()}
-          dataSource={currentDataWithColor}
+          dataSource={currentData}
           pagination={false}
           size="small"
           bordered
@@ -1209,15 +1041,12 @@ const OfferedCoursespage: React.FC = () => {
           }}
           className="custom-table"
           rowClassName={getRowClassName}
-          onRow={(record) => ({
-            onMouseEnter: () => setHoveredRowKey(record.key),
-            onMouseLeave: () => setHoveredRowKey(null),
-          })}
+          // ลบ onRow เพื่อเอา mouse events ออก
           components={{
             body: {
               row: ({ children, ...props }) => {
                 const record = props["data-row-key"]
-                  ? currentDataWithColor.find(
+                  ? currentData.find(
                       (item) => item.key === props["data-row-key"]
                     )
                   : null;
