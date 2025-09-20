@@ -205,95 +205,82 @@ const ManageCourse: React.FC = () => {
     );
   };
 
-  useEffect(() => {
-    const fetchCourseData = async () => {
-      if (!id) return;
+ useEffect(() => {
+  const fetchCourseData = async () => {
+    if (!id || curriculums.length === 0 || academicYears.length === 0) return;
 
-      try {
-        const res = await getCoursebyid(Number(id));
-        if (res.status === 200 && res.data) {
-          const data = res.data;
+    try {
+      const res = await getCoursebyid(Number(id));
+      if (res.status === 200 && res.data) {
+        const data = res.data;
 
-          // map UserAllCourses เป็น teacher objects
-          const fullTeacherObjects: AllTeacher[] =
-            data.UserAllCourses?.map((item: { User: any }) => {
-              const user = item.User!;
-              const major = user.Major as MajorInterface;
-              const department = major.Department as DepartmentInterface;
+        // map teachers
+        const fullTeacherObjects: AllTeacher[] =
+          data.UserAllCourses?.map((item: { User: any }) => {
+            const user = item.User!;
+            const major = user.Major as MajorInterface;
+            const department = major.Department as DepartmentInterface;
 
-              return {
-                ID: user.ID,
-                Title: user.Title?.Title || "",
-                Firstname: user.Firstname,
-                Lastname: user.Lastname,
-                Email: user.Email,
-                EmpId: user.EmpId,
-                Department: department,
-                Major: major,
-                Position: user.Position,
-                Status: user.Status,
-                Role: user.Role,
-              };
-            }) || [];
+            return {
+              ID: user.ID,
+              Title: user.Title?.Title || "",
+              Firstname: user.Firstname,
+              Lastname: user.Lastname,
+              Email: user.Email,
+              EmpId: user.EmpId,
+              Department: department,
+              Major: major,
+              Position: user.Position,
+              Status: user.Status,
+              Role: user.Role,
+            };
+          }) || [];
 
-          // set teachers & teacherOptions ก่อนเลือก department/major
-          setTeachers(fullTeacherObjects);
-          setTeacherOptions(fullTeacherObjects);
+        setTeachers(fullTeacherObjects);
+        setTeacherOptions(fullTeacherObjects);
 
-          // ถ้ามี teacher อย่างน้อย 1 คน
-          if (fullTeacherObjects.length > 0) {
-            const firstTeacher = fullTeacherObjects[0];
-            const departmentID = (
-              firstTeacher.Department as unknown as DepartmentInterface
-            ).ID;
-            const majorID = (firstTeacher.Major as unknown as MajorInterface)
-              .ID;
+       if (fullTeacherObjects.length > 0) {
+  const firstTeacher = fullTeacherObjects[0];
 
-            // auto select department & major
-            setSelectedDepartmentID(departmentID);
+  // บอก TypeScript ว่าเป็น object
+  const department = firstTeacher.Department as unknown as { ID: number };
+  const major = firstTeacher.Major as unknown as { ID: number };
 
-            // filter majors ของ department นั้น
-            const majorsOfDepartment = majors.filter(
-              (m) => m.DepartmentID === departmentID
-            );
-            setFilteredMajors(majorsOfDepartment);
+  setSelectedDepartmentID(department.ID);
+  setSelectedMajorID(major.ID);
+}
 
-            setSelectedMajorID(majorID);
-          }
+        // set form values
+        form.setFieldsValue({
+          ThaiName: data.ThaiName,
+          EnglishName: data.EnglishName,
+          Code: data.Code,
+          Credit: data.Credit?.Unit?.toString(),
+          Lecture: data.Credit?.Lecture?.toString(),
+          Lab: data.Credit?.Lab?.toString(),
+          Self: data.Credit?.Self?.toString(),
+          TypeOfCoursesID: data.TypeOfCoursesID?.toString(),
+          CurriculumID: data.CurriculumID,
+          AcademicYearID: data.AcademicYearID,
+          UserIDs: fullTeacherObjects.map((t) => t.ID),
+        });
 
-          form.setFieldsValue({
-            ThaiName: data.ThaiName,
-            EnglishName: data.EnglishName,
-            Code: data.Code,
-            Credit: data.Credit?.Unit?.toString(),
-            Lecture: data.Credit?.Lecture?.toString(),
-            Lab: data.Credit?.Lab?.toString(),
-            Self: data.Credit?.Self?.toString(),
-            TypeOfCoursesID: data.TypeOfCoursesID?.toString(),
-            CurriculumID: data.CurriculumID,
-            AcademicYearID: data.AcademicYearID,
-            UserIDs: fullTeacherObjects.map((t) => t.ID),
-          });
+        // ✅ Set selectedCurriculum & selectedAcademicYear หลัง curriculums/academicYears โหลดแล้ว
+        const curriculumFound = curriculums.find(c => c.ID === data.CurriculumID);
+        if (curriculumFound) setSelectedCurriculum(curriculumFound);
 
-          // ✅ เพิ่มตรงนี้
-          const curriculumFound = curriculums.find(
-            (c) => c.ID === data.CurriculumID
-          );
-          if (curriculumFound) setSelectedCurriculum(curriculumFound);
-
-          const yearFound = academicYears.find(
-            (a) => a.ID === data.AcademicYearID
-          );
-          if (yearFound) setSelectedAcademicYear(yearFound);
-        }
-      } catch (error) {
-        message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลรายวิชา");
-        console.error(error);
+        const yearFound = academicYears.find(a => a.ID === data.AcademicYearID);
+        if (yearFound) setSelectedAcademicYear(yearFound);
       }
-    };
+    } catch (error) {
+      message.error("เกิดข้อผิดพลาดในการโหลดข้อมูลรายวิชา");
+      console.error(error);
+    }
+  };
 
-    fetchCourseData();
-  }, [id, form, majors]);
+  fetchCourseData();
+}, [id, form, curriculums, academicYears]);
+
 
   console.log("useParams id:", id);
   console.log("isFormValid:", isFormValid());
