@@ -18,6 +18,7 @@ import {
   getAllCurriculum,
   getLaboratory,
   getOfferedCoursesByMajorbyID,
+  getAllAcademicYears,
 } from "../../../services/https/GetService";
 import {
   putUpdateFixedCourse,
@@ -28,6 +29,7 @@ import {
   CurriculumInterface,
   AllCourseinOpenCourseInterface,
   LaboratoryInterface,
+  AcademicYearInterface,
 } from "../../../interfaces/Adminpage";
 import { TimeFixedCoursesIn } from "../../../interfaces/TimeFix";
 import { getNameTable } from "../../../services/https/SchedulerPageService";
@@ -51,7 +53,6 @@ const ManageCesCourse: React.FC = () => {
     },
   ]);
   const [editingCourseID, setEditingCourseID] = useState<number | null>(null);
-
 
   // Monitor container width for responsive behavior
   useEffect(() => {
@@ -77,6 +78,8 @@ const ManageCesCourse: React.FC = () => {
   const [nameTables, setNameTables] = useState<string[]>([]);
   const [selectedNameTable, setSelectedNameTable] = useState<string>("");
   const [groupCount, setGroupCount] = useState<number>(1);
+  const [academicYears, setAcademicYears] = useState<AcademicYearInterface[]>([]);
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<AcademicYearInterface | null>(null);
 
   useEffect(() => {
     const year = localStorage.getItem("academicYear");
@@ -103,10 +106,11 @@ const ManageCesCourse: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [curriculumRes, labRes, nameTableRes] = await Promise.all([
+        const [curriculumRes, labRes, nameTableRes, yearRes] = await Promise.all([
           getAllCurriculum(),
           getLaboratory(),
           getNameTable(),
+          getAllAcademicYears(),
         ]);
 
         if (curriculumRes.status === 200) {
@@ -127,6 +131,10 @@ const ManageCesCourse: React.FC = () => {
             setSelectedNameTable(nameTableRes.data.name_tables[0]);
           }
         }
+
+        if (yearRes.status === 200) {
+          setAcademicYears(yearRes.data);
+        }
       } catch (error) {
         message.error("เกิดข้อผิดพลาดในการโหลดข้อมูล");
       }
@@ -145,11 +153,24 @@ const ManageCesCourse: React.FC = () => {
           setEditingCourseID(course.ID); // <- บันทึก ID ที่จะแก้ไข
           setSelectedCurriculumID(course.CurriculumID);
           setCourses([course]);
+          
+          // เพิ่มการตั้งค่า AcademicYearID ถ้ามีข้อมูลใน course
+          const academicYearID = course.AcademicYearID || 1; // fallback ไปปี 1
+          
+          // หา selectedAcademicYear จาก academicYears
+          if (academicYears.length > 0) {
+            const yearFound = academicYears.find(a => a.ID === academicYearID);
+            if (yearFound) {
+              setSelectedAcademicYear(yearFound);
+            }
+          }
+          
           form.setFieldsValue({
             curriculum: course.CurriculumID,
             Code: course.ID,
             courseNameTh: course.ThaiCourseName,
             courseNameEn: course.EnglishCourseName,
+            AcademicYearID: academicYearID,
             labRoom:
               course.Laboratory !== "ไม่มีการสอนปฏิบัติการ"
                 ? course.Laboratory
@@ -180,7 +201,7 @@ const ManageCesCourse: React.FC = () => {
     };
 
     fetchCourseData();
-  }, [id, form]);
+  }, [id, form, academicYears]);
 
   const handleCurriculumChange = async (value: number) => {
     setSelectedCurriculumID(value);
@@ -250,8 +271,6 @@ const handleGroupCountChange = (value: number | null) => {
   setGroupCount(value); // อัปเดต groupCount
 };
 
-
-
   const handleCourseCodeChange = (courseId: number) => {
     const selectedCourse = courses.find((course) => course.ID === courseId);
     if (selectedCourse) {
@@ -274,6 +293,7 @@ const handleGroupCountChange = (value: number | null) => {
       "Code",
       "courseNameTh",
       "courseNameEn",
+      "AcademicYearID",
       "groupCount",
       "studentsPerGroup",
     ];
@@ -283,6 +303,7 @@ const handleGroupCountChange = (value: number | null) => {
     }
 
     if (!selectedNameTable) return false;
+    if (!selectedAcademicYear) return false;
 
     for (const sec of fixedSections) {
       if (!sec.dayOfWeek || !sec.startTime || !sec.endTime || !sec.roomFix) {
@@ -331,6 +352,7 @@ const handleGroupCountChange = (value: number | null) => {
           EndTime: section.endTime,
           RoomFix: section.roomFix,
           NameTable: selectedNameTable,
+          // ลบ YearLevel ออกเพราะ interface ไม่มี property นี้
         };
 
         const res = await postCreateTimeFixedCourses(payload);
@@ -379,6 +401,7 @@ const handleGroupCountChange = (value: number | null) => {
       const payload: UpdateFixedCourse = {
         TotalSection: fixedSections.length,
         Capacity: values.studentsPerGroup,
+        // ลบ YearLevel ออกเพราะ interface ไม่มี property นี้
         LaboratoryID:
           values.labRoom === "ไม่มีการสอนปฏิบัติการ" ? null : values.labRoom,
         Groups: fixedSections.map((section, index) => ({
@@ -588,8 +611,36 @@ const handleGroupCountChange = (value: number | null) => {
               </Col>
             </Row>
 
+            {/* เพิ่มฟิลด์ชั้นปี */}
             <Row gutter={[16, 16]}>
-              <Col xs={24}>
+              <Col xs={24} md={12}>
+                <Form.Item
+                  label="ชั้นปีที่สามารถเรียนได้"
+                  name="AcademicYearID"
+                  rules={[
+                    { required: true, message: "กรุณาเลือกชั้นปีที่สามารถเรียนได้" },
+                  ]}
+                >
+                  <Select
+                    placeholder="เลือกชั้นปีที่สามารถเรียนได้"
+                    size="large"
+                    value={selectedAcademicYear?.ID?.toString() || undefined}
+                    onChange={(value) => {
+                      const found = academicYears.find(
+                        (a) => a.ID === Number(value)
+                      );
+                      if (found) setSelectedAcademicYear(found);
+                    }}
+                  >
+                    {academicYears.map((a) => (
+                      <Option key={a.ID} value={a.ID.toString()}>
+                        {a.Level}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={12}>
                 <Form.Item
                   label="ชื่อตารางเรียน"
                   name="nameTable"
@@ -794,8 +845,6 @@ const handleGroupCountChange = (value: number | null) => {
               </Row>
             ))}
 
-           
-
             <div
               style={{
                 marginTop: "16px",
@@ -863,10 +912,11 @@ const handleGroupCountChange = (value: number | null) => {
           <ul style={{ margin: "8px 0 0 20px", paddingLeft: 0 }}>
             <li>เลือกชื่อตารางเรียนที่ต้องการเพิ่มวิชาเข้าไป</li>
             <li>เลือกหลักสูตรก่อนเพื่อแสดงรายวิชาที่เกี่ยวข้อง</li>
+            <li>เลือกชั้นปีให้ตรงกับกลุ่มนักศึกษาที่จะเรียน</li>
             <li>รายวิชาจากศูนย์บริการจะมีการกำหนดเวลาเรียนคงที่</li>
             <li>ระบุวัน เวลา และห้องเรียนให้ชัดเจน</li>
             <li>ห้องปฏิบัติการเป็นข้อมูลเสริม ไม่จำเป็นต้องระบุ</li>
-            <li>วิชาจากศูนย์บริการจะไม่สามารถเปลี่ยนเวลาเรียนได้ภายหลัง</li>
+            <li>วิชาจากศูนย์บริการจะไม่สามารถเปลี่ยนเวลาเรียนได้ ภายหลัง</li>
           </ul>
         </div>
       </Card>
