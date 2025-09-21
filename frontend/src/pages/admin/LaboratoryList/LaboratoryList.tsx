@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
-import { Table, Input, Button, Dropdown, Menu, message } from "antd";
+import { Table, Input, Button, Dropdown, Menu, message, Select } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -13,12 +13,14 @@ import type { ColumnsType } from "antd/es/table";
 import { getLaboratory } from "../../../services/https/GetService";
 import { deleteLaboratory } from "../../../services/https/AdminPageServices";
 
+const { Option } = Select;
+
 interface Laboratory {
   ID: number;
   Room: string;
   Building: string;
   Capacity: string;
-  Code?: string; // สำหรับ sort ตัวอย่าง
+  Code?: string;
   Name?: string;
   Category?: string;
 }
@@ -38,15 +40,16 @@ const LaboratoryList: React.FC = () => {
   const [containerWidth, setContainerWidth] = useState(window.innerWidth);
 
   const isMobile = containerWidth < 768;
+  const isSmallScreen = containerWidth < 1400;
 
-  // ── Handle resize ──
+  // Handle resize
   useEffect(() => {
     const handleResize = () => setContainerWidth(window.innerWidth);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ── Fetch data ──
+  // Fetch data
   const fetchLaboratory = async () => {
     try {
       setLoading(true);
@@ -86,10 +89,9 @@ const LaboratoryList: React.FC = () => {
 
         const response = await deleteLaboratory(String(labId));
 
-        loadingMsg(); // ปิด loading
+        loadingMsg();
 
         if (response.status === 200 || response.status === 204) {
-          // แสดง Swal แทน message.success
           await Swal.fire({
             icon: "success",
             title: "ลบสำเร็จ",
@@ -120,7 +122,7 @@ const LaboratoryList: React.FC = () => {
     }
   };
 
-  // ── Sort Dropdown ──
+  // Sort Dropdown
   const sortMenu = (
     <Menu
       onClick={(e) => {
@@ -139,7 +141,7 @@ const LaboratoryList: React.FC = () => {
     />
   );
 
-  // ── Filter + Search ──
+  // Filter + Search
   const filteredLabs = labData.filter((lab) =>
     lab.Room.toLowerCase().includes(searchRoom.toLowerCase())
   );
@@ -150,7 +152,8 @@ const LaboratoryList: React.FC = () => {
     order: (currentPage - 1) * pageSize + index + 1,
   }));
 
-  const totalPages = Math.ceil(tableData.length / pageSize);
+  const totalItems = tableData.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const currentData = tableData.slice(startIndex, endIndex);
@@ -161,159 +164,505 @@ const LaboratoryList: React.FC = () => {
     setCurrentPage(1);
   };
 
-  // ── Columns ──
-  const columns: ColumnsType<LabTableData> = [
-    {
-      title: "ลำดับ",
-      dataIndex: "order",
-      key: "order",
-      width: 60,
-      align: "center",
-    },
-    {
-      title: "อาคาร",
-      dataIndex: "Building",
-      key: "Building",
-      width: 200,
-      sorter: (a, b) => a.Building.localeCompare(b.Building),
-    },
-    {
-      title: "ชื่อห้อง",
-      dataIndex: "Room",
-      key: "Room",
-      width: 150,
-      sorter: (a, b) => a.Room.localeCompare(b.Room),
-    },
-    {
-      title: "ความจุ",
-      dataIndex: "Capacity",
-      key: "Capacity",
-      width: 100,
-      sorter: (a, b) => parseInt(a.Capacity) - parseInt(b.Capacity),
-      align: "center",
-    },
-    {
-      title: "จัดการ",
-      key: "action",
-      width: 150,
-      align: "center",
-      render: (_, record) => (
-        <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            style={{
-              backgroundColor: "#F26522",
-              borderColor: "#F26522",
-              color: "white",
-            }}
-            onClick={() => navigate(`/manage-lab/${record.ID}`)}
-          >
-            แก้ไข
-          </Button>
-          <Button
-            size="small"
-            icon={<DeleteOutlined />}
-            style={{
-              backgroundColor: "#ff4d4f",
-              borderColor: "#ff4d4f",
-              color: "white",
-            }}
-            onClick={() => handleDeleteLab(record.ID, record.Room)}
-          >
-            ลบ
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  // Columns
+  const getColumns = (): ColumnsType<LabTableData> => {
+    if (isMobile) {
+      return [
+        {
+          title: "ลำดับ",
+          dataIndex: "order",
+          key: "order",
+          width: 40,
+          align: "center",
+          render: (v: number) => (
+            <span style={{ fontWeight: "bold", fontSize: "10px" }}>{v}</span>
+          ),
+        },
+        {
+          title: "ห้องปฏิบัติการ",
+          key: "laboratory",
+          width: 160,
+          render: (_, record) => (
+            <div style={{ fontSize: "11px" }}>
+              <div
+                style={{
+                  fontWeight: "bold",
+                  color: "#1890ff",
+                  marginBottom: "2px",
+                }}
+              >
+                {record.Room}
+              </div>
+              <div style={{ fontWeight: 500, color: "#666" }}>
+                {record.Building}
+              </div>
+              <div style={{ color: "#999", fontSize: "9px" }}>
+                ความจุ: {record.Capacity} คน
+              </div>
+            </div>
+          ),
+        },
+        {
+          title: "จัดการ",
+          key: "action",
+          width: 70,
+          align: "center",
+          render: (_, record) => (
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <Button
+                size="small"
+                style={{
+                  backgroundColor: "#F26522",
+                  borderColor: "#F26522",
+                  color: "white",
+                  fontSize: 9,
+                  padding: "1px 4px",
+                  height: 20,
+                  lineHeight: "18px",
+                }}
+                onClick={() => navigate(`/manage-lab/${record.ID}`)}
+              >
+                แก้ไข
+              </Button>
+              <Button
+                size="small"
+                style={{
+                  backgroundColor: "#ff4d4f",
+                  borderColor: "#ff4d4f",
+                  color: "white",
+                  fontSize: 9,
+                  padding: "1px 4px",
+                  height: 20,
+                  lineHeight: "18px",
+                }}
+                onClick={() => handleDeleteLab(record.ID, record.Room)}
+              >
+                ลบ
+              </Button>
+            </div>
+          ),
+        },
+      ];
+    }
+
+    // Desktop / Tablet
+    const columns: ColumnsType<LabTableData> = [
+      {
+        title: "ลำดับ",
+        dataIndex: "order",
+        key: "order",
+        width: 60,
+        align: "center",
+        render: (v: number) => <span style={{ fontWeight: "bold" }}>{v}</span>,
+      },
+      {
+        title: "อาคาร",
+        dataIndex: "Building",
+        key: "Building",
+        width: isSmallScreen ? 150 : 200,
+        sorter: (a, b) => a.Building.localeCompare(b.Building),
+        render: (value: string) => (
+          <span style={{ fontWeight: "bold", color: "#1890ff" }}>{value}</span>
+        ),
+      },
+      {
+        title: "ชื่อห้อง",
+        dataIndex: "Room",
+        key: "Room",
+        width: isSmallScreen ? 120 : 150,
+        sorter: (a, b) => a.Room.localeCompare(b.Room),
+        render: (value: string) => (
+          <span style={{ fontWeight: 500 }}>{value}</span>
+        ),
+      },
+      {
+        title: "ความจุ",
+        dataIndex: "Capacity",
+        key: "Capacity",
+        width: 100,
+        sorter: (a, b) => parseInt(a.Capacity) - parseInt(b.Capacity),
+        align: "center",
+        render: (value: string) => `${value} คน`,
+      },
+      {
+        title: "จัดการ",
+        key: "action",
+        width: 120,
+        align: "center",
+        render: (_, record) => (
+          <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              style={{
+                backgroundColor: "#F26522",
+                borderColor: "#F26522",
+                color: "white",
+                fontSize: 11,
+                padding: "2px 8px",
+                height: "auto",
+              }}
+              onClick={() => navigate(`/manage-lab/${record.ID}`)}
+            >
+              แก้ไข
+            </Button>
+            <Button
+              size="small"
+              icon={<DeleteOutlined />}
+              style={{
+                backgroundColor: "#ff4d4f",
+                borderColor: "#ff4d4f",
+                color: "white",
+                fontSize: 11,
+                padding: "2px 8px",
+                height: "auto",
+              }}
+              onClick={() => handleDeleteLab(record.ID, record.Room)}
+            >
+              ลบ
+            </Button>
+          </div>
+        ),
+      },
+    ];
+
+    return columns;
+  };
+
+  // Pagination function similar to TeacherList
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const getPaginationRange = () => {
+      const delta = 2;
+      const rangeWithDots = [];
+
+      const start = Math.max(1, currentPage - delta);
+      const end = Math.min(totalPages, currentPage + delta);
+
+      if (start > 1) {
+        rangeWithDots.push(1);
+        if (start > 2) {
+          rangeWithDots.push('...');
+        }
+      }
+
+      for (let i = start; i <= end; i++) {
+        rangeWithDots.push(i);
+      }
+
+      if (end < totalPages) {
+        if (end < totalPages - 1) {
+          rangeWithDots.push('...');
+        }
+        rangeWithDots.push(totalPages);
+      }
+
+      return rangeWithDots;
+    };
+
+    const paginationRange = getPaginationRange();
+
+    return (
+      <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+        <span
+          style={{
+            backgroundColor: currentPage === 1 ? "#f5f5f5" : "#F26522",
+            color: currentPage === 1 ? "#ccc" : "white",
+            padding: "2px 6px",
+            borderRadius: "3px",
+            fontSize: "11px",
+            fontWeight: "bold",
+            minWidth: "18px",
+            textAlign: "center",
+            cursor: currentPage === 1 ? "not-allowed" : "pointer",
+            display: "inline-block",
+            fontFamily: "Sarabun, sans-serif",
+          }}
+          onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+        >
+          ‹
+        </span>
+
+        {paginationRange.map((page, index) => {
+          if (page === '...') {
+            return (
+              <span 
+                key={`dots-${index}`} 
+                style={{ 
+                  color: "#666", 
+                  fontSize: "11px", 
+                  padding: "2px 6px",
+                  fontFamily: "Sarabun, sans-serif",
+                }}
+              >
+                ...
+              </span>
+            );
+          }
+
+          return (
+            <span
+              key={page}
+              style={{
+                backgroundColor: currentPage === page ? "#F26522" : "transparent",
+                color: currentPage === page ? "white" : "#666",
+                padding: "2px 6px",
+                borderRadius: "3px",
+                fontSize: "11px",
+                fontWeight: currentPage === page ? "bold" : "normal",
+                minWidth: "18px",
+                textAlign: "center",
+                cursor: "pointer",
+                display: "inline-block",
+                fontFamily: "Sarabun, sans-serif",
+              }}
+              onClick={() => handlePageChange(page as number)}
+            >
+              {page}
+            </span>
+          );
+        })}
+
+        <span
+          style={{
+            backgroundColor: currentPage === totalPages ? "#f5f5f5" : "#F26522",
+            color: currentPage === totalPages ? "#ccc" : "white",
+            padding: "2px 6px",
+            borderRadius: "3px",
+            fontSize: "11px",
+            fontWeight: "bold",
+            minWidth: "18px",
+            textAlign: "center",
+            cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+            display: "inline-block",
+            fontFamily: "Sarabun, sans-serif",
+          }}
+          onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+        >
+          ›
+        </span>
+      </div>
+    );
+  };
 
   return (
-    <div style={{ padding: 16, fontFamily: "Sarabun, sans-serif" }}>
-      {/* ── Top controls ── */}
+    <div style={{ fontFamily: "Sarabun, sans-serif", padding: 0, margin: 0 }}>
+      {/* Page Title */}
       <div
         style={{
           marginBottom: 20,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          paddingBottom: 12,
+          borderBottom: "2px solid #F26522",
         }}
       >
-        {/* ปุ่มเรียงลำดับ */}
-        <Dropdown overlay={sortMenu} placement="bottomLeft">
-          <Button size="small" icon={<SortAscendingOutlined />}>
-            เรียงลำดับ
-          </Button>
-        </Dropdown>
+        <h2
+          style={{
+            margin: "0 0 8px 0",
+            color: "#333",
+            fontSize: isMobile ? 18 : 20,
+            fontWeight: "bold",
+          }}
+        >
+          รายการห้องปฏิบัติการ
+        </h2>
+        <p style={{ margin: 0, color: "#666", fontSize: isMobile ? 12 : 13 }}>
+          จัดการข้อมูลห้องปฏิบัติการทั้งหมด สำหรับการบริหารจัดการระบบตารางเรียน
+        </p>
+      </div>
 
-        {/* ช่องค้นหา */}
-        <div style={{ flexGrow: 1, margin: "0 12px" }}>
+      {/* Controls */}
+      <div style={{ marginBottom: 20 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            backgroundColor: "#f8f9fa",
+            padding: isMobile ? "8px 12px" : "12px 16px",
+            borderRadius: 8,
+            border: "1px solid #e9ecef",
+            minHeight: 48,
+            flexWrap: isMobile ? "wrap" : "nowrap",
+            gap: isMobile ? 8 : 12,
+          }}
+        >
+          <Dropdown overlay={sortMenu} placement="bottomLeft">
+            <Button size="small" icon={<SortAscendingOutlined />}>
+              เรียงลำดับ
+            </Button>
+          </Dropdown>
+
           <Input
             placeholder="ค้นหาชื่อห้อง..."
             prefix={<SearchOutlined />}
             value={searchRoom}
             onChange={(e) => setSearchRoom(e.target.value)}
+            style={{ width: isMobile ? "100%" : 200 }}
             size="small"
           />
+
+          {!isMobile && (
+            <>
+              <span
+                style={{ whiteSpace: "nowrap", fontSize: 12, color: "#666" }}
+              >
+                รายการที่แสดง
+              </span>
+              <Select
+                value={pageSize.toString()}
+                style={{ width: 50 }}
+                size="small"
+                onChange={(value) => handlePageSizeChange(parseInt(value))}
+              >
+                <Option value="5">5</Option>
+                <Option value="10">10</Option>
+                <Option value="20">20</Option>
+                <Option value="50">50</Option>
+              </Select>
+
+              {renderPagination()}
+
+              <div style={{ flex: 1 }} />
+            </>
+          )}
+
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate("/manage-lab")}
+            style={{
+              backgroundColor: "#52c41a",
+              borderColor: "#52c41a",
+              fontSize: 12,
+            }}
+            size="small"
+          >
+            เพิ่มห้องปฏิบัติการ
+          </Button>
         </div>
 
-        {/* ปุ่มเพิ่ม */}
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => navigate("/manage-lab")}
-          style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
-          size="small"
-        >
-          เพิ่มห้องปฏิบัติการ
-        </Button>
+        {/* Mobile pagination */}
+        {isMobile && totalPages > 1 && (
+          <div
+            style={{
+              marginTop: 12,
+              padding: "8px 12px",
+              backgroundColor: "#f8f9fa",
+              borderRadius: 6,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Select
+              value={pageSize.toString()}
+              style={{ width: 70 }}
+              size="small"
+              onChange={(value) => handlePageSizeChange(parseInt(value))}
+            >
+              <Option value="5">5</Option>
+              <Option value="10">10</Option>
+              <Option value="20">20</Option>
+            </Select>
+
+            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <Button
+                size="small"
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+              >
+                ←
+              </Button>
+              <span style={{ fontSize: 12, padding: "0 8px" }}>
+                {currentPage}/{totalPages}
+              </span>
+              <Button
+                size="small"
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+              >
+                →
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ── Table ── */}
-      <Table
-        columns={columns}
-        dataSource={currentData}
-        pagination={false}
-        loading={loading}
-        scroll={{ x: 700, y: isMobile ? 400 : 600 }}
-      />
+      {/* Table */}
+      <div
+        style={{
+          backgroundColor: "white",
+          border: "1px solid #d9d9d9",
+          borderRadius: 6,
+          overflow: "hidden",
+        }}
+      >
+        <Table
+          columns={getColumns()}
+          dataSource={currentData}
+          pagination={false}
+          size="small"
+          bordered
+          scroll={{
+            x: isMobile ? 350 : isSmallScreen ? 800 : 1200,
+            y: isMobile ? 400 : 600,
+          }}
+          loading={loading}
+          style={{ fontSize: isMobile ? 11 : 12 }}
+          locale={{
+            emptyText: (
+              <div
+                style={{
+                  padding: isMobile ? 20 : 40,
+                  textAlign: "center",
+                  color: "#999",
+                }}
+              >
+                <div style={{ fontSize: isMobile ? 32 : 48, marginBottom: 16 }}>
+                  🏫
+                </div>
+                <div style={{ fontSize: isMobile ? 14 : 16, marginBottom: 8 }}>
+                  ไม่พบข้อมูลห้องปฏิบัติการ
+                </div>
+                <div style={{ fontSize: isMobile ? 12 : 14, color: "#ccc" }}>
+                  ยังไม่มีข้อมูลห้องปฏิบัติการในระบบ
+                </div>
+              </div>
+            ),
+          }}
+        />
+      </div>
 
-      {/* ── Pagination ── */}
-      {totalPages > 1 && (
+      {/* Footer Info */}
+      <div
+        style={{
+          marginTop: 16,
+          padding: isMobile ? "8px 12px" : "12px 16px",
+          backgroundColor: "#f8f9fa",
+          borderRadius: 6,
+          border: "1px solid #e9ecef",
+          fontSize: isMobile ? 11 : 12,
+          color: "#666",
+        }}
+      >
         <div
           style={{
-            marginTop: 12,
             display: "flex",
-            gap: 8,
+            justifyContent: "space-between",
             alignItems: "center",
+            flexDirection: isMobile ? "column" : "row",
+            gap: isMobile ? 8 : 0,
           }}
         >
-          <Button
-            size="small"
-            disabled={currentPage === 1}
-            onClick={() => handlePageChange(currentPage - 1)}
-          >
-            ←
-          </Button>
-          <span>
-            {currentPage}/{totalPages}
-          </span>
-          <Button
-            size="small"
-            disabled={currentPage === totalPages}
-            onClick={() => handlePageChange(currentPage + 1)}
-          >
-            →
-          </Button>
-          <Input
-            type="number"
-            value={pageSize}
-            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-            style={{ width: 60 }}
-            size="small"
-          />
+          <div>
+            💡 <strong>หมายเหตุ:</strong>{" "}
+            ข้อมูลห้องปฏิบัติการเหล่านี้ใช้สำหรับการบริหารจัดการระบบตารางเรียน
+          </div>
+          <div>
+            ข้อมูลล่าสุด: {new Date().toLocaleString("th-TH")}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
