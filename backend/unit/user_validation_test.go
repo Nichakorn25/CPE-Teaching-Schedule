@@ -10,7 +10,7 @@ import (
 
 func validUser() entity.User {
 	return entity.User{
-		Username:    "A12345",
+		Username:    "sarunya.k",
 		Password:    "password123",
 		Firstname:   "John",
 		Lastname:    "Smith",
@@ -42,7 +42,7 @@ func TestUserUsername(t *testing.T) {
 		g.Expect(err.Error()).To(ContainSubstring("Username is required."))
 	})
 
-	t.Run("Username must be 1 letter followed by 5 digits", func(t *testing.T) {
+	t.Run("Username must start with letters, followed by a dot, and end with one letter", func(t *testing.T) {
 		g := NewWithT(t)
 		user := validUser()
 		user.Username = "123456"
@@ -50,7 +50,7 @@ func TestUserUsername(t *testing.T) {
 		ok, err := govalidator.ValidateStruct(user)
 		g.Expect(ok).NotTo(BeTrue())
 		g.Expect(err).NotTo(BeNil())
-		g.Expect(err.Error()).To(ContainSubstring("Username must be 1 letter followed by 5 digits."))
+		g.Expect(err.Error()).To(ContainSubstring("Username must start with letters and dot and end with one letter."))
 	})
 
 	t.Run("Username is valid", func(t *testing.T) {
