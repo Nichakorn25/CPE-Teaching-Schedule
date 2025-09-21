@@ -48,6 +48,10 @@ const AllCourse: React.FC = () => {
   const [selectedMajor, setSelectedMajor] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
+  const [role] = useState(() => 
+      localStorage.getItem("role") || ""
+    );
+
   useEffect(() => {
     const fetchMajors = async () => {
       try {
@@ -862,6 +866,7 @@ const AllCourse: React.FC = () => {
             </>
           )}
           {/* Add Course Button */}
+          {role === "Admin" && (
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -877,6 +882,7 @@ const AllCourse: React.FC = () => {
           >
             เพิ่มรายวิชา
           </Button>
+          )}
         </div>
 
         {/* Mobile pagination */}
