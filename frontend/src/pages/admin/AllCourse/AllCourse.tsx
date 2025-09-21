@@ -162,6 +162,9 @@ const AllCourse: React.FC = () => {
             searchText.toLowerCase()
           ) ||
           course.CourseCode?.toLowerCase().includes(searchText.toLowerCase()) ||
+          course.ThaiCourseName?.toLowerCase().includes(
+            searchText.toLowerCase()
+          ) || 
           course.Instructor?.some((instructor) =>
             instructor.toLowerCase().includes(searchText.toLowerCase())
           );
@@ -563,7 +566,7 @@ const AllCourse: React.FC = () => {
       if (start > 1) {
         rangeWithDots.push(1);
         if (start > 2) {
-          rangeWithDots.push('...');
+          rangeWithDots.push("...");
         }
       }
 
@@ -575,7 +578,7 @@ const AllCourse: React.FC = () => {
       // เพิ่มหน้าสุดท้ายถ้าจำเป็น
       if (end < totalPages) {
         if (end < totalPages - 1) {
-          rangeWithDots.push('...');
+          rangeWithDots.push("...");
         }
         rangeWithDots.push(totalPages);
       }
@@ -609,13 +612,13 @@ const AllCourse: React.FC = () => {
 
         {/* หน้าต่างๆ */}
         {paginationRange.map((page, index) => {
-          if (page === '...') {
+          if (page === "...") {
             return (
-              <span 
-                key={`dots-${index}`} 
-                style={{ 
-                  color: "#666", 
-                  fontSize: "11px", 
+              <span
+                key={`dots-${index}`}
+                style={{
+                  color: "#666",
+                  fontSize: "11px",
                   padding: "2px 6px",
                   fontFamily: "Sarabun, sans-serif",
                 }}
@@ -629,7 +632,8 @@ const AllCourse: React.FC = () => {
             <span
               key={page}
               style={{
-                backgroundColor: currentPage === page ? "#F26522" : "transparent",
+                backgroundColor:
+                  currentPage === page ? "#F26522" : "transparent",
                 color: currentPage === page ? "white" : "#666",
                 padding: "2px 6px",
                 borderRadius: "3px",
@@ -663,7 +667,9 @@ const AllCourse: React.FC = () => {
             display: "inline-block",
             fontFamily: "Sarabun, sans-serif",
           }}
-          onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+          onClick={() =>
+            currentPage < totalPages && handlePageChange(currentPage + 1)
+          }
         >
           ›
         </span>
@@ -672,7 +678,7 @@ const AllCourse: React.FC = () => {
   };
 
   return (
-    <div 
+    <div
       style={{
         fontFamily: "Sarabun, sans-serif",
         padding: 0,
@@ -1021,9 +1027,7 @@ const AllCourse: React.FC = () => {
             💡 <strong>หมายเหตุ:</strong>{" "}
             ข้อมูลรายวิชาเหล่านี้ใช้สำหรับการจัดตารางเรียนและการลงทะเบียนเรียน
           </div>
-          <div>
-            ข้อมูลล่าสุด: {new Date().toLocaleString("th-TH")}
-          </div>
+          <div>ข้อมูลล่าสุด: {new Date().toLocaleString("th-TH")}</div>
         </div>
       </div>
 
