@@ -104,12 +104,24 @@ func CreateCourses(c *gin.Context) {
 		return
 	}
 
+	// ตรวจสอบรหัสวิชาซ้ำ
+	var existingCourse entity.AllCourses
+	if err := config.DB().Where("code = ?", input.Code).First(&existingCourse).Error; err == nil {
+		// เจอแล้ว → ส่ง 409
+		c.JSON(http.StatusConflict, gin.H{"error": "รหัสวิชาซ้ำ"})
+		return
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		// ถ้า error อื่น
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถตรวจสอบรหัสวิชาได้"})
+		return
+	}
+
+	// ตรวจสอบ/สร้าง Credit
 	var credit entity.Credit
 	err := config.DB().Where("unit = ? AND lecture = ? AND lab = ? AND self = ?",
 		input.Unit, input.Lecture, input.Lab, input.Self).First(&credit).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-
 		credit = entity.Credit{
 			Unit:    input.Unit,
 			Lecture: input.Lecture,
@@ -125,6 +137,7 @@ func CreateCourses(c *gin.Context) {
 		return
 	}
 
+	// สร้าง Course
 	course := entity.AllCourses{
 		Code:            input.Code,
 		EnglishName:     input.EnglishName,
@@ -140,6 +153,7 @@ func CreateCourses(c *gin.Context) {
 		return
 	}
 
+	// เพิ่มผู้สอน
 	var userAllCourses []entity.UserAllCourses
 	for _, userID := range input.UserIDs {
 		userAllCourses = append(userAllCourses, entity.UserAllCourses{
@@ -155,11 +169,12 @@ func CreateCourses(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusCreated, gin.H{
 		"message":   "เพิ่มรายวิชาและผู้สอนสำเร็จ",
 		"course_id": course.ID,
 	})
 }
+
 
 func UpdateAllCourses(c *gin.Context) {
 	id := c.Param("id")
