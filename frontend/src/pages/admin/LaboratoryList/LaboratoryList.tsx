@@ -128,15 +128,60 @@ const LaboratoryList: React.FC = () => {
       onClick={(e) => {
         const key = e.key;
         let sortedData = [...labData];
-        if (key === "building")
-          sortedData.sort((a, b) => a.Building.localeCompare(b.Building));
-        if (key === "room")
-          sortedData.sort((a, b) => a.Room.localeCompare(b.Room));
+        
+        switch (key) {
+          case "building-asc":
+            sortedData.sort((a, b) => a.Building.localeCompare(b.Building));
+            break;
+          case "building-desc":
+            sortedData.sort((a, b) => b.Building.localeCompare(a.Building));
+            break;
+          case "room-asc":
+            sortedData.sort((a, b) => a.Room.localeCompare(b.Room));
+            break;
+          case "room-desc":
+            sortedData.sort((a, b) => b.Room.localeCompare(a.Room));
+            break;
+          case "capacity-asc":
+            sortedData.sort((a, b) => parseInt(a.Capacity) - parseInt(b.Capacity));
+            break;
+          case "capacity-desc":
+            sortedData.sort((a, b) => parseInt(b.Capacity) - parseInt(a.Capacity));
+            break;
+          default:
+            break;
+        }
+        
         setLabData(sortedData);
       }}
       items={[
-        { label: "อาคาร", key: "building", icon: <SortAscendingOutlined /> },
-        { label: "ชื่อห้อง", key: "room", icon: <SortAscendingOutlined /> },
+        {
+          label: "เรียงตามอาคาร",
+          key: "building",
+          type: "group",
+          children: [
+            { label: "A → Z", key: "building-asc", icon: <SortAscendingOutlined /> },
+            { label: "Z → A", key: "building-desc", icon: <SortAscendingOutlined style={{ transform: 'rotate(180deg)' }} /> },
+          ]
+        },
+        {
+          label: "เรียงตามชื่อห้อง",
+          key: "room",
+          type: "group",
+          children: [
+            { label: "A → Z", key: "room-asc", icon: <SortAscendingOutlined /> },
+            { label: "Z → A", key: "room-desc", icon: <SortAscendingOutlined style={{ transform: 'rotate(180deg)' }} /> },
+          ]
+        },
+        {
+          label: "เรียงตามความจุ",
+          key: "capacity",
+          type: "group",
+          children: [
+            { label: "น้อย → มาก", key: "capacity-asc", icon: <SortAscendingOutlined /> },
+            { label: "มาก → น้อย", key: "capacity-desc", icon: <SortAscendingOutlined style={{ transform: 'rotate(180deg)' }} /> },
+          ]
+        },
       ]}
     />
   );
@@ -260,7 +305,6 @@ const LaboratoryList: React.FC = () => {
         dataIndex: "Building",
         key: "Building",
         width: isSmallScreen ? 150 : 200,
-        sorter: (a, b) => a.Building.localeCompare(b.Building),
         render: (value: string) => (
           <span style={{ fontWeight: "bold", color: "#1890ff" }}>{value}</span>
         ),
@@ -270,7 +314,6 @@ const LaboratoryList: React.FC = () => {
         dataIndex: "Room",
         key: "Room",
         width: isSmallScreen ? 120 : 150,
-        sorter: (a, b) => a.Room.localeCompare(b.Room),
         render: (value: string) => (
           <span style={{ fontWeight: 500 }}>{value}</span>
         ),
@@ -280,7 +323,6 @@ const LaboratoryList: React.FC = () => {
         dataIndex: "Capacity",
         key: "Capacity",
         width: 100,
-        sorter: (a, b) => parseInt(a.Capacity) - parseInt(b.Capacity),
         align: "center",
         render: (value: string) => `${value} คน`,
       },
