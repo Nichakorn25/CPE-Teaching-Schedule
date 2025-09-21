@@ -13,6 +13,8 @@ import { LaboratoryData } from "../../interfaces/Lab";
 import { Curriculum, CreateCurriculumInput, UpdateCurriculumInput } from "../../interfaces/Curriculum";
 
 const apiUrl = "http://localhost:8080";
+// const apiUrl: string = process.env.REACT_APP_API_URL;
+
 const Authorization = localStorage.getItem("token");
 const Bearer = localStorage.getItem("token_type");
 

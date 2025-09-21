@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16
+    container_name: schedule-db
+    environment:
+      POSTGRES_USER: b6515454
+      POSTGRES_PASSWORD: cpe@1
+      POSTGRES_DB: cpe_schedule
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: schedule-backend
+    env_file:
+      - ./backend/.env
+    expose:
+      - "8080"
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    container_name: schedule-frontend
+    expose:
+      - "80"
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    container_name: schedule-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  db_data:
