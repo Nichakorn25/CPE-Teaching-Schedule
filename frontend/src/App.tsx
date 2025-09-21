@@ -7,7 +7,6 @@ import HomeTest from "./pages/home/Dash";
 
 import TeacherList from "./pages/admin/TeacherList/TeacherList";
 import LaboratoryList from "./pages/admin/LaboratoryList/LaboratoryList";
-import CurriculumList from "./pages/admin/CurriculumList/CurriculumList";
 import AssistanceList from "./pages/admin/AssistanceList/AssistanceList";
 import AllCourse from "./pages/admin/AllCourse/AllCourse";
 import ManageTeacher from "./pages/admin/ManageTeacher/ManageTeacher";
@@ -15,7 +14,6 @@ import ManageCourse from "./pages/admin/ManageCourse/ManageCourse";
 import ManageCesCourse from "./pages/admin/ManageCesCourse/ManageCesCourse";
 import ManageAssistance from "./pages/admin/ManageAssistance/ManageAssistance";
 import ManageLab from "./pages/admin/ManageLab/ManageLab";
-import ManageCurriculum from "./pages/admin/ManageCurriculum/ManageCurriculum";
 
 import AddCondition from "./pages/instructor/AddCondition/AddCondition";
 import EditConditionpage from "./pages/scheduler/addconditionpage/EditConditionpage";
@@ -49,7 +47,6 @@ const App: React.FC = () => {
 
           <Route path="teacher-list" element={<MainLayout><TeacherList /></MainLayout>} />
           <Route path="laboratory-list" element={<MainLayout><LaboratoryList /></MainLayout>} />
-          <Route path="curriculum-list" element={<MainLayout><CurriculumList /></MainLayout>} />
           <Route path="assistance-list" element={<MainLayout><AssistanceList /></MainLayout>} />
           <Route path="all-course" element={<MainLayout><AllCourse /></MainLayout>} />
           <Route path="manage-teacher" element={<MainLayout><ManageTeacher /></MainLayout>} />
@@ -62,8 +59,6 @@ const App: React.FC = () => {
           <Route path="manage-assistance/:id" element={<MainLayout><ManageAssistance /></MainLayout>} />
           <Route path="manage-lab" element={<MainLayout><ManageLab /></MainLayout>} />
           <Route path="manage-lab/:id" element={<MainLayout><ManageLab /></MainLayout>} />
-          <Route path="manage-curriculum" element={<MainLayout><ManageCurriculum /></MainLayout>} />
-          <Route path="manage-curriculum/:id" element={<MainLayout><ManageCurriculum /></MainLayout>} />
 
           <Route path="add-condition" element={<MainLayout><AddCondition /></MainLayout>} />
           <Route path="add-course" element={<MainLayout><AddCourse /></MainLayout>} />
