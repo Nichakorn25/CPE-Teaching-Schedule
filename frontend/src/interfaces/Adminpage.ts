@@ -165,10 +165,23 @@ export interface MenuItem {
   roles: string[];
 };
 
-export interface CurriculumInterface{
+export interface CurriculumInterface {
   ID: number;
   CurriculumName: string;
+  Year: number;
+  Started: number;
+  MajorID: number;
+  Major: {
+    ID: number;
+    MajorName: string;
+    DepartmentID: number;
+    Department: {
+      ID: number;
+      DepartmentName: string;
+    };
+  };
 }
+
 
 export interface CreateLaboratoryInterface {
   room: string;
@@ -190,6 +203,7 @@ export interface AcademicYearInterface{
 
 export interface CourseType{
   ID: number;
+  Type: number;
   TypeName: string;
 }
 
