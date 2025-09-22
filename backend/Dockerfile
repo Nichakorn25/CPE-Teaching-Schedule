@@ -10,6 +10,6 @@ RUN go build -o schedule-backend
 FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/schedule-backend .
-COPY .env .
+# ไม่ copy .env เข้ามา ให้ใช้ env_file จาก docker-compose แทน
 EXPOSE 8080
 CMD ["./schedule-backend"]
