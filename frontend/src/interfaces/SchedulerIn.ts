@@ -36,3 +36,8 @@ export interface ScheduleIn {
   StartTime: string;   
   EndTime: string;     
 }
+
+export interface UpdateTARequest {
+  section_id: number;
+  teaching_assistant_ids: number[]; // list ของ TA ใหม่ทั้งหมด
+}

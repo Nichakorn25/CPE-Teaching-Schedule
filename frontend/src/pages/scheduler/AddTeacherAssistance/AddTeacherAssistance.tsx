@@ -1,6 +1,7 @@
 // pages/Admin/AddTeacherAssistance.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Button, Select, Form, Card } from "antd";
+import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { MinusCircleOutlined } from "@ant-design/icons";
 
@@ -8,7 +9,11 @@ import {
   getAllTeachers,
   getAllTeachingAssistants,
 } from "../../../services/https/AdminPageServices";
-import { postCreateTA } from "../../../services/https/SchedulerPageService";
+import {
+  postCreateTA,
+  removeTeachingAssistant,
+  upUpdateTeachingAssistants,
+} from "../../../services/https/SchedulerPageService";
 import { TeachingAssistantInterface } from "../../../interfaces/TeachingAssistant";
 import { OpenCourseForAddTA } from "../../../interfaces/Adminpage";
 import { getOfferedCoursesByMajor } from "../../../services/https/GetService";
@@ -143,6 +148,7 @@ const buildGroupDayRows = (gis: any[]): GroupDayRow[] => {
 /** ---------- helpers สำหรับฟิลเตอร์ ---------- */
 
 const AddTeachingAssistant: React.FC = () => {
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [courses, setCourses] = useState<OpenCourseForAddTA[]>([]);
   const [assistants, setAssistants] = useState<TeachingAssistantInterface[]>(
@@ -250,40 +256,118 @@ const AddTeachingAssistant: React.FC = () => {
   );
 
   const handleCourseChange = (courseID: number) => {
-  const course = courses.find((c) => c.ID === courseID) || null;
-  if (!course) {
-    setSelectedCourse(null);
-    form.setFieldsValue({ assistantsPerGroup: [] });
-    return;
-  }
+    const course = courses.find((c) => c.ID === courseID) || null;
+    if (!course) {
+      setSelectedCourse(null);
+      form.setFieldsValue({ assistantsPerGroup: [] });
+      return;
+    }
 
-  // สร้าง GroupInfos จาก Sections (กรอง Section ที่มีเวลาและวัน)
-  const groupInfos = course.Sections
-    ?.filter((s: any) => s.Time && s.DayOfWeek)
-    .map((s: any) => ({
-      Group: s.SectionNumber,
-      Day: s.DayOfWeek,
-      TimeSpan: s.Time,
-      Room: s.Room,
-    })) || [];
+    console.log("hjkl", course);
 
-  // อัพเดต selectedCourse พร้อม GroupInfos
-  setSelectedCourse({ ...course, GroupInfos: groupInfos });
+    // สร้าง GroupInfos จาก Sections
+    const groupInfos =
+      course.Sections?.filter((s: any) => s.Time && s.DayOfWeek).map(
+        (s: any) => ({
+          Group: s.SectionNumber,
+          Day: s.DayOfWeek,
+          TimeSpan: s.Time,
+          Room: s.Room,
+          TeachingAssistantIDs:
+            s.TeachingAssistants?.map((ta: any) => ta.ID) || [],
+        })
+      ) || [];
 
-  // สร้างแถว group/day สำหรับ Form
-  const rows = buildGroupDayRows(groupInfos);
+    setSelectedCourse({ ...course, GroupInfos: groupInfos });
 
-  // สร้างค่าเริ่มต้นให้ Form สำหรับผู้ช่วยสอน
-  const initFormValues = rows.map((r) => ({
-    group: r.group,
-    day: r.day,
-    assistantIDs: [],
-  }));
+    // สร้างแถว group/day สำหรับ Form
+    const rows = buildGroupDayRows(groupInfos);
 
-  form.setFieldsValue({ assistantsPerGroup: initFormValues });
-};
+    const normalizeDay = (d: string) =>
+      String(d ?? "")
+        .replace(/^วัน/, "")
+        .trim();
 
+    const initFormValues = rows.map((r) => {
+      const existingTAIDs = groupInfos
+        .filter((g) => g.Group === r.group && normalizeDay(g.Day) === r.day)
+        .flatMap((g) => g.TeachingAssistantIDs || []);
 
+      const uniqueTAIDs = Array.from(new Set(existingTAIDs));
+
+      return {
+        group: r.group,
+        day: r.day,
+        assistantIDs: uniqueTAIDs.length ? uniqueTAIDs : [undefined],
+      };
+    });
+
+    form.setFieldsValue({ assistantsPerGroup: initFormValues });
+  };
+
+  /** ---------- ฟังก์ชันลบผู้ช่วยสอน ---------- */
+  const handleRemoveTA = async (
+    taID: number | undefined,
+    groupIndex: number,
+    fieldName: number,
+    remove: (name: number) => void
+  ) => {
+    if (!taID) {
+      remove(fieldName);
+      return;
+    }
+
+    const row = groupDayRows[groupIndex];
+    const section = selectedCourse?.Sections?.find(
+      (s: any) => s.SectionNumber === row.group && s.DayOfWeek === row.day
+    );
+
+    if (!section) {
+      Swal.fire({
+        icon: "error",
+        title: "ไม่พบ Section",
+      });
+      return;
+    }
+
+    const sectionID = section.ID;
+
+    const confirm = await Swal.fire({
+      title: "ยืนยันการลบผู้ช่วยสอน?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "ลบ",
+      cancelButtonText: "ยกเลิก",
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      const res = await removeTeachingAssistant(sectionID, taID);
+
+      if (res?.status === 200) {
+        Swal.fire({
+          icon: "success",
+          title: "ลบผู้ช่วยสอนสำเร็จ",
+          showConfirmButton: false,
+          timer: 1200,
+        });
+        remove(fieldName);
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "ลบผู้ช่วยสอนล้มเหลว",
+          text: res?.data?.error || "เกิดข้อผิดพลาด",
+        });
+      }
+    } catch (e) {
+      Swal.fire({
+        icon: "error",
+        title: "ลบผู้ช่วยสอนล้มเหลว",
+        text: String(e),
+      });
+    }
+  };
 
   const handleSubmit = async (values: any) => {
     if (!selectedCourse) {
@@ -309,7 +393,6 @@ const AddTeachingAssistant: React.FC = () => {
       ? values.assistantsPerGroup
       : [];
 
-    // รวม TA จากทุกกลุ่มให้เหลือ unique
     const teachingAssistantIDs: number[] = Array.from(
       new Set(
         list.flatMap((g: any) =>
@@ -328,30 +411,60 @@ const AddTeachingAssistant: React.FC = () => {
       return;
     }
 
-    const payload = {
-      offered_courses_id: Number(selectedCourse.ID),
-      name_table: nameTable,
-      teaching_assistant_ids: teachingAssistantIDs,
-    };
+    try {
+      const sections = selectedCourse.Sections || [];
 
-    console.log("Assign TA payload >>", payload);
+      if (!sections.length) {
+        Swal.fire({
+          icon: "error",
+          title: "ไม่พบ Section ของวิชานี้",
+        });
+        return;
+      }
 
-    const res = await postCreateTA(payload);
-    if (res?.status === 200 || res?.status === 201) {
-      Swal.fire({
-        icon: "success",
-        title: "บันทึกข้อมูลสำเร็จ",
-        showConfirmButton: false,
-        timer: 1500,
+      const promises = sections.map((sec: any) => {
+        const existingTA = sec.TeachingAssistants || [];
+        if (existingTA.length > 0) {
+          return upUpdateTeachingAssistants(sec.ID, teachingAssistantIDs);
+        } else {
+          const payload = {
+            offered_courses_id: Number(selectedCourse.ID),
+            name_table: nameTable,
+            teaching_assistant_ids: teachingAssistantIDs,
+          };
+          return postCreateTA(payload);
+        }
       });
-      form.resetFields();
-      setSelectedCourse(null);
-    } else {
-      console.error("postCreateTA error:", res?.status, res?.data);
+
+      const results = await Promise.all(promises);
+
+      const failed = results.find(
+        (r) => !r || (r.status !== 200 && r.status !== 201)
+      );
+
+      if (failed) {
+        Swal.fire({
+          icon: "error",
+          title: `บันทึกผู้ช่วยสอนล้มเหลว`,
+        });
+      } else {
+        Swal.fire({
+          icon: "success",
+          title: "บันทึกผู้ช่วยสอนสำเร็จ",
+          showConfirmButton: false,
+          timer: 1500,
+        }).then(() => {
+          navigate("/all-open-course"); // redirect หลังจากกดปุ่มตกลง/ปิด Swal
+        });
+
+        form.resetFields();
+        setSelectedCourse(null);
+      }
+    } catch (e) {
       Swal.fire({
         icon: "error",
-        title: `บันทึกล้มเหลว${res?.status ? ` (${res.status})` : ""}`,
-        confirmButtonText: "ตกลง",
+        title: "เกิดข้อผิดพลาด",
+        text: String(e),
       });
     }
   };
@@ -438,9 +551,7 @@ const AddTeachingAssistant: React.FC = () => {
               <Card
                 title="อาจารย์ผู้สอน"
                 style={{ marginBottom: 24 }}
-                styles={{
-                  header: { backgroundColor: "#f8f9fa", fontWeight: "bold" },
-                }}
+                headStyle={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}
               >
                 {selectedCourse.Sections?.length ? (
                   <ul style={{ margin: 0, paddingLeft: 18 }}>
@@ -461,112 +572,138 @@ const AddTeachingAssistant: React.FC = () => {
 
               <Card
                 title="ข้อมูลผู้ช่วยสอนแยกตามกลุ่มเรียน"
-                styles={{
-                  header: { backgroundColor: "#f8f9fa", fontWeight: "bold" },
-                }}
+                headStyle={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}
               >
-                {groupDayRows.map((row, rowIdx) => (
+                {groupDayRows.map((row, index) => (
                   <div
-                    key={`${row.group}-${row.day}-${rowIdx}`}
+                    key={`${row.group}-${row.day}`}
                     style={{
                       marginBottom: 24,
-                      borderBottom: "1px solid #eee",
-                      paddingBottom: 16,
+                      padding: 12,
+                      border: "1px solid #e5e7eb", // เส้นขีดรอบ
+                      borderRadius: 8, // มุมโค้งเล็กน้อย
+                      backgroundColor: "#fafafa", // สีพื้นอ่อน
                     }}
                   >
-                    <p
-                      style={{
-                        fontWeight: "bold",
-                        color: "#F26522",
-                        marginBottom: 12,
-                      }}
-                    >
+                    <p style={{ fontWeight: 600, marginBottom: 12 }}>
                       กลุ่ม {row.group} - {row.day} {row.timesLabel}
                       {row.roomLabel ? ` ห้อง ${row.roomLabel}` : ""}
                     </p>
 
-                    {/* เก็บค่ากลุ่ม/วันไว้ (กัน undefined) */}
-                    <Form.Item
-                      name={["assistantsPerGroup", rowIdx, "group"]}
-                      hidden
-                    >
-                      <input />
-                    </Form.Item>
-                    <Form.Item
-                      name={["assistantsPerGroup", rowIdx, "day"]}
-                      hidden
-                    >
-                      <input />
-                    </Form.Item>
-
-                    <Form.List
-                      name={["assistantsPerGroup", rowIdx, "assistantIDs"]}
-                    >
-                      {(assistantFields, { add, remove }) => (
-                        <>
-                          {assistantFields.map((field) => (
-                            <div
-                              key={field.key}
-                              style={{
-                                display: "flex",
-                                marginBottom: 8,
-                                gap: 8,
-                              }}
-                            >
-                              <Form.Item
-                                name={[field.name]}
-                                rules={[
-                                  {
-                                    required: true,
-                                    message: "กรุณาเลือกผู้ช่วยสอน",
-                                  },
-                                ]}
-                                style={{ flex: 1, marginBottom: 0 }}
+                    <div style={{ marginTop: 12 }}>
+                      <Form.List
+                        name={["assistantsPerGroup", index, "assistantIDs"]}
+                      >
+                        {(fields, { add, remove }) => (
+                          <>
+                            {fields.map((field, idx) => (
+                              <div
+                                key={field.key}
+                                style={{
+                                  display: "flex",
+                                  gap: 8,
+                                  alignItems: "center",
+                                  marginBottom: 12,
+                                }}
                               >
-                                <Select
-                                  placeholder="เลือกผู้ช่วยสอน"
-                                  style={{ width: "100%" }}
-                                  showSearch
-                                  optionFilterProp="children"
-                                  filterOption={(input, option) =>
-                                    String(option?.children)
-                                      .toLowerCase()
-                                      .includes(input.toLowerCase())
-                                  }
+                                {/* เลขลำดับ */}
+                                <div
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    backgroundColor: "#F26522",
+                                    color: "white",
+                                    borderRadius: "50%",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontWeight: "bold",
+                                    fontSize: "14px",
+                                    flexShrink: 0,
+                                  }}
                                 >
-                                  {assistants.map((a) => (
-                                    <Option key={a.ID} value={a.ID}>
-                                      {a.Title?.Title} {a.Firstname}{" "}
-                                      {a.Lastname}
-                                    </Option>
-                                  ))}
-                                </Select>
-                              </Form.Item>
+                                  {idx + 1}
+                                </div>
 
-                              <Button
-                                icon={<MinusCircleOutlined />}
-                                onClick={() => remove(field.name)}
-                                danger
-                                type="text"
-                              />
-                            </div>
-                          ))}
+                                {/* Select */}
+                                <div style={{ flex: 1 }}>
+                                  <Form.Item {...field} noStyle>
+                                    <Select
+                                      placeholder="-- เลือกผู้ช่วยสอน --"
+                                      showSearch
+                                      optionFilterProp="children"
+                                      size="large"
+                                      style={{ width: "100%" }}
+                                    >
+                                      {assistants.map((a) => (
+                                        <Option key={a.ID} value={a.ID}>
+                                          {a.Title?.Title} {a.Firstname}{" "}
+                                          {a.Lastname}
+                                        </Option>
+                                      ))}
+                                    </Select>
+                                  </Form.Item>
+                                </div>
 
-                          <Form.Item style={{ marginTop: 8 }}>
+                                <Button
+                                  type="primary"
+                                  danger
+                                  icon={<MinusCircleOutlined />}
+                                  size="large"
+                                  onClick={() => {
+                                    const assistantIDs: number[] =
+                                      form.getFieldValue([
+                                        "assistantsPerGroup",
+                                        index,
+                                        "assistantIDs",
+                                      ]);
+                                    const taID = assistantIDs[field.name]; // หรือ idx ของ TA ที่ลบ
+                                    handleRemoveTA(
+                                      taID,
+                                      index,
+                                      field.name,
+                                      remove
+                                    );
+                                  }}
+                                >
+                                  ลบ
+                                </Button>
+                              </div>
+                            ))}
+
+                            {/* ปุ่มเพิ่มผู้ช่วยสอน */}
                             <Button type="dashed" onClick={() => add()} block>
                               เพิ่มผู้ช่วยสอนสำหรับกลุ่มนี้
                             </Button>
-                          </Form.Item>
-                        </>
-                      )}
-                    </Form.List>
+                          </>
+                        )}
+                      </Form.List>
+                    </div>
                   </div>
                 ))}
               </Card>
             </>
           )}
 
-          <div style={{ textAlign: "right", marginTop: 24 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: 24,
+            }}
+          >
+            <Button
+              type="default"
+              size="large"
+              onClick={() => {
+                form.resetFields();
+                setSelectedCourse(null);
+                navigate("/all-open-course"); // กลับไปหน้า list
+              }}
+            >
+              ยกเลิก
+            </Button>
+
             <Button
               type="primary"
               htmlType="submit"

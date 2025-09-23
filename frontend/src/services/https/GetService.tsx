@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const apiUrl = "https://cpeoffice.sut.ac.th/plan/api/";
+// const apiUrl = "http://localhost:8001";
 const Authorization = localStorage.getItem("token");
 const Bearer = localStorage.getItem("token_type");
 

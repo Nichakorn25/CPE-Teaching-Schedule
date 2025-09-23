@@ -655,6 +655,30 @@ const OfferedCoursespage: React.FC = () => {
       );
     },
   });
+  
+ columns.push({
+  title: "ผู้ช่วยสอน",
+  key: "TeachingAssistants",
+  width: 200,
+  render: (_t, record: CourseTableData) => {
+    // ถ้าเป็น child row ให้เอาจาก Section
+    const tas = record.isChild
+      ? record.Section?.TeachingAssistants
+      : record.Sections?.[0]?.TeachingAssistants ?? [];
+
+    return (
+      <div style={{ fontSize: isSmallScreen ? "10px" : "12px", color: "#000000ff" }}>
+        {Array.isArray(tas) && tas.length > 0
+          ? tas.map((ta: any, idx: number) => (
+              <div key={idx}>
+                {idx + 1}. {ta.Title} {ta.Firstname} {ta.Lastname}
+              </div>
+            ))
+          : "-"}
+      </div>
+    );
+  },
+});
 
   // -------------------- จัดการ --------------------
   columns.push({

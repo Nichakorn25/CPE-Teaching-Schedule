@@ -820,7 +820,7 @@ const ManageCourse: React.FC = () => {
                   <div style={{ flex: 1 }}>
                     <Select
                       placeholder="-- เลือกอาจารย์ --"
-                      value={t.ID} // ต้องเป็น ID
+                      value={t.ID && t.ID > 0 ? t.ID : undefined}
                       onChange={(value) => {
                         const selectedId = Number(value);
                         const selected = teacherOptions.find(

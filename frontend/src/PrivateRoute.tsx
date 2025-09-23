@@ -1,14 +1,10 @@
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 
-interface PrivateRouteProps {
-  children: React.ReactNode;
-}
-
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
+const PrivateRoute: React.FC = () => {
   const isLogin = localStorage.getItem("isLogin") === "true";
-  
-  return isLogin ? <>{children}</> : <Navigate to="/" />;
+
+  return isLogin ? <Outlet /> : <Navigate to="/" />;
 };
 
 export default PrivateRoute;

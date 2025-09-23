@@ -319,15 +319,24 @@ func DeleteOfferedCourse(c *gin.Context) {
 }
 
 // /////////////////////////// final-offerated
+
+type TAResponse struct {
+	ID        uint   `json:"ID"`
+	Title     string `json:"Title"`
+	Firstname string `json:"Firstname"`
+	Lastname  string `json:"Lastname"`
+}
+
 type SectionDetail struct {
-	ID              uint
-	SectionNumber   uint
-	Room            string
-	DayOfWeek       string
-	Time            string
-	Capacity        uint
-	ID_user         uint
-	InstructorNames []string
+	ID                 uint
+	SectionNumber      uint
+	Room               string
+	DayOfWeek          string
+	Time               string
+	Capacity           uint
+	ID_user            uint
+	InstructorNames    []string
+	TeachingAssistants []TAResponse
 }
 
 type OfferedCoursesDetail struct {
@@ -338,13 +347,13 @@ type OfferedCoursesDetail struct {
 	Credit            string
 	TypeOfCourse      string
 	TotalSections     uint
-	IsFixCourses   bool
+	IsFixCourses      bool
 	Sections          []SectionDetail
 }
 
 type OfferedCoursesDetailbyID struct {
 	ID                uint
-	CurriculumID        uint
+	CurriculumID      uint
 	Curriculum        string
 	Code              string
 	ThaiCourseName    string
@@ -380,6 +389,8 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 		Preload("AllCourses.UserAllCourses.User.Title").
 		Preload("Schedule.TimeFixedCourses").
 		Preload("Laboratory").
+		Preload("Schedule.ScheduleTeachingAssistant.TeachingAssistant").
+		Preload("Schedule.ScheduleTeachingAssistant.TeachingAssistant.Title").
 		Where("year = ? AND term = ?", year, term).
 		Find(&offeredCourses).Distinct("offered_courses.id").Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -406,6 +417,27 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 			instructors = append(instructors, instructorName)
 		}
 
+		// ผู้ช่วยสอน
+		taMap := make(map[uint]TAResponse)
+		for _, sch := range oc.Schedule {
+			for _, sta := range sch.ScheduleTeachingAssistant {
+				ta := sta.TeachingAssistant
+				if ta.ID != 0 {
+					taMap[ta.ID] = TAResponse{
+						ID:        ta.ID,
+						Title:     ta.Title.Title,
+						Firstname: ta.Firstname,
+						Lastname:  ta.Lastname,
+					}
+				}
+			}
+		}
+
+		teachingAssistants := []TAResponse{}
+		for _, ta := range taMap {
+			teachingAssistants = append(teachingAssistants, ta)
+		}
+
 		credit := fmt.Sprintf("%d(%d-%d-%d)",
 			oc.AllCourses.Credit.Unit,
 			oc.AllCourses.Credit.Lecture,
@@ -423,15 +455,16 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 				Credit:            credit,
 				TypeOfCourse:      oc.AllCourses.TypeOfCourses.TypeName,
 				TotalSections:     oc.Section,
-				IsFixCourses:     oc.IsFixCourses,
+				IsFixCourses:      oc.IsFixCourses,
 				Sections: []SectionDetail{
 					{
-						SectionNumber:   oc.Section,
-						Room:            room,
-						DayOfWeek:       "",
-						Time:            "",
-						Capacity:        oc.Capacity,
-						InstructorNames: instructors,
+						SectionNumber:      oc.Section,
+						Room:               room,
+						DayOfWeek:          "",
+						Time:               "",
+						Capacity:           oc.Capacity,
+						InstructorNames:    instructors,
+						TeachingAssistants: teachingAssistants,
 					},
 				},
 			}
@@ -444,13 +477,14 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 				for _, tf := range sch.TimeFixedCourses {
 					key := fmt.Sprintf("%d-%s-%s", tf.Section, tf.DayOfWeek, tf.StartTime)
 					sectionMap[key] = SectionDetail{
-						ID:              tf.ID,
-						SectionNumber:   tf.Section,
-						Room:            tf.RoomFix,
-						DayOfWeek:       tf.DayOfWeek,
-						Time:            tf.StartTime.Format("15:04") + " - " + tf.EndTime.Format("15:04"),
-						Capacity:        tf.Capacity,
-						InstructorNames: instructors,
+						ID:                 tf.ID,
+						SectionNumber:      tf.Section,
+						Room:               tf.RoomFix,
+						DayOfWeek:          tf.DayOfWeek,
+						Time:               tf.StartTime.Format("15:04") + " - " + tf.EndTime.Format("15:04"),
+						Capacity:           tf.Capacity,
+						InstructorNames:    instructors,
+						TeachingAssistants: teachingAssistants,
 					}
 				}
 			}
@@ -458,13 +492,14 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 			for _, sch := range oc.Schedule {
 				key := fmt.Sprintf("%d-%s-%s", sch.SectionNumber, sch.DayOfWeek, sch.StartTime)
 				sectionMap[key] = SectionDetail{
-					ID:              sch.ID,
-					SectionNumber:   sch.SectionNumber,
-					Room:            room,
-					DayOfWeek:       sch.DayOfWeek,
-					Time:            sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
-					Capacity:        oc.Capacity,
-					InstructorNames: instructors,
+					ID:                 sch.ID,
+					SectionNumber:      sch.SectionNumber,
+					Room:               room,
+					DayOfWeek:          sch.DayOfWeek,
+					Time:               sch.StartTime.Format("15:04") + " - " + sch.EndTime.Format("15:04"),
+					Capacity:           oc.Capacity,
+					InstructorNames:    instructors,
+					TeachingAssistants: teachingAssistants,
 				}
 			}
 		}
@@ -484,12 +519,13 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 		if len(v.Sections) == 0 {
 			v.Sections = []SectionDetail{
 				{
-					SectionNumber:   1,
-					Room:            "รอศูนย์บริการจัดสรรห้องเรียน",
-					DayOfWeek:       "",
-					Time:            "",
-					Capacity:        0,
-					InstructorNames: []string{},
+					SectionNumber:      1,
+					Room:               "รอศูนย์บริการจัดสรรห้องเรียน",
+					DayOfWeek:          "",
+					Time:               "",
+					Capacity:           0,
+					InstructorNames:    []string{},
+					TeachingAssistants: []TAResponse{},
 				},
 			}
 		}
@@ -498,6 +534,82 @@ func GetOfferedCoursesAndSchedule(c *gin.Context) {
 
 	c.JSON(http.StatusOK, responses)
 }
+
+// Request สำหรับลบผู้ช่วยสอน
+type RemoveTARequest struct {
+    SectionID          uint `json:"section_id"`
+    TeachingAssistantID uint `json:"teaching_assistant_id"`
+}
+
+func RemoveTeachingAssistant(c *gin.Context) {
+    sectionIDStr := c.Param("sectionID")
+    taIDStr := c.Param("taID")
+
+    sectionID, err := strconv.Atoi(sectionIDStr)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid section ID"})
+        return
+    }
+
+    taID, err := strconv.Atoi(taIDStr)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid teaching assistant ID"})
+        return
+    }
+
+    var sta entity.ScheduleTeachingAssistant
+    if err := config.DB().
+        Where("schedule_id = ? AND teaching_assistant_id = ?", sectionID, taID).
+        First(&sta).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Teaching assistant not found in this section"})
+        return
+    }
+
+    if err := config.DB().Delete(&sta).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove teaching assistant"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Teaching assistant removed successfully"})
+}
+
+// Request สำหรับอัปเดตผู้ช่วยสอน
+type UpdateTARequest struct {
+    SectionID          uint   `json:"section_id"`
+    TeachingAssistantIDs []uint `json:"teaching_assistant_ids"` // list ใหม่ทั้งหมด
+}
+
+// อัปเดตผู้ช่วยสอนของ Section
+func UpdateTeachingAssistants(c *gin.Context) {
+    var req UpdateTARequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    // ลบ TA เก่าออกทั้งหมด
+    if err := config.DB().
+        Where("schedule_id = ?", req.SectionID).
+        Delete(&entity.ScheduleTeachingAssistant{}).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear old teaching assistants"})
+        return
+    }
+
+    // เพิ่ม TA ใหม่
+    for _, taID := range req.TeachingAssistantIDs {
+        newSTA := entity.ScheduleTeachingAssistant{
+            ScheduleID:          req.SectionID,
+            TeachingAssistantID: taID,
+        }
+        if err := config.DB().Create(&newSTA).Error; err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add new teaching assistant"})
+            return
+        }
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Teaching assistants updated successfully"})
+}
+
 
 func GetOfferedCoursesAndSchedulebyID(c *gin.Context) {
 	id := c.Param("id") // รับจาก URL เช่น /api/offered-courses/:id
@@ -562,7 +674,7 @@ func GetOfferedCoursesAndSchedulebyID(c *gin.Context) {
 		if _, ok := grouped[oc.AllCourses.Code]; !ok {
 			grouped[oc.AllCourses.Code] = &OfferedCoursesDetailbyID{
 				ID:                oc.ID,
-				CurriculumID: oc.AllCourses.Curriculum.ID,
+				CurriculumID:      oc.AllCourses.Curriculum.ID,
 				Curriculum:        oc.AllCourses.Curriculum.CurriculumName,
 				Code:              oc.AllCourses.Code,
 				ThaiCourseName:    oc.AllCourses.ThaiName,

@@ -14,6 +14,7 @@ import { Curriculum, CreateCurriculumInput, UpdateCurriculumInput } from "../../
 
 const apiUrl = "https://cpeoffice.sut.ac.th/plan/api/";
 // const apiUrl: string = process.env.REACT_APP_API_URL;
+// const apiUrl = "http://localhost:8001";
 
 const Authorization = localStorage.getItem("token");
 const Bearer = localStorage.getItem("token_type");

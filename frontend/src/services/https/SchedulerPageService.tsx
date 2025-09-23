@@ -2,11 +2,13 @@ import axios from "axios";
 import {
   ConditionsRequestInterface,
   ScheduleIn,
+  UpdateTARequest,
 } from "../../interfaces/SchedulerIn";
 import { OpenCourseInterface } from "../../interfaces/OpenCourse";
 import { TARequestInterface } from "../../interfaces/TAIn";
 
 const apiUrl = "https://cpeoffice.sut.ac.th/plan/api/";
+// const apiUrl = "http://localhost:8001";
 const Authorization = localStorage.getItem("token");
 const Bearer = localStorage.getItem("token_type");
 
@@ -138,6 +140,25 @@ async function postCreateTA(data: TARequestInterface) {
     .catch((e) => e.response);
 }
 
+async function removeTeachingAssistant(sectionID: number, taID: number) {
+  return await axios
+    .delete(`${apiUrl}/remove-teaching-assistant/${sectionID}/${taID}`, requestOptions)
+    .then(res => res)
+    .catch(e => e.response);
+}
+
+async function upUpdateTeachingAssistants(sectionID: number, taIDs: number[]) {
+  const data: UpdateTARequest = {
+    section_id: sectionID,
+    teaching_assistant_ids: taIDs,
+  };
+
+  return await axios
+    .put(`${apiUrl}/update-teaching-assistants`, data, requestOptions)
+    .then(res => res)
+    .catch(e => e.response);
+}
+
 export {
   postCreateConditions,
   putUpdateConditions,
@@ -152,4 +173,6 @@ export {
   putupdateScheduleTime,
   deleteSchedulebyNametable,
   postCreateTA,
+  removeTeachingAssistant,
+  upUpdateTeachingAssistants,
 };

@@ -127,27 +127,21 @@ const ManageAssistance: React.FC = () => {
     );
   };
 
-  const handleSubmit = async () => {
-    if (!validateForm()) {
-      message.warning("กรุณากรอกข้อมูลให้ครบทุกช่องก่อนบันทึก");
-      return;
-    }
-
+  const handleSubmit = async (values: any) => {
+    const fullname = `${values.Firstname} ${values.Lastname}`;
     const selectedTitle =
-      title.find((t) => t.ID === formData.TitleID)?.Title || "";
-    const fullname = `${formData.Firstname} ${formData.Lastname}`;
+      title.find((t) => t.ID === values.TitleID)?.Title || "";
 
     try {
       setLoading(true);
       let res;
-
-      if (isEditMode && formData.ID) {
-        res = await putUpdateTeachingAssistant(formData.ID, formData);
+      if (isEditMode && id) {
+        res = await putUpdateTeachingAssistant(values.id, values);
       } else {
-        res = await postCreateTeachingAssistant(formData);
+        res = await postCreateTeachingAssistant(values);
       }
 
-      if (res.status === 201 || res.status === 200) {
+      if (res.status === 200 || res.status === 201) {
         await Swal.fire({
           icon: "success",
           title: "สำเร็จ!",
@@ -156,20 +150,17 @@ const ManageAssistance: React.FC = () => {
           }ข้อมูล ${selectedTitle} ${fullname} เรียบร้อยแล้ว`,
           confirmButtonText: "ตกลง",
         });
-        // จะ navigate ก็ต่อเมื่อกด "ตกลง" แล้ว
         navigate("/assistance-list");
       } else {
-        await Swal.fire({
+        Swal.fire({
           icon: "error",
           title: "ไม่สำเร็จ",
-          text:
-            res?.data?.error ||
-            `ไม่สามารถ${isEditMode ? "แก้ไข" : "บันทึก"}ข้อมูลได้`,
+          text: res?.data?.error || "เกิดข้อผิดพลาด",
           confirmButtonText: "ตกลง",
         });
       }
     } catch (error) {
-      await Swal.fire({
+      Swal.fire({
         icon: "error",
         title: "เกิดข้อผิดพลาด",
         text: `เกิดข้อผิดพลาดในการ${isEditMode ? "แก้ไข" : "บันทึก"}ข้อมูล`,
@@ -231,9 +222,8 @@ const ManageAssistance: React.FC = () => {
         <Form
           form={form}
           layout="vertical"
-          style={{ fontFamily: "Sarabun, sans-serif" }}
+          onFinish={handleSubmit} // จะเรียก handleSubmit ก็ต่อเมื่อ validate ผ่าน
         >
-          
           {/* Personal Information */}
           <Card
             size="small"
@@ -252,11 +242,13 @@ const ManageAssistance: React.FC = () => {
           >
             <Row gutter={[16, 16]}>
               <Col xs={24}>
-                <Form.Item label="คำนำหน้า" required>
+                <Form.Item
+                  label="คำนำหน้า"
+                  name="TitleID"
+                  rules={[{ required: true, message: "กรุณาเลือกคำนำหน้า" }]}
+                >
                   <Select
                     placeholder="-- เลือกคำนำหน้า --"
-                    value={formData.TitleID || undefined}
-                    onChange={(value) => handleChange("TitleID", value)}
                     size="large"
                     style={{ width: isMobile ? "100%" : "200px" }}
                   >
@@ -272,23 +264,21 @@ const ManageAssistance: React.FC = () => {
 
             <Row gutter={[16, 16]}>
               <Col xs={24} md={12}>
-                <Form.Item label="ชื่อ" required>
-                  <Input
-                    placeholder="กรอกชื่อ"
-                    value={formData.Firstname}
-                    onChange={(e) => handleChange("Firstname", e.target.value)}
-                    size="large"
-                  />
+                <Form.Item
+                  label="ชื่อ"
+                  name="Firstname"
+                  rules={[{ required: true, message: "กรุณากรอกชื่อ" }]}
+                >
+                  <Input placeholder="กรอกชื่อ" size="large" />
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
-                <Form.Item label="นามสกุล" required>
-                  <Input
-                    placeholder="กรอกนามสกุล"
-                    value={formData.Lastname}
-                    onChange={(e) => handleChange("Lastname", e.target.value)}
-                    size="large"
-                  />
+                <Form.Item
+                  label="นามสกุล"
+                  name="Lastname"
+                  rules={[{ required: true, message: "กรุณากรอกนามสกุล" }]}
+                >
+                  <Input placeholder="กรอกนามสกุล" size="large" />
                 </Form.Item>
               </Col>
             </Row>
@@ -303,13 +293,7 @@ const ManageAssistance: React.FC = () => {
                     { type: "email", message: "กรุณากรอกอีเมลให้ถูกต้อง" },
                   ]}
                 >
-                  <Input
-                    type="email"
-                    placeholder="กรอกอีเมล"
-                    value={formData.Email}
-                    onChange={(e) => handleChange("Email", e.target.value)}
-                    size="large"
-                  />
+                  <Input type="email" placeholder="กรอกอีเมล" size="large" />
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
@@ -317,21 +301,14 @@ const ManageAssistance: React.FC = () => {
                   label="หมายเลขโทรศัพท์"
                   name="PhoneNumber"
                   rules={[
-                    { required: true, message: "กรุณากรอกหมายเลขโทรศัพท์" },
+                    { required: true, message: "กรุณากรอกเบอร์โทรศัพท์" },
                     {
                       pattern: /^[0-9]{10}$/,
                       message: "กรุณากรอกเบอร์โทรศัพท์ 10 หลัก",
                     },
                   ]}
                 >
-                  <Input
-                    placeholder="กรอกเบอร์โทรศัพท์"
-                    value={formData.PhoneNumber}
-                    onChange={(e) =>
-                      handleChange("PhoneNumber", e.target.value)
-                    }
-                    size="large"
-                  />
+                  <Input placeholder="กรอกเบอร์โทรศัพท์" size="large" />
                 </Form.Item>
               </Col>
             </Row>
@@ -359,12 +336,11 @@ const ManageAssistance: React.FC = () => {
               type="primary"
               size="large"
               icon={<SaveOutlined />}
-              onClick={handleSubmit}
+              htmlType="submit" // ใช้ submit ของ Form แทน
               loading={loading}
-              disabled={!validateForm()}
               style={{
-                backgroundColor: validateForm() ? "#F26522" : undefined,
-                borderColor: validateForm() ? "#F26522" : undefined,
+                backgroundColor: "#F26522",
+                borderColor: "#F26522",
                 width: isMobile ? "100%" : "auto",
               }}
             >
