@@ -1,7 +1,7 @@
 import { SignInInterface, ChangePasswordInterface } from "../../interfaces/SignIn";
 import axios from "axios";
 
-const apiUrl = "http://localhost:8080";
+const apiUrl = "https://cpeoffice.sut.ac.th/plan/api/";
 const Authorization = localStorage.getItem("token");
 const Bearer = localStorage.getItem("token_type");
 

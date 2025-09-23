@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const apiUrl = "http://localhost:8080";
+const apiUrl = "https://cpeoffice.sut.ac.th/plan/api/";
 const Authorization = localStorage.getItem("token");
 const Bearer = localStorage.getItem("token_type");
 
@@ -95,7 +95,7 @@ async function getOffered(params: { major_name: string; year: string; term: stri
   }
 }
 
-async function getCountOffered(params) {
+async function getCountOffered(params: any) {
   return await axios
     .get(`${apiUrl}/all-count-offered`, {
       ...requestOptions,

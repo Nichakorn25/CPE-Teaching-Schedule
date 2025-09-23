@@ -4149,7 +4149,7 @@ const doSubCellsOverlap = (subCell1: SubCell, subCell2: SubCell): boolean => {
       }));
 
       try {
-        const apiUrl = "http://localhost:8080";
+        const apiUrl = "https://cpeoffice.sut.ac.th/plan/api/";
         const Authorization = localStorage.getItem("token");
         const Bearer = localStorage.getItem("token_type");
 
