@@ -33,7 +33,7 @@ export interface AllCourseinOpenCourseInterface {
   Laboratory: undefined;
   Sections: any;
   ID: number;
-  Code: string;
+  CourseCode: string;
   EnglishCourseName: string;
   ThaiCourseName: string;
   CourseType: string;
