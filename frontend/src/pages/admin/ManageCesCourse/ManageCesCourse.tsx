@@ -148,6 +148,7 @@ const ManageCesCourse: React.FC = () => {
 
       try {
         const res = await getOfferedCoursesByMajorbyID(Number(id));
+        console.log("drti",res)
         if (res.status === 200 && res.data && res.data.length > 0) {
           const course = res.data[0]; // response เป็น array
           setEditingCourseID(course.ID); // <- บันทึก ID ที่จะแก้ไข
@@ -167,7 +168,7 @@ const ManageCesCourse: React.FC = () => {
           
           form.setFieldsValue({
             curriculum: course.CurriculumID,
-            Code: course.ID,
+            Code: `${course.Code} - ${course.ThaiCourseName} / ${course.EnglishCourseName}`,
             courseNameTh: course.ThaiCourseName,
             courseNameEn: course.EnglishCourseName,
             AcademicYearID: academicYearID,
@@ -364,7 +365,7 @@ const handleGroupCountChange = (value: number | null) => {
       if (successCount === fixedSections.length) {
         await Swal.fire({
           icon: "success",
-          title: `เพิ่มรายวิชา ${selectedCourse.CourseCode} - ${selectedCourse.EnglishCourseName} ${selectedCourse.ThaiCourseName} เรียบร้อยแล้ว`,
+          title: `เพิ่มรายวิชา ${selectedCourse.Code} - ${selectedCourse.EnglishCourseName} ${selectedCourse.ThaiCourseName} เรียบร้อยแล้ว`,
         });
         navigate("/all-open-course");
       } else {
@@ -419,7 +420,7 @@ const handleGroupCountChange = (value: number | null) => {
       if (res && !res.error) {
         await Swal.fire({
           icon: "success",
-          title: `แก้ไขรายวิชา ${selectedCourse?.CourseCode} ${selectedCourse?.EnglishCourseName} - ${selectedCourse?.ThaiCourseName} เรียบร้อยแล้ว`,
+          title: `แก้ไขรายวิชา ${selectedCourse?.Code} ${selectedCourse?.EnglishCourseName} - ${selectedCourse?.ThaiCourseName} เรียบร้อยแล้ว`,
         });
         navigate("/all-open-course");
       } else {
@@ -552,7 +553,7 @@ const handleGroupCountChange = (value: number | null) => {
                   >
                     {courses.map((c) => (
                       <Option key={c.ID} value={c.ID}>
-                        {c.CourseCode} - {c.EnglishCourseName} {c.ThaiCourseName}
+                        {c.Code} - {c.EnglishCourseName} {c.ThaiCourseName}
                       </Option>
                     ))}
                   </Select>
