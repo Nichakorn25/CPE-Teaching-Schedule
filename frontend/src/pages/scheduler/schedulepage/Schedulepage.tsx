@@ -1454,7 +1454,32 @@ const isCourseCardUsed = (courseCard: CourseCard): boolean => {
   return usageInfo.isFullyUsed;
 };
 
-
+const getTeachingAssistantsForTooltip = (subCell: SubCell): string => {
+  if (subCell.scheduleId && originalScheduleData) {
+    const originalSchedule = originalScheduleData.find(
+      (schedule: any) => schedule.ID === subCell.scheduleId
+    );
+    
+    if (originalSchedule?.ScheduleTeachingAssistant && originalSchedule.ScheduleTeachingAssistant.length > 0) {
+      const assistants = originalSchedule.ScheduleTeachingAssistant
+        .map((sta: any) => {
+          if (sta.TeachingAssistant) {
+            const title = sta.TeachingAssistant.Title?.Title || '';
+            const firstname = sta.TeachingAssistant.Firstname || '';
+            const lastname = sta.TeachingAssistant.Lastname || '';
+            return `${title}${firstname} ${lastname}`.trim();
+          }
+          return '';
+        })
+        .filter(Boolean);
+      
+      if (assistants.length > 0) {
+        return assistants.join(', ');
+      }
+    }
+  }
+  return "";
+};
 
   // =================== COURSE CARD DRAG HANDLERS ===================
 const handleCourseCardDragStart = (e: React.DragEvent, courseCard: CourseCard) => {
@@ -3301,6 +3326,7 @@ const renderSubCell = (subCell: SubCell) => {
 
   const laboratoryRoom = getLaboratoryRoom(subCell);
   const realStudentYearDisplay = getRealStudentYearDisplay(subCell);
+  const teachingAssistants = getTeachingAssistantsForTooltip(subCell); // ดึงข้อมูลผู้ช่วยสอน
 
   return (
     <div
@@ -3361,14 +3387,21 @@ const renderSubCell = (subCell: SubCell) => {
             <p><b>🎓 ชั้นปี:</b> {realStudentYearDisplay}</p>
             <p><b>📄 หมู่เรียน:</b> {subCell.classData.section || "ไม่ระบุ"}</p>
             <p><b>👩‍🏫 อาจารย์:</b> {subCell.classData.teacher || "ไม่ระบุ"}</p>
+            
+            {/* เพิ่มข้อมูลผู้ช่วยสอน */}
+            {teachingAssistants && (
+              <p><b>👨‍🎓 ผู้ช่วยสอน:</b> {teachingAssistants}</p>
+            )}
+            
             <p><b>🏢 ห้องเรียน:</b> {subCell.classData.room || "ไม่ระบุ"}</p>
             
             {laboratoryRoom && (
-              <p><b>🔬 ห้องแล็บ:</b> {laboratoryRoom}</p>
+              <p><b>🔬 ห้องแลป:</b> {laboratoryRoom}</p>
             )}
             
             <p><b>📅 วัน:</b> {subCell.day}</p>
             <p><b>🕐 เวลา:</b> {subCell.startTime} - {subCell.endTime}</p>
+            
             {isTimeFixed && (
               <p style={{ color: "#999", fontSize: "12px", marginTop: "8px", fontWeight: "bold" }}>
                 🔒 วิชานี้ถูกล็อกไว้ ไม่สามารถย้ายหรือลบได้
@@ -3563,7 +3596,6 @@ const renderSubCell = (subCell: SubCell) => {
     </div>
   );
 };
-
 
 
   // เพิ่ม helper function สำหรับสร้าง empty row
