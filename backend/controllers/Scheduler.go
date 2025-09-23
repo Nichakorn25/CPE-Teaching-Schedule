@@ -137,6 +137,9 @@ func GetScheduleByNameTable(c *gin.Context) {
 		Preload("OfferedCourses.AllCourses.UserAllCourses").
 		Preload("OfferedCourses.AllCourses.UserAllCourses.User").
 		Preload("TimeFixedCourses").
+		Preload("ScheduleTeachingAssistant").
+		Preload("ScheduleTeachingAssistant.TeachingAssistant").
+		Preload("ScheduleTeachingAssistant.TeachingAssistant.Title").
 		Joins("JOIN offered_courses ON schedules.offered_courses_id = offered_courses.id").
 		Joins("JOIN all_courses ON offered_courses.all_courses_id = all_courses.id").
 		Joins("JOIN curriculums ON all_courses.curriculum_id = curriculums.id").

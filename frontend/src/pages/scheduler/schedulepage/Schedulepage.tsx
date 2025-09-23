@@ -4673,15 +4673,16 @@ const exportScheduleToXLSX = async () => {
       "13-14","14-15","15-16","16-17","17-18","18-19","19-20","20-21"
     ];
 
-    // แก้ไข interface เพื่อรองรับห้องแลป
+    // แก้ไข interface เพื่อเพิ่มฟิลด์ผู้ช่วยสอน
     interface SubjectInfo {
       subject: string;
       courseCode: string;
       teacher: string;
+      teachingAssistants: string; // เพิ่มฟิลด์ผู้ช่วยสอน
       section: string;
       studentYear: string;
       room: string;
-      laboratoryRoom: string; // *** เพิ่มฟิลด์นี้ ***
+      laboratoryRoom: string;
       capacity: number;
       schedule: Map<string, Array<{ startTime: string; endTime: string; room: string }>>;
       isTimeFixed: boolean;
@@ -4700,7 +4701,34 @@ const exportScheduleToXLSX = async () => {
       return "";
     };
 
-    // build allSubjects พร้อมข้อมูลห้องแลป
+    // เพิ่มฟังก์ชันดึงข้อมูลผู้ช่วยสอน
+    const getTeachingAssistants = (scheduleId: number): string => {
+      if (scheduleId && originalScheduleData) {
+        const originalSchedule = originalScheduleData.find(
+          (schedule: any) => schedule.ID === scheduleId
+        );
+        
+        if (originalSchedule?.ScheduleTeachingAssistant && originalSchedule.ScheduleTeachingAssistant.length > 0) {
+          const assistants = originalSchedule.ScheduleTeachingAssistant
+            .map((sta: any) => {
+              if (sta.TeachingAssistant) {
+                const title = sta.TeachingAssistant.Title?.Title || '';
+                const firstname = sta.TeachingAssistant.Firstname || '';
+                const lastname = sta.TeachingAssistant.Lastname || '';
+                return `${title}${firstname} ${lastname}`.trim();
+              }
+              return '';
+            })
+            .filter(Boolean)
+            .join(', ');
+          
+          return assistants;
+        }
+      }
+      return "";
+    };
+
+    // build allSubjects พร้อมข้อมูลห้องแลปและผู้ช่วยสอน
     const allSubjects = new Map<string, SubjectInfo>();
     scheduleData.forEach((dayData: any) => {
       if (dayData.subCells && dayData.subCells.length > 0) {
@@ -4708,25 +4736,29 @@ const exportScheduleToXLSX = async () => {
           const key = `${subCell.classData.courseCode || "NO_CODE"}-${subCell.classData.section || "1"}`;
           if (!allSubjects.has(key)) {
             let capacity = 30;
-            let laboratoryRoom = ""; // *** เพิ่มการดึงข้อมูลห้องแลป ***
+            let laboratoryRoom = "";
+            let teachingAssistants = ""; // เพิ่มการดึงข้อมูลผู้ช่วยสอน
             
             if (subCell.scheduleId && originalScheduleData) {
               const originalSchedule = originalScheduleData.find((s: any) => s.ID === subCell.scheduleId);
               if (originalSchedule?.OfferedCourses?.Capacity !== undefined) {
                 capacity = originalSchedule.OfferedCourses.Capacity;
               }
-              // *** ดึงข้อมูลห้องแลป ***
+              // ดึงข้อมูลห้องแลป
               laboratoryRoom = getLaboratoryRoom(subCell.scheduleId);
+              // ดึงข้อมูลผู้ช่วยสอน
+              teachingAssistants = getTeachingAssistants(subCell.scheduleId);
             }
             
             allSubjects.set(key, {
               subject: subCell.classData.subject || "ไม่ระบุวิชา",
               courseCode: subCell.classData.courseCode || "N/A",
               teacher: subCell.classData.teacher || "ไม่ระบุอาจารย์",
+              teachingAssistants: teachingAssistants, // เพิ่มข้อมูลผู้ช่วยสอน
               section: subCell.classData.section || "1",
               studentYear: subCell.classData.studentYear || "",
               room: subCell.classData.room || "ไม่ระบุห้อง",
-              laboratoryRoom: laboratoryRoom, // *** เพิ่มข้อมูลห้องแลป ***
+              laboratoryRoom: laboratoryRoom,
               capacity,
               schedule: new Map<string, Array<{ startTime: string; endTime: string; room: string }>>(),
               isTimeFixed: !!subCell.isTimeFixed,
@@ -4797,17 +4829,17 @@ const exportScheduleToXLSX = async () => {
     const LINE_HEIGHT = 12;
     const MIN_ROW_HEIGHT = 16;
 
-    // create sheet fn พร้อมการรองรับห้องแลป
+    // create sheet fn พร้อมการรองรับห้องแลปและผู้ช่วยสอน
     const createSheetFromItems = (sheet: any, items: Array<[string, SubjectInfo]>) => {
       const DAYS_LOCAL = DAYS;
-      const header1: string[] = ['วิชา', 'กลุ่ม', 'คน/กลุ่ม', 'อาจารย์'];
+      const header1: string[] = ['วิชา', 'กลุ่ม', 'คน/กลุ่ม', 'อาจารย์', 'ผู้ช่วยสอน']; // เพิ่มคอลัมน์ผู้ช่วยสอน
       DAYS_LOCAL.forEach((day: string) => {
         header1.push(day);
         for (let i = 1; i < compactTimeSlots.length; i++) header1.push('');
       });
-      const header2: string[] = ['รหัส/ชื่อวิชา', 'Section', 'Capacity', 'Teacher'];
+      const header2: string[] = ['รหัส/ชื่อวิชา', 'Section', 'Capacity', 'Teacher', 'Teaching Assistant']; // เพิ่มคอลัมน์ผู้ช่วยสอน
       DAYS_LOCAL.forEach(() => compactTimeSlots.forEach(t => header2.push(t)));
-      const totalColumns = 4 + (DAYS_LOCAL.length * compactTimeSlots.length);
+      const totalColumns = 5 + (DAYS_LOCAL.length * compactTimeSlots.length); // เปลี่ยนจาก 4 เป็น 5
 
       // write headers
       for (let c = 1; c <= totalColumns; c++) {
@@ -4816,7 +4848,7 @@ const exportScheduleToXLSX = async () => {
       }
 
       // merge header days
-      let curCol = 5;
+      let curCol = 6; // เปลี่ยนจาก 5 เป็น 6 เพราะเพิ่มคอลัมน์ผู้ช่วยสอน
       for (let d = 0; d < DAYS_LOCAL.length; d++) {
         const startCol = curCol;
         const endCol = curCol + compactTimeSlots.length - 1;
@@ -4829,7 +4861,8 @@ const exportScheduleToXLSX = async () => {
       sheet.column("B").width(8);
       sheet.column("C").width(8);
       sheet.column("D").width(22);
-      for (let c = 5; c <= totalColumns; c++) sheet.column(colToLetter(c)).width(TIME_COL_WIDTH);
+      sheet.column("E").width(25); // เพิ่มคอลัมน์ผู้ช่วยสอน
+      for (let c = 6; c <= totalColumns; c++) sheet.column(colToLetter(c)).width(TIME_COL_WIDTH); // เปลี่ยนจาก 5 เป็น 6
       sheet.row(1).height(28);
       sheet.row(2).height(18);
 
@@ -4846,7 +4879,7 @@ const exportScheduleToXLSX = async () => {
         return;
       }
 
-      // write subjects พร้อมข้อมูลห้องแลป
+      // write subjects พร้อมข้อมูลห้องแลปและผู้ช่วยสอน
       let rowPtr = 3;
       for (const [key, subjectInfo] of items) {
         // prepare text
@@ -4859,12 +4892,19 @@ const exportScheduleToXLSX = async () => {
         const teacherLines = teacherRaw.split(",").map((s: string) => s.trim()).filter(Boolean);
         const teacherText = teacherLines.join("\n") || "";
 
-        // MERGE A and D across two rows
+        // MERGE A, D, and E across two rows
         sheet.range(`A${rowPtr}:A${rowPtr + 1}`).merged(true);
         sheet.cell(`A${rowPtr}`).value(aText).style('wrapText', true).style('horizontalAlignment', 'left');
 
         sheet.range(`D${rowPtr}:D${rowPtr + 1}`).merged(true);
         sheet.cell(`D${rowPtr}`).value(teacherText).style('wrapText', true).style('horizontalAlignment', 'left');
+
+        // เพิ่มการ merge คอลัมน์ผู้ช่วยสอน
+        const assistantLines = subjectInfo.teachingAssistants.split(",").map((s: string) => s.trim()).filter(Boolean);
+        const assistantText = assistantLines.join("\n") || "ไม่มีผู้ช่วยสอน";
+        
+        sheet.range(`E${rowPtr}:E${rowPtr + 1}`).merged(true);
+        sheet.cell(`E${rowPtr}`).value(assistantText).style('wrapText', true).style('horizontalAlignment', 'left');
 
         // B and C merged vertically as before
         sheet.range(`B${rowPtr}:B${rowPtr + 1}`).merged(true);
@@ -4872,16 +4912,16 @@ const exportScheduleToXLSX = async () => {
         sheet.cell(`B${rowPtr}`).value(subjectInfo.section);
         sheet.cell(`C${rowPtr}`).value(subjectInfo.capacity);
 
-        // compute required height: at least show 2 lines for A (code+name) and teacherLines
-        const linesNeeded = Math.max(2, teacherLines.length || 1);
+        // compute required height: at least show 2 lines for A (code+name) and teacherLines/assistantLines
+        const linesNeeded = Math.max(2, Math.max(teacherLines.length || 1, assistantLines.length || 1));
         const totalHeight = Math.max(MIN_ROW_HEIGHT * 2, LINE_HEIGHT * linesNeeded + 8); // padding
         const perRow = Math.max(MIN_ROW_HEIGHT, Math.ceil(totalHeight / 2));
         sheet.row(rowPtr).height(perRow);
         sheet.row(rowPtr + 1).height(perRow);
 
-        // *** แก้ไขส่วนนี้เพื่อรองรับห้องแลป ***
+        // แก้ไขส่วนนี้เพื่อรองรับห้องแลปและปรับตำแหน่งคอลัมน์
         // fill times - รวมข้อมูล SEC และห้องแลปในเซลเดียวกัน
-        let col = 5;
+        let col = 6; // เปลี่ยนจาก 5 เป็น 6 เพราะเพิ่มคอลัมน์ผู้ช่วยสอน
         for (const day of DAYS_LOCAL) {
           const daySchedule = subjectInfo.schedule.get(day) || [];
           for (const tslot of compactTimeSlots) {
@@ -4895,7 +4935,7 @@ const exportScheduleToXLSX = async () => {
                 if (startHour >= sh && startHour < eh) {
                   cellValue = `SEC:${subjectInfo.section}`;
                   
-                  // *** ถ้ามีห้องแลป ให้รวมในเซลเดียวกันด้วย \n ***
+                  // ถ้ามีห้องแลป ให้รวมในเซลเดียวกันด้วย \n
                   if (subjectInfo.laboratoryRoom && subjectInfo.laboratoryRoom.trim() !== "") {
                     cellValue = `SEC:${subjectInfo.section}\n${subjectInfo.laboratoryRoom}`;
                   }
@@ -4938,10 +4978,10 @@ const exportScheduleToXLSX = async () => {
       sheet.range(`${lastColLetter}1:${lastColLetter}${lastRow}`).style({ rightBorder: 'thick' });
 
       // thick separation between main info and time grid
-      sheet.range(`D1:D${lastRow}`).style({ rightBorder: 'thick' });
+      sheet.range(`E1:E${lastRow}`).style({ rightBorder: 'thick' }); // เปลี่ยนจาก D เป็น E
 
       // medium borders between days
-      let dayColStart = 5;
+      let dayColStart = 6; // เปลี่ยนจาก 5 เป็น 6
       for (let d = 0; d < DAYS_LOCAL.length; d++) {
         const dayStart = dayColStart;
         const dayEnd = dayStart + compactTimeSlots.length - 1;
@@ -4972,7 +5012,7 @@ const exportScheduleToXLSX = async () => {
 
     // output
     const now = new Date();
-    const filename = `ตารางสอน_with_lab_${now.toISOString().slice(0,19).replace(/[-:]/g,'').replace('T','_')}.xlsx`;
+    const filename = `ตารางสอน_with_lab_and_ta_${now.toISOString().slice(0,19).replace(/[-:]/g,'').replace('T','_')}.xlsx`;
     const outputBlob: Blob = await workbook.outputAsync({ type: "blob" });
     const url = URL.createObjectURL(outputBlob);
     const a = document.createElement("a");
@@ -4984,14 +5024,13 @@ const exportScheduleToXLSX = async () => {
     URL.revokeObjectURL(url);
 
     hide();
-    message.success(`สร้างไฟล์ Excel พร้อมข้อมูลห้องแลป: ${filename}`);
+    message.success(`สร้างไฟล์ Excel พร้อมข้อมูลห้องแลปและผู้ช่วยสอน: ${filename}`);
   } catch (err) {
     hide();
     console.error("เกิดข้อผิดพลาดในการสร้าง Excel ด้วย xlsx-populate:", err);
     message.error("เกิดข้อผิดพลาดในการสร้างไฟล์ Excel");
   }
 };
-
   // =================== TABLE COLUMNS WITH FIXED ROW GROUPING ===================
   const columns: ColumnsType<ExtendedScheduleData> = [
     {
