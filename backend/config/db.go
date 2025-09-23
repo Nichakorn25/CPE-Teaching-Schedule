@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -20,71 +22,16 @@ func DB() *gorm.DB {
 	return db
 }
 
-func CreateDatabase() {
-	// dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
-	dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
-	dbSQL, err := sql.Open("postgres", dsn)
-	if err != nil {
-		log.Fatal("Failed to connect to PostgreSQL:", err)
-	}
-	defer dbSQL.Close()
-
-	dbName := "cpe_schedule"
-	_, err = dbSQL.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
-	if err != nil {
-		fmt.Println("Database may already exist:", err)
-	} else {
-		fmt.Println("Database created successfully")
-	}
-}
-
-func ConnectionDB() {
-	CreateDatabase()
-	// dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
-	dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
-	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect database")
-	}
-
-	fmt.Println("connected to database")
-	db = database
-}
-
-// func loadEnv() {
-// 	err := godotenv.Load()
-// 	if err != nil {
-// 		log.Println("No .env file found, using system environment variables")
-// 	}
-// }
-
-// func getDSN(withDB bool) string {
-// 	host := os.Getenv("DB_HOST")
-// 	user := os.Getenv("DB_USER")
-// 	password := os.Getenv("DB_PASSWORD")
-// 	port := os.Getenv("DB_PORT")
-// 	sslmode := os.Getenv("DB_SSLMODE")
-// 	timezone := os.Getenv("DB_TIMEZONE")
-
-// 	if withDB {
-// 		dbname := os.Getenv("DB_NAME")
-// 		return fmt.Sprintf(
-// 			"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
-// 			host, user, password, dbname, port, sslmode, timezone,
-// 		)
-// 	}
-
-// 	return fmt.Sprintf("host=%s user=%s password=%s dbname=postgres port=%s sslmode=%s", host, user, password, port, sslmode)
-// }
-
 // func CreateDatabase() {
-// 	dbSQL, err := sql.Open("postgres", getDSN(false))
+// 	// dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
+// 	dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
+// 	dbSQL, err := sql.Open("postgres", dsn)
 // 	if err != nil {
 // 		log.Fatal("Failed to connect to PostgreSQL:", err)
 // 	}
 // 	defer dbSQL.Close()
 
-// 	dbName := os.Getenv("DB_NAME")
+// 	dbName := "cpe_schedule"
 // 	_, err = dbSQL.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
 // 	if err != nil {
 // 		fmt.Println("Database may already exist:", err)
@@ -94,10 +41,10 @@ func ConnectionDB() {
 // }
 
 // func ConnectionDB() {
-// 	loadEnv()
 // 	CreateDatabase()
-
-// 	database, err := gorm.Open(postgres.Open(getDSN(true)), &gorm.Config{})
+// 	// dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
+// 	dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
+// 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 // 	if err != nil {
 // 		panic("failed to connect database")
 // 	}
@@ -105,6 +52,61 @@ func ConnectionDB() {
 // 	fmt.Println("connected to database")
 // 	db = database
 // }
+
+func loadEnv() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found, using system environment variables")
+	}
+}
+
+func getDSN(withDB bool) string {
+	host := os.Getenv("DB_HOST")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	port := os.Getenv("DB_PORT")
+	sslmode := os.Getenv("DB_SSLMODE")
+	timezone := os.Getenv("DB_TIMEZONE")
+
+	if withDB {
+		dbname := os.Getenv("DB_NAME")
+		return fmt.Sprintf(
+			"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
+			host, user, password, dbname, port, sslmode, timezone,
+		)
+	}
+
+	return fmt.Sprintf("host=%s user=%s password=%s dbname=postgres port=%s sslmode=%s", host, user, password, port, sslmode)
+}
+
+func CreateDatabase() {
+	dbSQL, err := sql.Open("postgres", getDSN(false))
+	if err != nil {
+		log.Fatal("Failed to connect to PostgreSQL:", err)
+	}
+	defer dbSQL.Close()
+
+	dbName := os.Getenv("DB_NAME")
+	_, err = dbSQL.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
+	if err != nil {
+		fmt.Println("Database may already exist:", err)
+	} else {
+		fmt.Println("Database created successfully")
+	}
+}
+
+func ConnectionDB() {
+	loadEnv()
+	CreateDatabase()
+
+	database, err := gorm.Open(postgres.Open(getDSN(true)), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+
+	fmt.Println("connected to database")
+	db = database
+}
 
 func SetupDatabase() {
 	err := db.AutoMigrate(
@@ -667,7 +669,7 @@ func SeedCurriculums() {
 // ยังใส่ไม่ครบ
 func SeedAllCourses() {
 	var (
-		curriculumComEng1 entity.Curriculum
+		curriculumComEng1        entity.Curriculum
 		curriculumElectricalEng1 entity.Curriculum
 
 		yearAll entity.AcademicYear
@@ -676,15 +678,15 @@ func SeedAllCourses() {
 		year3   entity.AcademicYear
 		year4   entity.AcademicYear
 
-		type1 entity.TypeOfCourses
-		type2 entity.TypeOfCourses
-		type3 entity.TypeOfCourses
-		type4 entity.TypeOfCourses
-		type5 entity.TypeOfCourses
-		type6 entity.TypeOfCourses
-		type7 entity.TypeOfCourses
-		type8 entity.TypeOfCourses
-		type9 entity.TypeOfCourses
+		type1  entity.TypeOfCourses
+		type2  entity.TypeOfCourses
+		type3  entity.TypeOfCourses
+		type4  entity.TypeOfCourses
+		type5  entity.TypeOfCourses
+		type6  entity.TypeOfCourses
+		type7  entity.TypeOfCourses
+		type8  entity.TypeOfCourses
+		type9  entity.TypeOfCourses
 		type10 entity.TypeOfCourses
 		type11 entity.TypeOfCourses
 
@@ -725,7 +727,6 @@ func SeedAllCourses() {
 	db.First(&type9, "type_name = ?", "กลุ่มวิชาพื้นฐานทางวิทยาศาสตร์และคณิตศาสตร์")
 	db.First(&type10, "type_name = ?", "หมวดวิชาสหกิจศึกษา")
 	db.First(&type11, "type_name = ?", "กลุ่มวิชาพื้นฐานทางวิทยาการคอมพิวเตอร์")
-
 
 	db.First(&credit2_2_0_4, "unit = ? AND lecture = ? AND lab = ? AND self = ?", 2, 2, 0, 4)
 	db.First(&credit1_0_2_1, "unit = ? AND lecture = ? AND lab = ? AND self = ?", 1, 0, 2, 1)
@@ -1894,7 +1895,7 @@ func SeedAllCourses() {
 			TypeOfCoursesID: 11,
 			CreditID:        credit2_0_6_0.ID,
 			Ismain:          false,
-		},		
+		},
 	}
 	for _, c := range courses {
 		var course entity.AllCourses
@@ -1928,121 +1929,121 @@ func SeedUserAllCourses() {
 		h1234  entity.User
 		i1234  entity.User
 
-		ist201001 entity.AllCourses 
-		ist201002 entity.AllCourses 
-		ist201003 entity.AllCourses 
-		ist201004 entity.AllCourses 
-		ist202001 entity.AllCourses 
-		ist202002 entity.AllCourses 
-		ist301101 entity.AllCourses 
-		ist301102 entity.AllCourses 
-		ist301103 entity.AllCourses 
-		ist301104 entity.AllCourses 
-		ist301105 entity.AllCourses 
-		dgt000140 entity.AllCourses 
-		eng201110 entity.AllCourses 
-		eng511901 entity.AllCourses 
-		iph034013 entity.AllCourses 
-		ist201501 entity.AllCourses 
-		ist201502 entity.AllCourses 
-		ist201503 entity.AllCourses 
-		ist201504 entity.AllCourses 
-		ist202501 entity.AllCourses 
-		ist202502 entity.AllCourses 
-		ist202503 entity.AllCourses 
-		ist202504 entity.AllCourses 
-		ist202505 entity.AllCourses 
-		eng201010 entity.AllCourses 
-		eng231001 entity.AllCourses 
-		eng232001 entity.AllCourses 
-		eng233001 entity.AllCourses 
-		eng251010 entity.AllCourses 
-		eng311001 entity.AllCourses 
-		eng232003 entity.AllCourses 
-		eng232011 entity.AllCourses 
-		eng234080 entity.AllCourses 
-		eng232031 entity.AllCourses 
-		eng232032 entity.AllCourses 
-		eng233031 entity.AllCourses 
-		eng233032 entity.AllCourses 
-		eng232051 entity.AllCourses 
-		eng233051 entity.AllCourses 
-		eng233052 entity.AllCourses 
-		eng233053 entity.AllCourses 
-		eng233054 entity.AllCourses 
-		eng232071 entity.AllCourses 
-		eng232072 entity.AllCourses 
-		eng232073 entity.AllCourses 
-		eng232074 entity.AllCourses 
-		eng232075 entity.AllCourses 
-		eng232076 entity.AllCourses 
-		eng232077 entity.AllCourses 
-		eng233012 entity.AllCourses 
-		eng233013 entity.AllCourses 
-		eng233014 entity.AllCourses 
-		eng233015 entity.AllCourses 
-		eng233016 entity.AllCourses 
-		eng233033 entity.AllCourses 
-		eng233055 entity.AllCourses 
-		eng233072 entity.AllCourses 
-		eng233073 entity.AllCourses 
-		eng233074 entity.AllCourses 
-		eng233075 entity.AllCourses 
-		eng234011 entity.AllCourses 
-		eng234013 entity.AllCourses 
-		eng234014 entity.AllCourses 
-		eng234015 entity.AllCourses 
-		eng234016 entity.AllCourses 
-		eng234017 entity.AllCourses 
-		eng234018 entity.AllCourses 
-		eng234019 entity.AllCourses 
-		eng234033 entity.AllCourses 
-		eng234035 entity.AllCourses 
-		eng234041 entity.AllCourses 
-		eng234042 entity.AllCourses 
-		eng234031 entity.AllCourses 
-		eng234032 entity.AllCourses 
-		eng234053 entity.AllCourses 
-		eng234034 entity.AllCourses 
-		eng234060 entity.AllCourses 
-		eng234071 entity.AllCourses 
-		eng234072 entity.AllCourses 
-		eng234073 entity.AllCourses 
-		eng234074 entity.AllCourses 
-		eng234081 entity.AllCourses 
-		eng234082 entity.AllCourses 
-		eng234097 entity.AllCourses 
-		eng234098 entity.AllCourses 
-		eng234099 entity.AllCourses 
-		eng234090 entity.AllCourses 
-		eng234091 entity.AllCourses 
-		eng234092 entity.AllCourses 
-		eng234094 entity.AllCourses 
-		eng202010 entity.AllCourses 
-		eng203010 entity.AllCourses 
-		eng204010 entity.AllCourses 
-		eng202020 entity.AllCourses 
-		eng203020 entity.AllCourses 
-		eng204020 entity.AllCourses 
-		eng292001 entity.AllCourses 
-		eng292111 entity.AllCourses 
-		eng292113 entity.AllCourses 
-		eng292115 entity.AllCourses 
-		eng292141 entity.AllCourses 
-		eng292142 entity.AllCourses 
-		eng292131 entity.AllCourses 
-		eng293131 entity.AllCourses 
-		eng293132 entity.AllCourses 
-		eng293151 entity.AllCourses 
-		eng293152 entity.AllCourses 
-		eng293153 entity.AllCourses 
-		eng293154 entity.AllCourses 
-		a1101021 entity.AllCourses 
-		a1101022 entity.AllCourses 
-		a1101023 entity.AllCourses 
-		a1101031 entity.AllCourses 
-		a1101032 entity.AllCourses 
-		a1101033 entity.AllCourses 
+		ist201001 entity.AllCourses
+		ist201002 entity.AllCourses
+		ist201003 entity.AllCourses
+		ist201004 entity.AllCourses
+		ist202001 entity.AllCourses
+		ist202002 entity.AllCourses
+		ist301101 entity.AllCourses
+		ist301102 entity.AllCourses
+		ist301103 entity.AllCourses
+		ist301104 entity.AllCourses
+		ist301105 entity.AllCourses
+		dgt000140 entity.AllCourses
+		eng201110 entity.AllCourses
+		eng511901 entity.AllCourses
+		iph034013 entity.AllCourses
+		ist201501 entity.AllCourses
+		ist201502 entity.AllCourses
+		ist201503 entity.AllCourses
+		ist201504 entity.AllCourses
+		ist202501 entity.AllCourses
+		ist202502 entity.AllCourses
+		ist202503 entity.AllCourses
+		ist202504 entity.AllCourses
+		ist202505 entity.AllCourses
+		eng201010 entity.AllCourses
+		eng231001 entity.AllCourses
+		eng232001 entity.AllCourses
+		eng233001 entity.AllCourses
+		eng251010 entity.AllCourses
+		eng311001 entity.AllCourses
+		eng232003 entity.AllCourses
+		eng232011 entity.AllCourses
+		eng234080 entity.AllCourses
+		eng232031 entity.AllCourses
+		eng232032 entity.AllCourses
+		eng233031 entity.AllCourses
+		eng233032 entity.AllCourses
+		eng232051 entity.AllCourses
+		eng233051 entity.AllCourses
+		eng233052 entity.AllCourses
+		eng233053 entity.AllCourses
+		eng233054 entity.AllCourses
+		eng232071 entity.AllCourses
+		eng232072 entity.AllCourses
+		eng232073 entity.AllCourses
+		eng232074 entity.AllCourses
+		eng232075 entity.AllCourses
+		eng232076 entity.AllCourses
+		eng232077 entity.AllCourses
+		eng233012 entity.AllCourses
+		eng233013 entity.AllCourses
+		eng233014 entity.AllCourses
+		eng233015 entity.AllCourses
+		eng233016 entity.AllCourses
+		eng233033 entity.AllCourses
+		eng233055 entity.AllCourses
+		eng233072 entity.AllCourses
+		eng233073 entity.AllCourses
+		eng233074 entity.AllCourses
+		eng233075 entity.AllCourses
+		eng234011 entity.AllCourses
+		eng234013 entity.AllCourses
+		eng234014 entity.AllCourses
+		eng234015 entity.AllCourses
+		eng234016 entity.AllCourses
+		eng234017 entity.AllCourses
+		eng234018 entity.AllCourses
+		eng234019 entity.AllCourses
+		eng234033 entity.AllCourses
+		eng234035 entity.AllCourses
+		eng234041 entity.AllCourses
+		eng234042 entity.AllCourses
+		eng234031 entity.AllCourses
+		eng234032 entity.AllCourses
+		eng234053 entity.AllCourses
+		eng234034 entity.AllCourses
+		eng234060 entity.AllCourses
+		eng234071 entity.AllCourses
+		eng234072 entity.AllCourses
+		eng234073 entity.AllCourses
+		eng234074 entity.AllCourses
+		eng234081 entity.AllCourses
+		eng234082 entity.AllCourses
+		eng234097 entity.AllCourses
+		eng234098 entity.AllCourses
+		eng234099 entity.AllCourses
+		eng234090 entity.AllCourses
+		eng234091 entity.AllCourses
+		eng234092 entity.AllCourses
+		eng234094 entity.AllCourses
+		eng202010 entity.AllCourses
+		eng203010 entity.AllCourses
+		eng204010 entity.AllCourses
+		eng202020 entity.AllCourses
+		eng203020 entity.AllCourses
+		eng204020 entity.AllCourses
+		eng292001 entity.AllCourses
+		eng292111 entity.AllCourses
+		eng292113 entity.AllCourses
+		eng292115 entity.AllCourses
+		eng292141 entity.AllCourses
+		eng292142 entity.AllCourses
+		eng292131 entity.AllCourses
+		eng293131 entity.AllCourses
+		eng293132 entity.AllCourses
+		eng293151 entity.AllCourses
+		eng293152 entity.AllCourses
+		eng293153 entity.AllCourses
+		eng293154 entity.AllCourses
+		a1101021  entity.AllCourses
+		a1101022  entity.AllCourses
+		a1101023  entity.AllCourses
+		a1101031  entity.AllCourses
+		a1101032  entity.AllCourses
+		a1101033  entity.AllCourses
 	)
 
 	db.First(&admin, "username = ?", "admin")
@@ -2174,140 +2175,139 @@ func SeedUserAllCourses() {
 	db.First(&a1101033, "code = ?", "1101033")
 
 	enrollments := []entity.UserAllCourses{
-	
-	{UserID: c1234.ID, AllCoursesID: eng231001.ID},
-	{UserID: c1234.ID, AllCoursesID: eng232001.ID},
-	{UserID: i1234.ID, AllCoursesID: eng233001.ID},
 
-	{UserID: a1234.ID, AllCoursesID: eng232003.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng232011.ID},
-	{UserID: a1234.ID, AllCoursesID: eng232011.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng234080.ID},
-	{UserID: a1234.ID, AllCoursesID: eng234080.ID},
-	{UserID: b1234.ID, AllCoursesID: eng234080.ID},
-	{UserID: c1234.ID, AllCoursesID: eng234080.ID},
-	{UserID: d1234.ID, AllCoursesID: eng234080.ID},
-	{UserID: e1234.ID, AllCoursesID: eng234080.ID},
-	{UserID: f1234.ID, AllCoursesID: eng234080.ID},
-	{UserID: g1234.ID, AllCoursesID: eng234080.ID},
-	{UserID: h1234.ID, AllCoursesID: eng234080.ID},
-	{UserID: i1234.ID, AllCoursesID: eng234080.ID},
-	{UserID: i1234.ID, AllCoursesID: eng232031.ID},
-	{UserID: e1234.ID, AllCoursesID: eng232032.ID},
-	{UserID: e1234.ID, AllCoursesID: eng233031.ID},
-	{UserID: e1234.ID, AllCoursesID: eng233032.ID},
-	{UserID: f1234.ID, AllCoursesID: eng232051.ID},
-	{UserID: d1234.ID, AllCoursesID: eng233051.ID},
-	{UserID: g1234.ID, AllCoursesID: eng233052.ID},
-	{UserID: h1234.ID, AllCoursesID: eng233053.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng233054.ID},
-	{UserID: a1234.ID, AllCoursesID: eng233054.ID},
-	{UserID: b1234.ID, AllCoursesID: eng232071.ID},
-	{UserID: g1234.ID, AllCoursesID: eng232071.ID},
-	{UserID: b1234.ID, AllCoursesID: eng232072.ID},
-	{UserID: g1234.ID, AllCoursesID: eng232072.ID},
-	{UserID: b1234.ID, AllCoursesID: eng232073.ID},
-	{UserID: b1234.ID, AllCoursesID: eng232074.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng232075.ID},
-	{UserID: i1234.ID, AllCoursesID: eng232076.ID},
-	{UserID: b1234.ID, AllCoursesID: eng232077.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng233012.ID},
-	{UserID: c1234.ID, AllCoursesID: eng233013.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng233014.ID},
-	{UserID: d1234.ID, AllCoursesID: eng233015.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng233016.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng233033.ID},
-	{UserID: h1234.ID, AllCoursesID: eng233055.ID},
-	{UserID: b1234.ID, AllCoursesID: eng233072.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng233073.ID},
-	{UserID: a1234.ID, AllCoursesID: eng233074.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng233075.ID},
-	{UserID: d1234.ID, AllCoursesID: eng234011.ID},
-	{UserID: g1234.ID, AllCoursesID: eng234013.ID},
-	{UserID: i1234.ID, AllCoursesID: eng234014.ID},
-	{UserID: c1234.ID, AllCoursesID: eng234015.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng234016.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng234017.ID},
-	{UserID: i1234.ID, AllCoursesID: eng234018.ID},
-	{UserID: a1234.ID, AllCoursesID: eng234019.ID},
-	{UserID: e1234.ID, AllCoursesID: eng234033.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng234035.ID},
-	{UserID: h1234.ID, AllCoursesID: eng234041.ID},
-	{UserID: h1234.ID, AllCoursesID: eng234042.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng234031.ID},
-	{UserID: b1234.ID, AllCoursesID: eng234032.ID},
-	{UserID: g1234.ID, AllCoursesID: eng234032.ID},
-	{UserID: g1234.ID, AllCoursesID: eng234053.ID},
-	{UserID: h1234.ID, AllCoursesID: eng234034.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng234060.ID},
-	{UserID: e1234.ID, AllCoursesID: eng234071.ID},
-	{UserID: g1234.ID, AllCoursesID: eng234072.ID},
-	{UserID: b1234.ID, AllCoursesID: eng234073.ID},
-	{UserID: b1234.ID, AllCoursesID: eng234074.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng234081.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng234082.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng234097.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng234098.ID},
-	{UserID: ss1234.ID, AllCoursesID: eng234099.ID},
+		{UserID: c1234.ID, AllCoursesID: eng231001.ID},
+		{UserID: c1234.ID, AllCoursesID: eng232001.ID},
+		{UserID: i1234.ID, AllCoursesID: eng233001.ID},
 
-	{UserID: admin.ID, AllCoursesID: ist201001.ID},
-	{UserID: admin.ID, AllCoursesID: ist201002.ID},
-	{UserID: admin.ID, AllCoursesID: ist201003.ID},
-	{UserID: admin.ID, AllCoursesID: ist201004.ID},
-	{UserID: admin.ID, AllCoursesID: ist202001.ID},
-	{UserID: admin.ID, AllCoursesID: ist202002.ID},
-	{UserID: admin.ID, AllCoursesID: ist301101.ID},
-	{UserID: admin.ID, AllCoursesID: ist301102.ID},
-	{UserID: admin.ID, AllCoursesID: ist301103.ID},
-	{UserID: admin.ID, AllCoursesID: ist301104.ID},
-	{UserID: admin.ID, AllCoursesID: ist301105.ID},
-	{UserID: admin.ID, AllCoursesID: dgt000140.ID},
-	{UserID: admin.ID, AllCoursesID: eng201110.ID},
-	{UserID: admin.ID, AllCoursesID: eng511901.ID},
-	{UserID: admin.ID, AllCoursesID: iph034013.ID},
-	{UserID: admin.ID, AllCoursesID: ist201501.ID},
-	{UserID: admin.ID, AllCoursesID: ist201502.ID},
-	{UserID: admin.ID, AllCoursesID: ist201503.ID},
-	{UserID: admin.ID, AllCoursesID: ist201504.ID},
-	{UserID: admin.ID, AllCoursesID: ist202501.ID},
-	{UserID: admin.ID, AllCoursesID: ist202502.ID},
-	{UserID: admin.ID, AllCoursesID: ist202503.ID},
-	{UserID: admin.ID, AllCoursesID: ist202504.ID},
-	{UserID: admin.ID, AllCoursesID: ist202505.ID},
-	{UserID: admin.ID, AllCoursesID: eng201010.ID},
+		{UserID: a1234.ID, AllCoursesID: eng232003.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng232011.ID},
+		{UserID: a1234.ID, AllCoursesID: eng232011.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng234080.ID},
+		{UserID: a1234.ID, AllCoursesID: eng234080.ID},
+		{UserID: b1234.ID, AllCoursesID: eng234080.ID},
+		{UserID: c1234.ID, AllCoursesID: eng234080.ID},
+		{UserID: d1234.ID, AllCoursesID: eng234080.ID},
+		{UserID: e1234.ID, AllCoursesID: eng234080.ID},
+		{UserID: f1234.ID, AllCoursesID: eng234080.ID},
+		{UserID: g1234.ID, AllCoursesID: eng234080.ID},
+		{UserID: h1234.ID, AllCoursesID: eng234080.ID},
+		{UserID: i1234.ID, AllCoursesID: eng234080.ID},
+		{UserID: i1234.ID, AllCoursesID: eng232031.ID},
+		{UserID: e1234.ID, AllCoursesID: eng232032.ID},
+		{UserID: e1234.ID, AllCoursesID: eng233031.ID},
+		{UserID: e1234.ID, AllCoursesID: eng233032.ID},
+		{UserID: f1234.ID, AllCoursesID: eng232051.ID},
+		{UserID: d1234.ID, AllCoursesID: eng233051.ID},
+		{UserID: g1234.ID, AllCoursesID: eng233052.ID},
+		{UserID: h1234.ID, AllCoursesID: eng233053.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng233054.ID},
+		{UserID: a1234.ID, AllCoursesID: eng233054.ID},
+		{UserID: b1234.ID, AllCoursesID: eng232071.ID},
+		{UserID: g1234.ID, AllCoursesID: eng232071.ID},
+		{UserID: b1234.ID, AllCoursesID: eng232072.ID},
+		{UserID: g1234.ID, AllCoursesID: eng232072.ID},
+		{UserID: b1234.ID, AllCoursesID: eng232073.ID},
+		{UserID: b1234.ID, AllCoursesID: eng232074.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng232075.ID},
+		{UserID: i1234.ID, AllCoursesID: eng232076.ID},
+		{UserID: b1234.ID, AllCoursesID: eng232077.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng233012.ID},
+		{UserID: c1234.ID, AllCoursesID: eng233013.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng233014.ID},
+		{UserID: d1234.ID, AllCoursesID: eng233015.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng233016.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng233033.ID},
+		{UserID: h1234.ID, AllCoursesID: eng233055.ID},
+		{UserID: b1234.ID, AllCoursesID: eng233072.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng233073.ID},
+		{UserID: a1234.ID, AllCoursesID: eng233074.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng233075.ID},
+		{UserID: d1234.ID, AllCoursesID: eng234011.ID},
+		{UserID: g1234.ID, AllCoursesID: eng234013.ID},
+		{UserID: i1234.ID, AllCoursesID: eng234014.ID},
+		{UserID: c1234.ID, AllCoursesID: eng234015.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng234016.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng234017.ID},
+		{UserID: i1234.ID, AllCoursesID: eng234018.ID},
+		{UserID: a1234.ID, AllCoursesID: eng234019.ID},
+		{UserID: e1234.ID, AllCoursesID: eng234033.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng234035.ID},
+		{UserID: h1234.ID, AllCoursesID: eng234041.ID},
+		{UserID: h1234.ID, AllCoursesID: eng234042.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng234031.ID},
+		{UserID: b1234.ID, AllCoursesID: eng234032.ID},
+		{UserID: g1234.ID, AllCoursesID: eng234032.ID},
+		{UserID: g1234.ID, AllCoursesID: eng234053.ID},
+		{UserID: h1234.ID, AllCoursesID: eng234034.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng234060.ID},
+		{UserID: e1234.ID, AllCoursesID: eng234071.ID},
+		{UserID: g1234.ID, AllCoursesID: eng234072.ID},
+		{UserID: b1234.ID, AllCoursesID: eng234073.ID},
+		{UserID: b1234.ID, AllCoursesID: eng234074.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng234081.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng234082.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng234097.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng234098.ID},
+		{UserID: ss1234.ID, AllCoursesID: eng234099.ID},
 
-	{UserID: admin.ID, AllCoursesID: eng251010.ID},
-	{UserID: admin.ID, AllCoursesID: eng311001.ID},
-	{UserID: admin.ID, AllCoursesID: eng234090.ID},
-	{UserID: admin.ID, AllCoursesID: eng234091.ID},
-	{UserID: admin.ID, AllCoursesID: eng234092.ID},
-	{UserID: admin.ID, AllCoursesID: eng234094.ID},
-	{UserID: admin.ID, AllCoursesID: eng202010.ID},
-	{UserID: admin.ID, AllCoursesID: eng203010.ID},
-	{UserID: admin.ID, AllCoursesID: eng204010.ID},
-	{UserID: admin.ID, AllCoursesID: eng202020.ID},
-	{UserID: admin.ID, AllCoursesID: eng203020.ID},
-	{UserID: admin.ID, AllCoursesID: eng204020.ID},
-	{UserID: admin.ID, AllCoursesID: eng292001.ID},
-	{UserID: admin.ID, AllCoursesID: eng292111.ID},
-	{UserID: admin.ID, AllCoursesID: eng292113.ID},
-	{UserID: admin.ID, AllCoursesID: eng292115.ID},
-	{UserID: admin.ID, AllCoursesID: eng292141.ID},
-	{UserID: admin.ID, AllCoursesID: eng292142.ID},
-	{UserID: admin.ID, AllCoursesID: eng292131.ID},
-	{UserID: admin.ID, AllCoursesID: eng293131.ID},
-	{UserID: admin.ID, AllCoursesID: eng293132.ID},
-	{UserID: admin.ID, AllCoursesID: eng293151.ID},
-	{UserID: admin.ID, AllCoursesID: eng293152.ID},
-	{UserID: admin.ID, AllCoursesID: eng293153.ID},
-	{UserID: admin.ID, AllCoursesID: eng293154.ID},
-	{UserID: admin.ID, AllCoursesID: a1101021.ID},
-	{UserID: admin.ID, AllCoursesID: a1101022.ID},
-	{UserID: admin.ID, AllCoursesID: a1101023.ID},
-	{UserID: admin.ID, AllCoursesID: a1101031.ID},
-	{UserID: admin.ID, AllCoursesID: a1101032.ID},
-	{UserID: admin.ID, AllCoursesID: a1101033.ID},
+		{UserID: admin.ID, AllCoursesID: ist201001.ID},
+		{UserID: admin.ID, AllCoursesID: ist201002.ID},
+		{UserID: admin.ID, AllCoursesID: ist201003.ID},
+		{UserID: admin.ID, AllCoursesID: ist201004.ID},
+		{UserID: admin.ID, AllCoursesID: ist202001.ID},
+		{UserID: admin.ID, AllCoursesID: ist202002.ID},
+		{UserID: admin.ID, AllCoursesID: ist301101.ID},
+		{UserID: admin.ID, AllCoursesID: ist301102.ID},
+		{UserID: admin.ID, AllCoursesID: ist301103.ID},
+		{UserID: admin.ID, AllCoursesID: ist301104.ID},
+		{UserID: admin.ID, AllCoursesID: ist301105.ID},
+		{UserID: admin.ID, AllCoursesID: dgt000140.ID},
+		{UserID: admin.ID, AllCoursesID: eng201110.ID},
+		{UserID: admin.ID, AllCoursesID: eng511901.ID},
+		{UserID: admin.ID, AllCoursesID: iph034013.ID},
+		{UserID: admin.ID, AllCoursesID: ist201501.ID},
+		{UserID: admin.ID, AllCoursesID: ist201502.ID},
+		{UserID: admin.ID, AllCoursesID: ist201503.ID},
+		{UserID: admin.ID, AllCoursesID: ist201504.ID},
+		{UserID: admin.ID, AllCoursesID: ist202501.ID},
+		{UserID: admin.ID, AllCoursesID: ist202502.ID},
+		{UserID: admin.ID, AllCoursesID: ist202503.ID},
+		{UserID: admin.ID, AllCoursesID: ist202504.ID},
+		{UserID: admin.ID, AllCoursesID: ist202505.ID},
+		{UserID: admin.ID, AllCoursesID: eng201010.ID},
 
+		{UserID: admin.ID, AllCoursesID: eng251010.ID},
+		{UserID: admin.ID, AllCoursesID: eng311001.ID},
+		{UserID: admin.ID, AllCoursesID: eng234090.ID},
+		{UserID: admin.ID, AllCoursesID: eng234091.ID},
+		{UserID: admin.ID, AllCoursesID: eng234092.ID},
+		{UserID: admin.ID, AllCoursesID: eng234094.ID},
+		{UserID: admin.ID, AllCoursesID: eng202010.ID},
+		{UserID: admin.ID, AllCoursesID: eng203010.ID},
+		{UserID: admin.ID, AllCoursesID: eng204010.ID},
+		{UserID: admin.ID, AllCoursesID: eng202020.ID},
+		{UserID: admin.ID, AllCoursesID: eng203020.ID},
+		{UserID: admin.ID, AllCoursesID: eng204020.ID},
+		{UserID: admin.ID, AllCoursesID: eng292001.ID},
+		{UserID: admin.ID, AllCoursesID: eng292111.ID},
+		{UserID: admin.ID, AllCoursesID: eng292113.ID},
+		{UserID: admin.ID, AllCoursesID: eng292115.ID},
+		{UserID: admin.ID, AllCoursesID: eng292141.ID},
+		{UserID: admin.ID, AllCoursesID: eng292142.ID},
+		{UserID: admin.ID, AllCoursesID: eng292131.ID},
+		{UserID: admin.ID, AllCoursesID: eng293131.ID},
+		{UserID: admin.ID, AllCoursesID: eng293132.ID},
+		{UserID: admin.ID, AllCoursesID: eng293151.ID},
+		{UserID: admin.ID, AllCoursesID: eng293152.ID},
+		{UserID: admin.ID, AllCoursesID: eng293153.ID},
+		{UserID: admin.ID, AllCoursesID: eng293154.ID},
+		{UserID: admin.ID, AllCoursesID: a1101021.ID},
+		{UserID: admin.ID, AllCoursesID: a1101022.ID},
+		{UserID: admin.ID, AllCoursesID: a1101023.ID},
+		{UserID: admin.ID, AllCoursesID: a1101031.ID},
+		{UserID: admin.ID, AllCoursesID: a1101032.ID},
+		{UserID: admin.ID, AllCoursesID: a1101033.ID},
 	}
 	for _, enroll := range enrollments {
 		db.Where("user_id = ? AND all_courses_id = ?", enroll.UserID, enroll.AllCoursesID).FirstOrCreate(&enroll)
@@ -3483,12 +3483,12 @@ func SeedTimeFixedCourses() {
 	// 		fmt.Println("Inserted or found:", s)
 	// 	}
 	// }
-		seedDB := db.Session(&gorm.Session{
+	seedDB := db.Session(&gorm.Session{
 		Logger: logger.Default.LogMode(logger.Silent), // เงียบ SQL/record not found
 	})
 
 	for i := range entries {
-		e := entries[i] // กันปัญหา pointer กับ range variable
+		e := entries[i]             // กันปัญหา pointer กับ range variable
 		_ = seedDB.Create(&e).Error // ใส่อย่างเดียว ไม่พิมพ์อะไรออก
 	}
 }
@@ -3543,7 +3543,7 @@ func SeedSchedules() {
 			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
 			OfferedCoursesID: 5,
 		},
-				{
+		{
 			NameTable:        "ปีการศึกษา 2567 เทอม 1",
 			SectionNumber:    2,
 			DayOfWeek:        "พฤหัสบดี",
