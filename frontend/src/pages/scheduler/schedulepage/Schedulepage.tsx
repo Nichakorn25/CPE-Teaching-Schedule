@@ -4967,7 +4967,6 @@ const exportScheduleToXLSX = async () => {
                 const eh = parseInt(sch.endTime.split(":")[0], 10);
                 if (startHour >= sh && startHour < eh) {
                   cellValue = `SEC:${subjectInfo.section}`;
-                  
                   // ถ้ามีห้องแลป ให้รวมในเซลเดียวกันด้วย \n
                   if (subjectInfo.laboratoryRoom && subjectInfo.laboratoryRoom.trim() !== "") {
                     cellValue = `SEC:${subjectInfo.section}\n${subjectInfo.laboratoryRoom}`;
@@ -4985,7 +4984,8 @@ const exportScheduleToXLSX = async () => {
             sheet.cell(crefTop).value(cellValue)
               .style('horizontalAlignment', 'center')
               .style('verticalAlignment', 'center')
-              .style('wrapText', true); // เพื่อให้แสดงหลายบรรทัดในเซลเดียวกัน
+              .style('wrapText', true) // เพื่อให้แสดงหลายบรรทัดในเซลเดียวกัน
+              .style('fontSize', 8);
 
             // ใส่สีถ้ามีเนื้อหา
             if (cellValue && cellValue.includes("SEC:")) {
