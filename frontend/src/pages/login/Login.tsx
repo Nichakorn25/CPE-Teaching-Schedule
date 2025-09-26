@@ -6,6 +6,8 @@ import {
   ChangePasswordInterface,
 } from "../../interfaces/SignIn";
 import Swal from "sweetalert2";
+// Import login video
+import loginVideo from "../../assets/login.mp4";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
