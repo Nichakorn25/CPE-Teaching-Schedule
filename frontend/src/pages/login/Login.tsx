@@ -344,7 +344,7 @@ const LoginPage: React.FC = () => {
                   type="password"
                   id="Password"
                   name="Password"
-                  placeholder="🔑 password"
+                  placeholder="🔒 password"
                   className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
                 />
               </div>
