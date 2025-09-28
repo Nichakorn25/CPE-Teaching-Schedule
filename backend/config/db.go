@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
+	// "os"
 	"time"
 
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
-	"github.com/joho/godotenv"
+	// "github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -22,72 +22,16 @@ func DB() *gorm.DB {
 	return db
 }
 
-// func CreateDatabase() {
-// 	dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
-// 	// dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
-// 	dbSQL, err := sql.Open("postgres", dsn)
-// 	if err != nil {
-// 		log.Fatal("Failed to connect to PostgreSQL:", err)
-// 	}
-// 	defer dbSQL.Close()
-
-// 	dbName := "cpe_schedule"
-// 	_, err = dbSQL.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
-// 	if err != nil {
-// 		fmt.Println("Database may already exist:", err)
-// 	} else {
-// 		fmt.Println("Database created successfully")
-// 	}
-// }
-
-// func ConnectionDB() {
-// 	CreateDatabase()
-// 	dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
-// 	// dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
-// 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-// 	if err != nil {
-// 		panic("failed to connect database")
-// 	}
-
-// 	fmt.Println("connected to database")
-// 	db = database
-// }
-/////////////////////////////////////////////////////////////////////////////////////////////
-
-func loadEnv() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("No .env file found, using system environment variables")
-	}
-}
-
-func getDSN(withDB bool) string {
-	host := os.Getenv("DB_HOST")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	port := os.Getenv("DB_PORT")
-	sslmode := os.Getenv("DB_SSLMODE")
-	timezone := os.Getenv("DB_TIMEZONE")
-
-	if withDB {
-		dbname := os.Getenv("DB_NAME")
-		return fmt.Sprintf(
-			"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
-			host, user, password, dbname, port, sslmode, timezone,
-		)
-	}
-
-	return fmt.Sprintf("host=%s user=%s password=%s dbname=postgres port=%s sslmode=%s", host, user, password, port, sslmode)
-}
-
 func CreateDatabase() {
-	dbSQL, err := sql.Open("postgres", getDSN(false))
+	// dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
+	dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
+	dbSQL, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal("Failed to connect to PostgreSQL:", err)
 	}
 	defer dbSQL.Close()
 
-	dbName := os.Getenv("DB_NAME")
+	dbName := "cpe_schedule"
 	_, err = dbSQL.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
 	if err != nil {
 		fmt.Println("Database may already exist:", err)
@@ -97,10 +41,10 @@ func CreateDatabase() {
 }
 
 func ConnectionDB() {
-	loadEnv()
 	CreateDatabase()
-
-	database, err := gorm.Open(postgres.Open(getDSN(true)), &gorm.Config{})
+	// dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
+	dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
+	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
@@ -108,6 +52,62 @@ func ConnectionDB() {
 	fmt.Println("connected to database")
 	db = database
 }
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+// func loadEnv() {
+// 	err := godotenv.Load()
+// 	if err != nil {
+// 		log.Println("No .env file found, using system environment variables")
+// 	}
+// }
+
+// func getDSN(withDB bool) string {
+// 	host := os.Getenv("DB_HOST")
+// 	user := os.Getenv("DB_USER")
+// 	password := os.Getenv("DB_PASSWORD")
+// 	port := os.Getenv("DB_PORT")
+// 	sslmode := os.Getenv("DB_SSLMODE")
+// 	timezone := os.Getenv("DB_TIMEZONE")
+
+// 	if withDB {
+// 		dbname := os.Getenv("DB_NAME")
+// 		return fmt.Sprintf(
+// 			"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
+// 			host, user, password, dbname, port, sslmode, timezone,
+// 		)
+// 	}
+
+// 	return fmt.Sprintf("host=%s user=%s password=%s dbname=postgres port=%s sslmode=%s", host, user, password, port, sslmode)
+// }
+
+// func CreateDatabase() {
+// 	dbSQL, err := sql.Open("postgres", getDSN(false))
+// 	if err != nil {
+// 		log.Fatal("Failed to connect to PostgreSQL:", err)
+// 	}
+// 	defer dbSQL.Close()
+
+// 	dbName := os.Getenv("DB_NAME")
+// 	_, err = dbSQL.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
+// 	if err != nil {
+// 		fmt.Println("Database may already exist:", err)
+// 	} else {
+// 		fmt.Println("Database created successfully")
+// 	}
+// }
+
+// func ConnectionDB() {
+// 	loadEnv()
+// 	CreateDatabase()
+
+// 	database, err := gorm.Open(postgres.Open(getDSN(true)), &gorm.Config{})
+// 	if err != nil {
+// 		panic("failed to connect database")
+// 	}
+
+// 	fmt.Println("connected to database")
+// 	db = database
+// }
 
 func SetupDatabase() {
 	err := db.AutoMigrate(
@@ -2390,6 +2390,27 @@ func SeedTeachingAssistants() {
 			PhoneNumber: "0898765432",
 			TitleID:     11,
 		},
+		{
+			Firstname:   "อำนวย",
+			Lastname:    "ทีจันทึก",
+			Email:       "umnual.m@g.sut.ac.th",
+			PhoneNumber: "0898765432",
+			TitleID:     9,
+		},
+		{
+			Firstname:   "สมิง",
+			Lastname:    "เติมพรมราช",
+			Email:       "saming.m@g.sut.ac.th",
+			PhoneNumber: "0898765432",
+			TitleID:     9,
+		},
+				{
+			Firstname:   "แสงเพ็ชร",
+			Lastname:    "งอนชัยภูมิ",
+			Email:       "sangpetch.m@g.sut.ac.th",
+			PhoneNumber: "0898765432",
+			TitleID:     9,
+		},
 	}
 
 	for _, ta := range assistants {
@@ -2437,36 +2458,6 @@ func SeedOfferedCourses() {
 			Capacity:     300,
 			IsFixCourses: true,
 			UserID:       1,
-			AllCoursesID: 2,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 3,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 4,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
 			AllCoursesID: 5,
 			LaboratoryID: nil,
 		},
@@ -2487,36 +2478,6 @@ func SeedOfferedCourses() {
 			Capacity:     300,
 			IsFixCourses: true,
 			UserID:       1,
-			AllCoursesID: 7,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 8,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      2,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 9,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
 			AllCoursesID: 10,
 			LaboratoryID: nil,
 		},
@@ -2527,147 +2488,7 @@ func SeedOfferedCourses() {
 			Capacity:     300,
 			IsFixCourses: true,
 			UserID:       1,
-			AllCoursesID: 11,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      2,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 12,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
 			AllCoursesID: 13,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 14,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 15,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 16,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 17,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 18,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 19,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      2,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 20,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 21,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 22,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 23,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     300,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 24,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      27,
-			Capacity:     10,
-			IsFixCourses: true,
-			UserID:       1,
-			AllCoursesID: 26,
 			LaboratoryID: nil,
 		},
 		{
@@ -2684,51 +2505,11 @@ func SeedOfferedCourses() {
 			Year:         2568,
 			Term:         2,
 			Section:      1,
-			Capacity:     90,
-			IsFixCourses: false,
-			UserID:       11,
-			AllCoursesID: 28,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      2,
-			Capacity:     55,
-			IsFixCourses: false,
-			UserID:       7,
-			AllCoursesID: 31,
-			LaboratoryID: &labID3,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      2,
-			Capacity:     45,
-			IsFixCourses: false,
-			UserID:       7,
-			AllCoursesID: 36,
-			LaboratoryID: &labID3,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     90,
-			IsFixCourses: false,
-			UserID:       6,
-			AllCoursesID: 39,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
 			Capacity:     120,
 			IsFixCourses: false,
-			UserID:       4,
-			AllCoursesID: 43,
-			LaboratoryID: &labID2,
+			UserID:       1,
+			AllCoursesID: 34,
+			LaboratoryID: nil,
 		},
 		{
 			Year:         2568,
@@ -2737,202 +2518,145 @@ func SeedOfferedCourses() {
 			Capacity:     60,
 			IsFixCourses: false,
 			UserID:       1,
-			AllCoursesID: 47,
+			AllCoursesID: 35,
+			LaboratoryID: &labID3,
+		},
+		{
+			Year:         2568,
+			Term:         2,
+			Section:      2,
+			Capacity:     30,
+			IsFixCourses: false,
+			UserID:       1,
+			AllCoursesID: 37,
+			LaboratoryID: &labID2,
+		},
+		{
+			Year:         2568,
+			Term:         2,
+			Section:      4,
+			Capacity:     30,
+			IsFixCourses: false,
+			UserID:       1,
+			AllCoursesID: 44,
+			LaboratoryID: &labID2,
+		},
+		{
+			Year:         2568,
+			Term:         2,
+			Section:      1,
+			Capacity:     120,
+			IsFixCourses: false,
+			UserID:       1,
+			AllCoursesID: 45,
 			LaboratoryID: nil,
 		},
 		{
 			Year:         2568,
 			Term:         2,
 			Section:      1,
-			Capacity:     60,
+			Capacity:     40,
 			IsFixCourses: false,
-			UserID:       12,
-			AllCoursesID: 97,
+			UserID:       1,
+			AllCoursesID: 53,
 			LaboratoryID: nil,
 		},
 		{
 			Year:         2568,
 			Term:         2,
 			Section:      1,
-			Capacity:     60,
+			Capacity:     120,
 			IsFixCourses: false,
-			UserID:       15,
-			AllCoursesID: 98,
+			UserID:       1,
+			AllCoursesID: 40,
 			LaboratoryID: nil,
 		},
 		{
 			Year:         2568,
 			Term:         2,
 			Section:      1,
-			Capacity:     60,
+			Capacity:     120,
 			IsFixCourses: false,
-			UserID:       13,
-			AllCoursesID: 99,
+			UserID:       1,
+			AllCoursesID: 42,
+			LaboratoryID: &labID3,
+		},
+		{
+			Year:         2568,
+			Term:         2,
+			Section:      1,
+			Capacity:     40,
+			IsFixCourses: false,
+			UserID:       1,
+			AllCoursesID: 56,
 			LaboratoryID: nil,
 		},
 		{
 			Year:         2568,
 			Term:         2,
 			Section:      1,
-			Capacity:     60,
+			Capacity:     40,
 			IsFixCourses: false,
-			UserID:       16,
-			AllCoursesID: 100,
+			UserID:       1,
+			AllCoursesID: 61,
 			LaboratoryID: nil,
 		},
 		{
 			Year:         2568,
 			Term:         2,
 			Section:      1,
-			Capacity:     60,
+			Capacity:     40,
 			IsFixCourses: false,
-			UserID:       14,
-			AllCoursesID: 101,
+			UserID:       1,
+			AllCoursesID: 67,
 			LaboratoryID: nil,
 		},
 		{
 			Year:         2568,
 			Term:         2,
 			Section:      1,
-			Capacity:     60,
+			Capacity:     40,
 			IsFixCourses: false,
-			UserID:       12,
-			AllCoursesID: 102,
-			LaboratoryID: nil,
+			UserID:       1,
+			AllCoursesID: 68,
+			LaboratoryID: &labID3,
 		},
 		{
 			Year:         2568,
 			Term:         2,
 			Section:      1,
-			Capacity:     60,
+			Capacity:     40,
 			IsFixCourses: false,
-			UserID:       16,
-			AllCoursesID: 103,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     60,
-			IsFixCourses: false,
-			UserID:       13,
-			AllCoursesID: 104,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     60,
-			IsFixCourses: false,
-			UserID:       12,
-			AllCoursesID: 105,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     60,
-			IsFixCourses: false,
-			UserID:       15,
-			AllCoursesID: 106,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     60,
-			IsFixCourses: false,
-			UserID:       14,
-			AllCoursesID: 107,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     60,
-			IsFixCourses: false,
-			UserID:       16,
-			AllCoursesID: 108,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     60,
-			IsFixCourses: false,
-			UserID:       17,
-			AllCoursesID: 110,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     60,
-			IsFixCourses: false,
-			UserID:       17,
-			AllCoursesID: 111,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     60,
-			IsFixCourses: false,
-			UserID:       17,
-			AllCoursesID: 112,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     60,
-			IsFixCourses: false,
-			UserID:       17,
-			AllCoursesID: 113,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     60,
-			IsFixCourses: false,
-			UserID:       17,
-			AllCoursesID: 114,
-			LaboratoryID: nil,
-		},
-		{
-			Year:         2568,
-			Term:         2,
-			Section:      1,
-			Capacity:     60,
-			IsFixCourses: false,
-			UserID:       17,
-			AllCoursesID: 115,
+			UserID:       1,
+			AllCoursesID: 79,
 			LaboratoryID: nil,
 		},
 	}
-	for _, c := range courses {
-		var oc entity.OfferedCourses
-		tx := db.Where("year = ? AND term = ? AND all_courses_id = ?", c.Year, c.Term, c.AllCoursesID).First(&oc)
+	// for _, c := range courses {
+	// 	var oc entity.OfferedCourses
+	// 	tx := db.Where("year = ? AND term = ? AND all_courses_id = ?", c.Year, c.Term, c.AllCoursesID).First(&oc)
 
-		if tx.Error == gorm.ErrRecordNotFound {
-			if err := db.Create(&c).Error; err != nil {
-				fmt.Println("Insert error:", err)
-			}
-		} else if tx.Error != nil {
-			fmt.Println("Query error:", tx.Error)
-		}
-	}
+	// 	if tx.Error == gorm.ErrRecordNotFound {
+	// 		if err := db.Create(&c).Error; err != nil {
+	// 			fmt.Println("Insert error:", err)
+	// 		}
+	// 	} else if tx.Error != nil {
+	// 		fmt.Println("Query error:", tx.Error)
+	// 	}
+	// }
+	for _, c := range courses {
+    var oc entity.OfferedCourses
+    tx := db.Where("year = ? AND term = ? AND all_courses_id = ?", c.Year, c.Term, c.AllCoursesID).First(&oc)
+
+    if tx.Error == gorm.ErrRecordNotFound {
+        if err := db.Create(&c).Error; err != nil {
+            fmt.Println("Insert error:", err)
+        }
+    } else if tx.Error != nil {
+        fmt.Println("Query error:", tx.Error)
+    }
+}
+
 
 }
 func parseTimeWithLoc(layout, value string, loc *time.Location) time.Time {
@@ -2954,551 +2678,59 @@ func SeedTimeFixedCourses() {
 
 	entries := []entity.TimeFixedCourses{
 		{
-			Year:         2568,
-			Term:         2,
-			DayOfWeek:    "อังคาร",
-			StartTime:    parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:      parseTimeWithLoc(layout, "11:00", loc),
-			RoomFix:      "Lecture C",
-			Section:      1,
-			Capacity:     300,
-			AllCoursesID: 2,
-			ScheduleID:   1,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "ศุกร์",
+			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
 			StartTime: parseTimeWithLoc(layout, "13:00", loc),
 			EndTime:   parseTimeWithLoc(layout, "16:00", loc),
-			RoomFix:   "Lecture A", Section: 1, Capacity: 300,
-			AllCoursesID: 3, ScheduleID: 2,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "14:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "17:00", loc),
-			RoomFix:   "Lecture C", Section: 1, Capacity: 300,
-			AllCoursesID: 4, ScheduleID: 3,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "Lecture B", Section: 1, Capacity: 300,
-			AllCoursesID: 5, ScheduleID: 4,
+			RoomFix:   "B4101", Section: 1, Capacity: 1500,
+			AllCoursesID: 5, ScheduleID: 1,
 		},
 		{
 			Year: 2568, Term: 2, DayOfWeek: "ศุกร์",
 			StartTime: parseTimeWithLoc(layout, "09:00", loc),
 			EndTime:   parseTimeWithLoc(layout, "12:00", loc),
-			RoomFix:   "Lecture A", Section: 1, Capacity: 300,
-			AllCoursesID: 6, ScheduleID: 5,
+			RoomFix:   "B4101", Section: 1, Capacity: 1500,
+			AllCoursesID: 6, ScheduleID: 2,
 		},
 		{
 			Year: 2568, Term: 2, DayOfWeek: "ศุกร์",
-			StartTime: parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "12:00", loc),
-			RoomFix:   "Lecture A", Section: 2, Capacity: 300,
-			AllCoursesID: 6, ScheduleID: 6,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "ศุกร์",
-			StartTime: parseTimeWithLoc(layout, "13:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "16:00", loc),
-			RoomFix:   "Lecture C", Section: 1, Capacity: 300,
-			AllCoursesID: 7, ScheduleID: 7,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "15:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "18:00", loc),
-			RoomFix:   "Lecture B", Section: 1, Capacity: 300,
-			AllCoursesID: 8, ScheduleID: 8,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "อังคาร",
-			StartTime: parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "12:00", loc),
-			RoomFix:   "Lecture C", Section: 1, Capacity: 300,
-			AllCoursesID: 9, ScheduleID: 9,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "อังคาร",
-			StartTime: parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "12:00", loc),
-			RoomFix:   "Lecture C", Section: 2, Capacity: 300,
-			AllCoursesID: 9, ScheduleID: 10,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "13:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "16:00", loc),
-			RoomFix:   "Lecture C", Section: 1, Capacity: 300,
-			AllCoursesID: 10, ScheduleID: 11,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "ศุกร์",
-			StartTime: parseTimeWithLoc(layout, "15:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "18:00", loc),
-			RoomFix:   "Lecture B", Section: 1, Capacity: 300,
-			AllCoursesID: 11, ScheduleID: 12,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
 			StartTime: parseTimeWithLoc(layout, "08:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "12:00", loc),
-			RoomFix:   "Lecture A", Section: 1, Capacity: 300,
-			AllCoursesID: 12, ScheduleID: 13,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "08:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "12:00", loc),
-			RoomFix:   "Lecture A", Section: 2, Capacity: 300,
-			AllCoursesID: 12, ScheduleID: 14,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "จันทร์",
-			StartTime: parseTimeWithLoc(layout, "13:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "14:00", loc),
-			RoomFix:   "Lecture A", Section: 1, Capacity: 300,
-			AllCoursesID: 13, ScheduleID: 15,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "อังคาร",
-			StartTime: parseTimeWithLoc(layout, "14:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "15:00", loc),
-			RoomFix:   "Lecture C", Section: 1, Capacity: 300,
-			AllCoursesID: 14, ScheduleID: 16,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "จันทร์",
-			StartTime: parseTimeWithLoc(layout, "15:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "16:00", loc),
-			RoomFix:   "Lecture A", Section: 1, Capacity: 300,
-			AllCoursesID: 15, ScheduleID: 17,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "ศุกร์",
-			StartTime: parseTimeWithLoc(layout, "16:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "17:00", loc),
-			RoomFix:   "Lecture A", Section: 1, Capacity: 300,
-			AllCoursesID: 16, ScheduleID: 18,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "18:00", loc),
-			RoomFix:   "Lecture B", Section: 1, Capacity: 300,
-			AllCoursesID: 17, ScheduleID: 19,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "จันทร์",
-			StartTime: parseTimeWithLoc(layout, "18:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "19:00", loc),
-			RoomFix:   "Lecture C", Section: 1, Capacity: 300,
-			AllCoursesID: 18, ScheduleID: 20,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "19:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "Lecture C", Section: 1, Capacity: 300,
-			AllCoursesID: 19, ScheduleID: 21,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "10:00", loc),
-			RoomFix:   "Lecture C", Section: 1, Capacity: 300,
-			AllCoursesID: 20, ScheduleID: 22,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "10:00", loc),
-			RoomFix:   "Lecture C", Section: 2, Capacity: 300,
-						AllCoursesID: 20, ScheduleID: 23,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "10:00", loc),
 			EndTime:   parseTimeWithLoc(layout, "11:00", loc),
-			RoomFix:   "Lecture C", Section: 1, Capacity: 300,
-			AllCoursesID: 21, ScheduleID: 24,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "จันทร์",
-			StartTime: parseTimeWithLoc(layout, "11:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "12:00", loc),
-			RoomFix:   "Lecture B", Section: 1, Capacity: 300,
-			AllCoursesID: 22, ScheduleID: 25,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:30", loc),
-			EndTime:   parseTimeWithLoc(layout, "18:30", loc),
-			RoomFix:   "Lecture A", Section: 1, Capacity: 300,
-			AllCoursesID: 23, ScheduleID: 26,
+			RoomFix:   "B5207", Section: 1, Capacity: 45,
+			AllCoursesID: 10, ScheduleID: 3,
 		},
 		{
 			Year: 2568, Term: 2, DayOfWeek: "ศุกร์",
 			StartTime: parseTimeWithLoc(layout, "13:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "14:00", loc),
-			RoomFix:   "Lecture B", Section: 1, Capacity: 300,
-			AllCoursesID: 24, ScheduleID: 27,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 01", Section: 1, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 28,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 02", Section: 2, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 29,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 03", Section: 3, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 30,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 04", Section: 4, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 31,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 05", Section: 5, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 32,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 06", Section: 6, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 33,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 07", Section: 7, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 34,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 08", Section: 8, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 35,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 09", Section: 9, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 36,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 10", Section: 10, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 37,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 11", Section: 11, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 38,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 12", Section: 12, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 39,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 13", Section: 13, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 40,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 01", Section: 14, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 41,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 02", Section: 15, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 42,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 03", Section: 16, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 43,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 04", Section: 17, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 44,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 05", Section: 18, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 45,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 06", Section: 19, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 46,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 07", Section: 20, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 47,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 08", Section: 21, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 48,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 09", Section: 22, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 49,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 10", Section: 23, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 50,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 11", Section: 24, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 51,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 12", Section: 25, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 52,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "20:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 13", Section: 26, Capacity: 35,
-			AllCoursesID: 26, ScheduleID: 53,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "จันทร์",
-			StartTime: parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "13:00", loc),
-			RoomFix:   "DIGITAL TECH LAB 09", Section: 31, Capacity: 20,
-			AllCoursesID: 26, ScheduleID: 54,
+			EndTime:   parseTimeWithLoc(layout, "16:00", loc),
+			RoomFix:   "B3104", Section: 1, Capacity: 300,
+			AllCoursesID: 13, ScheduleID: 4,
 		},
 		{
 			Year: 2568, Term: 2, DayOfWeek: "อังคาร",
 			StartTime: parseTimeWithLoc(layout, "13:00", loc),
 			EndTime:   parseTimeWithLoc(layout, "16:00", loc),
 			RoomFix:   "DIGITAL TECH LAB 09", Section: 1, Capacity: 40,
-			AllCoursesID: 27, ScheduleID: 55,
+			AllCoursesID: 27, ScheduleID: 32,
 		},
 		{
 			Year: 2568, Term: 2, DayOfWeek: "อังคาร",
 			StartTime: parseTimeWithLoc(layout, "13:00", loc),
 			EndTime:   parseTimeWithLoc(layout, "16:00", loc),
 			RoomFix:   "DIGITAL TECH LAB 09", Section: 2, Capacity: 0,
-			AllCoursesID: 27, ScheduleID: 56,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "จันทร์",
-			StartTime: parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "11:00", loc),
-			RoomFix:   "Lecture A", Section: 1, Capacity: 10,
-			AllCoursesID: 97, ScheduleID: 253,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "10:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "13:00", loc),
-			RoomFix:   "Room 402", Section: 1, Capacity: 10,
-			AllCoursesID: 98, ScheduleID: 254,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "ศุกร์",
-			StartTime: parseTimeWithLoc(layout, "13:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "15:00", loc),
-			RoomFix:   "Lab 1", Section: 1, Capacity: 10,
-			AllCoursesID: 99, ScheduleID: 255,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "อังคาร",
-			StartTime: parseTimeWithLoc(layout, "15:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "18:00", loc),
-			RoomFix:   "Lecture B", Section: 1, Capacity: 10,
-			AllCoursesID: 100, ScheduleID: 256,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "16:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "18:00", loc),
-			RoomFix:   "Room 305", Section: 1, Capacity: 10,
-			AllCoursesID: 101, ScheduleID: 257,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "11:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "13:00", loc),
-			RoomFix:   "Lab 2", Section: 1, Capacity: 10,
-			AllCoursesID: 102, ScheduleID: 258,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "จันทร์",
-			StartTime: parseTimeWithLoc(layout, "14:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "18:00", loc),
-			RoomFix:   "Seminar Rm", Section: 1, Capacity: 10,
-			AllCoursesID: 103, ScheduleID: 259,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "ศุกร์",
-			StartTime: parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "12:00", loc),
-			RoomFix:   "Room 201", Section: 1, Capacity: 10,
-			AllCoursesID: 104, ScheduleID: 260,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "อังคาร",
-			StartTime: parseTimeWithLoc(layout, "12:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "14:00", loc),
-			RoomFix:   "Lecture C", Section: 1, Capacity: 10,
-			AllCoursesID: 105, ScheduleID: 261,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พฤหัสบดี",
-			StartTime: parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "19:00", loc),
-			RoomFix:   "Room 410", Section: 1, Capacity: 10,
-			AllCoursesID: 106, ScheduleID: 262,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "พุธ",
-			StartTime: parseTimeWithLoc(layout, "10:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "14:00", loc),
-			RoomFix:   "Lab 3", Section: 1, Capacity: 10,
-			AllCoursesID: 107, ScheduleID: 263,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "ศุกร์",
-			StartTime: parseTimeWithLoc(layout, "13:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "16:00", loc),
-			RoomFix:   "Room 108", Section: 1, Capacity: 10,
-			AllCoursesID: 108, ScheduleID: 264,
-		},
-		{
-			Year: 2568, Term: 2, DayOfWeek: "จันทร์",
-			StartTime: parseTimeWithLoc(layout, "15:00", loc),
-			EndTime:   parseTimeWithLoc(layout, "17:00", loc),
-			RoomFix:   "Lecture D", Section: 1, Capacity: 10,
-			AllCoursesID: 109, ScheduleID: 265,
+			AllCoursesID: 27, ScheduleID: 33,
 		},
 	}
-
-	// for _, entry := range entries {
-	// 	startTime, _ := time.Parse(layout, entry.StartTimeStr)
-	// 	endTime, _ := time.Parse(layout, entry.EndTimeStr)
-
-	// 	db.FirstOrCreate(&entity.TimeFixedCourses{}, &entity.TimeFixedCourses{
-	// 		Year:         entry.Year,
-	// 		Term:         entry.Term,
-	// 		DayOfWeek:    entry.DayOfWeek,
-	// 		StartTime:    startTime,
-	// 		EndTime:      endTime,
-	// 		RoomFix:      entry.RoomFix,
-	// 		Section:      entry.Section,
-	// 		Capacity:     entry.Capacity,
-	// 		AllCoursesID: entry.AllCoursesID,
-	// 		ScheduleID:   entry.ScheduleID,
-	// 	})
-	// }
-	//////////////////////////////////////////////////////////
-	// for _, entry := range entries {
-	// 	// startTime, _ := time.ParseInLocation(layout, entry.StartTime, loc)
-	// 	// endTime, _ := time.ParseInLocation(layout, entry.EndTime, loc)
-
-	// 	// ✅ Insert ใหม่ทุกครั้ง ไม่เช็คซ้ำ
-	// 	db.FirstOrCreate(&entity.TimeFixedCourses{}, &entity.TimeFixedCourses{
-	// 		Year:         entry.Year,
-	// 		Term:         entry.Term,
-	// 		DayOfWeek:    entry.DayOfWeek,
-	// 		StartTime:    entry.StartTime,
-	// 		EndTime:      entry.EndTime,
-	// 		RoomFix:      entry.RoomFix,
-	// 		Section:      entry.Section,
-	// 		Capacity:     entry.Capacity,
-	// 		AllCoursesID: entry.AllCoursesID,
-	// 		ScheduleID:   entry.ScheduleID,
-	// 	})
-	// }
-	// for _, s := range entries {
-	// 	err := db.FirstOrCreate(&entity.TimeFixedCourses{}, &s).Error
-	// 	if err != nil {
-	// 		fmt.Println("Insert error:", err)
-	// 	} else {
-	// 		fmt.Println("Inserted or found:", s)
-	// 	}
-	// }
 	seedDB := db.Session(&gorm.Session{
-		Logger: logger.Default.LogMode(logger.Silent), // เงียบ SQL/record not found
+		Logger: logger.Default.LogMode(logger.Silent), 
 	})
 
 	for i := range entries {
-		e := entries[i]             // กันปัญหา pointer กับ range variable
-		_ = seedDB.Create(&e).Error // ใส่อย่างเดียว ไม่พิมพ์อะไรออก
+		e := entries[i]            
+		_ = seedDB.Create(&e).Error 
 	}
 }
 
 // //////////////////////////////////////////////////////////// ตารางสอน ///////////////////////////////////////////////////////
-// // ยังไม่ครบ
 func SeedSchedules() {
 	layout := "15:04"
 	loc, err := time.LoadLocation("Asia/Bangkok")
@@ -3510,18 +2742,26 @@ func SeedSchedules() {
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
-			DayOfWeek:        "จันทร์",
-			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "11:00", loc),
+			DayOfWeek:        "พฤหัสบดี",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
 			OfferedCoursesID: 1,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
-			DayOfWeek:        "อังคาร",
+			DayOfWeek:        "ศุกร์",
 			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "11:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
 			OfferedCoursesID: 2,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "ศุกร์",
+			StartTime:        parseTimeWithLoc(layout, "08:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "11:00", loc),
+			OfferedCoursesID: 3,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
@@ -3529,44 +2769,44 @@ func SeedSchedules() {
 			DayOfWeek:        "ศุกร์",
 			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
 			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
-			OfferedCoursesID: 3,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "14:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "17:00", loc),
 			OfferedCoursesID: 4,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
+			DayOfWeek:        "อังคาร",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
 			OfferedCoursesID: 5,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    2,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
+			DayOfWeek:        "อังคาร",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
 			OfferedCoursesID: 5,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "อังคาร",
+			StartTime:        parseTimeWithLoc(layout, "10:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
+			OfferedCoursesID: 6,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    2,
-			DayOfWeek:        "ศุกร์",
-			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
+			DayOfWeek:        "พฤหัสบดี",
+			StartTime:        parseTimeWithLoc(layout, "10:00", loc),
 			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
 			OfferedCoursesID: 6,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
-			DayOfWeek:        "ศุกร์",
+			DayOfWeek:        "จันทร์",
 			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
 			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
 			OfferedCoursesID: 7,
@@ -3574,25 +2814,49 @@ func SeedSchedules() {
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
+			DayOfWeek:        "จันทร์",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
+			OfferedCoursesID: 7,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "จันทร์",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
+			OfferedCoursesID: 8,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
 			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "15:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "18:00", loc),
+			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
+			OfferedCoursesID: 8,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    2,
+			DayOfWeek:        "จันทร์",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
 			OfferedCoursesID: 8,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    2,
 			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "15:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "18:00", loc),
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
 			OfferedCoursesID: 8,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
-			DayOfWeek:        "อังคาร",
-			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
+			DayOfWeek:        "พุธ",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
 			OfferedCoursesID: 9,
 		},
 		{
@@ -3601,29 +2865,77 @@ func SeedSchedules() {
 			DayOfWeek:        "พุธ",
 			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
 			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
+			OfferedCoursesID: 9,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "พุธ",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
+			OfferedCoursesID: 9,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "เสาร์",
+			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
+			OfferedCoursesID: 9,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "เสาร์",
+			StartTime:        parseTimeWithLoc(layout, "16:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "19:00", loc),
+			OfferedCoursesID: 9,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "พุธ",
+			StartTime:        parseTimeWithLoc(layout, "10:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
 			OfferedCoursesID: 10,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
-			DayOfWeek:        "ศุกร์",
-			StartTime:        parseTimeWithLoc(layout, "15:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "18:00", loc),
-			OfferedCoursesID: 11,
+			DayOfWeek:        "พฤหัสบดี",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "15:00", loc),
+			OfferedCoursesID: 10,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    2,
-			DayOfWeek:        "ศุกร์",
-			StartTime:        parseTimeWithLoc(layout, "15:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "18:00", loc),
+			SectionNumber:    1,
+			DayOfWeek:        "อังคาร",
+			StartTime:        parseTimeWithLoc(layout, "10:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
 			OfferedCoursesID: 11,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
 			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "08:00", loc),
+			StartTime:        parseTimeWithLoc(layout, "15:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "17:00", loc),
+			OfferedCoursesID: 11,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "พฤหัสบดี",
+			StartTime:        parseTimeWithLoc(layout, "10:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
+			OfferedCoursesID: 12,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "ศุกร์",
+			StartTime:        parseTimeWithLoc(layout, "10:00", loc),
 			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
 			OfferedCoursesID: 12,
 		},
@@ -3631,446 +2943,115 @@ func SeedSchedules() {
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
 			DayOfWeek:        "จันทร์",
-			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "14:00", loc),
+			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
 			OfferedCoursesID: 13,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
 			DayOfWeek:        "อังคาร",
-			StartTime:        parseTimeWithLoc(layout, "14:00", loc),
+			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
+			OfferedCoursesID: 13,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    2,
+			DayOfWeek:        "จันทร์",
+			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
+			OfferedCoursesID: 13,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    2,
+			DayOfWeek:        "อังคาร",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
+			OfferedCoursesID: 13,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "อังคาร",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
 			EndTime:          parseTimeWithLoc(layout, "15:00", loc),
 			OfferedCoursesID: 14,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
-			DayOfWeek:        "จันทร์",
-			StartTime:        parseTimeWithLoc(layout, "15:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
+			DayOfWeek:        "พุธ",
+			StartTime:        parseTimeWithLoc(layout, "10:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
+			OfferedCoursesID: 14,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "อังคาร",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "15:00", loc),
 			OfferedCoursesID: 15,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
-			DayOfWeek:        "ศุกร์",
-			StartTime:        parseTimeWithLoc(layout, "16:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "17:00", loc),
+			DayOfWeek:        "พฤหัสบดี",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "15:00", loc),
+			OfferedCoursesID: 15,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "จันทร์",
+			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "15:00", loc),
 			OfferedCoursesID: 16,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
 			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "18:00", loc),
+			StartTime:        parseTimeWithLoc(layout, "10:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
+			OfferedCoursesID: 16,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "พฤหัสบดี",
+			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
+			OfferedCoursesID: 17,
+		},
+		{
+			NameTable:        "ปีการศึกษา 2568 เทอม 2",
+			SectionNumber:    1,
+			DayOfWeek:        "ศุกร์",
+			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
 			OfferedCoursesID: 17,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
 			DayOfWeek:        "จันทร์",
-			StartTime:        parseTimeWithLoc(layout, "18:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "19:00", loc),
+			StartTime:        parseTimeWithLoc(layout, "10:00", loc),
+			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
 			OfferedCoursesID: 18,
 		},
 		{
 			NameTable:        "ปีการศึกษา 2568 เทอม 2",
 			SectionNumber:    1,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "19:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 19,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    2,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "19:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 19,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    2,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "10:00", loc),
-			OfferedCoursesID: 20,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
 			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "10:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "11:00", loc),
-			OfferedCoursesID: 21,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "จันทร์",
-			StartTime:        parseTimeWithLoc(layout, "11:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
-			OfferedCoursesID: 22,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:30", loc),
-			EndTime:          parseTimeWithLoc(layout, "18:30", loc),
-			OfferedCoursesID: 23,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    2,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    3,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    4,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    5,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    6,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    7,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    8,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    9,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    10,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    11,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    12,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    13,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    14,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    15,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    16,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    17,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    18,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    19,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    20,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    21,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    22,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    23,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    24,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    25,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    26,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "20:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    27,
-			DayOfWeek:        "จันทร์",
-			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "13:00", loc),
-			OfferedCoursesID: 24,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "อังคาร",
-			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
-			OfferedCoursesID: 25,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    2,
-			DayOfWeek:        "อังคาร",
-			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
-			OfferedCoursesID: 25,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "จันทร์",
-			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "11:00", loc),
-			OfferedCoursesID: 31,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "10:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "13:00", loc),
-			OfferedCoursesID: 32,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "ศุกร์",
 			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
 			EndTime:          parseTimeWithLoc(layout, "15:00", loc),
-			OfferedCoursesID: 33,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "อังคาร",
-			StartTime:        parseTimeWithLoc(layout, "15:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "18:00", loc),
-			OfferedCoursesID: 34,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "16:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "18:00", loc),
-			OfferedCoursesID: 35,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "11:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "13:00", loc),
-			OfferedCoursesID: 36,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "จันทร์",
-			StartTime:        parseTimeWithLoc(layout, "14:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "18:00", loc),
-			OfferedCoursesID: 37,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "ศุกร์",
-			StartTime:        parseTimeWithLoc(layout, "09:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "12:00", loc),
-			OfferedCoursesID: 38,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "อังคาร",
-			StartTime:        parseTimeWithLoc(layout, "12:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "14:00", loc),
-			OfferedCoursesID: 39,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "พฤหัสบดี",
-			StartTime:        parseTimeWithLoc(layout, "17:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "19:00", loc),
-			OfferedCoursesID: 40,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "พุธ",
-			StartTime:        parseTimeWithLoc(layout, "10:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "14:00", loc),
-			OfferedCoursesID: 41,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "ศุกร์",
-			StartTime:        parseTimeWithLoc(layout, "13:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "16:00", loc),
-			OfferedCoursesID: 42,
-		},
-		{
-			NameTable:        "ปีการศึกษา 2568 เทอม 2",
-			SectionNumber:    1,
-			DayOfWeek:        "จันทร์",
-			StartTime:        parseTimeWithLoc(layout, "15:00", loc),
-			EndTime:          parseTimeWithLoc(layout, "17:00", loc),
-			OfferedCoursesID: 43,
+			OfferedCoursesID: 18,
 		},
 	}
-
-	// for _, s := range schedules {
-	// 	db.FirstOrCreate(&entity.Schedule{}, &entity.Schedule{
-	// 		NameTable:        s.NameTable,
-	// 		SectionNumber:    s.SectionNumber,
-	// 		DayOfWeek:        s.DayOfWeek,
-	// 		StartTime:        s.StartTime,
-	// 		EndTime:          s.EndTime,
-	// 		OfferedCoursesID: s.OfferedCoursesID,
-	// 	})
-	// }
 	for _, s := range schedules {
 		db.FirstOrCreate(&entity.Schedule{}, &s)
 	}
