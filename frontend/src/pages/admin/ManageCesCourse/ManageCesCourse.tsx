@@ -365,7 +365,7 @@ const handleGroupCountChange = (value: number | null) => {
       if (successCount === fixedSections.length) {
         await Swal.fire({
           icon: "success",
-          title: `เพิ่มรายวิชา ${selectedCourse.Code} - ${selectedCourse.EnglishCourseName} ${selectedCourse.ThaiCourseName} เรียบร้อยแล้ว`,
+          title: `เพิ่มรายวิชา ${selectedCourse.CourseCode} - ${selectedCourse.EnglishCourseName} ${selectedCourse.ThaiCourseName} เรียบร้อยแล้ว`,
         });
         navigate("/all-open-course");
       } else {
@@ -420,7 +420,7 @@ const handleGroupCountChange = (value: number | null) => {
       if (res && !res.error) {
         await Swal.fire({
           icon: "success",
-          title: `แก้ไขรายวิชา ${selectedCourse?.Code} ${selectedCourse?.EnglishCourseName} - ${selectedCourse?.ThaiCourseName} เรียบร้อยแล้ว`,
+          title: `แก้ไขรายวิชา ${selectedCourse?.CourseCode} ${selectedCourse?.EnglishCourseName} - ${selectedCourse?.ThaiCourseName} เรียบร้อยแล้ว`,
         });
         navigate("/all-open-course");
       } else {
@@ -553,7 +553,7 @@ const handleGroupCountChange = (value: number | null) => {
                   >
                     {courses.map((c) => (
                       <Option key={c.ID} value={c.ID}>
-                        {c.Code} - {c.EnglishCourseName} {c.ThaiCourseName}
+                        {c.CourseCode} - {c.EnglishCourseName} {c.ThaiCourseName}
                       </Option>
                     ))}
                   </Select>

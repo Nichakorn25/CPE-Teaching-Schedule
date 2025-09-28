@@ -24,14 +24,11 @@ import AddTeacherAssistance from "./pages/scheduler/AddTeacherAssistance/AddTeac
 import OfferedCoursespage from "./pages/scheduler/offeredcoursepage/OfferedCoursespage";
 import AddConditionpage from './pages/scheduler/addconditionpage/AddConditionpage';
 import Conditionpage from './pages/scheduler/conditionpage/Conditionpage';
-// import OpenCourse from './pages/scheduler/allcoursepage/AllCoursepage';
+
 import AddCoursepage from './pages/scheduler/addcoursepage/AddCoursepage';
-// import Instructorpage from './pages/scheduler/instructorpage/Instructorpage';
-import Layout from "antd/es/layout/layout";
 
 import MainLayout from "./layout/MainLayout";
 import PrivateRoute from "./PrivateRoute";
-// import Test from "./services/https/Test";
 
 const App: React.FC = () => {
   return (
@@ -41,8 +38,6 @@ const App: React.FC = () => {
         <Route path="/change-password" element={<ChangePassword />} />
          <Route element={<PrivateRoute />}>
           <Route path="home-dash" element={<MainLayout><HomeTest /></MainLayout>} />
-
-          {/* <Route path="testtttt" element={<MainLayout><Test /></MainLayout>} /> */}
 
           <Route path="teacher-list" element={<MainLayout><TeacherList /></MainLayout>} />
           <Route path="laboratory-list" element={<MainLayout><LaboratoryList /></MainLayout>} />
@@ -66,8 +61,7 @@ const App: React.FC = () => {
           <Route path="add-teacher-assistance" element={<MainLayout><AddTeacherAssistance /></MainLayout>} />
           <Route path="all-open-course" element={<MainLayout><OfferedCoursespage /></MainLayout>} />
           <Route path="condition-page" element={<MainLayout><Conditionpage /></MainLayout>} />
-          {/* <Route path="Instructorpage" element={<MainLayout><Instructorpage /></MainLayout>} /> */}
-          {/* <Route path="open-course" element={<MainLayout><OpenCourse /></MainLayout>} /> */}
+
           <Route path="add-condition-page" element={<MainLayout><AddConditionpage /></MainLayout>} />
           <Route path="EditConditionpage" element={<MainLayout><EditConditionpage /></MainLayout>} />
           <Route path="add-open-course" element={<MainLayout><AddCoursepage /></MainLayout>} />

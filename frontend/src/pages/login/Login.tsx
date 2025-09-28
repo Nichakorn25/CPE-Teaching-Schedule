@@ -6,6 +6,8 @@ import {
   ChangePasswordInterface,
 } from "../../interfaces/SignIn";
 import Swal from "sweetalert2";
+// Import login video
+import loginVideo from "../../assets/login.mp4";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -344,7 +346,7 @@ const LoginPage: React.FC = () => {
                   type="password"
                   id="Password"
                   name="Password"
-                  placeholder="🔑 password"
+                  placeholder="🔒 password"
                   className="w-full mt-1 p-3 border border-gray-300 rounded-full text-sm bg-white/90 focus:outline-none focus:ring-2 focus:ring-[#F26522]"
                 />
               </div>

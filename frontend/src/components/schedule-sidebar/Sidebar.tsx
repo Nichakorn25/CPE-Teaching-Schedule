@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { IoMenu, IoClose } from "react-icons/io5";
 import { useNavigate, useLocation } from "react-router-dom";
 import { MenuItem } from "../../interfaces/Adminpage";
-
+// Import logo image
+import SUTLogo from "../../assets/SUT_logo.png";
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
@@ -41,119 +42,118 @@ const Sidebar: React.FC = () => {
     {
       id: 1,
       label: "หน้าแรก",
-      icon: "📖",
+      icon: "🏠", // เปลี่ยนจาก 📖 เป็น 🏠 (บ้าน)
       path: "/home-dash",
       roles: ["Admin", "Scheduler", "Instructor"],
     },
     {
       id: 2,
       label: "ตารางสอน",
-      icon: "🧑‍🏫",
+      icon: "📅", // เปลี่ยนจาก 🧑‍🏫 เป็น 📅 (ปฏิทิน/ตาราง)
       path: "/schedule-page",
       roles: ["Scheduler", "Instructor"],
     },
     {
       id: 3,
       label: "เงื่อนไขการจัดตารางสอน",
-      icon: "🧑‍🏫",
+      icon: "⚙️", // เปลี่ยนจาก 🧑‍🏫 เป็น ⚙️ (การตั้งค่า/เงื่อนไข)
       path: "/condition-page",
       roles: ["Scheduler"],
     },
     {
       id: 4,
       label: "เพิ่มเงื่อนไข",
-      icon: "🧑‍🏫",
+      icon: "➕", // เปลี่ยนจาก 🧑‍🏫 เป็น ➕ (เพิ่ม)
       path: "/add-condition-page",
       roles: ["Scheduler", "Instructor"],
     },
     {
       id: 5,
       label: "เพิ่มวิชาที่ต้องการสอน",
-      icon: "🧑‍🏫",
+      icon: "📝", // เปลี่ยนจาก 🧑‍🏫 เป็น 📝 (เขียน/บันทึก)
       path: "/add-open-course",
       roles: ["Scheduler", "Instructor"],
     },
     {
       id: 6,
       label: "เพิ่มผู้ช่วยสอน",
-      icon: "🧑‍🏫",
+      icon: "👥", // เปลี่ยนจาก 🧑‍🏫 เป็น 👥 (คน/กลุ่มคน)
       path: "/add-teacher-assistance",
       roles: ["Scheduler"],
     },
     {
       id: 7,
       label: "รายชื่ออาจารย์",
-      icon: "🧑‍🏫",
+      icon: "🎓", // เปลี่ยนเป็น 🎓 (หมวกครุย - เน้นความเป็นนักวิชาการ)
       path: "/teacher-list",
       roles: ["Admin", "Scheduler"],
     },
     {
       id: 8,
       label: "รายชื่อผู้ช่วยสอน",
-      icon: "🧑‍🏫",
+      icon: "🤝", // เปลี่ยนเป็น 🤝 (การช่วยเหลือ)
       path: "/assistance-list",
       roles: ["Admin", "Scheduler"],
     },
     {
       id: 9,
       label: "รายวิชาที่เปิดสอน",
-      icon: "📋",
+      icon: "📋", // เก็บไว้เหมือนเดิม (รายการ)
       path: "/all-open-course",
       roles: ["Admin", "Scheduler", "Instructor"],
     },
     {
       id: 10,
       label: "รายวิชาทั้งหมด",
-      icon: "📚",
+      icon: "📚", // เก็บไว้เหมือนเดิม (หนังสือ/วิชา)
       path: "/all-course",
       roles: ["Admin", "Scheduler"],
     },
     {
       id: 11,
-      label: "ห้องปฏิบัติการ",
-      icon: "📚",
+      label: "ห้องปฎิบัติการ",
+      icon: "🔬", // เปลี่ยนจาก 📚 เป็น 🔬 (ห้องแล็บ)
       path: "/laboratory-list",
       roles: ["Admin"],
     },
     {
       id: 12,
-      label: "จัดการห้องปฏิบัติการ",
-      icon: "🛠️",
+      label: "จัดการห้องปฎิบัติการ",
+      icon: "🏗️", // เปลี่ยนจาก 🛠️ เป็น 🏗️ (การจัดการ/ก่อสร้าง)
       path: "/manage-lab",
       roles: ["Admin"],
     },
     {
       id: 13,
       label: "จัดการรายชื่ออาจารย์",
-      icon: "🛠️",
+      icon: "👨‍💻", // เปลี่ยนจาก 🛠️ เป็น 👨‍💻 (จัดการข้อมูล)
       path: "/manage-teacher",
       roles: ["Admin"],
     },
     {
       id: 14,
       label: "จัดการรายชื่อผู้ช่วยสอน",
-      icon: "🛠️",
+      icon: "👨‍💼", // เปลี่ยนจาก 🛠️ เป็น 👨‍💼 (จัดการผู้ช่วย)
       path: "/manage-assistance",
       roles: ["Admin"],
     },
     {
       id: 15,
       label: "จัดการรายวิชา",
-      icon: "🖊️",
+      icon: "📖", // เปลี่ยนจาก 🖊️ เป็น 📖 (จัดการหนังสือ/วิชา)
       path: "/manage-course",
       roles: ["Admin"],
     },
     {
       id: 16,
       label: "จัดการวิชาจากศูนย์บริการ",
-      icon: "🖋️",
+      icon: "🏢", // เปลี่ยนจาก 🖋️ เป็น 🏢 (ศูนย์บริการ/อาคาร)
       path: "/manage-cescourse",
       roles: ["Admin"],
     },
   ];
 
-  const role = localStorage.getItem("role"); // ได้ค่ามาเป็น string | null
-
+  const role = localStorage.getItem("role");
   const filteredMenuItems: MenuItem[] = menuItems.filter((item) =>
     role ? item.roles.includes(role) : false
   );
@@ -174,7 +174,7 @@ const Sidebar: React.FC = () => {
     localStorage.removeItem("user_id");
     localStorage.removeItem("username");
     navigate("/");
-    window.location.reload;
+    window.location.reload();
   };
 
   useEffect(() => {
@@ -188,13 +188,6 @@ const Sidebar: React.FC = () => {
     setActiveItem(item.id);
     navigate(item.path);
   };
-
-  useEffect(() => {
-    const currentItem = menuItems.find(
-      (item) => item.path === location.pathname
-    );
-    if (currentItem) setActiveItem(currentItem.id);
-  }, [location.pathname]);
 
   return (
     <>
@@ -275,7 +268,7 @@ const Sidebar: React.FC = () => {
           }}
         >
           <img
-            src="/src/assets/SUT_logo.png"
+            src="/SUT_logo.png" // ใช้ public path สำหรับไฟล์ใน public folder
             alt="SUT Logo"
             style={{
               width: isOpen ? "120px" : "30px",
@@ -383,7 +376,6 @@ const Sidebar: React.FC = () => {
             backgroundColor: "#fafafa",
           }}
         >
-
           <button
             onClick={handleLogout}
             style={{
