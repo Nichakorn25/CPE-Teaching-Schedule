@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	// "os"
+	"os"
 	"time"
 
 	"github.com/Nichakorn25/CPE-Teaching-Schedule/entity"
-	// "github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -22,72 +22,16 @@ func DB() *gorm.DB {
 	return db
 }
 
-func CreateDatabase() {
-	// dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
-	dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
-	dbSQL, err := sql.Open("postgres", dsn)
-	if err != nil {
-		log.Fatal("Failed to connect to PostgreSQL:", err)
-	}
-	defer dbSQL.Close()
-
-	dbName := "cpe_schedule"
-	_, err = dbSQL.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
-	if err != nil {
-		fmt.Println("Database may already exist:", err)
-	} else {
-		fmt.Println("Database created successfully")
-	}
-}
-
-func ConnectionDB() {
-	CreateDatabase()
-	// dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
-	dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
-	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect database")
-	}
-
-	fmt.Println("connected to database")
-	db = database
-}
-/////////////////////////////////////////////////////////////////////////////////////////////
-
-// func loadEnv() {
-// 	err := godotenv.Load()
-// 	if err != nil {
-// 		log.Println("No .env file found, using system environment variables")
-// 	}
-// }
-
-// func getDSN(withDB bool) string {
-// 	host := os.Getenv("DB_HOST")
-// 	user := os.Getenv("DB_USER")
-// 	password := os.Getenv("DB_PASSWORD")
-// 	port := os.Getenv("DB_PORT")
-// 	sslmode := os.Getenv("DB_SSLMODE")
-// 	timezone := os.Getenv("DB_TIMEZONE")
-
-// 	if withDB {
-// 		dbname := os.Getenv("DB_NAME")
-// 		return fmt.Sprintf(
-// 			"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
-// 			host, user, password, dbname, port, sslmode, timezone,
-// 		)
-// 	}
-
-// 	return fmt.Sprintf("host=%s user=%s password=%s dbname=postgres port=%s sslmode=%s", host, user, password, port, sslmode)
-// }
-
 // func CreateDatabase() {
-// 	dbSQL, err := sql.Open("postgres", getDSN(false))
+// 	// dsn := "host=localhost user=postgres password=nichakorn25 port=5432 sslmode=disable"
+// 	dsn := "host=localhost user=postgres password=1234 port=5432 sslmode=disable" //salisa
+// 	dbSQL, err := sql.Open("postgres", dsn)
 // 	if err != nil {
 // 		log.Fatal("Failed to connect to PostgreSQL:", err)
 // 	}
 // 	defer dbSQL.Close()
 
-// 	dbName := os.Getenv("DB_NAME")
+// 	dbName := "cpe_schedule"
 // 	_, err = dbSQL.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
 // 	if err != nil {
 // 		fmt.Println("Database may already exist:", err)
@@ -97,10 +41,10 @@ func ConnectionDB() {
 // }
 
 // func ConnectionDB() {
-// 	loadEnv()
 // 	CreateDatabase()
-
-// 	database, err := gorm.Open(postgres.Open(getDSN(true)), &gorm.Config{})
+// 	// dsn := "host=localhost user=postgres password=nichakorn25 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok"
+// 	dsn := "host=localhost user=postgres password=1234 dbname=cpe_schedule port=5432 sslmode=disable TimeZone=Asia/Bangkok" //salisa
+// 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 // 	if err != nil {
 // 		panic("failed to connect database")
 // 	}
@@ -108,6 +52,62 @@ func ConnectionDB() {
 // 	fmt.Println("connected to database")
 // 	db = database
 // }
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+func loadEnv() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found, using system environment variables")
+	}
+}
+
+func getDSN(withDB bool) string {
+	host := os.Getenv("DB_HOST")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	port := os.Getenv("DB_PORT")
+	sslmode := os.Getenv("DB_SSLMODE")
+	timezone := os.Getenv("DB_TIMEZONE")
+
+	if withDB {
+		dbname := os.Getenv("DB_NAME")
+		return fmt.Sprintf(
+			"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
+			host, user, password, dbname, port, sslmode, timezone,
+		)
+	}
+
+	return fmt.Sprintf("host=%s user=%s password=%s dbname=postgres port=%s sslmode=%s", host, user, password, port, sslmode)
+}
+
+func CreateDatabase() {
+	dbSQL, err := sql.Open("postgres", getDSN(false))
+	if err != nil {
+		log.Fatal("Failed to connect to PostgreSQL:", err)
+	}
+	defer dbSQL.Close()
+
+	dbName := os.Getenv("DB_NAME")
+	_, err = dbSQL.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
+	if err != nil {
+		fmt.Println("Database may already exist:", err)
+	} else {
+		fmt.Println("Database created successfully")
+	}
+}
+
+func ConnectionDB() {
+	loadEnv()
+	CreateDatabase()
+
+	database, err := gorm.Open(postgres.Open(getDSN(true)), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+
+	fmt.Println("connected to database")
+	db = database
+}
 
 func SetupDatabase() {
 	err := db.AutoMigrate(
